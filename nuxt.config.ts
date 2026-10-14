@@ -8,6 +8,8 @@ export default defineNuxtConfig({
 
   // عربي + RTL بالكامل (مبدأ حاكم في البريف §2)
   app: {
+    // انتقال سلس بين الشاشات (تلاشٍ + انزياح خفيف) — أنماط .page-* في main.css
+    pageTransition: { name: 'page' },
     head: {
       htmlAttrs: {
         lang: 'ar',

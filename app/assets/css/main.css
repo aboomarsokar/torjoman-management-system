@@ -144,6 +144,9 @@
    ملاحظة: --ring لونٌ يُطبَّق هكذا: box-shadow:0 0 0 4px var(--ring)
    ============================================================ */
 :root {
+  /* انحناء حركي موحّد للانتقالات (ease-out قوي — أسرع إحساساً من منحنيات CSS الافتراضية) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
   /* الأسطح والنصوص والحدود */
   --bg: #EDF2F7;
   --surface: #FFFFFF;
@@ -287,4 +290,42 @@ html {
 body {
   background-color: var(--bg);
   color: var(--ink);
+}
+
+/* ============================================================
+   انتقال الصفحات — تلاشٍ + انزياح خفيف بين شاشات اللوحة (app.pageTransition)
+   يمسّ منطقة المحتوى فقط (.content في layouts/dashboard.vue) — الشريط
+   الجانبي/العلوي يبقيان ثابتين. مدّة قصيرة عمداً لأن التنقّل يتكرّر
+   عشرات المرّات يومياً (لا يجوز أن يُبطئ الإحساس بالاستجابة).
+   ============================================================ */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* الصفحة المغادرة تخرج من التدفّق كي تتقاطع مع الداخلة بدل أن تدفعها للأسفل.
+   تُثبَّت على حشوة المحتوى (--content-pad من layouts/dashboard.vue) وإلا
+   قفزت إلى الحافة واتّسعت أثناء تلاشيها. */
+.page-leave-active {
+  position: absolute;
+  top: var(--content-pad, auto);
+  inset-inline: var(--content-pad, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active,
+  .page-leave-active {
+    transition: opacity 160ms var(--ease-out);
+  }
+
+  .page-enter-from,
+  .page-leave-to {
+    transform: none;
+  }
 }

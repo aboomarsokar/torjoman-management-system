@@ -357,7 +357,8 @@ const isActive = (item: Item) => item.to === route.path
 .tu-name { font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.2; }
 .tu-role { font-size: 12.5px; color: var(--ink-3); }
 .top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; }
-.content { flex: 1; overflow-y: auto; padding: 32px; background: var(--bg); }
+/* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
+.content { --content-pad: 32px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
 
 /* RESPONSIVE */
 .overlay { display: none; }
@@ -369,7 +370,7 @@ const isActive = (item: Item) => item.to === route.path
 }
 @media (max-width: 620px) {
   .topbar { padding: 0 16px; }
-  .content { padding: 18px; }
+  .content { --content-pad: 18px; }
   .top-usertext { display: none; }
 }
 </style>

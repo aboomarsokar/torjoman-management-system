@@ -3,8 +3,9 @@
  * الاختبارات (§4.16) — موجّهة بالدور:
  * - المعلّم: يختار محطة الاختبار لكل طالب بحكم معرفته الفعلية بمستواه (بلا شرط
  *   على الأجزاء المثبتة)، ويرسل القائمة. الخيارات تستبعد المُجتاز والمعلّق فقط.
- * - المشرف/المدير: يرصد نتيجة كل اختبار وارد (ExamsGradeModal) — الاجتياز
- *   يحدّث الأجزاء المثبتة تلقائياً (GradeModal.vue).
+ * - المختبِر (لحلقاته المُسنَدة) / المدير احتياطاً: يرصد نتيجة كل اختبار وارد
+ *   (ExamsGradeModal) — الاجتياز يرفع الأجزاء المثبتة بمُشغِّلٍ في القاعدة.
+ *   المشرف لم يعد يرصد (يتابع النتائج فقط).
  * - الجميع: متابعة النتائج حسب النطاق (ExamsResultsBrowser بفلاتر هرمية).
  */
 import type { Database } from '~/types/database.types'
@@ -20,7 +21,7 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 
 const isTeacher = computed(() => role.value === 'teacher')
-const canGrade = computed(() => role.value === 'manager' || role.value === 'supervisor')
+const canGrade = computed(() => role.value === 'manager' || role.value === 'examiner')
 
 const stageLabel = (s: string) => s === 'partial' ? 'مرحلي' : 'تجميعي'
 
@@ -77,7 +78,7 @@ const nomineeCount = computed(() => Object.values(nominees).filter(n => n.checke
 const rosterRows = computed(() => (roster.value ?? []).map((s) => {
   const avail = availableStations(s)
   let blockReason = ''
-  if (!avail.length) blockReason = pendingOf(s.id).size ? 'بانتظار رصد المشرف' : 'اجتاز كل الخطة'
+  if (!avail.length) blockReason = pendingOf(s.id).size ? 'بانتظار رصد المختبِر' : 'اجتاز كل الخطة'
   return {
     ...s,
     nom: nominees[s.id] ?? { checked: false, planId: '' },
@@ -124,7 +125,7 @@ async function sendNominees() {
       const { error: e2 } = await supabase.from('exam_list_items').insert(items)
       if (e2) throw e2
     }
-    toast.add({ title: `أُرسلت ${valid.length} ترشيحاً للمشرف.`, color: 'success', icon: 'i-lucide-send' })
+    toast.add({ title: `أُرسلت ${valid.length} ترشيحاً للمختبِر.`, color: 'success', icon: 'i-lucide-send' })
     for (const n of Object.values(nominees)) n.checked = false
     await Promise.all([refreshRoster(), refreshState()])
   } catch (err) {
@@ -134,7 +135,7 @@ async function sendNominees() {
   }
 }
 
-// ═══ المشرف/المدير: الاختبارات الواردة ═══
+// ═══ المختبِر/المدير: الاختبارات الواردة ═══
 type QueueItem = {
   id: string
   student: { id: string, full_name: string } | null
@@ -143,7 +144,7 @@ type QueueItem = {
   exam_results: { id: string }[]
 }
 const { data: queueRaw, refresh: refreshQueue, pending: queuePending } = useLazyAsyncData<QueueItem[]>('exams-queue', async () => {
-  if (role.value !== 'manager' && role.value !== 'supervisor') return []
+  if (!canGrade.value) return []
   const { data, error } = await supabase
     .from('exam_list_items')
     .select('id, student:student_id(id, full_name), exam_plan:exam_plan_id(parts_from, parts_to, stage_type), exam_list:exam_list_id(halaqa:halaqa_id(name), teacher:teacher_id(full_name)), exam_results(id)')
@@ -189,7 +190,7 @@ async function onGraded() {
   <div class="exams">
     <UiPageHeader
       title="الاختبارات"
-      :subtitle="isTeacher ? 'رشّح طلابك للمحطة المناسبة حسب مستواهم الفعلي وأرسل القائمة للمشرف.' : canGrade ? 'الاختبارات الواردة من المعلّمين — افتح كلّ اختبار وارصد نتيجته من 100، وتابع النتائج في نطاقك.' : 'تابع نتائج اختبارات الطلاب في نطاقك.'"
+      :subtitle="isTeacher ? 'رشّح طلابك للمحطة المناسبة حسب مستواهم الفعلي وأرسل القائمة للمختبِر.' : canGrade ? 'الاختبارات الواردة من المعلّمين — افتح كلّ اختبار وارصد نتيجته من 100، وتابع النتائج في نطاقك.' : 'تابع نتائج اختبارات الطلاب في نطاقك.'"
     />
 
     <ClientOnly>
@@ -271,7 +272,7 @@ async function onGraded() {
           <div class="send-bar">
             <span>المحدّدون: <strong>{{ nomineeCount }}</strong></span>
             <UButton
-              label="إرسال للمشرف"
+              label="إرسال للمختبِر"
               color="primary"
               size="lg"
               icon="i-lucide-send"
@@ -284,7 +285,7 @@ async function onGraded() {
         </div>
       </template>
 
-      <!-- ═══ المشرف/المدير: الواردة ═══ -->
+      <!-- ═══ المختبِر/المدير: الواردة ═══ -->
       <template v-else-if="canGrade">
         <h3 class="sec-title">
           الاختبارات الواردة <span class="count">{{ queue.length }}</span>

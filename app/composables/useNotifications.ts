@@ -3,8 +3,9 @@ import type { Database } from '~/types/database.types'
 /**
  * جرس الإشعارات — محسوب من البيانات الموجودة (لا جدول إشعارات).
  * حسب الدور، مع RLS الذي يقصر النطاق تلقائيّاً:
- *  - المعلّم: تنبيهات إدارية جديدة لم يؤكّد اطّلاعه عليها.
- *  - المشرف: بنود اختبار بانتظار رصده + زيارات اليوم.
+ *  - المعلّم: تنبيهات إدارية جديدة لم يؤكّد اطّلاعه عليها + نتائج رُصدت اليوم.
+ *  - المختبِر: بنود اختبار بانتظار رصده.
+ *  - المشرف: زيارات اليوم.
  *  - المدير: تقارير شهرية مُرسلة بانتظار اعتماده.
  *  - الجودة: تقارير مُرسلة في نطاقها للمتابعة.
  * تحديث: عند التركيب + عند تغيّر المسار + استطلاع كل 60 ثانية.
@@ -38,9 +39,20 @@ export function useNotifications() {
       for (const a of data ?? []) {
         out.push({ id: a.id, label: 'تنبيه إداري جديد', sub: a.violation_type, to: '/alerts', icon: 'i-lucide-bell' })
       }
+
+      // RLS يقصرها على طلاب حلقته
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+      const { count: gradedToday } = await supabase
+        .from('exam_results')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', startOfDay.toISOString())
+      if (gradedToday) {
+        out.push({ id: 'graded', label: `${gradedToday} نتيجة اختبار رُصدت اليوم`, to: '/exams', icon: 'i-lucide-circle-check' })
+      }
     }
 
-    if (r === 'supervisor') {
+    if (r === 'examiner') {
       const { data: examItems } = await supabase
         .from('exam_list_items')
         .select('id, exam_results(id)')
@@ -49,7 +61,9 @@ export function useNotifications() {
       if (pending) {
         out.push({ id: 'grade', label: `${pending} بند اختبار بانتظار رصدك`, to: '/exams', icon: 'i-lucide-clipboard-check' })
       }
+    }
 
+    if (r === 'supervisor') {
       const today = new Date().toISOString().slice(0, 10)
       const { data: visits } = await supabase
         .from('supervision_visits')

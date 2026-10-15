@@ -98,18 +98,10 @@ async function saveGrade() {
       tajweed_score: sc('tajweed_score'),
       notes: scores.notes.trim() || null
     }
-    const { data: result, error } = await supabase.from('exam_results').insert(payload).select('passed').single()
+    // عند الاجتياز يرفع مُشغِّل القاعدة (bump_parts_on_pass) الأجزاءَ المثبتة إلى
+    // نهاية نطاق المحطة — فلا يحتاج الراصد (المختبِر) صلاحية تعديل الطلاب.
+    const { error } = await supabase.from('exam_results').insert(payload)
     if (error) throw error
-
-    // عند الاجتياز: الأجزاء المثبتة تصير نهاية نطاق المحطة — لا تُحسَب افتراضياً،
-    // بل نتيجة اختبار فعلي فقط. لا تُنقِص القيمة لو كانت أعلى أصلاً (رصد غير مرتّب).
-    if (result?.passed && props.target.exam_plan?.parts_to != null) {
-      const partsTo = props.target.exam_plan.parts_to
-      const { data: current } = await supabase.from('students').select('quran_parts').eq('id', props.target.student.id).maybeSingle()
-      if ((current?.quran_parts ?? 0) < partsTo) {
-        await supabase.from('students').update({ quran_parts: partsTo }).eq('id', props.target.student.id)
-      }
-    }
 
     toast.add({ title: 'تم رصد النتيجة.', color: 'success', icon: 'i-lucide-circle-check' })
     open.value = false

@@ -4,6 +4,8 @@
  * مشترك بين كل الأدوار العاملة. القوائم تظهر حسب دور المستخدم.
  * المسارات غير المبنيّة بعد تُظهر تنبيه «قيد الإنشاء» (تُربط عند بناء كل شاشة).
  */
+import { ROLE_LABEL } from '~/constants/roles'
+
 const { role, status, fullName, initial, pending: profilePending } = useProfile()
 const { signOut } = useAuth()
 const toast = useToast()
@@ -40,8 +42,8 @@ const mainNav: Item[] = [
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: ['manager', 'quality', 'supervisor'] },
   { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: ['manager', 'quality', 'supervisor'] },
-  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
+  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] },
+  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] },
   { key: 'reports', label: 'التقارير الشهرية', icon: 'i-lucide-file-text', to: '/reports', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: ['teacher'] },
   { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: ['manager', 'quality', 'supervisor', 'teacher'] }
@@ -54,7 +56,7 @@ const managerNav: Item[] = [
 ]
 
 const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: ['manager', 'quality'] }
-const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: ['manager', 'quality', 'supervisor', 'teacher'] }
+const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] }
 
 const visible = (items: Item[]) => computed(() => items.filter(i => role.value && i.roles.includes(role.value)))
 const mainItems = visible(mainNav)
@@ -66,9 +68,7 @@ const navTitle = computed(() => {
   return all.find(i => i.to && i.to === route.path)?.label ?? 'لوحة التحكم'
 })
 
-const roleLabel = computed(() => ({
-  manager: 'المدير', quality: 'مشرف الجودة', supervisor: 'المشرف', teacher: 'المعلم'
-}[role.value ?? 'manager'] ?? ''))
+const roleLabel = computed(() => (role.value ? ROLE_LABEL[role.value] : ''))
 
 function go(item: Item) {
   drawerOpen.value = false

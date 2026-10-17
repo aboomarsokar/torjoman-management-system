@@ -428,6 +428,9 @@ export type Database = {
             | null
           created_at: string
           daily_time: string | null
+          examiner_assigned_at: string | null
+          examiner_assigned_by: string | null
+          examiner_id: string | null
           gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
           name: string
@@ -443,6 +446,9 @@ export type Database = {
             | null
           created_at?: string
           daily_time?: string | null
+          examiner_assigned_at?: string | null
+          examiner_assigned_by?: string | null
+          examiner_id?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
           name: string
@@ -458,6 +464,9 @@ export type Database = {
             | null
           created_at?: string
           daily_time?: string | null
+          examiner_assigned_at?: string | null
+          examiner_assigned_by?: string | null
+          examiner_id?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
           name?: string
@@ -470,6 +479,20 @@ export type Database = {
           {
             foreignKeyName: "halaqat_assigned_by_fkey"
             columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halaqat_examiner_assigned_by_fkey"
+            columns: ["examiner_assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halaqat_examiner_id_fkey"
+            columns: ["examiner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1278,6 +1301,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      is_halaqa_examiner: { Args: { hid: string }, Returns: boolean }
       is_manager: { Args: never, Returns: boolean }
     }
     Enums: {
@@ -1310,7 +1334,7 @@ export type Database = {
       statement_status: "draft" | "submitted" | "reviewed"
       student_status: "active" | "withdrawn" | "graduated" | "transferred"
       transaction_type: "income" | "expense"
-      user_role: "manager" | "quality" | "supervisor" | "teacher"
+      user_role: "manager" | "quality" | "supervisor" | "teacher" | "examiner"
       visit_status: "scheduled" | "done" | "late" | "missed"
     }
     CompositeTypes: {
@@ -1469,7 +1493,7 @@ export const Constants = {
       statement_status: ["draft", "submitted", "reviewed"],
       student_status: ["active", "withdrawn", "graduated", "transferred"],
       transaction_type: ["income", "expense"],
-      user_role: ["manager", "quality", "supervisor", "teacher"],
+      user_role: ["manager", "quality", "supervisor", "teacher", "examiner"],
       visit_status: ["scheduled", "done", "late", "missed"],
     },
   },

@@ -69,8 +69,11 @@ create policy results_select on public.exam_results for select to authenticated
                  where s.id = student_id
                    and ((select public.is_manager()) or public.can_access_halaqa(s.halaqa_id) or public.is_halaqa_examiner(s.halaqa_id))));
 
--- 4) الرصد: المدير، أو المختبِر المُسنَد باسمه — المشرف يخرج منه
-drop policy results_insert on public.exam_results;
+-- 4) الرصد: المدير، أو المختبِر المُسنَد باسمه — المشرف يخرج منه.
+--    الإنتاج يحمل results_write (ALL) لأن هجرة 20260702 لم تُطبَّق عليه، والملفات تفترض
+--    results_insert/update/delete — فنُسقط الصيغتين أيّاً كانت الموجودة.
+drop policy if exists results_write on public.exam_results;
+drop policy if exists results_insert on public.exam_results;
 create policy results_insert on public.exam_results for insert to authenticated
   with check (
     (select public.is_manager())
@@ -79,12 +82,12 @@ create policy results_insert on public.exam_results for insert to authenticated
         and exists (select 1 from public.students s where s.id = student_id and public.is_halaqa_examiner(s.halaqa_id)))
   );
 
-drop policy results_update on public.exam_results;
+drop policy if exists results_update on public.exam_results;
 create policy results_update on public.exam_results for update to authenticated
   using ((select public.is_manager()) or ((select public.current_user_role()) = 'examiner' and examiner_id = (select auth.uid())))
   with check ((select public.is_manager()) or ((select public.current_user_role()) = 'examiner' and examiner_id = (select auth.uid())));
 
-drop policy results_delete on public.exam_results;
+drop policy if exists results_delete on public.exam_results;
 create policy results_delete on public.exam_results for delete to authenticated
   using ((select public.is_manager()));
 

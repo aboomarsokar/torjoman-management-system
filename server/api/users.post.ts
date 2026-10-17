@@ -1,65 +1,50 @@
-import { requireManager } from '../utils/supabaseAdmin'
-import type { Database } from '~/types/database.types'
-
-type Role = Database['public']['Enums']['user_role']
-type Gender = Database['public']['Enums']['gender_type']
-const ALLOWED_ROLES: Role[] = ['manager', 'quality', 'supervisor', 'teacher', 'examiner']
-const GENDERS: Gender[] = ['male', 'female']
+import { requireAdminManager } from '../utils/supabaseAdmin'
+import { authCreateError, parseStaffInput, staffProfileError } from '../utils/accountInput'
+import { staffEmailFromNumber } from '~/constants/accounts'
 
 /**
- * إنشاء حساب مستخدم عامل (مدير فقط).
- * ينشئ حساب المصادقة بصلاحية الخدمة (مؤكَّد البريد) ثم يضبط ملفه في profiles.
+ * إنشاء حساب موظف (المدير الإداري فقط).
+ * يأخذ رقماً وظيفياً من التسلسل (claim_employee_number)، وينشئ حساب Auth ببريدٍ داخليّ مؤكَّد،
+ * ثم يكتب الملف. ⚠️ الرقم يُستهلك حتى لو فشل الإنشاء لاحقاً — مقبول ولا يُعاد استعماله.
+ * ⚠️ المدير الإداري والفني: نشطٌ واحد لكلٍّ منهما (حارسٌ/فهرسٌ في القاعدة يرفع 23505 ← 409).
  */
 export default defineEventHandler(async (event) => {
-  const { admin, user } = await requireManager(event)
-  const body = await readBody<{ full_name?: string, email?: string, password?: string, role?: Role, phone?: string, gender?: Gender }>(event)
+  const { admin, user } = await requireAdminManager(event)
+  const parsed = parseStaffInput(await readBody(event))
+  if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
+  const { fullName, role, gender, phone, password } = parsed.value
 
-  const fullName = body.full_name?.trim()
-  const email = body.email?.trim().toLowerCase()
-  const password = body.password ?? ''
-  const role = body.role
-  const phone = body.phone?.trim() || null
+  const { data: employeeNumber, error: seqErr } = await admin.rpc('claim_employee_number')
+  if (seqErr || !employeeNumber) throw createError({ statusCode: 500, statusMessage: 'تعذّر توليد الرقم الوظيفي.' })
 
-  if (!fullName) throw createError({ statusCode: 400, statusMessage: 'الاسم الكامل مطلوب.' })
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw createError({ statusCode: 400, statusMessage: 'بريد إلكتروني غير صحيح.' })
-  if (password.length < 8) throw createError({ statusCode: 400, statusMessage: 'كلمة المرور 8 أحرف على الأقل.' })
-  if (!role || !ALLOWED_ROLES.includes(role)) throw createError({ statusCode: 400, statusMessage: 'الدور غير صالح.' })
-  // جنس المختبِر يحدّد حلقات جنسه في الاقتراح التلقائي — مطلوب له وحده
-  const gender = role === 'examiner' && body.gender && GENDERS.includes(body.gender) ? body.gender : null
-  if (role === 'examiner' && !gender) throw createError({ statusCode: 400, statusMessage: 'حدّد جنس المختبِر.' })
-
-  // 1) إنشاء حساب المصادقة (مؤكَّد البريد مباشرةً)
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
-    email,
+    email: staffEmailFromNumber(employeeNumber),
     password,
     email_confirm: true,
     user_metadata: { full_name: fullName }
   })
   if (authErr || !created.user) {
-    const msg = /already|exists|registered/i.test(authErr?.message ?? '')
-      ? 'هذا البريد مسجّل مسبقاً.'
-      : (authErr?.message ?? 'تعذّر إنشاء الحساب.')
-    throw createError({ statusCode: 400, statusMessage: msg })
+    const failure = authCreateError(authErr?.message, 'تعذّر إنشاء الحساب، حاول مرة أخرى.')
+    throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
   }
 
-  // 2) ضبط الملف (upsert تحسّباً لأي trigger أنشأ صفّاً مبدئيّاً)
-  const { error: profErr } = await admin.from('profiles').upsert({
+  const { error: profErr } = await admin.from('profiles').insert({
     id: created.user.id,
     full_name: fullName,
-    email,
     role,
+    gender,
+    employee_number: employeeNumber,
     phone,
-    ...(gender ? { gender } : {}),
     status: 'active',
     must_change_password: true,
     assigned_by: user.id
-  }, { onConflict: 'id' })
-
+  })
   if (profErr) {
-    // تراجُع: احذف حساب المصادقة حتى لا يبقى يتيماً بلا ملف
+    // تراجُع: لا يبقى حساب Auth يتيماً بلا ملف
     await admin.auth.admin.deleteUser(created.user.id)
-    throw createError({ statusCode: 500, statusMessage: `تعذّر حفظ الملف: ${profErr.message}` })
+    const failure = staffProfileError(profErr, role)
+    throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
   }
 
-  return { id: created.user.id, full_name: fullName, email, role, status: 'active' }
+  return { id: created.user.id, employee_number: employeeNumber }
 })

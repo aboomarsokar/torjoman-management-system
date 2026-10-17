@@ -4,7 +4,7 @@
  * إدخال + إجمالي + اعتماد (قفل) + ترحيل كحركة «صادر/رواتب».
  */
 import type { Database } from '~/types/database.types'
-import { ROLE_LABEL, type Role } from '~/constants/roles'
+import { roleLabel, type Role } from '~/constants/roles'
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
@@ -16,7 +16,7 @@ const yearItems = [now.getFullYear() - 1, now.getFullYear()].map(y => ({ label: 
 const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
-type Row = { profile_id: string, name: string, role: Role, amount: string }
+type Row = { profile_id: string, name: string, role: Role, gender: 'male' | 'female' | null, amount: string }
 const rows = ref<Row[]>([])
 const approved = ref(false)
 const loaded = ref(false)
@@ -29,13 +29,13 @@ async function load() {
   loading.value = true
   try {
     const [{ data: workers }, { data: sal }] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, role').neq('role', 'manager').eq('status', 'active').order('full_name'),
+      supabase.from('profiles').select('id, full_name, role, gender').neq('role', 'manager').eq('status', 'active').order('full_name'),
       supabase.from('monthly_salaries').select('profile_id, amount, approved').eq('salary_month', month.value).eq('salary_year', year.value)
     ])
     const map: Record<string, { amount: number, approved: boolean }> = {}
     for (const s of sal ?? []) map[s.profile_id] = { amount: s.amount, approved: s.approved }
     approved.value = (sal ?? []).some(s => s.approved)
-    rows.value = (workers ?? []).map(w => ({ profile_id: w.id, name: w.full_name, role: w.role, amount: map[w.id] ? String(map[w.id]!.amount) : '' }))
+    rows.value = (workers ?? []).map(w => ({ profile_id: w.id, name: w.full_name, role: w.role, gender: w.gender, amount: map[w.id] ? String(map[w.id]!.amount) : '' }))
     loaded.value = true
   } catch (err) {
     handle(err)
@@ -193,7 +193,7 @@ async function postAsTransaction() {
                 </td>
                 <td>
                   <UBadge
-                    :label="ROLE_LABEL[r.role]"
+                    :label="roleLabel(r.role, r.gender)"
                     color="neutral"
                     variant="soft"
                     size="sm"

@@ -5,7 +5,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { DEFAULT_PASSWORD } from '~/constants/auth'
-import { ROLE_LABEL, type Role } from '~/constants/roles'
+import { roleLabel, type Role } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'إدارة المستخدمين — ترجمان' })
@@ -219,7 +219,7 @@ async function confirmReset() {
           </template>
           <template #role="{ row }">
             <UBadge
-              :label="ROLE_LABEL[row.role]"
+              :label="roleLabel(row.role, row.gender)"
               :color="ROLE_COLOR[row.role]"
               variant="soft"
             />

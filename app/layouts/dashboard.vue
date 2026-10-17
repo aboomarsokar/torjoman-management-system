@@ -4,9 +4,9 @@
  * مشترك بين كل الأدوار العاملة. القوائم تظهر حسب دور المستخدم.
  * المسارات غير المبنيّة بعد تُظهر تنبيه «قيد الإنشاء» (تُربط عند بناء كل شاشة).
  */
-import { ROLE_LABEL } from '~/constants/roles'
+import { roleLabel as roleLabelFor } from '~/constants/roles'
 
-const { role, status, fullName, initial, pending: profilePending } = useProfile()
+const { profile, role, status, fullName, initial, pending: profilePending } = useProfile()
 const { signOut } = useAuth()
 const toast = useToast()
 const route = useRoute()
@@ -68,7 +68,7 @@ const navTitle = computed(() => {
   return all.find(i => i.to && i.to === route.path)?.label ?? 'لوحة التحكم'
 })
 
-const roleLabel = computed(() => (role.value ? ROLE_LABEL[role.value] : ''))
+const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
 function go(item: Item) {
   drawerOpen.value = false

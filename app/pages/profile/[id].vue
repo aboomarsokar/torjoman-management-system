@@ -5,7 +5,7 @@
  * والتعديل للمدير أو لصاحب الملف نفسه (RLS). رقم الهوية يُقنَّع لغير المخوّل.
  */
 import type { Database } from '~/types/database.types'
-import { ROLE_LABEL } from '~/constants/roles'
+import { roleLabel } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -277,7 +277,7 @@ async function changePassword() {
               <h1>{{ data.p.full_name }}</h1>
               <div class="band-sub">
                 <UBadge
-                  :label="ROLE_LABEL[data.p.role]"
+                  :label="roleLabel(data.p.role, data.p.gender)"
                   color="info"
                   variant="soft"
                 />

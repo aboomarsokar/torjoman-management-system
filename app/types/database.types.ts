@@ -1023,7 +1023,6 @@ export type Database = {
           quran_parts: number | null
           residence_area: string | null
           role: Database["public"]["Enums"]["user_role"]
-          section: Database["public"]["Enums"]["section_scope"]
           status: Database["public"]["Enums"]["profile_status"]
           tajweed_level: string | null
           updated_at: string
@@ -1053,7 +1052,6 @@ export type Database = {
           quran_parts?: number | null
           residence_area?: string | null
           role: Database["public"]["Enums"]["user_role"]
-          section?: Database["public"]["Enums"]["section_scope"]
           status?: Database["public"]["Enums"]["profile_status"]
           tajweed_level?: string | null
           updated_at?: string
@@ -1083,7 +1081,6 @@ export type Database = {
           quran_parts?: number | null
           residence_area?: string | null
           role?: Database["public"]["Enums"]["user_role"]
-          section?: Database["public"]["Enums"]["section_scope"]
           status?: Database["public"]["Enums"]["profile_status"]
           tajweed_level?: string | null
           updated_at?: string
@@ -1295,6 +1292,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_approve_in_halaqa: { Args: { hid: string }, Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }, Returns: boolean }
       can_manage_halaqa: { Args: { hid: string }, Returns: boolean }
       can_view_halaqa: { Args: { hid: string }, Returns: boolean }
@@ -1303,19 +1301,17 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      current_user_section: {
-        Args: never
-        Returns: Database["public"]["Enums"]["section_scope"]
-      }
-      in_section: {
+      in_admin_scope: {
         Args: { g: Database["public"]["Enums"]["gender_type"] }
         Returns: boolean
       }
       is_admin_manager: { Args: never, Returns: boolean }
-      is_full_admin: { Args: never, Returns: boolean }
       is_halaqa_examiner: { Args: { hid: string }, Returns: boolean }
+      is_halaqa_supervisor: { Args: { hid: string }, Returns: boolean }
       is_halaqa_teacher: { Args: { hid: string }, Returns: boolean }
       is_project_supervisor: { Args: never, Returns: boolean }
+      is_women_admin: { Args: never, Returns: boolean }
+      my_halaqa_id: { Args: never, Returns: string }
       my_student_id: { Args: never, Returns: string }
     }
     Enums: {
@@ -1345,7 +1341,6 @@ export type Database = {
       minutes_status: "draft" | "final"
       profile_status: "pending" | "active" | "disabled"
       report_status: "draft" | "submitted" | "approved"
-      section_scope: "all" | "male" | "female"
       statement_status: "draft" | "submitted" | "reviewed"
       student_status: "active" | "withdrawn" | "graduated" | "transferred"
       transaction_type: "income" | "expense"
@@ -1353,6 +1348,7 @@ export type Database = {
         | "project_supervisor"
         | "admin_manager"
         | "technical_manager"
+        | "women_admin"
         | "field_supervisor"
         | "examiner"
         | "teacher"
@@ -1512,7 +1508,6 @@ export const Constants = {
       minutes_status: ["draft", "final"],
       profile_status: ["pending", "active", "disabled"],
       report_status: ["draft", "submitted", "approved"],
-      section_scope: ["all", "male", "female"],
       statement_status: ["draft", "submitted", "reviewed"],
       student_status: ["active", "withdrawn", "graduated", "transferred"],
       transaction_type: ["income", "expense"],
@@ -1520,6 +1515,7 @@ export const Constants = {
         "project_supervisor",
         "admin_manager",
         "technical_manager",
+        "women_admin",
         "field_supervisor",
         "examiner",
         "teacher",

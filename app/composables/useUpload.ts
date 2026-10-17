@@ -12,7 +12,14 @@ export function useUpload() {
     if (file.size > MAX_BYTES) throw new Error('حجم الصورة يتجاوز 5 ميغابايت.')
 
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-    const path = `${folder}/${crypto.randomUUID()}.${ext}`
+    // سياسة التخزين: غير المدير الإداري يكتب تحت avatars/<معرّفه>/ فقط، فيُضاف المعرّف للصور الشخصية.
+    let dir = folder
+    if (folder === 'avatars') {
+      const { data: auth } = await supabase.auth.getUser()
+      if (!auth.user) throw new Error('انتهت الجلسة، سجّل الدخول من جديد.')
+      dir = `${folder}/${auth.user.id}`
+    }
+    const path = `${dir}/${crypto.randomUUID()}.${ext}`
     const { error } = await supabase.storage.from('media').upload(path, file, { cacheControl: '3600', upsert: false })
     if (error) throw new Error(error.message)
 

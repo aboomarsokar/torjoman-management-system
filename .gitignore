@@ -49,3 +49,6 @@ test-results
 # Misc
 *.local
 .eslintcache
+
+# مساحة عمل التنفيذ بالوكلاء (سجلّ التقدّم والموجزات) — مؤقّتة
+.superpowers/

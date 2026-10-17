@@ -20,6 +20,11 @@ const isTeacher = computed(() => role.value === 'teacher')
 const isSupervisor = computed(() => role.value === 'supervisor')
 const isQuality = computed(() => role.value === 'quality')
 
+// المختبِر لا لوحة له — عمله كلّه في الاختبارات (الدخول يوجّه إلى /dashboard)
+watch(role, (r) => {
+  if (r === 'examiner') navigateTo('/exams', { replace: true })
+}, { immediate: true })
+
 // ── أعداد البطاقات (للمدير) ──
 const counts = reactive({ students: 0, teachers: 0, supervisors: 0, quality: 0, halqat: 0 })
 

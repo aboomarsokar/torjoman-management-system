@@ -4,19 +4,19 @@
  * إدخال + إجمالي + اعتماد (قفل) + ترحيل كحركة «صادر/رواتب».
  */
 import type { Database } from '~/types/database.types'
+import { ROLE_LABEL, type Role } from '~/constants/roles'
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const ROLE_LABEL: Record<string, string> = { manager: 'المدير', quality: 'مشرف الجودة', supervisor: 'المشرف', teacher: 'المعلم' }
 const now = new Date()
 const yearItems = [now.getFullYear() - 1, now.getFullYear()].map(y => ({ label: String(y), value: y }))
 const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
-type Row = { profile_id: string, name: string, role: string, amount: string }
+type Row = { profile_id: string, name: string, role: Role, amount: string }
 const rows = ref<Row[]>([])
 const approved = ref(false)
 const loaded = ref(false)

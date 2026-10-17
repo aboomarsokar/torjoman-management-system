@@ -5,6 +5,7 @@
  * والتعديل للمدير أو لصاحب الملف نفسه (RLS). رقم الهوية يُقنَّع لغير المخوّل.
  */
 import type { Database } from '~/types/database.types'
+import { ROLE_LABEL } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -15,7 +16,6 @@ const { handle } = useErrorHandler()
 const { uploadImage } = useUpload()
 const toast = useToast()
 
-const ROLE_LABEL: Record<string, string> = { manager: 'المدير', quality: 'مشرف الجودة', supervisor: 'المشرف', teacher: 'المعلم' }
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
 
@@ -50,6 +50,9 @@ const { data, pending, refresh } = useLazyAsyncData(() => `profile-${targetId.va
   } else if (p.role === 'quality') {
     const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('quality_supervisor_id', p.id).eq('role', 'supervisor')
     scope.push({ label: 'المشرفون التابعون', value: count ?? 0 })
+  } else if (p.role === 'examiner') {
+    const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('examiner_id', p.id)
+    scope.push({ label: 'الحلقات المُسندة للاختبار', value: count ?? 0 })
   }
   return { p, scope }
 }, { server: false, default: () => null, watch: [targetId] })

@@ -2,7 +2,9 @@ import { requireManager } from '../utils/supabaseAdmin'
 import type { Database } from '~/types/database.types'
 
 type Role = Database['public']['Enums']['user_role']
-const ALLOWED_ROLES: Role[] = ['manager', 'quality', 'supervisor', 'teacher']
+type Gender = Database['public']['Enums']['gender_type']
+const ALLOWED_ROLES: Role[] = ['manager', 'quality', 'supervisor', 'teacher', 'examiner']
+const GENDERS: Gender[] = ['male', 'female']
 
 /**
  * إنشاء حساب مستخدم عامل (مدير فقط).
@@ -10,7 +12,7 @@ const ALLOWED_ROLES: Role[] = ['manager', 'quality', 'supervisor', 'teacher']
  */
 export default defineEventHandler(async (event) => {
   const { admin, user } = await requireManager(event)
-  const body = await readBody<{ full_name?: string, email?: string, password?: string, role?: Role, phone?: string }>(event)
+  const body = await readBody<{ full_name?: string, email?: string, password?: string, role?: Role, phone?: string, gender?: Gender }>(event)
 
   const fullName = body.full_name?.trim()
   const email = body.email?.trim().toLowerCase()
@@ -22,6 +24,9 @@ export default defineEventHandler(async (event) => {
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw createError({ statusCode: 400, statusMessage: 'بريد إلكتروني غير صحيح.' })
   if (password.length < 8) throw createError({ statusCode: 400, statusMessage: 'كلمة المرور 8 أحرف على الأقل.' })
   if (!role || !ALLOWED_ROLES.includes(role)) throw createError({ statusCode: 400, statusMessage: 'الدور غير صالح.' })
+  // جنس المختبِر يحدّد حلقات جنسه في الاقتراح التلقائي — مطلوب له وحده
+  const gender = role === 'examiner' && body.gender && GENDERS.includes(body.gender) ? body.gender : null
+  if (role === 'examiner' && !gender) throw createError({ statusCode: 400, statusMessage: 'حدّد جنس المختبِر.' })
 
   // 1) إنشاء حساب المصادقة (مؤكَّد البريد مباشرةً)
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
@@ -44,6 +49,7 @@ export default defineEventHandler(async (event) => {
     email,
     role,
     phone,
+    ...(gender ? { gender } : {}),
     status: 'active',
     must_change_password: true,
     assigned_by: user.id

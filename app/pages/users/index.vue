@@ -5,11 +5,12 @@
  */
 import type { Database } from '~/types/database.types'
 import { DEFAULT_PASSWORD } from '~/constants/auth'
+import { ROLE_LABEL, type Role } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'إدارة المستخدمين — ترجمان' })
 
-type Role = Database['public']['Enums']['user_role']
+type Gender = Database['public']['Enums']['gender_type']
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 type UserRow = ProfileRow & { assigner: { full_name: string } | null }
 
@@ -19,11 +20,8 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 const isManager = computed(() => myRole.value === 'manager')
 
-const ROLE_LABEL: Record<Role, string> = {
-  manager: 'المدير', quality: 'مشرف الجودة', supervisor: 'المشرف', teacher: 'المعلم'
-}
-const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success'> = {
-  manager: 'primary', quality: 'secondary', supervisor: 'info', teacher: 'success'
+const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning'> = {
+  manager: 'primary', quality: 'secondary', supervisor: 'info', teacher: 'success', examiner: 'warning'
 }
 const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
   'users-list',
@@ -52,7 +50,8 @@ const chipOptions = computed(() => ([
   { value: 'manager' as const, label: 'المديرون' },
   { value: 'quality' as const, label: 'الجودة' },
   { value: 'supervisor' as const, label: 'المشرفون' },
-  { value: 'teacher' as const, label: 'المعلمون' }
+  { value: 'teacher' as const, label: 'المعلمون' },
+  { value: 'examiner' as const, label: 'المختبِرون' }
 ]).map(c => ({ ...c, count: countFor(c.value) })))
 const filteredUsers = computed(() => {
   const list = users.value ?? []
@@ -75,15 +74,17 @@ function initialOf(name: string) {
 // ── إنشاء مستخدم ──
 const modalOpen = ref(false)
 const creating = ref(false)
-const form = reactive({ full_name: '', email: '', password: DEFAULT_PASSWORD, role: 'teacher' as Role, phone: '' })
+const form = reactive({ full_name: '', email: '', password: DEFAULT_PASSWORD, role: 'teacher' as Role, phone: '', gender: 'male' as Gender })
 const roleItems = [
   { label: 'معلم', value: 'teacher' },
   { label: 'مشرف ميداني', value: 'supervisor' },
   { label: 'مشرف جودة', value: 'quality' },
+  { label: 'مختبِر', value: 'examiner' },
   { label: 'مدير', value: 'manager' }
 ]
+const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
 function openCreate() {
-  Object.assign(form, { full_name: '', email: '', password: DEFAULT_PASSWORD, role: 'teacher', phone: '' })
+  Object.assign(form, { full_name: '', email: '', password: DEFAULT_PASSWORD, role: 'teacher', phone: '', gender: 'male' })
   modalOpen.value = true
 }
 function validate(s: typeof form) {
@@ -357,6 +358,20 @@ async function confirmReset() {
               />
             </UFormField>
           </div>
+          <UFormField
+            v-if="form.role === 'examiner'"
+            label="الجنس"
+            name="gender"
+            hint="يُقترح المختبِر تلقائياً لحلقات جنسه"
+          >
+            <USelect
+              v-model="form.gender"
+              :items="genderItems"
+              size="lg"
+              class="w-full"
+              :ui="{ base: 'rounded-[13px]' }"
+            />
+          </UFormField>
           <div class="form-actions">
             <UButton
               label="إلغاء"

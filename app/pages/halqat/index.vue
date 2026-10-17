@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * الحلقات (§4.13) — للمدير فقط (RLS: halaqat_write = is_manager).
- * إنشاء/تعديل/حذف حلقة وتعيين معلّم ومشرف لها، مع تصفية بالجنس والحالة.
+ * إنشاء/تعديل/حذف حلقة وتعيين معلّم ومشرف ومختبِر لها، مع تصفية بالجنس والحالة.
+ * المختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنس الحلقة.
  */
 import type { Database } from '~/types/database.types'
 
@@ -14,9 +15,11 @@ type Status = Database['public']['Enums']['halaqa_status']
 type HalaqaRow = Database['public']['Tables']['halaqat']['Row'] & {
   teacher: { full_name: string } | null
   supervisor: { full_name: string } | null
+  examiner: { full_name: string } | null
   student_count: { count: number }[]
 }
 type NameRow = { id: string, full_name: string }
+type ExaminerRow = NameRow & { gender: Gender | null }
 
 const supabase = useSupabaseClient<Database>()
 const { role: myRole } = useProfile()
@@ -32,7 +35,7 @@ const { data: halqat, refresh, pending } = useLazyAsyncData<HalaqaRow[]>(
   async () => {
     const { data, error } = await supabase
       .from('halaqat')
-      .select('*, teacher:teacher_id(full_name), supervisor:supervisor_id(full_name), student_count:students(count)')
+      .select('*, teacher:teacher_id(full_name), supervisor:supervisor_id(full_name), examiner:examiner_id(full_name), student_count:students(count)')
       .order('created_at', { ascending: false })
       .returns<HalaqaRow[]>()
     if (error) {
@@ -49,6 +52,11 @@ const { data: teachers } = useLazyAsyncData<NameRow[]>('teachers-options', async
 }, { server: false, default: () => [] })
 const { data: supervisors } = useLazyAsyncData<NameRow[]>('supervisors-options', async () => {
   const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'supervisor').eq('status', 'active').order('full_name')
+  return data ?? []
+}, { server: false, default: () => [] })
+
+const { data: examiners } = useLazyAsyncData<ExaminerRow[]>('examiners-options', async () => {
+  const { data } = await supabase.from('profiles').select('id, full_name, gender').eq('role', 'examiner').eq('status', 'active').order('full_name')
   return data ?? []
 }, { server: false, default: () => [] })
 
@@ -81,6 +89,7 @@ const columns = computed(() => {
     { key: 'name', label: 'الحلقة' },
     { key: 'teacher', label: 'المعلّم' },
     { key: 'supervisor', label: 'المشرف' },
+    { key: 'examiner', label: 'المختبِر' },
     { key: 'gender', label: 'الجنس' },
     { key: 'students', label: 'الطلاب' },
     { key: 'time', label: 'الوقت اليومي' },
@@ -94,15 +103,32 @@ const modalOpen = ref(false)
 const saving = ref(false)
 const editingId = ref<string | null>(null)
 const form = reactive({
-  name: '', teacher_id: '', supervisor_id: NO_SUP, daily_time: '',
+  name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: NO_SUP, daily_time: '',
   gender: 'male' as Gender, classification: 'a' as Classification, status: 'active' as Status
 })
 const genderItems = [{ label: 'بنين', value: 'male' }, { label: 'بنات', value: 'female' }]
+
+// المختبِرون من جنس الحلقة (ومَن لم يُحدَّد جنسه) — والاقتراح حين يكون واحداً فقط
+const examinersFor = (g: Gender) => (examiners.value ?? []).filter(e => !e.gender || e.gender === g)
+const examinerItems = computed(() => [
+  { label: 'بلا مختبِر', value: NO_SUP },
+  ...examinersFor(form.gender).map(e => ({ label: e.full_name, value: e.id }))
+])
+function suggestedExaminer(g: Gender) {
+  const exact = (examiners.value ?? []).filter(e => e.gender === g)
+  return exact.length === 1 ? exact[0]!.id : NO_SUP
+}
+// تغيير جنس الحلقة يُسقط مختبِراً من الجنس الآخر ويقترح البديل (ولا يمسّ مختبِراً
+// غير ظاهرٍ في القائمة — كأن يكون معطَّلاً — كي لا يُفرَّغ إسنادٌ قائم بصمت)
+watch(() => form.gender, (g) => {
+  const cur = (examiners.value ?? []).find(e => e.id === form.examiner_id)
+  if (form.examiner_id === NO_SUP || (cur?.gender && cur.gender !== g)) form.examiner_id = suggestedExaminer(g)
+})
 const classItems = [{ label: 'الفئة أ', value: 'a' }, { label: 'الفئة ب', value: 'b' }]
 const statusItems = [{ label: 'نشطة', value: 'active' }, { label: 'متوقفة', value: 'stopped' }]
 function openCreate() {
   editingId.value = null
-  Object.assign(form, { name: '', teacher_id: '', supervisor_id: NO_SUP, daily_time: '', gender: 'male', classification: 'a', status: 'active' })
+  Object.assign(form, { name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: suggestedExaminer('male'), daily_time: '', gender: 'male', classification: 'a', status: 'active' })
   modalOpen.value = true
 }
 function openEdit(h: HalaqaRow) {
@@ -111,6 +137,7 @@ function openEdit(h: HalaqaRow) {
     name: h.name,
     teacher_id: h.teacher_id,
     supervisor_id: h.supervisor_id ?? NO_SUP,
+    examiner_id: h.examiner_id ?? NO_SUP,
     daily_time: h.daily_time ? h.daily_time.slice(0, 5) : '',
     gender: h.gender ?? 'male',
     classification: h.classification ?? 'a',
@@ -131,6 +158,7 @@ async function save() {
       name: form.name.trim(),
       teacher_id: form.teacher_id,
       supervisor_id: form.supervisor_id === NO_SUP ? null : form.supervisor_id,
+      examiner_id: form.examiner_id === NO_SUP ? null : form.examiner_id,
       daily_time: form.daily_time || null,
       gender: form.gender,
       classification: form.classification,
@@ -254,6 +282,12 @@ async function confirmDelete() {
             class="muted"
             :class="{ orphan: !row.supervisor }"
           >{{ row.supervisor?.full_name || 'بلا مشرف' }}</span>
+        </template>
+        <template #examiner="{ row }">
+          <span
+            class="muted"
+            :class="{ orphan: !row.examiner }"
+          >{{ row.examiner?.full_name || 'بلا مختبِر' }}</span>
         </template>
         <template #gender="{ row }">
           <UBadge
@@ -403,6 +437,17 @@ async function confirmDelete() {
               />
             </UFormField>
           </div>
+          <UFormField
+            label="المختبِر"
+            name="examiner_id"
+            hint="تذهب ترشيحات الحلقة إليه ليرصدها"
+          >
+            <UiSelect
+              v-model="form.examiner_id"
+              :items="examinerItems"
+              size="lg"
+            />
+          </UFormField>
           <div class="row">
             <UFormField
               label="التصنيف"

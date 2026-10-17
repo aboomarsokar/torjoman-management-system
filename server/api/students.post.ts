@@ -1,5 +1,5 @@
 import { requireAdminManager } from '../utils/supabaseAdmin'
-import { authCreateError, parseStudentInput } from '../utils/accountInput'
+import { authCreateError, DUPLICATE_IDENTITY_MESSAGE, parseStudentInput, studentRowError } from '../utils/accountInput'
 import { studentEmailFromIdentity } from '~/constants/accounts'
 
 /**
@@ -12,6 +12,10 @@ export default defineEventHandler(async (event) => {
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
   const { fullName, gender, nationalId, halaqaId, birthDate, guardianPhone, password } = parsed.value
 
+  // فحصٌ مسبق: صفّ طالبٍ قديمٌ بلا حساب يحمل الهوية نفسها — فلا يُنشأ حساب Auth ثم يُحذف
+  const { data: existing } = await admin.from('students').select('id').eq('national_id', nationalId).maybeSingle()
+  if (existing) throw createError({ statusCode: 409, statusMessage: DUPLICATE_IDENTITY_MESSAGE })
+
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
     email: studentEmailFromIdentity(nationalId),
     password,
@@ -19,7 +23,7 @@ export default defineEventHandler(async (event) => {
     user_metadata: { full_name: fullName }
   })
   if (authErr || !created.user) {
-    const failure = authCreateError(authErr?.message, 'رقم الهوية مسجّل لطالب آخر.')
+    const failure = authCreateError(authErr?.message, DUPLICATE_IDENTITY_MESSAGE)
     throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
   }
   const uid = created.user.id
@@ -46,7 +50,8 @@ export default defineEventHandler(async (event) => {
   if (stuErr || !student) {
     await admin.from('profiles').delete().eq('id', uid)
     await admin.auth.admin.deleteUser(uid)
-    throw createError({ statusCode: 400, statusMessage: `تعذّر حفظ الطالب: ${stuErr?.message ?? ''}` })
+    const failure = studentRowError(stuErr ?? { message: '' })
+    throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
   }
 
   return { id: student.id, user_id: uid }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  authCreateError, parseResetPasswordInput, parseStaffInput, parseStudentInput, staffProfileError, trimmedString
+  authCreateError, parseResetPasswordInput, parseStaffInput, parseStudentInput, staffProfileError, studentRowError, trimmedString
 } from './accountInput'
 
 const staff = { full_name: ' أحمد ', role: 'teacher', gender: 'male', password: '12345678' }
@@ -80,6 +80,16 @@ describe('staffProfileError', () => {
   it('23505 لدورٍ آخر ← 409 عامّة، وغيرها 500', () => {
     expect(staffProfileError({ code: '23505', message: 'x' }, 'teacher').statusCode).toBe(409)
     expect(staffProfileError({ code: '42501', message: 'denied' }, 'admin_manager')).toEqual({ statusCode: 500, message: 'تعذّر حفظ الملف: denied' })
+  })
+})
+
+describe('studentRowError', () => {
+  it('تكرار الهوية 23505 ← 409 بالرسالة العربية دون نصّ Postgres', () => {
+    const r = studentRowError({ code: '23505', message: 'duplicate key value violates unique constraint "students_national_id_key"' })
+    expect(r).toEqual({ statusCode: 409, message: 'رقم الهوية مسجّل لطالب آخر.' })
+  })
+  it('غيره ← 400', () => {
+    expect(studentRowError({ code: '23503', message: 'fk' })).toEqual({ statusCode: 400, message: 'تعذّر حفظ الطالب: fk' })
   })
 })
 

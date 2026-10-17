@@ -117,6 +117,14 @@ export function staffProfileError(error: { code?: string, message: string }, rol
   return { statusCode: 500, message: `تعذّر حفظ الملف: ${error.message}` }
 }
 
+export const DUPLICATE_IDENTITY_MESSAGE = 'رقم الهوية مسجّل لطالب آخر.'
+
+/** يترجم خطأ إدراج صفّ الطالب: تفرّد الهوية ← 409 بالعربية، وما عداه 400 (لا نصّ Postgres الخام للتكرار). */
+export function studentRowError(error: { code?: string, message: string }): { statusCode: number, message: string } {
+  if (error.code === UNIQUE_VIOLATION) return { statusCode: 409, message: DUPLICATE_IDENTITY_MESSAGE }
+  return { statusCode: 400, message: `تعذّر حفظ الطالب: ${error.message}` }
+}
+
 /** يترجم خطأ إنشاء حساب Auth: التكرار يعني أن المعرّف مسجّل لحسابٍ آخر. */
 export function authCreateError(message: string | undefined, duplicateMessage: string): { statusCode: number, message: string } {
   if (/already|exists|registered/i.test(message ?? '')) return { statusCode: 409, message: duplicateMessage }

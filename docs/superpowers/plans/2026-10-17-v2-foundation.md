@@ -11,8 +11,9 @@
 **المواصفة:** `docs/superpowers/specs/2026-10-17-v2-foundation-design.md`
 
 ## Global Constraints
-- الأدوار بالضبط: `project_supervisor`, `admin_manager`, `technical_manager`, `field_supervisor`, `examiner`, `teacher`, `student`.
-- `profiles.section` ∈ `all` | `male` | `female`. المدير الإداري والفني `all`، والمديرة الإدارية `female`.
+- الأدوار بالضبط (ثمانية، قرار المستخدم 2026-10-17 بعد مراجعة Task 2): `project_supervisor`, `admin_manager`, `technical_manager`, `women_admin`, `field_supervisor`, `examiner`, `teacher`, `student`.
+- **لا عمود `section`**: النطاق في الدور نفسه. المدير الإداري والمدير الفني: القسمان، و**شخصٌ واحد نشط لكلٍّ منهما** (فهرس فريد جزئي). `women_admin` (المديرة الإدارية): قسم البنات فقط — ترى كل شيء فيه، وتُسند الطالبات للحلقات، وتعتمد التقارير الشهرية وكشوف الحوافز؛ **ولا تنشئ حسابات** (الإنشاء للمدير الإداري وحده).
+- **تعديل لاحق للمهام 3 و5 و6:** كل ذكرٍ لـ `Section`/`section`/`SECTION_LABEL`/`isFullAdmin`/`assertInSection`/`current_user_section` في نصّها أدناه **ملغى** — المكافئ: `isAdmin` (المدير الإداري) و`isWomenAdmin`، ونطاق المديرة يُحسب من دورها (حلقات `gender = 'female'`).
 - الرقم الوظيفي نصّ 4 خانات بالضبط، يبدأ `1001`، فريد. رقم الهوية 9 خانات.
 - النطاقات: `staff.torjoman.org` و`students.torjoman.org` — لا يُرسل إليهما بريد.
 - رسالة رفض الدخول واحدة: «الرقم أو كلمة المرور غير صحيحة.»

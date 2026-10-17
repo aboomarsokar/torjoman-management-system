@@ -20,9 +20,10 @@ const isTeacher = computed(() => role.value === 'teacher')
 const isSupervisor = computed(() => role.value === 'supervisor')
 const isQuality = computed(() => role.value === 'quality')
 
-// المختبِر لا لوحة له — عمله كلّه في الاختبارات (الدخول يوجّه إلى /dashboard)
+// المختبِر لا لوحة له — عمله كلّه في الاختبارات؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)
 watch(role, (r) => {
   if (r === 'examiner') navigateTo('/exams', { replace: true })
+  if (r === 'student') navigateTo('/me', { replace: true })
 }, { immediate: true })
 
 // ── أعداد البطاقات (للمدير) ──

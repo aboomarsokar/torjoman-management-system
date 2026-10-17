@@ -1,29 +1,44 @@
 import type { Database } from '~/types/database.types'
+import { classifyLoginId, LOGIN_ID_ERROR } from '~/constants/identity'
+import { studentEmailFromIdentity } from '~/constants/accounts'
+
+/** رسالة رفض الدخول الموحّدة — لا تفرّق بين رقم خاطئ وكلمة مرور خاطئة. */
+const LOGIN_REJECTION = 'الرقم أو كلمة المرور غير صحيحة.'
 
 /**
- * المصادقة — غلاف مُنمّط حول Supabase Auth.
- * الدخول للعاملين بالبريد فقط (الطالب ليس مستخدماً — لا دخول).
- * يعرّض المستخدم الحالي ودوالّ الدخول/الخروج/استعادة كلمة المرور.
+ * المصادقة — الموظف برقمه الوظيفي (عبر الخادم)، والطالب برقم هويته (مباشرةً).
+ * لا بريد ولا استعادة ذاتية: كلمة المرور يعيد تعيينها المدير الإداري.
  */
 export function useAuth() {
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
 
   /**
-   * دخول بالبريد وكلمة المرور. يرمي الخطأ ليلتقطه المستدعي عبر useErrorHandler.
-   * يمنع الحساب المعطَّل: لو كانت حالته disabled يُسجَّل خروجه فوراً ويُرمى account_disabled.
+   * دخول برقم وظيفي (4 خانات) أو رقم هوية (9 خانات) وكلمة مرور.
+   * يرمي الخطأ ليلتقطه المستدعي عبر useErrorHandler.
+   * الحساب غير النشط: يُسجَّل خروجه فوراً ويُرمى account_disabled.
    */
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+  async function signInWithIdentifier(identifier: string, password: string) {
+    const id = classifyLoginId(identifier)
+    if (id.kind === 'invalid') throw new Error(LOGIN_ID_ERROR)
+
+    if (id.kind === 'staff') {
+      const tokens = await $fetch<{ accessToken: string, refreshToken: string }>('/api/auth/staff-login', {
+        method: 'POST', body: { employeeNumber: id.id, password }
+      })
+      const { error } = await supabase.auth.setSession({ access_token: tokens.accessToken, refresh_token: tokens.refreshToken })
+      if (error) throw new Error(LOGIN_REJECTION)
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email: studentEmailFromIdentity(id.id), password })
+      if (error) throw new Error(LOGIN_REJECTION)
+    }
 
     const { data: auth } = await supabase.auth.getUser()
-    if (auth.user) {
-      const { data: profile } = await supabase.from('profiles').select('status').eq('id', auth.user.id).single()
-      if (profile?.status === 'disabled') {
-        await supabase.auth.signOut()
-        throw new Error('account_disabled')
-      }
+    if (!auth.user) throw new Error(LOGIN_REJECTION)
+    const { data: profile } = await supabase.from('profiles').select('status').eq('id', auth.user.id).single()
+    if (profile?.status !== 'active') {
+      await supabase.auth.signOut()
+      throw new Error('account_disabled')
     }
   }
 
@@ -33,12 +48,5 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
-  /** إرسال رابط استعادة كلمة المرور إلى البريد (استرجاع ذاتي — §4.1). */
-  async function sendPasswordReset(email: string) {
-    const redirectTo = import.meta.client ? `${window.location.origin}/auth/confirm` : undefined
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-    if (error) throw error
-  }
-
-  return { user, signIn, signOut, sendPasswordReset }
+  return { user, signInWithIdentifier, signOut }
 }

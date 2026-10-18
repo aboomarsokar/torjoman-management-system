@@ -11,10 +11,10 @@ describe('hasArabic', () => {
 
 describe('rawErrorText', () => {
   it('يفضّل statusMessage القادم من الخادم على الرسالة المركّبة', () => {
-    const fetchError = Object.assign(new Error('[POST] "/api/auth/staff-login": 401 الرقم أو كلمة المرور غير صحيحة.'), {
-      statusMessage: 'الرقم أو كلمة المرور غير صحيحة.'
+    const fetchError = Object.assign(new Error('[POST] "/api/users": 409 يوجد مدير فني نشط بالفعل.'), {
+      statusMessage: 'يوجد مدير فني نشط بالفعل.'
     })
-    expect(rawErrorText(fetchError)).toBe('الرقم أو كلمة المرور غير صحيحة.')
+    expect(rawErrorText(fetchError)).toBe('يوجد مدير فني نشط بالفعل.')
   })
 
   it('يقرأ data.statusMessage عند غياب statusMessage', () => {

@@ -1,13 +1,14 @@
 import type { Database } from '~/types/database.types'
 import { classifyLoginId, LOGIN_ID_ERROR } from '~/constants/identity'
-import { studentEmailFromIdentity } from '~/constants/accounts'
+import { staffEmailFromNumber, studentEmailFromIdentity } from '~/constants/accounts'
+import { LOGIN_REJECTION } from '~/constants/auth'
+import { loginErrorMessage } from '~/utils/loginError'
 import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
 
-/** رسالة رفض الدخول الموحّدة — لا تفرّق بين رقم خاطئ وكلمة مرور خاطئة. */
-const LOGIN_REJECTION = 'الرقم أو كلمة المرور غير صحيحة.'
-
 /**
- * المصادقة — الموظف برقمه الوظيفي (عبر الخادم)، والطالب برقم هويته (مباشرةً).
+ * المصادقة — الموظف برقمه الوظيفي والطالب برقم هويته، كلاهما من المتصفّح مباشرةً ببريدٍ داخليّ مشتقّ.
+ * لماذا لا خادم وسيط للموظف: الدخول من عناوين Vercel القليلة يُشرك الجميع في حدّ محاولات GoTrue لكل IP،
+ * ولا يضيف أماناً (اشتقاق البريد من الرقم معروضٌ في الحزمة أصلاً).
  * لا بريد ولا استعادة ذاتية: كلمة المرور يعيد تعيينها المدير الإداري.
  */
 export function useAuth() {
@@ -16,23 +17,16 @@ export function useAuth() {
 
   /**
    * دخول برقم وظيفي (4 خانات) أو رقم هوية (9 خانات) وكلمة مرور.
-   * يرمي الخطأ ليلتقطه المستدعي عبر useErrorHandler.
+   * يرمي الخطأ ليلتقطه المستدعي عبر useErrorHandler: رفضٌ واحد، أو «محاولات كثيرة» عند تجاوز الحدّ.
    * الحساب غير النشط: يُسجَّل خروجه فوراً ويُرمى account_disabled.
    */
   async function signInWithIdentifier(identifier: string, password: string) {
     const id = classifyLoginId(identifier)
     if (id.kind === 'invalid') throw new Error(LOGIN_ID_ERROR)
 
-    if (id.kind === 'staff') {
-      const tokens = await $fetch<{ accessToken: string, refreshToken: string }>('/api/auth/staff-login', {
-        method: 'POST', body: { employeeNumber: id.id, password }
-      })
-      const { error } = await supabase.auth.setSession({ access_token: tokens.accessToken, refresh_token: tokens.refreshToken })
-      if (error) throw new Error(LOGIN_REJECTION)
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email: studentEmailFromIdentity(id.id), password })
-      if (error) throw new Error(LOGIN_REJECTION)
-    }
+    const email = id.kind === 'staff' ? staffEmailFromNumber(id.id) : studentEmailFromIdentity(id.id)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw new Error(loginErrorMessage(error))
 
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) throw new Error(LOGIN_REJECTION)

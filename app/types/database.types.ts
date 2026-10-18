@@ -1316,6 +1316,16 @@ export type Database = {
       is_halaqa_teacher: { Args: { hid: string }, Returns: boolean }
       is_project_supervisor: { Args: never, Returns: boolean }
       is_women_admin: { Args: never, Returns: boolean }
+      my_approved_pages: { Args: never, Returns: number }
+      my_exam_results: {
+        Args: never
+        Returns: {
+          exam_date: string
+          exam_plan_id: number
+          passed: boolean
+          total_score: number
+        }[]
+      }
       my_halaqa_id: { Args: never, Returns: string }
       my_student_id: { Args: never, Returns: string }
     }

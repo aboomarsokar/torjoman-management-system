@@ -146,6 +146,7 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
           :student-id="me.id"
           :quran-parts="me.quran_parts"
           :enrollment-date="me.enrollment_date"
+          own-records
         />
       </template>
     </ClientOnly>

@@ -576,3 +576,5 @@ news (الأخبار — المدير ينشرها، عامّة على Landing)
 > **تذكير:** هذه مسوّدة. عند الاستقرار → أول migration → تتحوّل لمصدر حقيقة حيّ يُحدَّث مع كل migration لاحق.
 
 > **profiles.must_change_password** (boolean, default false): يُضبط true عند إنشاء حساب عامل بالكلمة الافتراضية، ويصير false بعد تغيير العامل كلمته. (migration 20260624130000)
+
+> **دالّتا رحلة الطالب** (`20261018083507_student_journey_rpcs.sql`): `my_exam_results()` تُرجع `(exam_plan_id, passed, total_score, exam_date)` لنتائج الطالب نفسه، و`my_approved_pages()` مجموع `memorization_pages` من تقارير حلقته **المعتمدة** — كلتاهما `SECURITY DEFINER` + `search_path = public` مقصورتان على `my_student_id()` (لا `teacher_note` ولا غير صفّه)، `EXECUTE` لـ`authenticated` وحده. سببهما أنّ الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) فتصله التضمينات `null`.

@@ -648,3 +648,136 @@ update profiles set gender = 'female' where id = '00000000-0000-4000-8000-000000
 reset role;
 select gender, photo_path from profiles where id = '00000000-0000-4000-8000-0000000006b1';
 rollback;
+
+
+-- ============================================================================
+-- رحلة الطالب في /me: my_exam_results() و my_approved_pages()
+-- الهجرة: supabase/migrations/20261018083507_student_journey_rpcs.sql (Task 7، جولة الإصلاح 1)
+-- التجهيز: معلّم وحلقة بنين مؤقّتان (البيانات التجريبية مُسحت) وثلاثة طلاب (أ، ب، ج) فيها؛ لأ نتيجةٌ بدرجة 90 ومحطّتُها محدّدة، ولب
+-- نتيجةٌ بدرجة 70؛ ولج لا شيء. تقريران: معتمدٌ (أ: 30 صفحة، ب: 7) ومُرسَلٌ (أ: 50 صفحة لا تُحتسب).
+-- (memorization_pages مولَّد = إلى − من؛ passed وtotal_score مولَّدان، وكل سؤال 0–10: الدرجة 90 = عشرة تسعات (اجتاز)، و70 = عشرة سبعات (لم يجتز).)
+-- التجهيز بصلاحية postgres قبل الانتحال فلا تعترضه الحراس (auth.uid() فارغ).
+-- ============================================================================
+
+-- (ر-1) الطالب أ: نتيجتُه وحدَها بمحطّتها، وصفحاتُه المعتمدة وحدَها، والتضمينُ المباشر ما زال أعمى (سبب الدالّتين)
+-- المتوقّع: results = 1، score = 90، plan_ok = true، pages = 30، direct_item_visible = 0، direct_report_visible = 0
+-- الفعلي:   1، 90، true، 30، 0، 0 ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b9','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b9','teacher','معلم اختبار','male','active','9609');
+insert into halaqat (id, name, teacher_id, gender) values
+  ('00000000-0000-4000-8000-0000000006b0','حلقة اختبار','00000000-0000-4000-8000-0000000006b9','male');
+insert into auth.users (id, aud, role) values
+  ('00000000-0000-4000-8000-0000000006c1','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006c2','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006c3','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status) values
+  ('00000000-0000-4000-8000-0000000006c1','student','طالب اختبار أ','male','active'),
+  ('00000000-0000-4000-8000-0000000006c2','student','طالب اختبار ب','male','active'),
+  ('00000000-0000-4000-8000-0000000006c3','student','طالب اختبار ج','male','active');
+insert into students (id, full_name, gender, user_id, halaqa_id) values
+  ('00000000-0000-4000-8000-0000000006d1','طالب اختبار أ','male','00000000-0000-4000-8000-0000000006c1','00000000-0000-4000-8000-0000000006b0'),
+  ('00000000-0000-4000-8000-0000000006d2','طالب اختبار ب','male','00000000-0000-4000-8000-0000000006c2','00000000-0000-4000-8000-0000000006b0'),
+  ('00000000-0000-4000-8000-0000000006d3','طالب اختبار ج','male','00000000-0000-4000-8000-0000000006c3','00000000-0000-4000-8000-0000000006b0');
+insert into exam_lists (id, teacher_id, halaqa_id, week_date) values
+  ('00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006b9','00000000-0000-4000-8000-0000000006b0','2026-10-01');
+insert into exam_list_items (id, exam_list_id, student_id, exam_plan_id, teacher_note) values
+  ('00000000-0000-4000-8000-0000000006f1','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d1',(select min(id) from exam_plan),'ملاحظة سرّية'),
+  ('00000000-0000-4000-8000-0000000006f2','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d2',(select min(id) from exam_plan),'ملاحظة سرّية');
+insert into exam_results (student_id, exam_list_item_id, pass_mark_snapshot, q1_memorization, q1_understanding, q1_reflection, q2_memorization, q2_understanding, q2_reflection, q3_memorization, q3_understanding, q3_reflection, tajweed_score, exam_date) values
+  ('00000000-0000-4000-8000-0000000006d1','00000000-0000-4000-8000-0000000006f1',80,9,9,9,9,9,9,9,9,9,9,'2026-10-02'),
+  ('00000000-0000-4000-8000-0000000006d2','00000000-0000-4000-8000-0000000006f2',80,7,7,7,7,7,7,7,7,7,7,'2026-10-02');
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006b0',8,2026,'approved'),
+  ('00000000-0000-4000-8000-0000000006a2','00000000-0000-4000-8000-0000000006b0',9,2026,'submitted');
+insert into monthly_report_students (report_id, student_id, memorization_from, memorization_to) values
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d1',0,30),
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d2',0,7),
+  ('00000000-0000-4000-8000-0000000006a2','00000000-0000-4000-8000-0000000006d1',0,50);
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006c1', 'role', 'authenticated')::text, true);
+insert into _r select 'results', count(*)::text from my_exam_results();
+insert into _r select 'score', coalesce(string_agg(total_score::text, ','), '') from my_exam_results();
+insert into _r select 'plan_ok', bool_and(exam_plan_id is not null)::text from my_exam_results();
+insert into _r select 'pages', my_approved_pages()::text;
+insert into _r select 'direct_item_visible', count(*)::text from exam_list_items;
+insert into _r select 'direct_report_visible', count(*)::text from monthly_reports where id in ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006a2');
+reset role;
+select * from _r;
+rollback;
+
+
+-- (ر-2) الطالب ب (نتيجتُه وصفحاتُه غيرُ أ)، والطالب ج (لا شيء)، والمعلّم (ليس طالباً): كلٌّ يرى ما يخصّه فقط
+-- المتوقّع: b_results = 1، b_score = 70، b_pages = 7 ؛ c_results = 0، c_pages = 0 ؛ teacher_results = 0، teacher_pages = 0
+-- الفعلي:   1، 70، 7 ؛ 0، 0 ؛ 0، 0 ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b9','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b9','teacher','معلم اختبار','male','active','9609');
+insert into halaqat (id, name, teacher_id, gender) values
+  ('00000000-0000-4000-8000-0000000006b0','حلقة اختبار','00000000-0000-4000-8000-0000000006b9','male');
+insert into auth.users (id, aud, role) values
+  ('00000000-0000-4000-8000-0000000006c1','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006c2','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006c3','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status) values
+  ('00000000-0000-4000-8000-0000000006c1','student','طالب اختبار أ','male','active'),
+  ('00000000-0000-4000-8000-0000000006c2','student','طالب اختبار ب','male','active'),
+  ('00000000-0000-4000-8000-0000000006c3','student','طالب اختبار ج','male','active');
+insert into students (id, full_name, gender, user_id, halaqa_id) values
+  ('00000000-0000-4000-8000-0000000006d1','طالب اختبار أ','male','00000000-0000-4000-8000-0000000006c1','00000000-0000-4000-8000-0000000006b0'),
+  ('00000000-0000-4000-8000-0000000006d2','طالب اختبار ب','male','00000000-0000-4000-8000-0000000006c2','00000000-0000-4000-8000-0000000006b0'),
+  ('00000000-0000-4000-8000-0000000006d3','طالب اختبار ج','male','00000000-0000-4000-8000-0000000006c3','00000000-0000-4000-8000-0000000006b0');
+insert into exam_lists (id, teacher_id, halaqa_id, week_date) values
+  ('00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006b9','00000000-0000-4000-8000-0000000006b0','2026-10-01');
+insert into exam_list_items (id, exam_list_id, student_id, exam_plan_id, teacher_note) values
+  ('00000000-0000-4000-8000-0000000006f1','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d1',(select min(id) from exam_plan),'ملاحظة سرّية'),
+  ('00000000-0000-4000-8000-0000000006f2','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d2',(select min(id) from exam_plan),'ملاحظة سرّية');
+insert into exam_results (student_id, exam_list_item_id, pass_mark_snapshot, q1_memorization, q1_understanding, q1_reflection, q2_memorization, q2_understanding, q2_reflection, q3_memorization, q3_understanding, q3_reflection, tajweed_score, exam_date) values
+  ('00000000-0000-4000-8000-0000000006d1','00000000-0000-4000-8000-0000000006f1',80,9,9,9,9,9,9,9,9,9,9,'2026-10-02'),
+  ('00000000-0000-4000-8000-0000000006d2','00000000-0000-4000-8000-0000000006f2',80,7,7,7,7,7,7,7,7,7,7,'2026-10-02');
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006b0',8,2026,'approved');
+insert into monthly_report_students (report_id, student_id, memorization_from, memorization_to) values
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d1',0,30),
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d2',0,7);
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006c2', 'role', 'authenticated')::text, true);
+insert into _r select 'b_results', count(*)::text from my_exam_results();
+insert into _r select 'b_score', coalesce(string_agg(total_score::text, ','), '') from my_exam_results();
+insert into _r select 'b_pages', my_approved_pages()::text;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006c3', 'role', 'authenticated')::text, true);
+insert into _r select 'c_results', count(*)::text from my_exam_results();
+insert into _r select 'c_pages', my_approved_pages()::text;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b9', 'role', 'authenticated')::text, true);
+insert into _r select 'teacher_results', count(*)::text from my_exam_results();
+insert into _r select 'teacher_pages', my_approved_pages()::text;
+reset role;
+select * from _r;
+rollback;
+
+
+-- (ر-3) الدالّتان لا تنفّذهما anon (سُحبتا من PUBLIC وanon، والمنحُ لـauthenticated)
+-- المتوقّع: ERROR 42501 permission denied for function my_exam_results
+-- الفعلي:   ERROR 42501 permission denied for function my_exam_results ✅
+begin;
+set local role anon;
+select * from my_exam_results();
+rollback;
+
+
+-- (ر-4) المنحُ: authenticated وحده يملك EXECUTE
+-- المتوقّع: auth_exec = true، anon_exec = false، public_exec = false (للدالّتين)
+-- الفعلي:   true، false، false ✅
+select p.proname,
+       has_function_privilege('authenticated', p.oid, 'execute') auth_exec,
+       has_function_privilege('anon', p.oid, 'execute') anon_exec,
+       has_function_privilege('public', p.oid, 'execute') public_exec
+from pg_proc p
+where p.pronamespace = 'public'::regnamespace and p.proname in ('my_exam_results', 'my_approved_pages')
+order by 1;

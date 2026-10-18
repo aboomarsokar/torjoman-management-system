@@ -3,16 +3,23 @@
  * بطاقة رحلة الطالب على خطة الاختبارات (للقراءة فقط) — مشتركة بين ملف الطالب الداخلي
  * وصفحة «صفحتي». تجلب خطة الاختبارات ونتائج الطالب وصفحات الحفظ المعتمدة وتمرّرها
  * إلى `StudentJourney`. كلّ ما يُجلب خاضعٌ لـRLS: الطالب لا يرى إلا ما يخصّه.
+ *
+ * `ownRecords` (صفحة الطالب /me): الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports`،
+ * فتصله تضمينات المحطّة والاعتماد `null` (محطّاتٌ مجتازةٌ تظهر «مستحقّة» وصفحاتٌ معتمدةٌ تُجمَع صفراً).
+ * فيقرأ عبر `my_exam_results()` و`my_approved_pages()` المقصورتين على سجلّه. مسار العاملين كما هو.
  */
 import type { Database } from '~/types/database.types'
+import { toApprovedPages, toJourneyResults } from '~/utils/journeyInputs'
 
 interface Props {
   studentId: string
   quranParts: number | null
   enrollmentDate: string | null
+  /** الطالب نفسه يعرض رحلته (يقرأ بدالّتيه الخاصّتين لا بالتضمين). */
+  ownRecords?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { ownRecords: false })
 
 const supabase = useSupabaseClient<Database>()
 const { settings: gradeCfg, loadSettings } = useGrades()
@@ -25,7 +32,12 @@ const { data: plan } = useLazyAsyncData('journey-exam-plan', async () => {
 }, { server: false, default: () => [] })
 
 type ResultRow = { passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }
-const { data: examResults } = useLazyAsyncData(() => `journey-results-${props.studentId}`, async () => {
+const { data: examResults } = useLazyAsyncData(() => `journey-results-${props.studentId}-${props.ownRecords}`, async () => {
+  if (props.ownRecords) {
+    const { data, error } = await supabase.rpc('my_exam_results')
+    if (error) console.error('[journey] فشل جلب نتائجي:', error.message)
+    return toJourneyResults(data)
+  }
   const { data } = await supabase
     .from('exam_results')
     .select('passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id)')
@@ -36,7 +48,12 @@ const { data: examResults } = useLazyAsyncData(() => `journey-results-${props.st
 
 // إجمالي صفحات الحفظ من التقارير الشهرية المعتمدة
 type PagesRow = { memorization_pages: number | null, report: { status: string } | null }
-const { data: memorizationPages } = useLazyAsyncData(() => `journey-pages-${props.studentId}`, async () => {
+const { data: memorizationPages } = useLazyAsyncData(() => `journey-pages-${props.studentId}-${props.ownRecords}`, async () => {
+  if (props.ownRecords) {
+    const { data, error } = await supabase.rpc('my_approved_pages')
+    if (error) console.error('[journey] فشل جلب صفحاتي المعتمدة:', error.message)
+    return toApprovedPages(data)
+  }
   const { data } = await supabase
     .from('monthly_report_students')
     .select('memorization_pages, report:report_id(status)')

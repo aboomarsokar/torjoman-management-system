@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * ملف الطالب (§4.23) — عرض تفصيلي لسجلّ الطالب (بلا حساب دخول).
+ * ملف الطالب (§4.23) — عرض تفصيلي لسجلّ الطالب.
  * بيانات أساسية + قرآنية + سكن + وليّ الأمر والتواصل. رحلة الطالب (§4.22)
  * تُضاف مع وحدتي التقارير والاختبارات.
  */
@@ -14,13 +14,14 @@ type StudentRow = Database['public']['Tables']['students']['Row'] & {
 
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
-const { role } = useProfile()
 const { handle } = useErrorHandler()
 const { settings: gradeCfg, loadSettings } = useGrades()
 onMounted(loadSettings)
 const toast = useToast()
 const id = computed(() => String(route.params.id))
-const canManage = computed(() => role.value === 'manager' || role.value === 'teacher')
+const { isAdmin, canAssign, isTeacher, isReadOnly } = usePermissions()
+/** نسخ رابط الاطّلاع لمن يعمل على الطالب؛ وإعادة توليده للمدير الإداري وحده (view_token محميّ في القاعدة). */
+const canManage = computed(() => !isReadOnly.value && (canAssign.value || isTeacher.value))
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامات الأربعة مستقلّة وتعمل بالتوازي تلقائياً
 const { data: student, pending, refresh } = useLazyAsyncData<StudentRow | null>(
@@ -222,6 +223,7 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
               @click="copyLink"
             />
             <UButton
+              v-if="isAdmin"
               icon="i-lucide-refresh-cw"
               color="neutral"
               variant="ghost"

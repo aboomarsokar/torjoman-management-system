@@ -1,10 +1,14 @@
 <script setup lang="ts">
 /**
- * دليل الطلاب (§4.23) — الطالب سجلّ بيانات بلا حساب.
- * قائمة + إضافة/تعديل/حذف وربط بالحلقة، تصفية بالحالة والحلقة.
- * RLS: المدير يدير الكل، المعلّم طلاب حلقته، الحذف للمدير.
+ * دليل الطلاب (§4.23) — لكل طالب حساب يدخل به برقم هويته.
+ * قائمة + إضافة/تعديل/حذف وإسناد للحلقة، تصفية بالحالة والحلقة.
+ * الإضافة للمدير الإداري وحده عبر POST /api/students (ينشئ الحساب في الخطوة نفسها)،
+ * والإسناد (الحلقة) لمن يملكه في نطاقه (canAssign)، والمعلّم يعدّل بيانات طلاب حلقته فقط.
+ * الهوية والجنس للمدير الإداري وحده (حارس القاعدة)، والحذف له.
  */
 import type { Database } from '~/types/database.types'
+import { DEFAULT_PASSWORD } from '~/constants/auth'
+import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الطلاب — ترجمان' })
@@ -17,12 +21,14 @@ type StudentRow = Database['public']['Tables']['students']['Row'] & {
 type HalqaOpt = { id: string, name: string, daily_time: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
-const { role: myRole, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const canManage = computed(() => myRole.value === 'manager' || myRole.value === 'teacher')
-const canDelete = computed(() => myRole.value === 'manager')
+const { isAdmin, canAssign, isTeacher, isReadOnly } = usePermissions()
+/** التعديل: من يملك الإسناد في نطاقه أو معلّم الحلقة — لا مشرف المشروع. */
+const canManage = computed(() => !isReadOnly.value && (canAssign.value || isTeacher.value))
+const canCreate = isAdmin
+const canDelete = isAdmin
 const HALQA_NONE = 'none'
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً
@@ -86,7 +92,8 @@ const columns = computed(() => {
     { key: 'parts', label: 'الأجزاء المحفوظة' },
     { key: 'status', label: 'الحالة' }
   ]
-  return canManage.value ? [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }] : base
+  // عمود الإجراءات للجميع: «عرض الملف» متاح لكل من يرى الطالب، والتعديل والحذف مقيّدان داخله
+  return [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }]
 })
 function initialOf(name: string) {
   return name.trim().charAt(0) || '؟'
@@ -153,19 +160,40 @@ function openEdit(s: StudentRow) {
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
   if (!s.full_name.trim()) errors.push({ name: 'full_name', message: 'اسم الطالب مطلوب.' })
+  // الهوية إلزامية عند الإضافة (معرّف دخول الطالب)، وتُفحص صيغتها متى عدّلها المدير الإداري
+  if ((!editingId.value || isAdmin.value) && !isValidIdentity(s.national_id)) errors.push({ name: 'national_id', message: IDENTITY_ERROR })
   if (s.quran_parts && (Number(s.quran_parts) < 0 || Number(s.quran_parts) > 30)) errors.push({ name: 'quran_parts', message: 'الأجزاء بين 0 و30.' })
   return errors
 }
+/** إضافة طالب (المدير الإداري): الخادم ينشئ الحساب وصفّ الطالب، ثم تُكمَل بقية البيانات بتحديث. */
+async function createStudent(details: Database['public']['Tables']['students']['Update']) {
+  const created = await $fetch('/api/students', {
+    method: 'POST',
+    body: {
+      full_name: form.full_name.trim(),
+      gender: form.gender,
+      national_id: normalizeDigits(form.national_id.trim()),
+      halaqa_id: form.halaqa_id === HALQA_NONE ? undefined : form.halaqa_id,
+      birth_date: form.birth_date || undefined,
+      guardian_phone: form.guardian_phone.trim() || undefined,
+      password: DEFAULT_PASSWORD
+    }
+  })
+  const { error } = await supabase.from('students').update(details).eq('id', created.id)
+  if (error) throw error
+}
+
 async function save() {
   saving.value = true
   try {
-    const payload = {
+    const identity = {
+      national_id: normalizeDigits(form.national_id.trim()) || null,
+      gender: form.gender
+    }
+    const details = {
       full_name: form.full_name.trim(),
-      national_id: form.national_id.trim() || null,
-      gender: form.gender,
       birth_date: form.birth_date || null,
       family_count: form.family_count ? Number(form.family_count) : null,
-      halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id,
       quran_parts: form.quran_parts ? Number(form.quran_parts) : null,
       tajweed_level: form.tajweed_level === TAJWEED_NONE ? null : form.tajweed_level,
       residence: form.residence.trim() || null,
@@ -177,11 +205,23 @@ async function save() {
       enrollment_date: form.enrollment_date || null,
       status: form.status
     }
-    const { error } = editingId.value
-      ? await supabase.from('students').update(payload).eq('id', editingId.value)
-      : await supabase.from('students').insert({ ...payload, created_by: profile.value?.id ?? null })
-    if (error) throw error
-    toast.add({ title: editingId.value ? 'تم تحديث بيانات الطالب.' : 'تمت إضافة الطالب.', color: 'success', icon: 'i-lucide-circle-check' })
+    if (editingId.value) {
+      // الهوية والجنس للمدير الإداري وحده، والحلقة لمن يملك الإسناد — لا تُرسل لغيرهما (حارس القاعدة يرفضها)
+      const payload = {
+        ...details,
+        ...(isAdmin.value ? identity : {}),
+        ...(canAssign.value ? { halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id } : {})
+      }
+      const { error } = await supabase.from('students').update(payload).eq('id', editingId.value)
+      if (error) throw error
+    } else {
+      await createStudent(details)
+    }
+    toast.add({
+      title: editingId.value ? 'تم تحديث بيانات الطالب.' : 'تمت إضافة الطالب — يدخل برقم هويته وكلمة المرور المبدئية.',
+      color: 'success',
+      icon: 'i-lucide-circle-check'
+    })
     modalOpen.value = false
     await refresh()
   } catch (err) {
@@ -215,11 +255,11 @@ async function confirmDelete() {
   <div class="students">
     <UiPageHeader
       title="الطلاب"
-      subtitle="سجلّ الطلاب وبياناتهم وربطهم بالحلقات — الطالب سجلّ بيانات بلا حساب دخول."
+      subtitle="سجلّ الطلاب وبياناتهم وإسنادهم للحلقات — يدخل الطالب برقم هويته."
     >
       <template #actions>
         <UButton
-          v-if="canManage"
+          v-if="canCreate"
           label="إضافة طالب"
           color="primary"
           size="lg"
@@ -253,7 +293,7 @@ async function confirmDelete() {
         v-else-if="filtered.length === 0"
         icon="i-lucide-graduation-cap"
         title="لا طلاب بعد"
-        :description="canManage ? 'أضِف أول طالب واربطه بحلقته ليظهر هنا.' : 'لا طلاب في نطاقك حاليّاً.'"
+        :description="canCreate ? 'أضِف أول طالب واربطه بحلقته ليظهر هنا.' : 'لا طلاب في نطاقك حاليّاً.'"
       />
       <UiDataTable
         v-else
@@ -311,6 +351,7 @@ async function confirmDelete() {
               @click="navigateTo(`/students/${row.id}`)"
             />
             <UButton
+              v-if="canManage"
               color="neutral"
               variant="outline"
               size="sm"
@@ -374,6 +415,7 @@ async function confirmDelete() {
               <UiSelect
                 v-model="form.gender"
                 :items="genderItems"
+                :disabled="!!editingId && !isAdmin"
                 size="lg"
               />
             </UFormField>
@@ -385,6 +427,7 @@ async function confirmDelete() {
               <UiSelect
                 v-model="form.halaqa_id"
                 :items="halqaItems"
+                :disabled="!canAssign"
                 size="lg"
               />
             </UFormField>
@@ -394,9 +437,13 @@ async function confirmDelete() {
               label="رقم الهوية"
               name="national_id"
               class="f"
+              :required="!editingId"
+              :hint="editingId ? undefined : 'معرّف دخول الطالب'"
             >
               <UInput
                 v-model="form.national_id"
+                :disabled="!!editingId && !isAdmin"
+                inputmode="numeric"
                 dir="ltr"
                 size="lg"
                 class="w-full"

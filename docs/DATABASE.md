@@ -27,7 +27,7 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     │       ├─< students (halaqa_id)           سجلّ الطالب — مربوط بحسابه بـ students.user_id (→ auth.users ← profiles بدور student)
     │       ├─< supervision_visits (halaqa_id) زيارات الحلقة
     │       ├─< monthly_reports (halaqa_id)    تقارير الحلقة الشهرية
-    │       ├─< halaqa_incentives (halaqa_id)  تخصيص حوافز الحلقة الشهري (المدير)
+    │       ├─< halaqa_incentives (halaqa_id)  تخصيص حوافز الحلقة الشهري (المدير الإداري)
     │       └─< incentive_statements (halaqa_id) كشف حوافز الحلقة (المعلم)
     │
     ├─< exam_lists (teacher_id)                قوائم الاختبار الأسبوعي
@@ -35,12 +35,12 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     │
     ├─< admin_alerts (issuer_id, teacher_id)   التنبيهات الإدارية
     ├─< meeting_minutes (created_by)           محاضر الاجتماعات
-    ├─< monthly_salaries (profile_id)          الرواتب الشهرية المرجعية (المدير)
+    ├─< monthly_salaries (profile_id)          الرواتب الشهرية المرجعية (المدير الإداري)
     └─< financial_transactions (created_by)    الحركات المالية
 
-exam_plan (بيانات مرجعية — يعدّلها المدير)
-app_settings (إعدادات المدير القابلة للضبط)
-news (الأخبار — المدير ينشرها، عامّة على Landing)
+exam_plan (بيانات مرجعية — يعدّلها المدير الإداري والمدير الفني)
+app_settings (إعدادات المدير الإداري القابلة للضبط)
+news (الأخبار — المدير الإداري ينشرها، عامّة على Landing)
 ```
 
 ---
@@ -78,7 +78,7 @@ news (الأخبار — المدير ينشرها، عامّة على Landing)
 | `avatar_url` | text | ⚠️ متروك منذ Task 6b (لا يُقرأ ولا يُكتب) — يُسقط بعد النشر |
 | `photo_path` | text | الصورة الشخصية الاختيارية: مسارٌ في المستودع **الخاص** `profile-photos`، شكلُه ثابت `<id>/photo.webp` (قيد `profiles_photo_path_shape`)، و**لا صورة لحساب أنثى**. القراءة بروابط موقَّعة لساعة: لصاحبها ولكل حسابٍ نشطٍ غير طالب (`can_view_profile_photo`)؛ الرفع/الحذف لصاحب المجلّد أو المدير الإداري (`can_manage_profile_photo`). الهجرة `20261018080234_profile_photos.sql`. ومنذ `20261018081904_profile_photos_gender_sync.sql`: جنسُ الطالب يُزامَن من `students` إلى حسابه (`students_sync_gender_to_profile_*`)، وتحويلُ الحساب إلى أنثى يُفرغ `photo_path` آلياً (`profiles_photo_clear_on_female`)، والقراءةُ لغير صاحبها والمدير تشترط `photo_path` غيرَ فارغ (فالكائن اليتيم لا يُوقَّع) |
 
-**بيانات مالية (🔒 صلاحية المدير فقط — يُفضّل جدول منفصل `profile_financials` بـ RLS صارم):**
+**بيانات مالية (🔒 جدول منفصل `profile_financials` بـ RLS صارم: كتابة المدير الإداري وحده، وقراءة المدير الإداري ومشرف المشروع):**
 
 | العمود | النوع | ملاحظات |
 |---|---|---|

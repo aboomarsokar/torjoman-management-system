@@ -706,7 +706,6 @@ const settingCards = [
 </template>
 
 <style scoped>
-.dash { max-width: 1280px; margin: 0 auto; }
 .welcome { margin-bottom: 28px; }
 .welcome h2 { margin: 0; font-size: 28px; font-weight: 700; color: var(--ink); }
 .welcome p { margin: 8px 0 0; font-size: 16px; color: var(--ink-2); font-weight: 300; }

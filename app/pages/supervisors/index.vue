@@ -120,7 +120,6 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
 </template>
 
 <style scoped>
-.sups { max-width: 1280px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 .scard { padding: 18px 20px; display: block; transition: border-color .15s, transform .1s; }

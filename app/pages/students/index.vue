@@ -696,7 +696,6 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.students { max-width: 1280px; margin: 0 auto; }
 .filters { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
 .halqa-sel { min-width: 180px; }
 .muted { color: var(--ink-2); white-space: nowrap; }

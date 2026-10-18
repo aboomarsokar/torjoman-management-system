@@ -795,7 +795,6 @@ async function setStatus(status: ReportStatus) {
 </template>
 
 <style scoped>
-.reports { max-width: 1280px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
 
 .list-card { padding: 0; }

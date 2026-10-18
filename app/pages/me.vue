@@ -161,8 +161,6 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
 </template>
 
 <style scoped>
-.me { max-width: 1000px; margin: 0 auto; }
-
 .band { background: var(--band); border-radius: 22px; padding: 28px 30px; box-shadow: var(--shadow-lg); margin-bottom: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; overflow: hidden; }
 .band-info { min-width: 0; flex: 1; }

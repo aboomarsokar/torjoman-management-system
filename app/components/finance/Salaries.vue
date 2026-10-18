@@ -6,8 +6,12 @@
 import type { Database } from '~/types/database.types'
 import { roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
 
-/** أصحاب الرواتب: العاملون عدا المدير الإداري (كما كان المدير مستثنى) — والطالب ليس عاملاً. */
-const SALARIED_ROLES = STAFF_ROLES.filter(r => r !== 'admin_manager')
+/**
+ * أصحاب الرواتب: العاملون عدا المدير الإداري ومشرف المشروع والمدير الفني (قرار 2026-10-18)
+ * — والطالب ليس عاملاً.
+ */
+const UNSALARIED_ROLES: Role[] = ['admin_manager', 'project_supervisor', 'technical_manager']
+const SALARIED_ROLES = STAFF_ROLES.filter(r => !UNSALARIED_ROLES.includes(r))
 
 const { isReadOnly } = usePermissions()
 const supabase = useSupabaseClient<Database>()

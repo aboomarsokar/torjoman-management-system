@@ -6,7 +6,8 @@ type Gender = 'male' | 'female'
 
 const LABELS: Record<Role, Record<Gender, string>> = {
   project_supervisor: { male: 'مشرف المشروع', female: 'مشرفة المشروع' },
-  admin_manager: { male: 'المدير الإداري', female: 'المديرة الإدارية' },
+  // قرار 2026-10-18: المدير الإداري رجلٌ دائماً حالياً — المسمّى واحد لأيّ جنس (المديرة الإدارية = women_admin)
+  admin_manager: { male: 'المدير الإداري', female: 'المدير الإداري' },
   technical_manager: { male: 'المدير الفني', female: 'المديرة الفنية' },
   // دور نسائي حصراً (قسم البنات): المسمّى واحد لأيّ جنس ليبقى السجلّ كاملاً
   women_admin: { male: 'المديرة الإدارية', female: 'المديرة الإدارية' },

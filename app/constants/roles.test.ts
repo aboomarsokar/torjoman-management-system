@@ -3,10 +3,13 @@ import { MANAGER_ROLES, STAFF_ROLES, roleLabel } from './roles'
 
 describe('roleLabel', () => {
   it('يؤنّث حسب الجنس', () => {
-    expect(roleLabel('admin_manager', 'male')).toBe('المدير الإداري')
-    expect(roleLabel('admin_manager', 'female')).toBe('المديرة الإدارية')
     expect(roleLabel('field_supervisor', 'female')).toBe('مشرفة ميدانية')
     expect(roleLabel('examiner', 'female')).toBe('مختبِرة')
+  })
+  it('المدير الإداري مسمّىً واحد لأيّ جنس (قرار 2026-10-18)', () => {
+    expect(roleLabel('admin_manager', 'male')).toBe('المدير الإداري')
+    expect(roleLabel('admin_manager', 'female')).toBe('المدير الإداري')
+    expect(roleLabel('admin_manager', null)).toBe('المدير الإداري')
   })
   it('بلا جنس = المذكّر', () => {
     expect(roleLabel('teacher', null)).toBe('معلم')

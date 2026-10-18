@@ -2,7 +2,8 @@
 /**
  * الحلقات (§4.13) — الإدارة للمديرَين الإداري والفني (والحذف للإداري)، والبقية للاطّلاع ضمن نطاقهم.
  * إنشاء/تعديل/حذف حلقة وتعيين معلّم ومشرف ومختبِر لها، مع تصفية بالجنس والحالة.
- * المختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنس الحلقة.
+ * الجنس أوّل حقل، والطاقم (معلم/مشرف/مختبِر) من جنس الحلقة وحدَه (useHalaqaStaffOptions)،
+ * والمختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنسها. الحكم الأخير لحارس القاعدة.
  */
 import type { Database } from '~/types/database.types'
 
@@ -18,8 +19,6 @@ type HalaqaRow = Database['public']['Tables']['halaqat']['Row'] & {
   examiner: { full_name: string } | null
   student_count: { count: number }[]
 }
-type NameRow = { id: string, full_name: string }
-type ExaminerRow = NameRow & { gender: Gender | null }
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
@@ -46,31 +45,19 @@ const { data: halqat, refresh, pending } = useLazyAsyncData<HalaqaRow[]>(
   },
   { server: false, default: () => [] }
 )
-const { data: teachers } = useLazyAsyncData<NameRow[]>('teachers-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
-const { data: supervisors } = useLazyAsyncData<NameRow[]>('supervisors-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
-
-const { data: examiners } = useLazyAsyncData<ExaminerRow[]>('examiners-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name, gender').eq('role', 'examiner').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
-
-const NO_SUP = 'none'
-const teacherItems = computed(() => (teachers.value ?? []).map(t => ({ label: t.full_name, value: t.id })))
-const supervisorItems = computed(() => [{ label: 'بلا مشرف', value: NO_SUP }, ...(supervisors.value ?? []).map(s => ({ label: s.full_name, value: s.id }))])
+const NO_SUP = NO_STAFF
 
 const genderF = ref<Gender | 'all'>('all')
 const statusF = ref<Status | 'all'>('all')
-const genderChips = [
-  { value: 'all' as const, label: 'الكل' },
-  { value: 'male' as const, label: 'بنين' },
-  { value: 'female' as const, label: 'بنات' }
-]
+const genderChips = computed(() => {
+  const all = halqat.value ?? []
+  const n = (g: Gender) => all.filter(h => h.gender === g).length
+  return [
+    { value: 'all' as const, label: 'الكل', count: all.length },
+    { value: 'male' as const, label: 'بنين', count: n('male') },
+    { value: 'female' as const, label: 'بنات', count: n('female') }
+  ]
+})
 const filtered = computed(() => (halqat.value ?? []).filter(h =>
   (genderF.value === 'all' || h.gender === genderF.value)
   && (statusF.value === 'all' || h.status === statusF.value)
@@ -80,56 +67,38 @@ watch([genderF, statusF], resetPage)
 function studentsOf(h: HalaqaRow) {
   return h.student_count?.[0]?.count ?? 0
 }
-const GENDER_LABEL: Record<Gender, string> = { male: 'بنين', female: 'بنات' }
-const CLASS_LABEL: Record<Classification, string> = { a: 'الفئة أ', b: 'الفئة ب' }
 
-const columns = computed(() => {
-  const base = [
-    { key: 'num', label: '#' },
-    { key: 'name', label: 'الحلقة' },
-    { key: 'teacher', label: 'المعلّم' },
-    { key: 'supervisorName', label: 'المشرف' },
-    { key: 'examiner', label: 'المختبِر' },
-    { key: 'gender', label: 'الجنس' },
-    { key: 'students', label: 'الطلاب' },
-    { key: 'time', label: 'الوقت اليومي' },
-    { key: 'status', label: 'الحالة' }
-  ]
-  // عمود الإجراءات للجميع: «تفاصيل» لكل من يرى الحلقة (ومنهم مشرف المشروع)، والتعديل والحذف مقيّدان داخله
-  return [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }]
-})
-
+// الجنس والفئة والوقت في خانة الحلقة نفسها. الطاقم ثلاثة أعمدة في الحاوية الواسعة،
+// وعمودٌ واحد مكدَّس فيما دونها (col-wide / col-narrow — الاستعلام في أنماط الصفحة)
+// عمود الإجراءات للجميع: «تفاصيل» لكل من يرى الحلقة (ومنهم مشرف المشروع)، والتعديل والحذف مقيّدان داخله
+const columns = [
+  { key: 'num', label: '#' },
+  { key: 'name', label: 'الحلقة' },
+  { key: 'teacher', label: 'المعلّم', class: 'col-wide' },
+  { key: 'supervisorName', label: 'المشرف', class: 'col-wide' },
+  { key: 'examiner', label: 'المختبِر', class: 'col-wide' },
+  { key: 'staff', label: 'الطاقم', class: 'col-narrow' },
+  { key: 'students', label: 'الطلاب', align: 'center' as const },
+  { key: 'status', label: 'الحالة' },
+  { key: 'actions', label: 'إجراءات', align: 'end' as const }
+]
 // ── إنشاء/تعديل ──
 const modalOpen = ref(false)
 const saving = ref(false)
 const editingId = ref<string | null>(null)
 const form = reactive({
   name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: NO_SUP, daily_time: '',
-  gender: 'male' as Gender, classification: 'a' as Classification, status: 'active' as Status
+  gender: '' as Gender | '', classification: 'a' as Classification, status: 'active' as Status
 })
 const genderItems = [{ label: 'بنين', value: 'male' }, { label: 'بنات', value: 'female' }]
 
-// المختبِرون من جنس الحلقة (ومَن لم يُحدَّد جنسه) — والاقتراح حين يكون واحداً فقط
-const examinersFor = (g: Gender) => (examiners.value ?? []).filter(e => !e.gender || e.gender === g)
-const examinerItems = computed(() => [
-  { label: 'بلا مختبِر', value: NO_SUP },
-  ...examinersFor(form.gender).map(e => ({ label: e.full_name, value: e.id }))
-])
-function suggestedExaminer(g: Gender) {
-  const exact = (examiners.value ?? []).filter(e => e.gender === g)
-  return exact.length === 1 ? exact[0]!.id : NO_SUP
-}
-// تغيير جنس الحلقة يُسقط مختبِراً من الجنس الآخر ويقترح البديل (ولا يمسّ مختبِراً
-// غير ظاهرٍ في القائمة — كأن يكون معطَّلاً — كي لا يُفرَّغ إسنادٌ قائم بصمت)
-watch(() => form.gender, (g) => {
-  const cur = (examiners.value ?? []).find(e => e.id === form.examiner_id)
-  if (form.examiner_id === NO_SUP || (cur?.gender && cur.gender !== g)) form.examiner_id = suggestedExaminer(g)
-})
+// الطاقم من جنس الحلقة وحدَه، ولا قائمة قبل اختياره (والمختبِر يُقترح حين يكون واحداً)
+const { teacherItems, supervisorItems, examinerItems } = useHalaqaStaffOptions(form, halqat, editingId)
 const classItems = [{ label: 'الفئة أ', value: 'a' }, { label: 'الفئة ب', value: 'b' }]
 const statusItems = [{ label: 'نشطة', value: 'active' }, { label: 'متوقفة', value: 'stopped' }]
 function openCreate() {
   editingId.value = null
-  Object.assign(form, { name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: suggestedExaminer('male'), daily_time: '', gender: 'male', classification: 'a', status: 'active' })
+  Object.assign(form, { name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: NO_SUP, daily_time: '', gender: '', classification: 'a', status: 'active' })
   modalOpen.value = true
 }
 function openEdit(h: HalaqaRow) {
@@ -140,7 +109,7 @@ function openEdit(h: HalaqaRow) {
     supervisor_id: h.supervisor_id ?? NO_SUP,
     examiner_id: h.examiner_id ?? NO_SUP,
     daily_time: h.daily_time ? h.daily_time.slice(0, 5) : '',
-    gender: h.gender ?? 'male',
+    gender: h.gender ?? '',
     classification: h.classification ?? 'a',
     status: h.status
   })
@@ -148,6 +117,7 @@ function openEdit(h: HalaqaRow) {
 }
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
+  if (!s.gender) errors.push({ name: 'gender', message: 'اختر جنس الحلقة أولاً.' })
   if (!s.name.trim()) errors.push({ name: 'name', message: 'اسم الحلقة مطلوب.' })
   if (!s.teacher_id) errors.push({ name: 'teacher_id', message: 'تعيين المعلّم مطلوب.' })
   return errors
@@ -161,7 +131,7 @@ async function save() {
       supervisor_id: form.supervisor_id === NO_SUP ? null : form.supervisor_id,
       examiner_id: form.examiner_id === NO_SUP ? null : form.examiner_id,
       daily_time: form.daily_time || null,
-      gender: form.gender,
+      gender: form.gender as Gender, // validate يشترطه قبل الحفظ
       classification: form.classification,
       status: form.status
     }
@@ -201,36 +171,30 @@ async function confirmDelete() {
 
 <template>
   <div class="halqat">
-    <UiPageHeader
-      title="الحلقات"
-      :subtitle="isManager ? 'لكل حلقة معلّم ووقت يومي ثابت — أنشئ الحلقات وعيّن معلميها ومشرفيها.' : 'الحلقات ضمن نطاقك — عرض للاطّلاع.'"
-    >
-      <template
-        v-if="isManager"
-        #actions
-      >
-        <UButton
-          label="إنشاء حلقة"
-          color="primary"
-          size="lg"
-          icon="i-lucide-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
-          @click="openCreate"
+    <!-- العنوان في الشريط العلوي؛ هنا صفّ أدواتٍ واحد: التصفية ثم الإنشاء -->
+    <div class="toolbar">
+      <div class="filters">
+        <UiFilterChips
+          v-model="genderF"
+          :options="genderChips"
         />
-      </template>
-    </UiPageHeader>
-
-    <div class="filters">
-      <UiFilterChips
-        v-model="genderF"
-        :options="genderChips"
-      />
-      <USelect
-        v-model="statusF"
-        :items="[{ label: 'كل الحالات', value: 'all' }, ...statusItems]"
+        <USelect
+          v-model="statusF"
+          :items="[{ label: 'كل الحالات', value: 'all' }, ...statusItems]"
+          size="md"
+          class="status-sel"
+          :ui="{ base: 'rounded-[11px]' }"
+        />
+      </div>
+      <UButton
+        v-if="isManager"
+        label="إنشاء حلقة"
+        color="primary"
         size="md"
-        class="status-sel"
-        :ui="{ base: 'rounded-[11px]' }"
+        icon="i-lucide-plus"
+        class="create"
+        :ui="{ base: 'rounded-[12px] font-semibold' }"
+        @click="openCreate"
       />
     </div>
 
@@ -252,62 +216,44 @@ async function confirmDelete() {
         row-key="id"
       >
         <template #num="{ index }">
-          <span class="muted">{{ index + 1 }}</span>
+          <span class="num idx">{{ (page - 1) * pageSize + index + 1 }}</span>
         </template>
         <template #name="{ row }">
-          <div class="h-cell">
-            <div class="hicon">
-              <UIcon
-                name="i-lucide-book-open"
-                class="size-5"
-              />
-            </div>
-            <div>
-              <div class="h-name">
-                {{ row.name }}
-              </div>
-              <div
-                v-if="row.classification"
-                class="h-sub"
-              >
-                {{ CLASS_LABEL[row.classification] }}
-              </div>
-            </div>
-          </div>
+          <HalqatNameCell
+            :id="row.id"
+            :name="row.name"
+            :gender="row.gender"
+            :classification="row.classification"
+            :daily-time="row.daily_time"
+          />
         </template>
         <template #teacher="{ row }">
-          <span class="muted">{{ row.teacher?.full_name || '—' }}</span>
+          <span class="person">{{ row.teacher?.full_name || '—' }}</span>
         </template>
         <template #supervisorName="{ row }">
           <span
-            class="muted"
+            class="person"
             :class="{ orphan: !row.supervisor }"
           >{{ row.supervisor?.full_name || 'بلا مشرف' }}</span>
         </template>
         <template #examiner="{ row }">
           <span
-            class="muted"
+            class="person"
             :class="{ orphan: !row.examiner }"
           >{{ row.examiner?.full_name || 'بلا مختبِر' }}</span>
         </template>
-        <template #gender="{ row }">
-          <UBadge
-            v-if="row.gender"
-            :label="GENDER_LABEL[row.gender]"
-            :color="row.gender === 'male' ? 'info' : 'secondary'"
-            variant="soft"
-            size="sm"
+        <template #staff="{ row }">
+          <HalqatStaffList
+            :teacher="row.teacher?.full_name ?? null"
+            :supervisor="row.supervisor?.full_name ?? null"
+            :examiner="row.examiner?.full_name ?? null"
           />
-          <span
-            v-else
-            class="muted"
-          >—</span>
         </template>
         <template #students="{ row }">
-          <span class="muted">{{ studentsOf(row) }}</span>
-        </template>
-        <template #time="{ row }">
-          <span class="muted">{{ row.daily_time ? row.daily_time.slice(0, 5) : '—' }}</span>
+          <span
+            class="num count"
+            :class="{ zero: !studentsOf(row) }"
+          >{{ studentsOf(row) }}</span>
         </template>
         <template #status="{ row }">
           <UBadge
@@ -351,6 +297,63 @@ async function confirmDelete() {
           </div>
         </template>
       </UiDataTable>
+      <!-- الحاوية الضيّقة (الجوال): بطاقاتٌ بدل الجدول — الجدول يُخفى هناك بالاستعلام -->
+      <ul
+        v-if="!pending && filtered.length"
+        class="cards"
+      >
+        <li
+          v-for="row in paged"
+          :key="row.id"
+          class="hcard"
+        >
+          <div class="hcard-top">
+            <HalqatNameCell
+              :id="row.id"
+              :name="row.name"
+              :gender="row.gender"
+              :classification="row.classification"
+              :daily-time="row.daily_time"
+            />
+            <UBadge
+              :label="row.status === 'active' ? 'نشطة' : 'متوقفة'"
+              :color="row.status === 'active' ? 'success' : 'neutral'"
+              variant="soft"
+              size="sm"
+            />
+          </div>
+          <HalqatStaffList
+            :teacher="row.teacher?.full_name ?? null"
+            :supervisor="row.supervisor?.full_name ?? null"
+            :examiner="row.examiner?.full_name ?? null"
+            :students="studentsOf(row)"
+          />
+          <div
+            v-if="isManager"
+            class="hcard-actions"
+          >
+            <UButton
+              label="تعديل"
+              color="neutral"
+              variant="outline"
+              size="md"
+              icon="i-lucide-pencil"
+              :ui="{ base: 'rounded-[11px]' }"
+              @click="openEdit(row)"
+            />
+            <UButton
+              v-if="isAdmin"
+              label="حذف"
+              color="neutral"
+              variant="ghost"
+              size="md"
+              icon="i-lucide-trash-2"
+              :ui="{ base: 'rounded-[11px]' }"
+              @click="deleteTarget = row"
+            />
+          </div>
+        </li>
+      </ul>
       <UiPaginator
         v-if="filtered.length"
         :page="page"
@@ -373,43 +376,75 @@ async function confirmDelete() {
           class="form"
           @submit="save"
         >
-          <UFormField
-            label="اسم الحلقة"
-            name="name"
-          >
-            <UInput
-              v-model="form.name"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
           <div class="row">
             <UFormField
-              label="المعلّم"
+              label="الجنس"
+              name="gender"
+              class="f"
+            >
+              <USelect
+                v-model="form.gender"
+                :items="genderItems"
+                placeholder="بنين أم بنات؟"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+            <UFormField
+              label="اسم الحلقة"
+              name="name"
+              class="f"
+            >
+              <UInput
+                v-model="form.name"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+          </div>
+          <div class="row">
+            <UFormField
+              :label="form.gender === 'female' ? 'المعلّمة' : 'المعلّم'"
               name="teacher_id"
               class="f"
             >
               <UiSelect
                 v-model="form.teacher_id"
                 :items="teacherItems"
-                placeholder="اختر معلّماً"
+                :placeholder="form.gender ? 'اختر من القائمة' : 'اختر الجنس أولاً'"
+                :disabled="!form.gender"
                 size="lg"
               />
             </UFormField>
             <UFormField
-              label="المشرف"
+              :label="form.gender === 'female' ? 'المشرفة' : 'المشرف'"
               name="supervisor_id"
               class="f"
             >
               <UiSelect
                 v-model="form.supervisor_id"
                 :items="supervisorItems"
+                :disabled="!form.gender"
                 size="lg"
               />
             </UFormField>
           </div>
           <div class="row">
+            <UFormField
+              :label="form.gender === 'female' ? 'المختبِرة' : 'المختبِر'"
+              name="examiner_id"
+              class="f"
+              hint="يرصد ترشيحاتها"
+            >
+              <UiSelect
+                v-model="form.examiner_id"
+                :items="examinerItems"
+                :disabled="!form.gender"
+                size="lg"
+              />
+            </UFormField>
             <UFormField
               label="الوقت اليومي"
               name="daily_time"
@@ -424,31 +459,7 @@ async function confirmDelete() {
                 :ui="{ base: 'rounded-[13px]' }"
               />
             </UFormField>
-            <UFormField
-              label="الجنس"
-              name="gender"
-              class="f"
-            >
-              <USelect
-                v-model="form.gender"
-                :items="genderItems"
-                size="lg"
-                class="w-full"
-                :ui="{ base: 'rounded-[13px]' }"
-              />
-            </UFormField>
           </div>
-          <UFormField
-            label="المختبِر"
-            name="examiner_id"
-            hint="تذهب ترشيحات الحلقة إليه ليرصدها"
-          >
-            <UiSelect
-              v-model="form.examiner_id"
-              :items="examinerItems"
-              size="lg"
-            />
-          </UFormField>
           <div class="row">
             <UFormField
               label="التصنيف"
@@ -513,17 +524,38 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.halqat { max-width: 1280px; margin: 0 auto; }
-.filters { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.status-sel { min-width: 150px; }
+/* الصفحة تملأ مساحة المحتوى (لا عرض أقصى)، وتتكيّف بعرض حاويتها لا بعرض النافذة:
+   ≥1180 أعمدة الطاقم الثلاثة · دونها عمود «الطاقم» المكدَّس · دون 720 بطاقات */
+.halqat { container: halqat / inline-size; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.filters { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
+.status-sel { min-width: 140px; }
 
-.h-cell { display: flex; align-items: center; gap: 11px; }
-.hicon { width: 40px; height: 40px; border-radius: 11px; background: var(--surface-3); color: var(--ink); display: flex; align-items: center; justify-content: center; flex: none; }
-.h-name { font-weight: 600; color: var(--ink); white-space: nowrap; }
-.h-sub { font-size: 12.5px; color: var(--ink-3); }
-.muted { color: var(--ink-2); white-space: nowrap; }
-.muted.orphan { color: var(--ink-3); }
+.num { font-variant-numeric: tabular-nums; }
+.idx { color: var(--ink-3); font-size: 13px; }
+.person { color: var(--ink-2); }
+.person.orphan { color: var(--ink-3); }
+.count { font-weight: 600; color: var(--ink); }
+.count.zero { color: var(--ink-3); font-weight: 500; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+
+.halqat :deep(.col-narrow) { display: none; }
+@container halqat (max-width: 1179px) {
+  .halqat :deep(.col-wide) { display: none; }
+  .halqat :deep(.col-narrow) { display: table-cell; }
+}
+
+.cards { display: none; list-style: none; margin: 0; padding: 0; }
+@container halqat (max-width: 719px) {
+  .halqat :deep(.table-wrap) { display: none; }
+  .cards { display: grid; gap: 12px; }
+  .toolbar { align-items: stretch; }
+  .create { width: 100%; justify-content: center; }
+}
+.hcard { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.hcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.hcard-actions { display: flex; gap: 8px; margin-top: 16px; }
+.hcard-actions > :first-child { flex: 1; justify-content: center; }
 
 .form { display: flex; flex-direction: column; gap: 14px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }

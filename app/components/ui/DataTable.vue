@@ -1,10 +1,11 @@
 <script setup lang="ts" generic="T extends Record<string, unknown>">
 /**
  * جدول موحّد داخل بطاقة: أعمدة معرّفة + slot لكل عمود (#<key>="{ row }").
- * عند غياب slot العمود يُعرض row[key] مباشرةً.
+ * عند غياب slot العمود يُعرض row[key] مباشرةً. و`class` (اختياري) يُضاف لخانة العمود ورأسه
+ * — لإظهار عمودٍ أو إخفائه بعرض الحاوية مثلاً.
  */
 defineProps<{
-  columns: { key: string, label: string, align?: 'start' | 'end' | 'center' }[]
+  columns: { key: string, label: string, align?: 'start' | 'end' | 'center', class?: string }[]
   rows: T[]
   rowKey?: string
 }>()
@@ -18,7 +19,7 @@ defineProps<{
           <th
             v-for="c in columns"
             :key="c.key"
-            :class="`ta-${c.align || 'start'}`"
+            :class="[`ta-${c.align || 'start'}`, c.class]"
           >
             {{ c.label }}
           </th>
@@ -32,7 +33,7 @@ defineProps<{
           <td
             v-for="c in columns"
             :key="c.key"
-            :class="`ta-${c.align || 'start'}`"
+            :class="[`ta-${c.align || 'start'}`, c.class]"
           >
             <slot
               :name="c.key"

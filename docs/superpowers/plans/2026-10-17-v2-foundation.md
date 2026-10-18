@@ -1031,6 +1031,33 @@ git commit -m "feat(ui): الشاشات والقوائم للأدوار السب
 
 ---
 
+### Task 6b: الصورة الشخصية (منقولة من الصحابة) — طلب المستخدم 2026-10-18
+
+> قرار المستخدم: لكل مستخدم صورة اختيارية (موظفون وطلاب)، **ولا صور في قسم البنات** — أي حساب `gender = 'female'` لا صورة له، والقاعدة ترفض الرفع، والعرض الحرف الأول دائماً (كقرار الصحابة 2026-10-07 لمدارس البنات).
+
+**المرجع للنقل (اقرأه قبل الكتابة):** في `/Users/aboomar/Developer/sahaba-schools`:
+- `supabase/migrations/20260927120000_employee_photo.sql` (+ `20260928120000_employee_photo_write_guards.sql`) — مخزن خاص، مسار ثابت `<id>/photo.webp`، روابط موقَّعة لساعة.
+- `app/components/profile/Avatar.vue` — صورة أو الحرف الأول، ويسقط إلى الحرف عند فشل التحميل.
+- `app/components/employees/PhotoField.vue` + `app/composables/useEmployeePhoto.ts` — تصغير في المتصفح إلى WebP، رفع `upsert`، إزالة.
+- `app/composables/useEmployeePhotoUrls.ts` (ذاكرة الروابط الموقَّعة) + `app/composables/useMyPhoto.ts` (صورة صاحب الحساب للشريط).
+- اختباراتها: `app/constants/employeePhoto.test.ts`, `app/composables/useMyPhoto.test.ts`, `app/components/employees/photoField.test.ts`.
+
+**Files:**
+- Create: `supabase/migrations/<version>_profile_photos.sql`, `app/components/profile/Avatar.vue`, `app/components/profile/PhotoField.vue`, `app/composables/useProfilePhoto.ts`, `app/composables/useProfilePhotoUrls.ts`, `app/composables/useMyPhoto.ts`, `app/constants/profilePhoto.ts` (+ اختبار)
+- Modify: `app/pages/profile/[id].vue` (يستبدل رفع `avatar_url` القديم)، `app/layouts/dashboard.vue` (صورة الشريط)، قوائم المستخدمين والطلاب وملف الطالب وصفحة `/me` (المهمة 7) لعرض `ProfileAvatar`.
+
+**القاعدة:**
+- `profiles.photo_path text` بقيد: `photo_path is null or (photo_path = id::text || '/photo.webp' and gender is distinct from 'female')`.
+- مخزن **خاص** `profile-photos` (حدّ 262144 بايت، webp/png/jpeg).
+- سياسات `storage.objects` للمخزن: **القراءة** (توليد الرابط الموقَّع) لصاحب الصورة، ولمن يرى ملفه بحسب RLS `profiles` (الموظفون يرون كل الملفات، والطالب ملفه فقط)؛ **الكتابة/الحذف** لصاحب المجلّد `<auth.uid()>/photo.webp` أو `is_admin_manager()`، وفقط إن لم يكن صاحب المجلّد أنثى. احترس من `storage.foldername()` الذي يعيد NULL للأسماء الجذرية (`coalesce(…, false)`).
+- `avatar_url` في `profiles` و`students` يبقى ولا يُستعمل (يُحذف لاحقاً بعد النشر — درس «إسقاط العمود بعد النشر»).
+
+**التحقّق:** اختبارات Vitest المنقولة والمكيَّفة تمرّ؛ واختبار سياسات بجلسة: موظف ذكر يرفع لنفسه ✅، لغيره ❌، أنثى ترفع لنفسها ❌ (القيد/السياسة)، المدير الإداري يرفع لموظف ذكر ✅، الطالب يقرأ صورة غيره ❌.
+
+**Commit:** `feat(photos): الصورة الشخصية الاختيارية منقولةً من الصحابة — بلا صور لقسم البنات`
+
+---
+
 ### Task 7: صفحة الطالب `/me`
 
 **Files:** Create `app/pages/me.vue`؛ Modify `app/layouts/dashboard.vue` (عنصر «صفحتي» للطالب).

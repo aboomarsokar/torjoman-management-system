@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * الحلقات (§4.13) — للمدير فقط (RLS: halaqat_write = is_manager).
+ * الحلقات (§4.13) — الإدارة للمديرَين الإداري والفني (والحذف للإداري)، والبقية للاطّلاع ضمن نطاقهم.
  * إنشاء/تعديل/حذف حلقة وتعيين معلّم ومشرف ومختبِر لها، مع تصفية بالجنس والحالة.
  * المختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنس الحلقة.
  */
@@ -22,10 +22,10 @@ type NameRow = { id: string, full_name: string }
 type ExaminerRow = NameRow & { gender: Gender | null }
 
 const supabase = useSupabaseClient<Database>()
-const { role: myRole } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isManager = computed(() => myRole.value === 'manager')
+/** الإنشاء والتعديل للمديرَين (الإداري والفني)، والحذف للمدير الإداري — كما يسمح RLS. */
+const { isManager, isAdmin } = usePermissions()
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
 // بحالة pending، والسكيلتون يغطّي الانتظار ريثما تصل البيانات. الاستعلامات
@@ -51,7 +51,7 @@ const { data: teachers } = useLazyAsyncData<NameRow[]>('teachers-options', async
   return data ?? []
 }, { server: false, default: () => [] })
 const { data: supervisors } = useLazyAsyncData<NameRow[]>('supervisors-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'supervisor').eq('status', 'active').order('full_name')
+  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
   return data ?? []
 }, { server: false, default: () => [] })
 
@@ -88,14 +88,15 @@ const columns = computed(() => {
     { key: 'num', label: '#' },
     { key: 'name', label: 'الحلقة' },
     { key: 'teacher', label: 'المعلّم' },
-    { key: 'supervisor', label: 'المشرف' },
+    { key: 'supervisorName', label: 'المشرف' },
     { key: 'examiner', label: 'المختبِر' },
     { key: 'gender', label: 'الجنس' },
     { key: 'students', label: 'الطلاب' },
     { key: 'time', label: 'الوقت اليومي' },
     { key: 'status', label: 'الحالة' }
   ]
-  return isManager.value ? [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }] : base
+  // عمود الإجراءات للجميع: «تفاصيل» لكل من يرى الحلقة (ومنهم مشرف المشروع)، والتعديل والحذف مقيّدان داخله
+  return [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }]
 })
 
 // ── إنشاء/تعديل ──
@@ -277,7 +278,7 @@ async function confirmDelete() {
         <template #teacher="{ row }">
           <span class="muted">{{ row.teacher?.full_name || '—' }}</span>
         </template>
-        <template #supervisor="{ row }">
+        <template #supervisorName="{ row }">
           <span
             class="muted"
             :class="{ orphan: !row.supervisor }"
@@ -338,7 +339,7 @@ async function confirmDelete() {
               @click="openEdit(row)"
             />
             <UButton
-              v-if="isManager"
+              v-if="isAdmin"
               color="neutral"
               variant="outline"
               size="sm"

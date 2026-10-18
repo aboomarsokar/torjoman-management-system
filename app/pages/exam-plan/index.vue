@@ -2,7 +2,7 @@
 /**
  * خطة الاختبارات (§4.11).
  * كل مجموعة محطّتان: مرحلي (3 أجزاء) وتجميعي (5)، مخزّنتان كصفّين في exam_plan.
- * تُعرض كصفّ واحد لكل مجموعة. التعديل/الإضافة/الحذف للمدير، والبقية للاطّلاع.
+ * تُعرض كصفّ واحد لكل مجموعة. التعديل/الإضافة/الحذف للمديرَين، والبقية للاطّلاع.
  */
 import type { Database } from '~/types/database.types'
 
@@ -13,10 +13,10 @@ type PlanRow = Database['public']['Tables']['exam_plan']['Row']
 type Group = { group_number: number, partial: PlanRow | null, cumulative: PlanRow | null }
 
 const supabase = useSupabaseClient<Database>()
-const { role: myRole } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isManager = computed(() => myRole.value === 'manager')
+/** التعديل للمديرَين (الإداري والفني) كما يسمح RLS؛ مشرف المشروع وغيره للاطّلاع. */
+const { isManager } = usePermissions()
 
 // جلب غير حاجز: لا يوقف عرض الصفحة، والسكيلتون يغطّي انتظار البيانات
 const { data: rows, refresh, pending } = useLazyAsyncData<PlanRow[]>(

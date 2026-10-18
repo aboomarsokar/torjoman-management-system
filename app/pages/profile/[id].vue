@@ -2,7 +2,8 @@
 /**
  * الملف الشخصي للعامل (§4.4/4.5) — عرض وتعديل بيانات عامل.
  * المسار: /profile/[id]، و«me» تعني المستخدم الحالي. العرض متاح للعاملين،
- * والتعديل للمدير أو لصاحب الملف نفسه (RLS). رقم الهوية يُقنَّع لغير المخوّل.
+ * والتعديل للمدير الإداري أو لصاحب الملف نفسه (RLS). رقم الهوية يُقنَّع لغير المخوّل.
+ * الجنس للمدير الإداري وحده (حارس القاعدة يمنع صاحب الملف من تغييره).
  */
 import type { Database } from '~/types/database.types'
 import { roleLabel } from '~/constants/roles'
@@ -11,7 +12,8 @@ definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
-const { profile: myProfile, role: myRole } = useProfile()
+const { profile: myProfile } = useProfile()
+const { isAdmin } = usePermissions()
 const { handle } = useErrorHandler()
 const { uploadImage } = useUpload()
 const toast = useToast()
@@ -21,8 +23,8 @@ const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', va
 
 const targetId = computed(() => route.params.id === 'me' ? (myProfile.value?.id ?? '') : String(route.params.id))
 const isSelf = computed(() => !!targetId.value && targetId.value === myProfile.value?.id)
-const canEdit = computed(() => myRole.value === 'manager' || isSelf.value)
-const canSeeId = computed(() => myRole.value === 'manager' || isSelf.value)
+const canEdit = computed(() => isAdmin.value || isSelf.value)
+const canSeeId = computed(() => isAdmin.value || isSelf.value)
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type Scope = { label: string, value: string | number }
@@ -40,31 +42,15 @@ const { data, pending, refresh } = useLazyAsyncData(() => `profile-${targetId.va
       const { count } = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('halaqa_id', h.id).eq('status', 'active')
       scope.push({ label: 'الحلقة', value: h.name }, { label: 'عدد الطلاب', value: count ?? 0 })
     }
-  } else if (p.role === 'supervisor') {
+  } else if (p.role === 'field_supervisor') {
     const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('supervisor_id', p.id)
     scope.push({ label: 'الحلقات المُسندة', value: count ?? 0 })
-    if (p.quality_supervisor_id) {
-      const { data: q } = await supabase.from('profiles').select('full_name').eq('id', p.quality_supervisor_id).maybeSingle()
-      if (q) scope.push({ label: 'مشرف الجودة المسؤول', value: q.full_name })
-    }
-  } else if (p.role === 'quality') {
-    const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('quality_supervisor_id', p.id).eq('role', 'supervisor')
-    scope.push({ label: 'المشرفون التابعون', value: count ?? 0 })
   } else if (p.role === 'examiner') {
     const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('examiner_id', p.id)
     scope.push({ label: 'الحلقات المُسندة للاختبار', value: count ?? 0 })
   }
   return { p, scope }
 }, { server: false, default: () => null, watch: [targetId] })
-
-// قائمة مشرفي الجودة (لإسناد المشرف — للمدير)
-const QUALITY_NONE = 'none'
-const { data: qualityList } = useLazyAsyncData('quality-options', async () => {
-  if (myRole.value !== 'manager') return []
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'quality').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [], watch: [myRole] })
-const qualityItems = computed(() => [{ label: 'بلا مشرف جودة', value: QUALITY_NONE }, ...(qualityList.value ?? []).map(q => ({ label: q.full_name, value: q.id }))])
 
 useSeoMeta({ title: () => data.value?.p ? `${data.value.p.full_name} — ترجمان` : 'الملف الشخصي — ترجمان' })
 
@@ -127,7 +113,7 @@ const modalOpen = ref(false)
 const saving = ref(false)
 const form = reactive({
   full_name: '', avatar_url: '', gender: '' as '' | 'male' | 'female', birth_date: '', national_id: '', marital_status: '', family_count: '',
-  job_title: '', hire_date: '', years_experience: '', quality_supervisor_id: QUALITY_NONE,
+  job_title: '', hire_date: '', years_experience: '',
   residence_area: '', nearest_mosque: '', address_detail: '', phone: '',
   education_level: '', academic_major: '', quran_parts: '', tajweed_level: ''
 })
@@ -153,7 +139,7 @@ function openEdit() {
   if (!p) return
   Object.assign(form, {
     full_name: p.full_name, avatar_url: p.avatar_url ?? '', gender: p.gender ?? '', birth_date: p.birth_date ?? '', national_id: p.national_id ?? '', marital_status: p.marital_status ?? '', family_count: numStr(p.family_count),
-    job_title: p.job_title ?? '', hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience), quality_supervisor_id: p.quality_supervisor_id ?? QUALITY_NONE,
+    job_title: p.job_title ?? '', hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience),
     residence_area: p.residence_area ?? '', nearest_mosque: p.nearest_mosque ?? '', address_detail: p.address_detail ?? '', phone: p.phone ?? '',
     education_level: p.education_level ?? '', academic_major: p.academic_major ?? '', quran_parts: numStr(p.quran_parts), tajweed_level: p.tajweed_level ?? ''
   })
@@ -173,7 +159,8 @@ async function save() {
     const patch: Database['public']['Tables']['profiles']['Update'] = {
       full_name: form.full_name.trim(),
       avatar_url: form.avatar_url || null,
-      gender: form.gender || null,
+      // الجنس للمدير الإداري وحده — لا يُرسل من غيره (حارس القاعدة يرفض التغيير)
+      ...(isAdmin.value ? { gender: form.gender || null } : {}),
       birth_date: strOrNull(form.birth_date),
       national_id: strOrNull(form.national_id),
       marital_status: strOrNull(form.marital_status),
@@ -181,10 +168,6 @@ async function save() {
       job_title: strOrNull(form.job_title),
       hire_date: strOrNull(form.hire_date),
       years_experience: numOrNull(form.years_experience),
-      // إسناد مشرف الجودة — للمشرف فقط ومن المدير
-      ...(data.value?.p?.role === 'supervisor' && myRole.value === 'manager'
-        ? { quality_supervisor_id: form.quality_supervisor_id === QUALITY_NONE ? null : form.quality_supervisor_id }
-        : {}),
       residence_area: strOrNull(form.residence_area),
       nearest_mosque: strOrNull(form.nearest_mosque),
       address_detail: strOrNull(form.address_detail),
@@ -281,10 +264,10 @@ async function changePassword() {
                   color="info"
                   variant="soft"
                 />
-                <span v-if="data.p.email"><UIcon
-                  name="i-lucide-mail"
+                <span v-if="data.p.employee_number"><UIcon
+                  name="i-lucide-id-card"
                   class="size-4"
-                />{{ data.p.email }}</span>
+                /><bdi dir="ltr">{{ data.p.employee_number }}</bdi></span>
               </div>
             </div>
           </div>
@@ -499,6 +482,7 @@ async function changePassword() {
               <UiSelect
                 v-model="form.gender"
                 :items="genderItems"
+                :disabled="!isAdmin"
                 placeholder="—"
                 size="lg"
               />
@@ -590,16 +574,6 @@ async function changePassword() {
               size="lg"
               class="w-full"
               :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField
-            v-if="data?.p?.role === 'supervisor' && myRole === 'manager'"
-            label="مشرف الجودة المسؤول"
-          >
-            <UiSelect
-              v-model="form.quality_supervisor_id"
-              :items="qualityItems"
-              size="lg"
             />
           </UFormField>
 

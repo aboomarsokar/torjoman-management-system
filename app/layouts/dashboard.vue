@@ -4,7 +4,7 @@
  * مشترك بين كل الأدوار العاملة. القوائم تظهر حسب دور المستخدم.
  * المسارات غير المبنيّة بعد تُظهر تنبيه «قيد الإنشاء» (تُربط عند بناء كل شاشة).
  */
-import { roleLabel as roleLabelFor } from '~/constants/roles'
+import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 
 const { profile, role, status, fullName, initial, pending: profilePending } = useProfile()
 const { signOut } = useAuth()
@@ -33,30 +33,40 @@ function comingSoon() {
   toast.add({ title: 'هذه الشاشة قيد الإنشاء — قريباً.', icon: 'i-lucide-hammer', color: 'info' })
 }
 
-type Item = { key: string, label: string, icon: string, to?: string, roles: string[] }
+type Item = { key: string, label: string, icon: string, to?: string, roles: Role[] }
+
+// مجموعات الأدوار — مشرف المشروع (PS) يرى كل شاشة قراءة، والكتابة تُحجب داخل الشاشات (isReadOnly)
+const PS: Role = 'project_supervisor'
+const ADMIN: Role = 'admin_manager'
+const TECH: Role = 'technical_manager'
+const WOMEN: Role = 'women_admin'
+const FIELD: Role = 'field_supervisor'
+const LEADERS: Role[] = [PS, ADMIN, TECH]
+const SCOPED_STAFF: Role[] = [...LEADERS, WOMEN, FIELD]
 
 const mainNav: Item[] = [
-  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: ['manager'] },
-  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: ['manager', 'quality'] },
-  { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: ['manager', 'quality', 'supervisor'] },
-  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: ['manager', 'quality', 'supervisor'] },
-  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] },
-  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] },
-  { key: 'reports', label: 'التقارير الشهرية', icon: 'i-lucide-file-text', to: '/reports', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: ['teacher'] },
-  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: ['manager', 'quality', 'supervisor', 'teacher'] }
+  { key: 'me', label: 'صفحتي', icon: 'i-lucide-house', to: '/me', roles: ['student'] },
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher'] },
+  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN] },
+  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS },
+  { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF },
+  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'] },
+  { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: SCOPED_STAFF },
+  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
+  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
+  { key: 'reports', label: 'التقارير الشهرية', icon: 'i-lucide-file-text', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'] },
+  { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [...LEADERS, WOMEN, 'teacher'] },
+  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...SCOPED_STAFF, 'teacher'] }
 ]
 
 const managerNav: Item[] = [
-  { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: ['manager'] },
-  { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: ['manager'] },
-  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: ['manager'] }
+  { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: [PS, ADMIN] },
+  { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN] },
+  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN] }
 ]
 
-const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: ['manager', 'quality'] }
-const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] }
+const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: LEADERS }
+const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner', 'student'] }
 
 const visible = (items: Item[]) => computed(() => items.filter(i => role.value && i.roles.includes(role.value)))
 const mainItems = visible(mainNav)

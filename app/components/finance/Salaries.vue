@@ -4,8 +4,12 @@
  * إدخال + إجمالي + اعتماد (قفل) + ترحيل كحركة «صادر/رواتب».
  */
 import type { Database } from '~/types/database.types'
-import { roleLabel, type Role } from '~/constants/roles'
+import { roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
 
+/** أصحاب الرواتب: العاملون عدا المدير الإداري (كما كان المدير مستثنى) — والطالب ليس عاملاً. */
+const SALARIED_ROLES = STAFF_ROLES.filter(r => r !== 'admin_manager')
+
+const { isReadOnly } = usePermissions()
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
@@ -21,7 +25,7 @@ const rows = ref<Row[]>([])
 const approved = ref(false)
 const loaded = ref(false)
 const loading = ref(false)
-const canEdit = computed(() => !approved.value)
+const canEdit = computed(() => !approved.value && !isReadOnly.value)
 const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.amount) || 0), 0))
 const fmt = (n: number) => n.toLocaleString('ar')
 
@@ -29,7 +33,7 @@ async function load() {
   loading.value = true
   try {
     const [{ data: workers }, { data: sal }] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, role, gender').neq('role', 'manager').eq('status', 'active').order('full_name'),
+      supabase.from('profiles').select('id, full_name, role, gender').in('role', SALARIED_ROLES).eq('status', 'active').order('full_name'),
       supabase.from('monthly_salaries').select('profile_id, amount, approved').eq('salary_month', month.value).eq('salary_year', year.value)
     ])
     const map: Record<string, { amount: number, approved: boolean }> = {}
@@ -248,7 +252,7 @@ async function postAsTransaction() {
             @click="approveMonth"
           />
           <UButton
-            v-else
+            v-else-if="!isReadOnly"
             label="فتح للتعديل"
             color="neutral"
             variant="outline"
@@ -259,6 +263,7 @@ async function postAsTransaction() {
             @click="reopen"
           />
           <UButton
+            v-if="!isReadOnly"
             label="ترحيل كحركة"
             color="neutral"
             variant="outline"

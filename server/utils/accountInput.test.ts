@@ -22,7 +22,7 @@ describe('parseStaffInput', () => {
   })
   it('يرفض كل الأدوار خارج الموظفين (ومنها الطالب)', () => {
     expect(parseStaffInput({ ...staff, role: 'student' })).toMatchObject({ ok: false, message: 'الدور غير صالح.' })
-    expect(parseStaffInput({ ...staff, role: 'manager' })).toMatchObject({ ok: false })
+    expect(parseStaffInput({ ...staff, role: 'owner' })).toMatchObject({ ok: false })
   })
   it('يقبل women_admin كدورٍ يُنشأ', () => {
     expect(parseStaffInput({ ...staff, role: 'women_admin', gender: 'female' }).ok).toBe(true)

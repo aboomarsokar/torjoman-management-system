@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * إدارة الأخبار (§4.26) — للمدير فقط. تظهر المنشورة للزوّار على صفحة الهبوط.
+ * إدارة الأخبار (§4.26) — للمدير الإداري (ومشرف المشروع اطّلاعاً). تظهر المنشورة للزوّار على صفحة الهبوط.
  * إنشاء/تعديل/حذف + نشر/إخفاء + فتح للقراءة. رفع الصورة إلى Storage (اختياري).
  */
 import type { Database } from '~/types/database.types'
@@ -9,11 +9,12 @@ definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الأخبار — ترجمان' })
 
 const supabase = useSupabaseClient<Database>()
-const { role, profile } = useProfile()
+const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const { uploadImage } = useUpload()
 const toast = useToast()
-const isManager = computed(() => role.value === 'manager')
+const { isAdmin, isReadOnly } = usePermissions()
+const canView = computed(() => isAdmin.value || isReadOnly.value)
 
 const uploading = ref(false)
 async function onPickImage(e: Event) {
@@ -155,7 +156,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
       subtitle="أخبار وإعلانات تظهر للزوّار على صفحة الهبوط — أنشئ وانشر وتابع."
     >
       <template
-        v-if="isManager"
+        v-if="isAdmin"
         #actions
       >
         <UButton
@@ -170,9 +171,9 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
     </UiPageHeader>
 
     <UiEmptyState
-      v-if="!isManager"
+      v-if="!canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير فقط."
+      title="هذه الصفحة للمدير الإداري فقط."
     />
 
     <ClientOnly v-else>
@@ -253,6 +254,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 @click="reading = n"
               />
               <UButton
+                v-if="isAdmin"
                 :label="n.published ? 'إخفاء' : 'نشر'"
                 :color="n.published ? 'neutral' : 'primary'"
                 variant="ghost"
@@ -262,6 +264,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 @click="togglePublish(n)"
               />
               <UButton
+                v-if="isAdmin"
                 color="neutral"
                 variant="ghost"
                 size="sm"
@@ -271,6 +274,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 @click="openEdit(n)"
               />
               <UButton
+                v-if="isAdmin"
                 color="error"
                 variant="ghost"
                 size="sm"

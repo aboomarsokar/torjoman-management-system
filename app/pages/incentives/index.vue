@@ -14,7 +14,8 @@ const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isTeacher = computed(() => role.value === 'teacher')
+const { isTeacher, canApprove, isReadOnly } = usePermissions()
+const canReview = computed(() => canApprove.value || isReadOnly.value)
 
 const CATEGORIES = ['جوائز', 'أنشطة', 'ضيافة', 'أخرى']
 const categoryItems = CATEGORIES.map(c => ({ label: c, value: c }))
@@ -137,12 +138,18 @@ const fmt = (n: number) => n.toLocaleString('ar')
 <template>
   <div class="inc">
     <UiPageHeader
-      title="كشف حوافز الحلقة"
-      subtitle="مصروفات مبلغ الحوافز الشهري لحلقتك — أضِف البنود وارفع الكشف للمدير."
+      :title="canReview ? 'كشوف حوافز الحلقات' : 'كشف حوافز الحلقة'"
+      :subtitle="canReview ? 'الكشوف الواردة من المعلّمين لكل شهر — مراجعتها واعتمادها بـ«تمّ الاطّلاع».' : 'مصروفات مبلغ الحوافز الشهري لحلقتك — أضِف البنود وارفع الكشف للمدير.'"
+    />
+
+    <!-- المعتمِدون ومشرف المشروع: مراجعة الكشوف الواردة في نطاقهم (RLS) بلا تخصيص -->
+    <FinanceIncentives
+      v-if="canReview"
+      review-only
     />
 
     <UiEmptyState
-      v-if="!isTeacher"
+      v-else-if="!isTeacher"
       icon="i-lucide-lock"
       title="هذه الصفحة للمعلّم."
     />

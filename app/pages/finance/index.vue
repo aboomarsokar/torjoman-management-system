@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
- * الملف المالي (§4.20) — للمدير فقط. مركز مالي بالشيكل، أربعة تبويبات:
- * نظرة عامة · سجلّ الحركات · الرواتب الشهرية · حوافز الحلقات.
+ * الملف المالي (§4.20) — للمدير الإداري (ومشرف المشروع عرضاً بلا كتابة).
+ * مركز مالي بالشيكل، أربعة تبويبات: نظرة عامة · سجلّ الحركات · الرواتب الشهرية · حوافز الحلقات.
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الملف المالي — ترجمان' })
 
-const { role } = useProfile()
-const isManager = computed(() => role.value === 'manager')
+const { isAdmin, isReadOnly } = usePermissions()
+const canView = computed(() => isAdmin.value || isReadOnly.value)
 
 const tabs = [
   { key: 'overview', label: 'نظرة عامة', icon: 'i-lucide-layout-dashboard' },
@@ -26,9 +26,9 @@ const tab = ref('overview')
     />
 
     <UiEmptyState
-      v-if="!isManager"
+      v-if="!canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير فقط."
+      title="هذه الصفحة للمدير الإداري فقط."
     />
 
     <template v-else>

@@ -20,8 +20,9 @@ const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const isTeacher = computed(() => role.value === 'teacher')
-const canGrade = computed(() => role.value === 'manager' || role.value === 'examiner')
+const { isTeacher, isManager, isExaminer } = usePermissions()
+/** الرصد: المختبِر لحلقاته، والمديران (الإداري والفني) احتياطاً — كما يسمح RLS. */
+const canGrade = computed(() => isManager.value || isExaminer.value)
 
 const stageLabel = (s: string) => s === 'partial' ? 'مرحلي' : 'تجميعي'
 

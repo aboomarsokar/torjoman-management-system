@@ -2,7 +2,8 @@
 /**
  * التقرير الشهري للحلقة (§4.17).
  * المعلّم يرفع تقرير حلقته (حفظ/مراجعة/غياب/نقاط/درجة لكل طالب + أنشطة مصاحبة)،
- * والمدير يعتمده. صفحات الحفظ/المراجعة محسوبة في القاعدة. RLS: المدير + حلقة المعلّم.
+ * ونطاق الاعتماد (الإداري والفني والمديرة الإدارية للبنات) يعتمده. صفحات الحفظ/المراجعة محسوبة في القاعدة.
+ * RLS: المعلّم مسودّةً ← مُرسَل فقط، والاعتماد لنطاقه.
  * يُختار الشهر/السنة (لا مستقبل)، وتقرير واحد لكل (حلقة، شهر، سنة).
  */
 import type { Database } from '~/types/database.types'
@@ -18,8 +19,8 @@ const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const { exportXlsx } = useExport()
 const toast = useToast()
-const isManager = computed(() => role.value === 'manager')
-const isTeacher = computed(() => role.value === 'teacher')
+/** الاعتماد وإعادة الفتح لنطاق الاعتماد (الإداري والفني، والمديرة الإدارية لحلقات البنات — RLS يقصره). */
+const { isTeacher, canApprove, isManager, isReadOnly } = usePermissions()
 
 // ── المفاتيح والتسميات ──
 const ACTIVITY_GROUPS: { title: string, keys: { key: ActivityKey, label: string }[] }[] = [
@@ -319,7 +320,7 @@ async function setStatus(status: ReportStatus) {
     />
 
     <!-- لوحة التكريم (للمراجِعين) -->
-    <ReportsHonorsBoard v-if="isManager || role === 'quality'" />
+    <ReportsHonorsBoard v-if="isManager || isReadOnly" />
 
     <!-- قائمة التقارير -->
     <ClientOnly>
@@ -531,7 +532,7 @@ async function setStatus(status: ReportStatus) {
               @click="submitConfirmOpen = true"
             />
             <UButton
-              v-if="isManager && report && report.status !== 'approved'"
+              v-if="canApprove && report && report.status !== 'approved'"
               label="اعتماد"
               color="success"
               size="lg"
@@ -541,7 +542,7 @@ async function setStatus(status: ReportStatus) {
               @click="setStatus('approved')"
             />
             <UButton
-              v-if="isManager && report && report.status === 'approved'"
+              v-if="canApprove && report && report.status === 'approved'"
               label="إعادة فتح"
               color="neutral"
               variant="outline"

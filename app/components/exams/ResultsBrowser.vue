@@ -1,17 +1,14 @@
 <script setup lang="ts">
 /**
  * متصفّح نتائج الاختبارات (§4.16) — لكل الأدوار حسب النطاق (RLS يقصّ البيانات):
- * فلاتر هرمية (مشرف جودة → مشرف → حلقة) تظهر حسب الدور + ترقيم صفحات.
+ * فلاتر هرمية (مشرف ميداني → حلقة) تظهر حسب الدور + ترقيم صفحات.
  */
 import type { Database } from '~/types/database.types'
 
 const supabase = useSupabaseClient<Database>()
-const { role } = useProfile()
-
-const isTeacher = computed(() => role.value === 'teacher')
-const isManager = computed(() => role.value === 'manager')
-const isQuality = computed(() => role.value === 'quality')
-const isSupervisor = computed(() => role.value === 'supervisor')
+const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = usePermissions()
+/** فلتر المشرف لمن يرى أكثر من مشرف: الإداري والفني ومشرف المشروع والمديرة الإدارية. */
+const showSupervisorFilter = computed(() => isManager.value || isReadOnly.value || isWomenAdmin.value)
 
 type RawResult = {
   id: string
@@ -23,7 +20,7 @@ type RawResult = {
     halaqa: {
       id: string
       name: string
-      supervisor: { id: string, full_name: string, quality: { id: string, full_name: string } | null } | null
+      supervisor: { id: string, full_name: string } | null
     } | null
   } | null
   exam_list_item: { exam_plan: { parts_from: number, parts_to: number } | null } | null
@@ -39,15 +36,13 @@ type FlatResult = {
   halqa: string
   supId: string
   sup: string
-  qId: string
-  q: string
 }
 
 // بلا await قبل defineExpose (قاعدة vue/no-expose-after-await) — الجلب عميل فقط أصلاً
 const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results', async () => {
   const { data, error } = await supabase
     .from('exam_results')
-    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name, quality:quality_supervisor_id(id, full_name)))), exam_list_item:exam_list_item_id(exam_plan:exam_plan_id(parts_from, parts_to))')
+    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_plan:exam_plan_id(parts_from, parts_to))')
     .order('exam_date', { ascending: false })
     .limit(500)
     .returns<RawResult[]>()
@@ -63,19 +58,16 @@ defineExpose({ refresh })
 const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).map((r) => {
   const h = r.student?.halaqa
   const sup = h?.supervisor
-  const q = sup?.quality
   return {
     id: r.id, exam_date: r.exam_date, total_score: r.total_score, passed: r.passed,
     student: r.student?.full_name ?? '—',
     range: r.exam_list_item?.exam_plan ? `${r.exam_list_item.exam_plan.parts_from}–${r.exam_list_item.exam_plan.parts_to}` : '—',
     halqaId: h?.id ?? '', halqa: h?.name ?? '—',
-    supId: sup?.id ?? '', sup: sup?.full_name ?? '—',
-    qId: q?.id ?? '', q: q?.full_name ?? '—'
+    supId: sup?.id ?? '', sup: sup?.full_name ?? '—'
   }
 }))
 
 // فلاتر هرمية
-const fQuality = ref('all')
 const fSupervisor = ref('all')
 const fHalqa = ref('all')
 const uniq = (arr: { id: string, label: string }[]) => {
@@ -83,30 +75,21 @@ const uniq = (arr: { id: string, label: string }[]) => {
   for (const x of arr) if (x.id) m.set(x.id, x.label)
   return [{ value: 'all', label: 'الكل' }, ...[...m].map(([value, label]) => ({ value, label }))]
 }
-const qualityOpts = computed(() => uniq(allResults.value.map(r => ({ id: r.qId, label: r.q }))))
-const supervisorOpts = computed(() => uniq(allResults.value
-  .filter(r => fQuality.value === 'all' || r.qId === fQuality.value)
-  .map(r => ({ id: r.supId, label: r.sup }))))
+const supervisorOpts = computed(() => uniq(allResults.value.map(r => ({ id: r.supId, label: r.sup }))))
 const halqaOpts = computed(() => uniq(allResults.value
-  .filter(r => (fQuality.value === 'all' || r.qId === fQuality.value) && (fSupervisor.value === 'all' || r.supId === fSupervisor.value))
+  .filter(r => fSupervisor.value === 'all' || r.supId === fSupervisor.value)
   .map(r => ({ id: r.halqaId, label: r.halqa }))))
-watch(fQuality, () => {
-  fSupervisor.value = 'all'
-  fHalqa.value = 'all'
-})
 watch(fSupervisor, () => {
   fHalqa.value = 'all'
 })
 
 const results = computed(() => allResults.value.filter(r =>
-  (fQuality.value === 'all' || r.qId === fQuality.value)
-  && (fSupervisor.value === 'all' || r.supId === fSupervisor.value)
+  (fSupervisor.value === 'all' || r.supId === fSupervisor.value)
   && (fHalqa.value === 'all' || r.halqaId === fHalqa.value)))
 
 const { page: resPage, pageCount: resPageCount, total: resTotal, pageSize: resPageSize, paged: resPaged, resetPage: resetResPage } = usePagination(results, 12)
-watch([fQuality, fSupervisor, fHalqa], resetResPage)
+watch([fSupervisor, fHalqa], resetResPage)
 function clearResFilters() {
-  fQuality.value = 'all'
   fSupervisor.value = 'all'
   fHalqa.value = 'all'
 }
@@ -120,19 +103,7 @@ function clearResFilters() {
 
     <div class="res-filters">
       <UFormField
-        v-if="isManager"
-        label="مشرف الجودة"
-        size="sm"
-      >
-        <UiSelect
-          v-model="fQuality"
-          :items="qualityOpts"
-          size="md"
-          class="rf"
-        />
-      </UFormField>
-      <UFormField
-        v-if="isManager || isQuality"
+        v-if="showSupervisorFilter"
         label="المشرف"
         size="sm"
       >
@@ -156,7 +127,7 @@ function clearResFilters() {
         />
       </UFormField>
       <UButton
-        v-if="fQuality !== 'all' || fSupervisor !== 'all' || fHalqa !== 'all'"
+        v-if="fSupervisor !== 'all' || fHalqa !== 'all'"
         label="مسح الفلاتر"
         color="neutral"
         variant="ghost"
@@ -188,7 +159,7 @@ function clearResFilters() {
               الحلقة
             </th>
             <th
-              v-if="!isTeacher && !isSupervisor"
+              v-if="!isTeacher && !isFieldSupervisor"
               class="ta-start"
             >
               المشرف
@@ -222,7 +193,7 @@ function clearResFilters() {
               {{ r.halqa }}
             </td>
             <td
-              v-if="!isTeacher && !isSupervisor"
+              v-if="!isTeacher && !isFieldSupervisor"
               class="muted"
             >
               {{ r.sup }}

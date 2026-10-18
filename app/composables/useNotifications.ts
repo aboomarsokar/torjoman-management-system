@@ -5,9 +5,8 @@ import type { Database } from '~/types/database.types'
  * حسب الدور، مع RLS الذي يقصر النطاق تلقائيّاً:
  *  - المعلّم: تنبيهات إدارية جديدة لم يؤكّد اطّلاعه عليها + نتائج رُصدت اليوم.
  *  - المختبِر: بنود اختبار بانتظار رصده.
- *  - المشرف: زيارات اليوم.
- *  - المدير: تقارير شهرية مُرسلة بانتظار اعتماده.
- *  - الجودة: تقارير مُرسلة في نطاقها للمتابعة.
+ *  - المشرف الميداني: زيارات اليوم.
+ *  - المعتمِدون (الإداري والفني والمديرة الإدارية): تقارير شهرية مُرسلة بانتظار الاعتماد (RLS يقصر نطاقها).
  * تحديث: عند التركيب + عند تغيّر المسار + استطلاع كل 60 ثانية.
  */
 export type NotifItem = { id: string, label: string, sub?: string, to: string, icon: string }
@@ -15,6 +14,7 @@ export type NotifItem = { id: string, label: string, sub?: string, to: string, i
 export function useNotifications() {
   const supabase = useSupabaseClient<Database>()
   const { role, profile } = useProfile()
+  const { canApprove } = usePermissions()
   const route = useRoute()
 
   const items = ref<NotifItem[]>([])
@@ -63,7 +63,7 @@ export function useNotifications() {
       }
     }
 
-    if (r === 'supervisor') {
+    if (r === 'field_supervisor') {
       const today = new Date().toISOString().slice(0, 10)
       const { data: visits } = await supabase
         .from('supervision_visits')
@@ -76,7 +76,7 @@ export function useNotifications() {
       }
     }
 
-    if (r === 'manager' || r === 'quality') {
+    if (canApprove.value) {
       const { data } = await supabase
         .from('monthly_reports')
         .select('id, report_month, report_year, halaqa:halaqa_id(name)')
@@ -84,7 +84,7 @@ export function useNotifications() {
         .order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(10)
         .returns<{ id: string, report_month: number, report_year: number, halaqa: { name: string } | null }[]>()
       for (const rep of data ?? []) {
-        out.push({ id: rep.id, label: r === 'manager' ? 'تقرير بانتظار اعتمادك' : 'تقرير مُرسل للمتابعة', sub: rep.halaqa?.name ?? '—', to: '/reports', icon: 'i-lucide-file-text' })
+        out.push({ id: rep.id, label: 'تقرير بانتظار اعتمادك', sub: rep.halaqa?.name ?? '—', to: '/reports', icon: 'i-lucide-file-text' })
       }
     }
 

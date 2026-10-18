@@ -118,6 +118,22 @@ export function staffProfileError(error: { code?: string, message: string }, rol
 }
 
 export const DUPLICATE_IDENTITY_MESSAGE = 'رقم الهوية مسجّل لطالب آخر.'
+export const HALAQA_NOT_FOUND_MESSAGE = 'الحلقة غير موجودة.'
+export const HALAQA_GENDER_MISMATCH_MESSAGE = 'جنس الطالب لا يطابق جنس الحلقة.'
+
+/**
+ * فحص إسناد الطالب الجديد لحلقة: الحلقة موجودة وجنسها يطابق جنس الطالب.
+ * لازمٌ لأن الإنشاء بعميل الخدمة لا يمرّ بحارس القاعدة guard_student_assignment.
+ * halaqa = null تعني أن الحلقة المطلوبة لم توجد.
+ */
+export function studentHalaqaError(
+  studentGender: AccountGender,
+  halaqa: { gender: AccountGender | null } | null
+): string | null {
+  if (!halaqa) return HALAQA_NOT_FOUND_MESSAGE
+  if (halaqa.gender !== null && halaqa.gender !== studentGender) return HALAQA_GENDER_MISMATCH_MESSAGE
+  return null
+}
 
 /** يترجم خطأ إدراج صفّ الطالب: تفرّد الهوية ← 409 بالعربية، وما عداه 400 (لا نصّ Postgres الخام للتكرار). */
 export function studentRowError(error: { code?: string, message: string }): { statusCode: number, message: string } {

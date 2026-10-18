@@ -1,5 +1,5 @@
 import { requireAdminManager } from '../utils/supabaseAdmin'
-import { authCreateError, DUPLICATE_IDENTITY_MESSAGE, parseStudentInput, studentRowError } from '../utils/accountInput'
+import { authCreateError, DUPLICATE_IDENTITY_MESSAGE, parseStudentInput, studentHalaqaError, studentRowError } from '../utils/accountInput'
 import { studentEmailFromIdentity } from '~/constants/accounts'
 
 /**
@@ -15,6 +15,13 @@ export default defineEventHandler(async (event) => {
   // فحصٌ مسبق: صفّ طالبٍ قديمٌ بلا حساب يحمل الهوية نفسها — فلا يُنشأ حساب Auth ثم يُحذف
   const { data: existing } = await admin.from('students').select('id').eq('national_id', nationalId).maybeSingle()
   if (existing) throw createError({ statusCode: 409, statusMessage: DUPLICATE_IDENTITY_MESSAGE })
+
+  // عميل الخدمة لا يمرّ بحارس guard_student_assignment — فيُفحص وجود الحلقة وتطابق الجنس هنا قبل إنشاء الحساب
+  if (halaqaId) {
+    const { data: halaqa } = await admin.from('halaqat').select('gender').eq('id', halaqaId).maybeSingle()
+    const halaqaError = studentHalaqaError(gender, halaqa)
+    if (halaqaError) throw createError({ statusCode: 400, statusMessage: halaqaError })
+  }
 
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
     email: studentEmailFromIdentity(nationalId),

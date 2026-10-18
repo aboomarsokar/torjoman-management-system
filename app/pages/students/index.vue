@@ -18,7 +18,7 @@ type StudentStatus = Database['public']['Enums']['student_status']
 type StudentRow = Database['public']['Tables']['students']['Row'] & {
   halaqa: { name: string, teacher: { full_name: string } | null } | null
 }
-type HalqaOpt = { id: string, name: string, daily_time: string | null, teacher: { full_name: string } | null }
+type HalqaOpt = { id: string, name: string, gender: Gender, daily_time: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
@@ -52,7 +52,7 @@ const { data: students, refresh, pending } = useLazyAsyncData<StudentRow[]>(
 const { data: halqat } = useLazyAsyncData<HalqaOpt[]>('students-halqat', async () => {
   const { data } = await supabase
     .from('halaqat')
-    .select('id, name, daily_time, teacher:teacher_id(full_name)')
+    .select('id, name, gender, daily_time, teacher:teacher_id(full_name)')
     .order('name')
     .returns<HalqaOpt[]>()
   return data ?? []
@@ -61,7 +61,11 @@ function halqaLabel(h: HalqaOpt) {
   return h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name
 }
 // قائمة الإسناد: تفاصيل كاملة لتمييز الحلقة. قائمة التصفية: الاسم فقط (أوجز).
-const halqaItems = computed(() => [{ label: 'بلا حلقة', value: HALQA_NONE }, ...(halqat.value ?? []).map(h => ({ label: halqaLabel(h), value: h.id }))])
+// قائمة الإسناد مقصورة على حلقات جنس الطالب المختار (جنس الطالب يطابق جنس الحلقة)
+const halqaItems = computed(() => [
+  { label: 'بلا حلقة', value: HALQA_NONE },
+  ...(halqat.value ?? []).filter(h => h.gender === form.gender).map(h => ({ label: halqaLabel(h), value: h.id }))
+])
 const halqaFilterItems = computed(() => [{ label: 'كل الحلقات', value: 'all' }, ...(halqat.value ?? []).map(h => ({ label: h.name, value: h.id }))])
 
 const statusF = ref<StudentStatus | 'all'>('all')
@@ -109,6 +113,11 @@ const form = reactive({
   residence: '', nearest_mosque: '',
   guardian_name: '', guardian_phone: '', phone: '', guardian_email: '', enrollment_date: '',
   status: 'active' as StudentStatus
+})
+// تغيير الجنس إلى الآخر يُسقط حلقةً من غير جنسه (القاعدة والخادم يرفضانها)
+watch(() => form.gender, (g) => {
+  const cur = (halqat.value ?? []).find(h => h.id === form.halaqa_id)
+  if (cur && cur.gender !== g) form.halaqa_id = HALQA_NONE
 })
 const tajweedItems = [
   { label: '—', value: TAJWEED_NONE },

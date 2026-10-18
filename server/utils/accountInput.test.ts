@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  authCreateError, parseResetPasswordInput, parseStaffInput, parseStudentInput, staffProfileError, studentRowError, trimmedString
+  authCreateError, HALAQA_GENDER_MISMATCH_MESSAGE, HALAQA_NOT_FOUND_MESSAGE, parseResetPasswordInput, parseStaffInput,
+  parseStudentInput, staffProfileError, studentHalaqaError, studentRowError, trimmedString
 } from './accountInput'
 
 const staff = { full_name: ' أحمد ', role: 'teacher', gender: 'male', password: '12345678' }
@@ -61,6 +62,23 @@ describe('parseStudentInput', () => {
     expect(parseStudentInput({ ...student, full_name: '  ' }).ok).toBe(false)
     expect(parseStudentInput({ ...student, gender: undefined }).ok).toBe(false)
     expect(parseStudentInput({ ...student, password: 'short' }).ok).toBe(false)
+  })
+})
+
+describe('studentHalaqaError', () => {
+  it('يقبل حلقةً من جنس الطالب', () => {
+    expect(studentHalaqaError('female', { gender: 'female' })).toBeNull()
+    expect(studentHalaqaError('male', { gender: 'male' })).toBeNull()
+  })
+  it('يرفض حلقةً من الجنس الآخر', () => {
+    expect(studentHalaqaError('female', { gender: 'male' })).toBe(HALAQA_GENDER_MISMATCH_MESSAGE)
+    expect(studentHalaqaError('male', { gender: 'female' })).toBe('جنس الطالب لا يطابق جنس الحلقة.')
+  })
+  it('يرفض حلقةً غير موجودة', () => {
+    expect(studentHalaqaError('male', null)).toBe(HALAQA_NOT_FOUND_MESSAGE)
+  })
+  it('حلقة بلا جنسٍ محدَّد لا تُرفض (كحارس القاعدة)', () => {
+    expect(studentHalaqaError('female', { gender: null })).toBeNull()
   })
 })
 

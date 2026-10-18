@@ -4,14 +4,15 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
-  PHOTO_REMOVE_DENIED, PHOTO_SAVE_DENIED, PHOTO_TOO_LARGE,
-  removeProfilePhoto, uploadProfilePhoto, type PhotoBackend
+  PHOTO_FILE_LEFT, PHOTO_REMOVE_DENIED, PHOTO_SAVE_DENIED, PHOTO_TOO_LARGE,
+  PhotoFileLeftError, removeProfilePhoto, uploadProfilePhoto, type PhotoBackend
 } from './useProfilePhoto'
 
 interface FakeOptions {
   uploadError?: unknown
   rows?: { id: string }[] | null
   removeThrows?: boolean
+  removeError?: unknown
 }
 
 function fakeBackend(options: FakeOptions = {}) {
@@ -24,7 +25,7 @@ function fakeBackend(options: FakeOptions = {}) {
     async removeObject(path) {
       calls.push(`remove:${path}`)
       if (options.removeThrows) throw new Error('Failed to fetch')
-      return null
+      return { error: options.removeError ?? null }
     },
     async setPhotoPath(profileId, path) {
       calls.push(`row:${profileId}=${path}`)
@@ -77,10 +78,19 @@ describe('removeProfilePhoto', () => {
     expect(calls).toEqual(['row:p1=null', 'remove:p1/photo.webp'])
   })
 
-  it('وفشلُ حذف الملفّ لا يُفشل الإزالة', async () => {
+  it('وخطأُ المستودع المُعاد من الحذف لا يُبتلع — يُرمى بالعربية بعد إفراغ المسار', async () => {
+    const { backend, calls } = fakeBackend({ removeError: { message: 'Object not found' } })
+
+    const failure = removeProfilePhoto(backend, 'p1')
+    await expect(failure).rejects.toBeInstanceOf(PhotoFileLeftError)
+    await expect(failure).rejects.toThrow(PHOTO_FILE_LEFT)
+    expect(calls).toEqual(['row:p1=null', 'remove:p1/photo.webp'])
+  })
+
+  it('وكذلك الانقطاعُ المرميّ أثناء الحذف', async () => {
     const { backend } = fakeBackend({ removeThrows: true })
 
-    await expect(removeProfilePhoto(backend, 'p1')).resolves.toBeUndefined()
+    await expect(removeProfilePhoto(backend, 'p1')).rejects.toBeInstanceOf(PhotoFileLeftError)
   })
 
   it('وصفرُ الصفوف يُرمى بالعربية ولا يُحذف الملفّ', async () => {

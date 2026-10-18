@@ -77,7 +77,7 @@ news (الأخبار — المدير ينشرها، عامّة على Landing)
 | `status` | enum | `pending` / `active` / `disabled` (تُشتقّ من حالة Auth) |
 | `assigned_by` | uuid FK → profiles | «عيّنه» — مَن أنشأ/عيّن هذا الحساب |
 | `avatar_url` | text | ⚠️ متروك منذ Task 6b (لا يُقرأ ولا يُكتب) — يُسقط بعد النشر |
-| `photo_path` | text | الصورة الشخصية الاختيارية: مسارٌ في المستودع **الخاص** `profile-photos`، شكلُه ثابت `<id>/photo.webp` (قيد `profiles_photo_path_shape`)، و**لا صورة لحساب أنثى**. القراءة بروابط موقَّعة لساعة: لصاحبها ولكل حسابٍ نشطٍ غير طالب (`can_view_profile_photo`)؛ الرفع/الحذف لصاحب المجلّد أو المدير الإداري (`can_manage_profile_photo`). الهجرة `20261018080234_profile_photos.sql` |
+| `photo_path` | text | الصورة الشخصية الاختيارية: مسارٌ في المستودع **الخاص** `profile-photos`، شكلُه ثابت `<id>/photo.webp` (قيد `profiles_photo_path_shape`)، و**لا صورة لحساب أنثى**. القراءة بروابط موقَّعة لساعة: لصاحبها ولكل حسابٍ نشطٍ غير طالب (`can_view_profile_photo`)؛ الرفع/الحذف لصاحب المجلّد أو المدير الإداري (`can_manage_profile_photo`). الهجرة `20261018080234_profile_photos.sql`. ومنذ `20261018081904_profile_photos_gender_sync.sql`: جنسُ الطالب يُزامَن من `students` إلى حسابه (`students_sync_gender_to_profile_*`)، وتحويلُ الحساب إلى أنثى يُفرغ `photo_path` آلياً (`profiles_photo_clear_on_female`)، والقراءةُ لغير صاحبها والمدير تشترط `photo_path` غيرَ فارغ (فالكائن اليتيم لا يُوقَّع) |
 
 **بيانات مالية (🔒 صلاحية المدير فقط — يُفضّل جدول منفصل `profile_financials` بـ RLS صارم):**
 

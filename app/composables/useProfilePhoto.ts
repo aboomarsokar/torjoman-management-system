@@ -14,8 +14,8 @@ import { shrinkToSquare } from '~/utils/imageSquare'
 export interface PhotoBackend {
   /** رفعٌ باستبدال (`upsert`) — الاسمُ ثابت. */
   uploadObject: (path: string, blob: Blob) => Promise<{ error: unknown }>
-  /** حذفُ الكائن — فشلُه لا يُفشل الإزالة. */
-  removeObject: (path: string) => Promise<unknown>
+  /** حذفُ الكائن — يُرجع خطأ المستودع إن وُجد. */
+  removeObject: (path: string) => Promise<{ error: unknown }>
   /** يكتب المسار (أو null) في صفّ الحساب ويُرجع الصفوفَ المتأثّرة. */
   setPhotoPath: (profileId: string, path: string | null) => Promise<{ data: { id: string }[] | null, error: unknown }>
 }
@@ -23,6 +23,18 @@ export interface PhotoBackend {
 export const PHOTO_TOO_LARGE = 'الصورة كبيرة حتى بعد التصغير. جرّب صورة أوضح وأبسط.'
 export const PHOTO_SAVE_DENIED = 'تعذّر حفظ الصورة — لا تملك صلاحية تعديل هذا الملف.'
 export const PHOTO_REMOVE_DENIED = 'تعذّر إزالة الصورة — لا تملك صلاحية تعديل هذا الملف.'
+export const PHOTO_FILE_LEFT = 'أُزيلت الصورة من الملف، لكن تعذّر حذف ملفها من التخزين.'
+
+/**
+ * أُفرغ المسارُ في الصفّ (فاختفت الصورةُ من الشاشات ولا يوقّعها غيرُ صاحبها والمدير)، لكنّ
+ * حذفَ الكائن فشل — يميّزه المستدعي عن رفضٍ كامل فيُحدّث الشاشةَ ويعرض الرسالة.
+ */
+export class PhotoFileLeftError extends Error {
+  constructor(cause?: unknown) {
+    super(PHOTO_FILE_LEFT, { cause })
+    this.name = 'PhotoFileLeftError'
+  }
+}
 
 /**
  * يصغّر ويرفع ثم يثبّت المسار في الصفّ.
@@ -51,18 +63,21 @@ export async function uploadProfilePhoto(
 
 /**
  * يُفرِّغ العمودَ أوّلاً ثم يحذف الملفّ — العكسُ يترك الصفَّ يُشير إلى ملفٍّ محذوف.
- * وفشلُ حذف الملفّ لا يُفشل الإزالة: اختفت من الشاشات، واليتيمُ أهون.
+ * وفشلُ حذف الملفّ (خطأٌ مُعاد أو مرميّ) يُرمى `PhotoFileLeftError` برسالةٍ عربية بعد أن
+ * أُفرغ المسار — فلا يُبتلع صامتاً، والكائنُ اليتيم لا يوقّعه غيرُ صاحبه والمدير.
  */
 export async function removeProfilePhoto(backend: PhotoBackend, profileId: string): Promise<void> {
   const { data, error } = await backend.setPhotoPath(profileId, null)
   if (error) throw error
   if (!data || data.length === 0) throw new Error(PHOTO_REMOVE_DENIED)
 
+  let removeError: unknown
   try {
-    await backend.removeObject(photoPath(profileId))
-  } catch {
-    // يتيمٌ في المستودع أهونُ من إزالةٍ فاشلة.
+    removeError = (await backend.removeObject(photoPath(profileId))).error
+  } catch (thrown) {
+    removeError = thrown
   }
+  if (removeError) throw new PhotoFileLeftError(removeError)
 }
 
 export function useProfilePhoto() {

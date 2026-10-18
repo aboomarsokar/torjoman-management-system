@@ -9,6 +9,7 @@
  * - الحفظُ فوريٌّ (لا ينتظر زرَّ «حفظ» في نموذج)، ويُعلم الصفحةَ بـ`changed`.
  */
 import { canHavePhoto, PHOTO_ACCEPT, photoPath as photoPathOf } from '~/constants/profilePhoto'
+import { PhotoFileLeftError } from '~/composables/useProfilePhoto'
 
 interface Props {
   /** معرّف الحساب (profiles.id) — مجلّدُ الصورة. */
@@ -59,13 +60,19 @@ async function onPick(event: Event) {
 }
 
 async function onRemove() {
+  // أُفرغ المسار؟ نعم عند النجاح، وعند PhotoFileLeftError (فشل حذف الملف بعد إفراغ المسار)
+  let cleared = false
   try {
     await remove(props.profileId)
-    invalidate(photoPathOf(props.profileId))
+    cleared = true
     toast.add({ title: 'أُزيلت الصورة.', color: 'success', icon: 'i-lucide-image-off' })
-    emit('changed')
   } catch (error) {
+    cleared = error instanceof PhotoFileLeftError
     handle(error, 'تعذّر إزالة الصورة.')
+  }
+  if (cleared) {
+    invalidate(photoPathOf(props.profileId))
+    emit('changed')
   }
 }
 </script>

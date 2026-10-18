@@ -54,7 +54,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `id` | uuid PK | = `auth.users.id` |
 | `role` | enum `user_role` | ثمانية: `project_supervisor` / `admin_manager` / `technical_manager` / `women_admin` / `field_supervisor` / `examiner` / `teacher` / `student` — المعاني والنطاق في §17. (القديم: `manager`→`admin_manager` و`quality`→`technical_manager` و`supervisor`→`field_supervisor`، وأُلغي النوع القديم بهجرة 20261017132335.) |
 | `employee_number` | text unique | **الرقم الوظيفي** — 4 خانات بالضبط (`check ^\d{4}$`)، يبدأ من `1001`، يولّده `claim_employee_number()` من تسلسلٍ للخدمة وحدها عند إنشاء الحساب. للموظفين فقط (null للطالب). معرّف دخول الموظف؛ بريده الداخلي `<رقم>@staff.torjoman.org` |
-| `must_change_password` | boolean | يرتفع عند الإنشاء بالكلمة الافتراضية أو إعادة التعيين؛ يطفئه صاحبه بعد تغييرها، ولا يرفعه إلا المدير الإداري أو الخدمة (`guard_profile_privileged`) |
+| `must_change_password` | boolean | يرتفع عند الإنشاء بالكلمة المؤقّتة أو إعادة التعيين (وما دام قائماً فلا شاشة إلا `/change-password`)؛ يطفئه صاحبه بعد تغييرها، ولا يرفعه إلا المدير الإداري أو الخدمة (`guard_profile_privileged`) |
 | `full_name` | text | الاسم رباعي |
 | `gender` | enum | `male` / `female` |
 | `birth_date` | date | العمر يُحسب منه |
@@ -638,9 +638,12 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 | المسار | من يستدعيه | ما يفعله |
 |---|---|---|
-| `POST /api/users` | `admin_manager` | `claim_employee_number()` ← حساب Auth ببريد الموظف الداخلي ← صفّ `profiles` (`must_change_password=true`، `assigned_by`)؛ يتراجع إن فشل الصفّ. المدير الإداري/الفني الثاني النشط ← `23505` ← 409 بالعربية. الرقم يُستهلك ولو فشل الإنشاء ولا يُعاد |
-| `POST /api/students` | `admin_manager` | هوية 9 خانات ← حساب Auth ← `profiles` بدور `student` ← `students` مربوطاً بـ`user_id`؛ تطابق جنس الحلقة يُفحص قبل الإنشاء؛ الهوية المكرّرة ← 409 |
-| `POST /api/users/reset-password` | `admin_manager` | يضبط كلمة جديدة ويرفع `must_change_password` |
-| `POST /api/auth/staff-login` | عامّ | ترجمة الرقم الوظيفي ← البريد الداخلي ← دخول بلا حفظ جلسة ← يُعيد الرموز؛ رفضٌ واحد «الرقم أو كلمة المرور غير صحيحة.» |
+| `POST /api/users` | `admin_manager` | `claim_employee_number()` ← حساب Auth ببريد الموظف الداخلي **وكلمةٍ مؤقّتة يولّدها الخادم** ← صفّ `profiles` (`must_change_password=true`، `assigned_by`)؛ يتراجع إن فشل الصفّ. يُعيد `{ id, employee_number, temp_password }` (الكلمة مرّةً واحدة، لا تُسجَّل). المدير الإداري/الفني الثاني النشط ← `23505` ← 409 بالعربية؛ والمديرة الإدارية بجنس الذكر ← 400. الرقم يُستهلك ولو فشل الإنشاء ولا يُعاد |
+| `POST /api/students` | `admin_manager` | هوية 9 خانات ← حساب Auth (كلمة مؤقّتة من الخادم) ← `profiles` بدور `student` ← `students` مربوطاً بـ`user_id`؛ تطابق جنس الحلقة يُفحص قبل الإنشاء؛ الهوية المكرّرة ← 409. يُعيد `{ id, user_id, temp_password }` |
+| `POST /api/users/reset-password` | `admin_manager` | لأي حساب (موظف أو طالب): يرفع `must_change_password` **أولاً** ثم يضبط كلمةً مؤقّتة جديدة ويعيدها `{ ok, temp_password }`. ⚠️ الجلسات القائمة لا تُلغى (`auth.admin.signOut` يأخذ رمز الجلسة لا معرّف المستخدم) |
+| `DELETE /api/students/:id` | `admin_manager` | `profiles` ← حساب Auth ← صفّ `students` (كل خطوةٍ يُفحص ناتجها؛ الحساب قبل الصفّ كي يبقى الصفّ ظاهراً لإعادة المحاولة). التابعون يُحذفون بالتتالي |
+| `PATCH /api/students/:id/national-id` | `admin_manager` | `{ national_id }`: تحقّق + فحص تكرار ← بريد Auth `<هوية>@students…` (مؤكَّد) ← `students.national_id`؛ يُعاد البريد القديم إن فشل الصفّ. التعديل المباشر للهوية من الواجهة أُلغي |
+
+> **دخول الموظف** لم يعد مساراً خادمياً (`/api/auth/staff-login` حُذف 2026-10-18): المتصفّح يشتقّ البريد من الرقم ويدخل مباشرةً كالطالب، ثم يفحص `profiles.status`. **حالة الدخول** (`profiles.status`) يغيّرها المدير الإداري مباشرةً (حارس `guard_profile_privileged`) — من إدارة المستخدمين للموظف ومن ملف الطالب للطالب؛ وهي مستقلّة عن `students.status` الدراسية.
 
 > **حالة البيانات:** بيانات الاختبار حُذفت 2026-10-18 (بقي `exam_plan` و`app_settings`)، والحساب الأول `1001` للمدير الإداري — كلمة مروره لا تُكتب في أي ملف. الاستيراد من Excel مؤجَّل: سيُدخل المستخدم الطلاب بمساعدة Claude.

@@ -6,3 +6,6 @@
  * must_change_password عند الإنشاء ويصير false بعد التغيير).
  */
 export const DEFAULT_PASSWORD = 'Turjuman@2026'
+
+/** الحدّ الأدنى لطول كلمة المرور عند تغييرها. */
+export const PASSWORD_MIN_LENGTH = 8

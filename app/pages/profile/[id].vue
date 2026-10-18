@@ -6,6 +6,7 @@
  * الجنس للمدير الإداري وحده (حارس القاعدة يمنع صاحب الملف من تغييره).
  * الصورة الشخصية اختيارية في مستودعٍ خاص (Task 6b) — يرفعها صاحب الملف أو المدير الإداري،
  * ولا صورة لحساب أنثى (لا حقل، والترويسة بالحرف الأول دائماً).
+ * الطالب لا يملك ملفّاً وظيفيّاً: يُحوَّل إلى «صفحتي» (/me) حيث بياناته للقراءة وكلمة مروره وصورته.
  */
 import type { Database } from '~/types/database.types'
 import { roleLabel } from '~/constants/roles'
@@ -16,7 +17,7 @@ definePageMeta({ layout: 'dashboard' })
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
 const { profile: myProfile } = useProfile()
-const { isAdmin } = usePermissions()
+const { isAdmin, isStudent } = usePermissions()
 const { handle } = useErrorHandler()
 const { prime, urlFor } = useProfilePhotoUrls()
 const { refresh: refreshMyPhoto } = useMyPhoto()
@@ -24,6 +25,11 @@ const toast = useToast()
 
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
+
+// الطالب لا يعدّل حقولاً وظيفيّة (المسمّى، التعيين، الاسم) — صفحته /me. الدور يصل غير متزامن، فيُراقَب.
+watch(isStudent, (student) => {
+  if (student) void navigateTo('/me', { replace: true })
+}, { immediate: true })
 
 const targetId = computed(() => route.params.id === 'me' ? (myProfile.value?.id ?? '') : String(route.params.id))
 const isSelf = computed(() => !!targetId.value && targetId.value === myProfile.value?.id)
@@ -189,42 +195,12 @@ async function save() {
 
 // ── تغيير كلمة المرور (لصاحب الملف) ──
 const pwOpen = ref(false)
-const pwSaving = ref(false)
-const pw = reactive({ next: '', confirm: '' })
-function openChangePw() {
-  pw.next = ''
-  pw.confirm = ''
-  pwOpen.value = true
-}
-async function changePassword() {
-  if (pw.next.length < 8) {
-    toast.add({ title: 'كلمة المرور 8 أحرف على الأقل.', color: 'error', icon: 'i-lucide-circle-alert' })
-    return
-  }
-  if (pw.next !== pw.confirm) {
-    toast.add({ title: 'الكلمتان غير متطابقتين.', color: 'error', icon: 'i-lucide-circle-alert' })
-    return
-  }
-  pwSaving.value = true
-  try {
-    const { error } = await supabase.auth.updateUser({ password: pw.next })
-    if (error) throw error
-    await supabase.from('profiles').update({ must_change_password: false }).eq('id', targetId.value)
-    toast.add({ title: 'تم تغيير كلمة المرور.', color: 'success', icon: 'i-lucide-circle-check' })
-    pwOpen.value = false
-    await refresh()
-  } catch (err) {
-    handle(err)
-  } finally {
-    pwSaving.value = false
-  }
-}
 </script>
 
 <template>
   <div class="profile">
     <ClientOnly>
-      <template v-if="pending">
+      <template v-if="pending || isStudent">
         <UiSkeletonBand :actions="2" />
         <div class="sections">
           <UiSkeletonLines
@@ -274,7 +250,7 @@ async function changePassword() {
               size="lg"
               icon="i-lucide-key-round"
               :ui="{ base: 'rounded-[13px] font-semibold' }"
-              @click="openChangePw"
+              @click="pwOpen = true"
             />
             <UButton
               v-if="canEdit"
@@ -289,24 +265,10 @@ async function changePassword() {
         </div>
 
         <!-- تنبيه الكلمة الافتراضية -->
-        <div
+        <ProfilePasswordBanner
           v-if="isSelf && data.p.must_change_password"
-          class="pw-banner"
-        >
-          <UIcon
-            name="i-lucide-shield-alert"
-            class="size-5"
-          />
-          <span>كلمة مرورك ما زالت الافتراضية — يُرجى تغييرها لحماية حسابك.</span>
-          <UButton
-            label="تغيير الآن"
-            color="warning"
-            size="sm"
-            icon="i-lucide-key-round"
-            :ui="{ base: 'rounded-[11px] font-semibold' }"
-            @click="openChangePw"
-          />
-        </div>
+          @change="pwOpen = true"
+        />
 
         <!-- الصورة الشخصية (اختيارية؛ لا تُعرض لحساب أنثى) -->
         <section
@@ -370,56 +332,11 @@ async function changePassword() {
     </ClientOnly>
 
     <!-- نافذة تغيير كلمة المرور -->
-    <UModal
+    <ProfilePasswordModal
       v-model:open="pwOpen"
-      title="تغيير كلمة المرور"
-    >
-      <template #body>
-        <div class="form">
-          <UFormField
-            label="كلمة المرور الجديدة"
-            hint="8 أحرف على الأقل"
-          >
-            <UInput
-              v-model="pw.next"
-              type="password"
-              dir="ltr"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField label="تأكيد كلمة المرور">
-            <UInput
-              v-model="pw.confirm"
-              type="password"
-              dir="ltr"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="modal-foot">
-          <UButton
-            label="إلغاء"
-            color="neutral"
-            variant="ghost"
-            @click="pwOpen = false"
-          />
-          <UButton
-            label="حفظ"
-            color="primary"
-            icon="i-lucide-check"
-            :loading="pwSaving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
-            @click="changePassword"
-          />
-        </div>
-      </template>
-    </UModal>
+      :profile-id="targetId"
+      @changed="refresh"
+    />
 
     <!-- نافذة التعديل -->
     <UModal
@@ -681,8 +598,6 @@ async function changePassword() {
 
 .band { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
 .band-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.pw-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--warn-soft, #fef3c7); color: var(--warn-ink, #92400e); border: 1px solid var(--warn, #f59e0b); border-radius: 14px; padding: 12px 16px; font-size: 14.5px; font-weight: 600; margin-bottom: 18px; }
-.pw-banner span { flex: 1; min-width: 180px; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .av { width: 64px; height: 64px; border-radius: 18px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex: none; overflow: hidden; }
 .photo-card { padding: 18px 22px; margin-bottom: 18px; }

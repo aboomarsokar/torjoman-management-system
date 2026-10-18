@@ -68,12 +68,14 @@ const managerNav: Item[] = [
 ]
 
 const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: LEADERS }
-const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner', 'student'] }
+// الطالب بلا «ملف شخصي» وظيفيّ: بياناته وكلمة مروره وصورته في «صفحتي» (/me)
+const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] }
 
 const visible = (items: Item[]) => computed(() => items.filter(i => role.value && i.roles.includes(role.value)))
 const mainItems = visible(mainNav)
 const managerItems = visible(managerNav)
 const showMetrics = computed(() => role.value && metricsItem.roles.includes(role.value))
+const showProfile = computed(() => role.value && profileItem.roles.includes(role.value))
 
 const navTitle = computed(() => {
   const all = [...mainNav, ...managerNav, metricsItem, profileItem]
@@ -170,19 +172,21 @@ const isActive = (item: Item) => item.to === route.path
               </button>
             </template>
 
-            <div class="nav-group">
-              الحساب
-            </div>
-            <button
-              class="nav-item"
-              @click="go(profileItem)"
-            >
-              <UIcon
-                :name="profileItem.icon"
-                class="size-5"
-              />
-              <span>{{ profileItem.label }}</span>
-            </button>
+            <template v-if="showProfile">
+              <div class="nav-group">
+                الحساب
+              </div>
+              <button
+                class="nav-item"
+                @click="go(profileItem)"
+              >
+                <UIcon
+                  :name="profileItem.icon"
+                  class="size-5"
+                />
+                <span>{{ profileItem.label }}</span>
+              </button>
+            </template>
           </template>
         </ClientOnly>
       </nav>

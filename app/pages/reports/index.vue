@@ -79,7 +79,10 @@ const acts = reactive<Record<string, boolean>>({})
 const meta = reactive({ general_notes: '', activities_notes: '' })
 
 // المعلّم وحده يحرّر التقرير (المدير يستقبل ويعتمد فقط)
-const canEdit = computed(() => isTeacher.value && report.value?.status !== 'approved')
+// المعلّم يعدّل المسودّة فقط (أو تقريراً لم يُحفظ بعد) — حارس القاعدة يرفض أيّ تعديل بعد الإرسال
+const canEdit = computed(() => isTeacher.value && (!report.value || report.value.status === 'draft'))
+/** تقرير المعلّم بعد الإرسال: للقراءة فقط حتى يعتمده نطاق الاعتماد أو يعيد فتحه. */
+const teacherLocked = computed(() => isTeacher.value && !!report.value && report.value.status !== 'draft')
 const num = (v: number | string) => (v === '' || v === null || v === undefined) ? null : Number(v)
 const pagesOf = (r: Row) => (num(r.memorization_to) ?? 0) - (num(r.memorization_from) ?? 0)
 const reviewOf = (r: Row) => (num(r.review_to) ?? 0) - (num(r.memorization_from) ?? 0)
@@ -498,6 +501,16 @@ async function setStatus(status: ReportStatus) {
               size="lg"
             />
             <span class="sb-sub">{{ rows.length }} طالب · {{ MONTH_NAMES[month - 1] }} {{ year }}</span>
+            <span
+              v-if="teacherLocked"
+              class="sb-locked"
+            >
+              <UIcon
+                name="i-lucide-lock"
+                class="size-4"
+              />
+              {{ report?.status === 'approved' ? 'معتمد — للقراءة فقط' : 'أُرسل — بانتظار الاعتماد' }}
+            </span>
           </div>
           <div class="sb-actions">
             <UButton
@@ -821,6 +834,7 @@ async function setStatus(status: ReportStatus) {
 .statusbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .sb-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .sb-sub { font-size: 14px; color: var(--ink-2); }
+.sb-locked { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .settings-ref { display: flex; gap: 10px 22px; flex-wrap: wrap; padding: 12px 18px; margin-bottom: 18px; background: var(--surface-2); border: 1px dashed var(--line-2); border-radius: 14px; }
 .sr-item { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--ink-2); }
 .sr-item strong { color: var(--ink); font-weight: 700; }

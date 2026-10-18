@@ -40,7 +40,8 @@ const statement = ref<{ id: string, status: StatementStatus } | null>(null)
 const allocated = ref(0)
 const rows = ref<ItemRow[]>([])
 
-const canEdit = computed(() => isTeacher.value && statement.value?.status !== 'reviewed')
+// المعلّم يعدّل المسودّة فقط (أو كشفاً لم يُحفظ بعد) — حارس القاعدة يرفض أيّ تعديل بعد الإرسال
+const canEdit = computed(() => isTeacher.value && (!statement.value || statement.value.status === 'draft'))
 const num = (v: number | string) => (v === '' || v === null) ? 0 : Number(v)
 const spent = computed(() => rows.value.reduce((s, r) => s + num(r.amount), 0))
 const remaining = computed(() => allocated.value - spent.value)
@@ -256,6 +257,17 @@ const fmt = (n: number) => n.toLocaleString('ar')
             تجاوز المصروف المبلغ المخصّص بمقدار {{ fmt(Math.abs(remaining)) }}.
           </div>
 
+          <div
+            v-if="statement && statement.status !== 'draft'"
+            class="locked"
+          >
+            <UIcon
+              name="i-lucide-lock"
+              class="size-4"
+            />
+            {{ statement.status === 'reviewed' ? 'تمّت مراجعة الكشف — للقراءة فقط.' : 'أُرسل — بانتظار الاعتماد. لا يُعدَّل بعد الإرسال.' }}
+          </div>
+
           <!-- بنود المصروفات -->
           <div class="card items">
             <div class="items-head">
@@ -402,6 +414,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
 .sm-card.neg .sm-val { color: var(--err); }
 .sm-lbl { font-size: 13px; color: var(--ink-3); margin-top: 7px; }
 .sm-status { flex: none; }
+.locked { display: flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
 .warn { display: flex; align-items: center; gap: 8px; background: var(--err-soft); color: var(--err); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 

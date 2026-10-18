@@ -1,10 +1,14 @@
 <script setup lang="ts">
 /**
- * ملف الطالب (§4.23) — عرض تفصيلي لسجلّ الطالب (بلا حساب دخول).
+ * ملف الطالب (§4.23) — عرض تفصيلي لسجلّ الطالب.
  * بيانات أساسية + قرآنية + سكن + وليّ الأمر والتواصل. رحلة الطالب (§4.22)
  * تُضاف مع وحدتي التقارير والاختبارات.
+ * الصورة الشخصية (Task 6b) تُعرض من حساب الطالب، ولا صورة لطالبة.
+ * حساب الدخول (إعادة تعيين الكلمة وتعطيل الدخول) للمدير الإداري وحده — StudentAccountActions.
  */
 import type { Database } from '~/types/database.types'
+import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
+import { buildStudentSections } from '~/utils/studentSections'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -14,13 +18,12 @@ type StudentRow = Database['public']['Tables']['students']['Row'] & {
 
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
-const { role } = useProfile()
 const { handle } = useErrorHandler()
-const { settings: gradeCfg, loadSettings } = useGrades()
-onMounted(loadSettings)
 const toast = useToast()
 const id = computed(() => String(route.params.id))
-const canManage = computed(() => role.value === 'manager' || role.value === 'teacher')
+const { isAdmin, canAssign, isTeacher, isReadOnly } = usePermissions()
+/** نسخ رابط الاطّلاع لمن يعمل على الطالب؛ وإعادة توليده للمدير الإداري وحده (view_token محميّ في القاعدة). */
+const canManage = computed(() => !isReadOnly.value && (canAssign.value || isTeacher.value))
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامات الأربعة مستقلّة وتعمل بالتوازي تلقائياً
 const { data: student, pending, refresh } = useLazyAsyncData<StudentRow | null>(
@@ -40,44 +43,23 @@ const { data: student, pending, refresh } = useLazyAsyncData<StudentRow | null>(
   { server: false, default: () => null }
 )
 
-// خطة الاختبارات + نتائج الطالب لرسم رحلة الطالب (حسب الحفظ + النتائج)
-const { data: plan } = useLazyAsyncData('journey-exam-plan', async () => {
-  const { data } = await supabase.from('exam_plan').select('id, parts_from, parts_to, stage_type').order('parts_to')
-  return data ?? []
-}, { server: false, default: () => [] })
-
-type ResultRow = { passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }
-const { data: examResults } = useLazyAsyncData(() => `journey-results-${id.value}`, async () => {
-  const { data } = await supabase
-    .from('exam_results')
-    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id)')
-    .eq('student_id', id.value)
-    .returns<ResultRow[]>()
-  return (data ?? []).map(r => ({ exam_plan_id: r.exam_list_item?.exam_plan_id ?? null, passed: r.passed, total_score: r.total_score }))
-}, { server: false, default: () => [] })
-
-// إجمالي صفحات الحفظ من التقارير الشهرية المعتمدة
-type PagesRow = { memorization_pages: number | null, report: { status: string } | null }
-const { data: memorizationPages } = useLazyAsyncData(() => `journey-pages-${id.value}`, async () => {
-  const { data } = await supabase
-    .from('monthly_report_students')
-    .select('memorization_pages, report:report_id(status)')
-    .eq('student_id', id.value)
-    .returns<PagesRow[]>()
-  return (data ?? []).filter(r => r.report?.status === 'approved').reduce((sum, r) => sum + (r.memorization_pages ?? 0), 0)
-}, { server: false, default: () => 0 })
-
 useSeoMeta({ title: () => student.value ? `${student.value.full_name} — ترجمان` : 'ملف الطالب — ترجمان' })
 
-const GENDER: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
-function ageFrom(d: string | null) {
-  if (!d) return '—'
-  const years = Math.floor((Date.now() - new Date(d).getTime()) / (365.25 * 24 * 3600 * 1000))
-  return years > 0 ? `${years} سنة` : '—'
-}
-const dash = (v: string | number | null | undefined) => (v === null || v === undefined || v === '') ? '—' : String(v)
-
-const initial = computed(() => student.value?.full_name?.trim().charAt(0) || '؟')
+// الصورة الشخصية على حساب الطالب (profiles عبر user_id) — ولا صورة لطالبة: الحرف الأول دائماً
+const { prime: primePhoto, urlFor: photoUrlFor } = useProfilePhotoUrls()
+const { data: accountPhotoPath } = useLazyAsyncData<string | null>(
+  () => `student-photo-${id.value}`,
+  async () => {
+    const s = student.value
+    if (!s?.user_id || !canHavePhoto(s.gender)) return null
+    const { data } = await supabase.from('profiles').select('photo_path').eq('id', s.user_id).maybeSingle()
+    return data?.photo_path ?? null
+  },
+  { server: false, default: () => null, watch: [student] }
+)
+const photoPath = computed(() => displayPhotoPath({ gender: student.value?.gender, photo_path: accountPhotoPath.value }))
+watch(photoPath, path => void primePhoto([path]), { immediate: true })
+const photoUrl = computed(() => photoUrlFor(photoPath.value))
 
 // رابط الاطّلاع العام (للقراءة فقط)
 function copyLink() {
@@ -101,56 +83,7 @@ async function regenerateLink() {
   }
 }
 
-type Field = { label: string, value: string, ltr?: boolean, wide?: boolean }
-const sections = computed<{ title: string, icon: string, tone: string, fields: Field[] }[]>(() => {
-  const s = student.value
-  if (!s) return []
-  return [
-    {
-      title: 'البيانات الأساسية',
-      icon: 'i-lucide-id-card',
-      tone: 'blue',
-      fields: [
-        { label: 'الاسم رباعي', value: dash(s.full_name), wide: true },
-        { label: 'الجنس', value: (s.gender && GENDER[s.gender]) || '—' },
-        { label: 'تاريخ الميلاد', value: dash(s.birth_date), ltr: true },
-        { label: 'العمر', value: ageFrom(s.birth_date) },
-        { label: 'رقم الهوية', value: dash(s.national_id), ltr: true },
-        { label: 'عدد الأفراد', value: dash(s.family_count) }
-      ]
-    },
-    {
-      title: 'بيانات قرآنية',
-      icon: 'i-lucide-book-open',
-      tone: 'green',
-      fields: [
-        { label: 'الأجزاء المثبتة', value: s.quran_parts != null ? `${s.quran_parts} جزء` : '—' },
-        { label: 'الأحكام (التجويد)', value: dash(s.tajweed_level) }
-      ]
-    },
-    {
-      title: 'السكن',
-      icon: 'i-lucide-home',
-      tone: 'neutral',
-      fields: [
-        { label: 'المنطقة / المدينة', value: dash(s.residence) },
-        { label: 'أقرب مسجد', value: dash(s.nearest_mosque) }
-      ]
-    },
-    {
-      title: 'وليّ الأمر والتواصل',
-      icon: 'i-lucide-phone',
-      tone: 'blue',
-      fields: [
-        { label: 'اسم وليّ الأمر', value: dash(s.guardian_name) },
-        { label: 'جوال وليّ الأمر', value: dash(s.guardian_phone), ltr: true },
-        { label: 'جوال الطالب', value: dash(s.phone), ltr: true },
-        { label: 'بريد وليّ الأمر', value: dash(s.guardian_email), ltr: true },
-        { label: 'تاريخ الالتحاق', value: dash(s.enrollment_date), ltr: true }
-      ]
-    }
-  ]
-})
+const sections = computed(() => student.value ? buildStudentSections(student.value) : [])
 </script>
 
 <template>
@@ -187,7 +120,10 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
         <!-- شريط علوي -->
         <div class="band">
           <div class="av">
-            {{ initial }}
+            <ProfileAvatar
+              :name="student.full_name"
+              :photo-url="photoUrl"
+            />
           </div>
           <div class="band-info">
             <div class="band-top">
@@ -222,6 +158,7 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
               @click="copyLink"
             />
             <UButton
+              v-if="isAdmin"
               icon="i-lucide-refresh-cw"
               color="neutral"
               variant="ghost"
@@ -235,62 +172,23 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
           </div>
         </div>
 
+        <!-- حساب الدخول (المدير الإداري): إعادة تعيين الكلمة وتعطيل الدخول -->
+        <StudentAccountActions
+          v-if="isAdmin && student.user_id"
+          :user-id="student.user_id"
+          :student-name="student.full_name"
+          :national-id="student.national_id"
+        />
+
         <!-- بطاقات البيانات -->
-        <div class="grid">
-          <section
-            v-for="sec in sections"
-            :key="sec.title"
-            class="card"
-          >
-            <h3>
-              <span
-                class="ico"
-                :class="`ico-${sec.tone}`"
-              ><UIcon
-                :name="sec.icon"
-                class="size-5"
-              /></span>
-              {{ sec.title }}
-            </h3>
-            <div class="fields">
-              <div
-                v-for="f in sec.fields"
-                :key="f.label"
-                class="field"
-                :class="{ wide: f.wide }"
-              >
-                <div class="f-label">
-                  {{ f.label }}
-                </div>
-                <div
-                  class="f-value"
-                  :dir="f.ltr ? 'ltr' : undefined"
-                >
-                  {{ f.value }}
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+        <StudentDetailCards :sections="sections" />
 
         <!-- رحلة الطالب على خطة الاختبارات (حسب الحفظ) -->
-        <section class="card journey">
-          <h3>
-            <span class="ico ico-green"><UIcon
-              name="i-lucide-route"
-              class="size-5"
-            /></span>
-            رحلة الطالب على خطة الاختبارات
-          </h3>
-          <StudentJourney
-            :quran-parts="student.quran_parts"
-            :plan="plan"
-            :results="examResults"
-            :memorization-pages="memorizationPages"
-            :target-per-month="gradeCfg.target"
-            :enrollment-date="student.enrollment_date"
-          />
-        </section>
+        <StudentJourneyCard
+          :student-id="student.id"
+          :quran-parts="student.quran_parts"
+          :enrollment-date="student.enrollment_date"
+        />
       </template>
     </ClientOnly>
   </div>
@@ -302,28 +200,14 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
 .back:hover { color: var(--ink); }
 
 .band { background: var(--band); border-radius: 22px; padding: 28px 30px; box-shadow: var(--shadow-lg); margin-bottom: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; }
+.av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; overflow: hidden; }
 .band-info { min-width: 0; flex: 1; }
 .band-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .band-top h2 { margin: 0; font-size: 25px; font-weight: 700; color: #fff; }
 .band-sub { font-size: 15px; color: var(--band-sub); margin-top: 6px; }
 .band-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
-.grid { columns: 2; column-gap: 22px; margin-bottom: -22px; }
-.card { break-inside: avoid; margin-bottom: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); }
-.card h3 { margin: 0 0 18px; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }
-.ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
-.ico-blue { background: var(--blue-soft); color: var(--blue-ink); }
-.ico-green { background: var(--green-soft); color: var(--green-ink); }
-.ico-neutral { background: var(--surface-3); color: var(--ink); }
-.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.field { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px; }
-.field.wide { grid-column: 1 / -1; }
-.f-label { font-size: 12px; color: var(--ink-3); margin-bottom: 7px; font-weight: 500; }
-.f-value { font-size: 15.5px; font-weight: 700; color: var(--ink); }
-
-.journey { margin-top: 22px; }
-.soon { margin: 0; font-size: 14.5px; line-height: 1.8; color: var(--ink-2); font-weight: 300; }
-
+/* هيكل التحميل فقط — البطاقات الحقيقية في StudentDetailCards */
+.grid { columns: 2; column-gap: 22px; }
 @media (max-width: 768px) { .grid { columns: 1; } }
 </style>

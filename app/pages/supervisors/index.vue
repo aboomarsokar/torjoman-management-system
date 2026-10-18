@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * دليل المشرفين (§4.14أ) — للمدير ومشرف الجودة (ضمن نطاقه).
+ * دليل المشرفين (§4.14أ) — للمدير الإداري والمدير الفني (ومشرف المشروع اطّلاعاً).
  * يعرض المشرفين الميدانيين + عدد حلقاتهم + نسبة الالتزام بالزيارات.
  * الالتزام = الزيارات في وقتها ÷ (في وقتها + متأخرة + لم تتم) × 100.
  */
@@ -10,18 +10,15 @@ definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'المشرفون — ترجمان' })
 
 const supabase = useSupabaseClient<Database>()
-const { role, profile } = useProfile()
-const isManager = computed(() => role.value === 'manager')
-const isQuality = computed(() => role.value === 'quality')
-const canView = computed(() => isManager.value || isQuality.value)
+const { isManager, isReadOnly } = usePermissions()
+const canView = computed(() => isManager.value || isReadOnly.value)
 
-type Row = { id: string, name: string, email: string | null, halqat: number, commitment: number | null }
+type Row = { id: string, name: string, employeeNumber: string | null, halqat: number, commitment: number | null }
 
 const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async () => {
   if (!canView.value) return []
-  let q = supabase.from('profiles').select('id, full_name, email').eq('role', 'supervisor').eq('status', 'active')
-  if (isQuality.value) q = q.eq('quality_supervisor_id', profile.value?.id ?? '')
-  const { data: sups } = await q.order('full_name')
+  const { data: sups } = await supabase.from('profiles').select('id, full_name, employee_number')
+    .eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
   const ids = (sups ?? []).map(s => s.id)
   if (!ids.length) return []
 
@@ -44,7 +41,7 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
   return (sups ?? []).map((s) => {
     const a = vAgg[s.id]
     return {
-      id: s.id, name: s.full_name, email: s.email,
+      id: s.id, name: s.full_name, employeeNumber: s.employee_number,
       halqat: halqaCount[s.id] ?? 0,
       commitment: a && a.due > 0 ? Math.round(a.done / a.due * 100) : null
     }
@@ -64,7 +61,7 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
     <UiEmptyState
       v-if="!canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير ومشرف الجودة."
+      title="هذه الصفحة للمدير الإداري والمدير الفني."
     />
 
     <ClientOnly v-else>
@@ -100,9 +97,9 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
             <div class="sinfo">
               <h3>{{ s.name }}</h3>
               <span
-                v-if="s.email"
+                v-if="s.employeeNumber"
                 class="email"
-              >{{ s.email }}</span>
+              >الرقم الوظيفي <bdi dir="ltr">{{ s.employeeNumber }}</bdi></span>
             </div>
           </div>
           <div class="smeta">

@@ -2,9 +2,18 @@
 /**
  * حوافز الحلقات (§4.20د) — تخصيص المبلغ لكل حلقة/شهر (قفل بالاعتماد)
  * + جدول الكشوف الواردة من المعلمين (مستلَم/مصروف/متبقّي/حالة) مع «تمّ الاطّلاع».
+ * reviewOnly: يُخفي التخصيص (للمدير الإداري وحده) ويُبقي مراجعة الكشوف — تستعمله
+ * صفحة الحوافز للمعتمِدين (الفني والمديرة الإدارية) ولمشرف المشروع (عرضاً).
  */
 import type { Database } from '~/types/database.types'
 
+interface Props {
+  /** إخفاء قسم التخصيص وأزراره، وإبقاء الكشوف الواردة فقط. */
+  reviewOnly?: boolean
+}
+const props = withDefaults(defineProps<Props>(), { reviewOnly: false })
+
+const { isReadOnly, canApprove } = usePermissions()
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
@@ -22,7 +31,8 @@ const statements = ref<StmtRow[]>([])
 const approved = ref(false)
 const loaded = ref(false)
 const loading = ref(false)
-const canEdit = computed(() => !approved.value)
+const canEdit = computed(() => !approved.value && !isReadOnly.value && !props.reviewOnly)
+const canReview = computed(() => canApprove.value && !isReadOnly.value)
 const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.amount) || 0), 0))
 const fmt = (n: number) => n.toLocaleString('ar')
 
@@ -164,94 +174,96 @@ async function markReviewed(s: StmtRow) {
       />
       <template v-else>
         <!-- التخصيص -->
-        <h3 class="sec-t">
-          تخصيص الحوافز
-        </h3>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th class="ta-start">
-                  #
-                </th><th class="ta-start">
-                  الحلقة
-                </th><th class="ta-start">
-                  المعلّم
-                </th><th>المخصّص (₪)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(r, i) in rows"
-                :key="r.halaqa_id"
-              >
-                <td class="ta-start muted">
-                  {{ i + 1 }}
-                </td>
-                <td class="ta-start strong">
-                  {{ r.name }}
-                </td>
-                <td class="ta-start muted">
-                  {{ r.teacher }}
-                </td>
-                <td>
-                  <input
-                    v-model="r.amount"
-                    :disabled="!canEdit"
-                    type="number"
-                    class="cell"
-                    dir="ltr"
-                  >
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td
-                  colspan="3"
-                  class="ta-start strong"
+        <template v-if="!reviewOnly">
+          <h3 class="sec-t">
+            تخصيص الحوافز
+          </h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="ta-start">
+                    #
+                  </th><th class="ta-start">
+                    الحلقة
+                  </th><th class="ta-start">
+                    المعلّم
+                  </th><th>المخصّص (₪)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(r, i) in rows"
+                  :key="r.halaqa_id"
                 >
-                  إجمالي المخصّص
-                </td><td class="strong num">
-                  {{ fmt(total) }}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <div class="actions">
-          <UButton
-            v-if="canEdit"
-            label="حفظ"
-            color="primary"
-            size="lg"
-            icon="i-lucide-save"
-            :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
-            @click="save"
-          />
-          <UButton
-            v-if="canEdit"
-            label="اعتماد التخصيص"
-            color="success"
-            size="lg"
-            icon="i-lucide-lock"
-            :loading="working"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
-            @click="approveAlloc"
-          />
-          <UButton
-            v-else
-            label="فتح للتعديل"
-            color="neutral"
-            variant="outline"
-            size="lg"
-            icon="i-lucide-lock-open"
-            :loading="working"
-            :ui="{ base: 'rounded-[13px]' }"
-            @click="reopen"
-          />
-        </div>
+                  <td class="ta-start muted">
+                    {{ i + 1 }}
+                  </td>
+                  <td class="ta-start strong">
+                    {{ r.name }}
+                  </td>
+                  <td class="ta-start muted">
+                    {{ r.teacher }}
+                  </td>
+                  <td>
+                    <input
+                      v-model="r.amount"
+                      :disabled="!canEdit"
+                      type="number"
+                      class="cell"
+                      dir="ltr"
+                    >
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td
+                    colspan="3"
+                    class="ta-start strong"
+                  >
+                    إجمالي المخصّص
+                  </td><td class="strong num">
+                    {{ fmt(total) }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="actions">
+            <UButton
+              v-if="canEdit"
+              label="حفظ"
+              color="primary"
+              size="lg"
+              icon="i-lucide-save"
+              :loading="saving"
+              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              @click="save"
+            />
+            <UButton
+              v-if="canEdit"
+              label="اعتماد التخصيص"
+              color="success"
+              size="lg"
+              icon="i-lucide-lock"
+              :loading="working"
+              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              @click="approveAlloc"
+            />
+            <UButton
+              v-else-if="!isReadOnly"
+              label="فتح للتعديل"
+              color="neutral"
+              variant="outline"
+              size="lg"
+              icon="i-lucide-lock-open"
+              :loading="working"
+              :ui="{ base: 'rounded-[13px]' }"
+              @click="reopen"
+            />
+          </div>
+        </template>
 
         <!-- الكشوف الواردة -->
         <h3 class="sec-t mt">
@@ -309,7 +321,7 @@ async function markReviewed(s: StmtRow) {
                 </td>
                 <td>
                   <UButton
-                    v-if="s.status === 'submitted'"
+                    v-if="canReview && s.status === 'submitted'"
                     label="تمّ الاطّلاع"
                     color="primary"
                     variant="outline"

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 /**
- * إدارة المستخدمين (§4.12) — للمدير فقط.
- * قائمة العاملين + تصفية بالدور + إنشاء حساب (عبر مسار خادمي) + تفعيل/تعطيل.
+ * إدارة المستخدمين (§4.12) — للمدير الإداري (ومشرف المشروع اطّلاعاً بلا كتابة).
+ * قائمة العاملين + تصفية بالدور + إنشاء حساب برقمٍ وظيفيّ مولَّد (عبر مسار خادمي) + تفعيل/تعطيل.
+ * الطلاب لا يظهرون هنا (حساباتهم تُنشأ من شاشة الطلاب).
  */
 import type { Database } from '~/types/database.types'
-import { DEFAULT_PASSWORD } from '~/constants/auth'
-import { ROLE_LABEL, type Role } from '~/constants/roles'
+import { staffCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
+import { roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
+import { displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'إدارة المستخدمين — ترجمان' })
@@ -18,10 +20,18 @@ const supabase = useSupabaseClient<Database>()
 const { role: myRole } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isManager = computed(() => myRole.value === 'manager')
+const { isAdmin, isReadOnly } = usePermissions()
+const canView = computed(() => isAdmin.value || isReadOnly.value)
 
-const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning'> = {
-  manager: 'primary', quality: 'secondary', supervisor: 'info', teacher: 'success', examiner: 'warning'
+const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'neutral' | 'error'> = {
+  project_supervisor: 'neutral',
+  admin_manager: 'primary',
+  technical_manager: 'primary',
+  women_admin: 'secondary',
+  field_supervisor: 'info',
+  examiner: 'warning',
+  teacher: 'success',
+  student: 'neutral'
 }
 const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
   'users-list',
@@ -29,6 +39,7 @@ const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
     const { data, error } = await supabase
       .from('profiles')
       .select('*, assigner:assigned_by(full_name)')
+      .in('role', STAFF_ROLES)
       .order('created_at', { ascending: false })
       .returns<UserRow[]>()
     if (error) {
@@ -47,11 +58,7 @@ function countFor(key: Role | 'all') {
 }
 const chipOptions = computed(() => ([
   { value: 'all' as const, label: 'الكل' },
-  { value: 'manager' as const, label: 'المديرون' },
-  { value: 'quality' as const, label: 'الجودة' },
-  { value: 'supervisor' as const, label: 'المشرفون' },
-  { value: 'teacher' as const, label: 'المعلمون' },
-  { value: 'examiner' as const, label: 'المختبِرون' }
+  ...STAFF_ROLES.map(r => ({ value: r, label: roleLabel(r, null) }))
 ]).map(c => ({ ...c, count: countFor(c.value) })))
 const filteredUsers = computed(() => {
   const list = users.value ?? []
@@ -62,49 +69,54 @@ watch(filter, resetPage)
 const columns = [
   { key: 'num', label: '#' },
   { key: 'user', label: 'المستخدم' },
+  { key: 'employee_number', label: 'الرقم الوظيفي' },
   { key: 'role', label: 'الدور' },
   { key: 'assigner', label: 'عيّنه' },
   { key: 'status', label: 'الحالة' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
-function initialOf(name: string) {
-  return name.trim().charAt(0) || '؟'
-}
+// الصور الشخصية: توقيعٌ دفعةً واحدة لصفحة القائمة الظاهرة، والمخبأ يمنع التكرار
+const { prime: primePhotos, urlFor: photoUrlFor } = useProfilePhotoUrls()
+watch(paged, rows => void primePhotos(rows.map(displayPhotoPath)), { immediate: true })
 
 // ── إنشاء مستخدم ──
 const modalOpen = ref(false)
 const creating = ref(false)
-const form = reactive({ full_name: '', email: '', password: DEFAULT_PASSWORD, role: 'teacher' as Role, phone: '', gender: 'male' as Gender })
-const roleItems = [
-  { label: 'معلم', value: 'teacher' },
-  { label: 'مشرف ميداني', value: 'supervisor' },
-  { label: 'مشرف جودة', value: 'quality' },
-  { label: 'مختبِر', value: 'examiner' },
-  { label: 'مدير', value: 'manager' }
-]
+const form = reactive({ full_name: '', role: 'teacher' as Role, phone: '', gender: 'male' as Gender })
+const { createStaff, resetPassword } = useAccountAdmin()
+// المسمّى بجنس الحساب المختار؛ والمديرة الإدارية تُميَّز بقسمها كي لا تلتبس بالمدير الإداري الأنثى
+const roleItems = computed(() => STAFF_ROLES.map(r => ({
+  label: r === 'women_admin' ? `${roleLabel(r, form.gender)} — قسم البنات` : roleLabel(r, form.gender),
+  value: r
+})))
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
+// دور المديرة الإدارية نسائيّ حصراً (قسم البنات)
+watch(() => form.role, (r) => {
+  if (r === 'women_admin') form.gender = 'female'
+})
 function openCreate() {
-  Object.assign(form, { full_name: '', email: '', password: DEFAULT_PASSWORD, role: 'teacher', phone: '', gender: 'male' })
+  Object.assign(form, { full_name: '', role: 'teacher', phone: '', gender: 'male' })
   modalOpen.value = true
 }
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
   if (!s.full_name.trim()) errors.push({ name: 'full_name', message: 'الاسم الكامل مطلوب.' })
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.email)) errors.push({ name: 'email', message: 'بريد إلكتروني غير صحيح.' })
-  if (s.password.length < 8) errors.push({ name: 'password', message: 'كلمة المرور 8 أحرف على الأقل.' })
   return errors
 }
+
+// بعد الإنشاء أو إعادة التعيين: الرقم الوظيفي والكلمة المؤقّتة (مرّةً واحدة، قابلان للنسخ)
+const credentials = ref<AccountCredentials | null>(null)
+
 async function submitCreate() {
   creating.value = true
   try {
-    const created = await $fetch('/api/users', { method: 'POST', body: { ...form } })
-    toast.add({ title: `تم إنشاء حساب «${created.full_name}».`, color: 'success', icon: 'i-lucide-circle-check' })
+    const body = { full_name: form.full_name.trim(), role: form.role, gender: form.gender, phone: form.phone.trim() || undefined }
+    const created = await createStaff(body)
+    credentials.value = staffCredentials(body.full_name, created.employee_number, created.temp_password, 'created')
     modalOpen.value = false
     await refresh()
   } catch (err) {
-    const msg = (err as { data?: { statusMessage?: string }, statusMessage?: string })?.data?.statusMessage
-      || (err as { statusMessage?: string })?.statusMessage
-    toast.add({ title: msg || 'تعذّر إنشاء الحساب.', color: 'error', icon: 'i-lucide-circle-alert' })
+    handle(err, 'تعذّر إنشاء الحساب.')
   } finally {
     creating.value = false
   }
@@ -131,15 +143,15 @@ async function toggleStatus(u: UserRow) {
 const resetTarget = ref<UserRow | null>(null)
 const resetting = ref(false)
 async function confirmReset() {
-  if (!resetTarget.value) return
+  const target = resetTarget.value
+  if (!target) return
   resetting.value = true
   try {
-    await $fetch('/api/users/reset-password', { method: 'POST', body: { user_id: resetTarget.value.id, password: DEFAULT_PASSWORD } })
-    toast.add({ title: `أُعيدت كلمة مرور «${resetTarget.value.full_name}» إلى الافتراضية.`, color: 'success', icon: 'i-lucide-key-round' })
+    const password = await resetPassword(target.id)
+    credentials.value = staffCredentials(target.full_name, target.employee_number ?? '—', password, 'reset')
     resetTarget.value = null
   } catch (err) {
-    const msg = (err as { data?: { statusMessage?: string } })?.data?.statusMessage
-    toast.add({ title: msg || 'تعذّرت إعادة التعيين.', color: 'error', icon: 'i-lucide-circle-alert' })
+    handle(err, 'تعذّرت إعادة التعيين.')
   } finally {
     resetting.value = false
   }
@@ -151,17 +163,20 @@ async function confirmReset() {
     <!-- المنع للدور المحسوم غير المدير فقط (لا يُحجب المحتوى أثناء تحميل الدور:
          سكيلتون بيانات الصفحة يظهر مباشرةً بدل انتظار جلب الملف الشخصي) -->
     <UiEmptyState
-      v-if="myRole && !isManager"
+      v-if="myRole && !canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير فقط."
+      title="هذه الصفحة للمدير الإداري فقط."
     />
 
     <template v-else>
       <UiPageHeader
         title="إدارة المستخدمين"
-        :subtitle="`${(users || []).length} مستخدم في المنظومة — الحسابات تُنشأ من قِبل الإدارة فقط.`"
+        :subtitle="`${(users || []).length} مستخدم في المنظومة — الحسابات يُنشئها المدير الإداري وحده.`"
       >
-        <template #actions>
+        <template
+          v-if="isAdmin"
+          #actions
+        >
           <UButton
             label="إنشاء مستخدم"
             color="primary"
@@ -202,24 +217,25 @@ async function confirmReset() {
           <template #user="{ row }">
             <div class="user-cell">
               <div class="av">
-                {{ initialOf(row.full_name) }}
+                <ProfileAvatar
+                  :name="row.full_name"
+                  :photo-url="photoUrlFor(displayPhotoPath(row))"
+                />
               </div>
-              <div>
-                <div class="u-name">
-                  {{ row.full_name }}
-                </div>
-                <div
-                  class="u-email"
-                  dir="ltr"
-                >
-                  {{ row.email }}
-                </div>
+              <div class="u-name">
+                {{ row.full_name }}
               </div>
             </div>
           </template>
+          <template #employee_number="{ row }">
+            <span
+              class="emp-no"
+              dir="ltr"
+            >{{ row.employee_number || '—' }}</span>
+          </template>
           <template #role="{ row }">
             <UBadge
-              :label="ROLE_LABEL[row.role]"
+              :label="roleLabel(row.role, row.gender)"
               :color="ROLE_COLOR[row.role]"
               variant="soft"
             />
@@ -246,6 +262,7 @@ async function confirmReset() {
                 :ui="{ base: 'rounded-[10px]' }"
               />
               <UButton
+                v-if="isAdmin"
                 label="إعادة تعيين الكلمة"
                 color="neutral"
                 variant="outline"
@@ -255,6 +272,7 @@ async function confirmReset() {
                 @click="resetTarget = row"
               />
               <UButton
+                v-if="isAdmin"
                 :label="row.status === 'disabled' ? 'تفعيل' : 'تعطيل'"
                 :color="row.status === 'disabled' ? 'success' : 'neutral'"
                 variant="outline"
@@ -301,35 +319,6 @@ async function confirmReset() {
               :ui="{ base: 'rounded-[13px]' }"
             />
           </UFormField>
-          <UFormField
-            label="البريد الإلكتروني"
-            name="email"
-          >
-            <UInput
-              v-model="form.email"
-              type="email"
-              dir="ltr"
-              icon="i-lucide-mail"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField
-            label="كلمة المرور المبدئية"
-            name="password"
-            hint="افتراضية موحّدة — أبلغها للعامل ليغيّرها لاحقاً"
-          >
-            <UInput
-              v-model="form.password"
-              type="text"
-              dir="ltr"
-              icon="i-lucide-key-round"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
           <div class="row">
             <UFormField
               label="الدور"
@@ -359,19 +348,27 @@ async function confirmReset() {
             </UFormField>
           </div>
           <UFormField
-            v-if="form.role === 'examiner'"
             label="الجنس"
             name="gender"
-            hint="يُقترح المختبِر تلقائياً لحلقات جنسه"
+            required
+            hint="يحدّد المسمّى (معلم/معلمة…) والقسم"
           >
             <USelect
               v-model="form.gender"
               :items="genderItems"
+              :disabled="form.role === 'women_admin'"
               size="lg"
               class="w-full"
               :ui="{ base: 'rounded-[13px]' }"
             />
           </UFormField>
+          <p class="form-note">
+            <UIcon
+              name="i-lucide-info"
+              class="size-4"
+            />
+            يُولَّد الرقم الوظيفي وكلمة مرورٍ مؤقّتة بعد الإنشاء — تظهران مرّةً واحدة، ويغيّر العامل الكلمة عند أول دخول.
+          </p>
           <div class="form-actions">
             <UButton
               label="إلغاء"
@@ -394,11 +391,17 @@ async function confirmReset() {
       </template>
     </UModal>
 
+    <!-- الرقم الوظيفي والكلمة المؤقّتة بعد الإنشاء أو إعادة التعيين -->
+    <AccountCredentialsModal
+      :credentials="credentials"
+      @close="credentials = null"
+    />
+
     <!-- تأكيد إعادة تعيين كلمة المرور -->
     <UiConfirmModal
       :open="!!resetTarget"
       title="إعادة تعيين كلمة المرور"
-      :message="`ستُعاد كلمة مرور «${resetTarget?.full_name}» إلى الافتراضية (${DEFAULT_PASSWORD})، ويُطلب منه تغييرها عند الدخول.`"
+      :message="`ستُولَّد لـ«${resetTarget?.full_name}» كلمة مرورٍ مؤقّتة جديدة تظهر لك مرّةً واحدة، وتبطل كلمته الحالية، ويُطلب منه تغييرها عند الدخول.`"
       confirm-label="إعادة التعيين"
       confirm-color="primary"
       confirm-icon="i-lucide-key-round"
@@ -414,15 +417,14 @@ async function confirmReset() {
 .mb-4 { margin-bottom: 16px; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
-.av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; }
+.av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
 .u-name { font-weight: 600; color: var(--ink); }
-.u-email { font-size: 13px; color: var(--ink-3); }
+.emp-no { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
 .form { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }
 .row > * { flex: 1; min-width: 160px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
-
-@media (max-width: 620px) { .u-email { display: none; } }
+.form-note { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--ink-3); }
 </style>

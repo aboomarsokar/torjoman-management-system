@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * التنبيهات الإدارية (§4.21) — متابعة أداء المعلّمين.
- * المدير/الجودة/المشرف يُصدرون تنبيهاً لمعلّم (نوع المخالفة + درجة + وصف)،
- * والمعلّم يستقبله ويؤكّد الاطّلاع. النطاق محكوم بـ RLS.
+ * المديران (الإداري والفني) والمشرف الميداني يُصدرون تنبيهاً لمعلّم (نوع المخالفة + درجة + وصف)،
+ * والمعلّم يستقبله ويؤكّد الاطّلاع. مشرف المشروع والمديرة الإدارية للاطّلاع. النطاق محكوم بـ RLS.
  */
 import type { Database } from '~/types/database.types'
 
@@ -11,12 +11,13 @@ useSeoMeta({ title: 'التنبيهات الإدارية — ترجمان' })
 
 type Severity = Database['public']['Enums']['alert_severity']
 const supabase = useSupabaseClient<Database>()
-const { role, profile } = useProfile()
+const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const isTeacher = computed(() => role.value === 'teacher')
-const canIssue = computed(() => ['manager', 'quality', 'supervisor'].includes(role.value ?? ''))
+const { isTeacher, isManager, isFieldSupervisor } = usePermissions()
+/** الإصدار كما يسمح RLS (alerts_insert): الإداري والفني والمشرف الميداني. */
+const canIssue = computed(() => isManager.value || isFieldSupervisor.value)
 
 const SEVERITY: Record<Severity, { label: string, color: 'neutral' | 'warning' | 'error' }> = {
   note: { label: 'ملاحظة', color: 'neutral' },

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -1008,6 +1008,7 @@ export type Database = {
           created_at: string
           education_level: string | null
           email: string | null
+          employee_number: string | null
           family_count: number | null
           full_name: string
           gender: Database["public"]["Enums"]["gender_type"] | null
@@ -1019,7 +1020,7 @@ export type Database = {
           national_id: string | null
           nearest_mosque: string | null
           phone: string | null
-          quality_supervisor_id: string | null
+          photo_path: string | null
           quran_parts: number | null
           residence_area: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1037,6 +1038,7 @@ export type Database = {
           created_at?: string
           education_level?: string | null
           email?: string | null
+          employee_number?: string | null
           family_count?: number | null
           full_name: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
@@ -1048,7 +1050,7 @@ export type Database = {
           national_id?: string | null
           nearest_mosque?: string | null
           phone?: string | null
-          quality_supervisor_id?: string | null
+          photo_path?: string | null
           quran_parts?: number | null
           residence_area?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1066,6 +1068,7 @@ export type Database = {
           created_at?: string
           education_level?: string | null
           email?: string | null
+          employee_number?: string | null
           family_count?: number | null
           full_name?: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
@@ -1077,7 +1080,7 @@ export type Database = {
           national_id?: string | null
           nearest_mosque?: string | null
           phone?: string | null
-          quality_supervisor_id?: string | null
+          photo_path?: string | null
           quran_parts?: number | null
           residence_area?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -1090,13 +1093,6 @@ export type Database = {
           {
             foreignKeyName: "profiles_assigned_by_fkey"
             columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_quality_supervisor_id_fkey"
-            columns: ["quality_supervisor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1126,6 +1122,7 @@ export type Database = {
           status: Database["public"]["Enums"]["student_status"]
           tajweed_level: string | null
           updated_at: string
+          user_id: string | null
           view_token: string
         }
         Insert: {
@@ -1150,6 +1147,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["student_status"]
           tajweed_level?: string | null
           updated_at?: string
+          user_id?: string | null
           view_token?: string
         }
         Update: {
@@ -1174,6 +1172,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["student_status"]
           tajweed_level?: string | null
           updated_at?: string
+          user_id?: string | null
           view_token?: string
         }
         Relationships: [
@@ -1296,13 +1295,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_access_halaqa: { Args: { hid: string }, Returns: boolean }
+      can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_manage_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_manage_profile_photo: { Args: { p_folder: string }; Returns: boolean }
+      can_view_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
+      claim_employee_number: { Args: never; Returns: string }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
-      is_halaqa_examiner: { Args: { hid: string }, Returns: boolean }
-      is_manager: { Args: never, Returns: boolean }
+      in_admin_scope: {
+        Args: { g: Database["public"]["Enums"]["gender_type"] }
+        Returns: boolean
+      }
+      is_admin_manager: { Args: never; Returns: boolean }
+      is_halaqa_examiner: { Args: { hid: string }; Returns: boolean }
+      is_halaqa_supervisor: { Args: { hid: string }; Returns: boolean }
+      is_halaqa_teacher: { Args: { hid: string }; Returns: boolean }
+      is_project_supervisor: { Args: never; Returns: boolean }
+      is_women_admin: { Args: never; Returns: boolean }
+      my_approved_pages: { Args: never; Returns: number }
+      my_exam_results: {
+        Args: never
+        Returns: {
+          exam_date: string
+          exam_plan_id: number
+          passed: boolean
+          total_score: number
+        }[]
+      }
+      my_halaqa_id: { Args: never; Returns: string }
+      my_student_id: { Args: never; Returns: string }
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"
@@ -1334,7 +1359,15 @@ export type Database = {
       statement_status: "draft" | "submitted" | "reviewed"
       student_status: "active" | "withdrawn" | "graduated" | "transferred"
       transaction_type: "income" | "expense"
-      user_role: "manager" | "quality" | "supervisor" | "teacher" | "examiner"
+      user_role:
+        | "project_supervisor"
+        | "admin_manager"
+        | "technical_manager"
+        | "women_admin"
+        | "field_supervisor"
+        | "examiner"
+        | "teacher"
+        | "student"
       visit_status: "scheduled" | "done" | "late" | "missed"
     }
     CompositeTypes: {
@@ -1351,12 +1384,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1380,11 +1413,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1405,11 +1438,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1430,11 +1463,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1447,11 +1480,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1493,7 +1526,16 @@ export const Constants = {
       statement_status: ["draft", "submitted", "reviewed"],
       student_status: ["active", "withdrawn", "graduated", "transferred"],
       transaction_type: ["income", "expense"],
-      user_role: ["manager", "quality", "supervisor", "teacher", "examiner"],
+      user_role: [
+        "project_supervisor",
+        "admin_manager",
+        "technical_manager",
+        "women_admin",
+        "field_supervisor",
+        "examiner",
+        "teacher",
+        "student",
+      ],
       visit_status: ["scheduled", "done", "late", "missed"],
     },
   },

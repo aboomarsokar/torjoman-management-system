@@ -1,44 +1,48 @@
 import type { Database } from '~/types/database.types'
+import { classifyLoginId, LOGIN_ID_ERROR } from '~/constants/identity'
+import { staffEmailFromNumber, studentEmailFromIdentity } from '~/constants/accounts'
+import { LOGIN_REJECTION } from '~/constants/auth'
+import { loginErrorMessage } from '~/utils/loginError'
+import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
 
 /**
- * المصادقة — غلاف مُنمّط حول Supabase Auth.
- * الدخول للعاملين بالبريد فقط (الطالب ليس مستخدماً — لا دخول).
- * يعرّض المستخدم الحالي ودوالّ الدخول/الخروج/استعادة كلمة المرور.
+ * المصادقة — الموظف برقمه الوظيفي والطالب برقم هويته، كلاهما من المتصفّح مباشرةً ببريدٍ داخليّ مشتقّ.
+ * لماذا لا خادم وسيط للموظف: الدخول من عناوين Vercel القليلة يُشرك الجميع في حدّ محاولات GoTrue لكل IP،
+ * ولا يضيف أماناً (اشتقاق البريد من الرقم معروضٌ في الحزمة أصلاً).
+ * لا بريد ولا استعادة ذاتية: كلمة المرور يعيد تعيينها المدير الإداري.
  */
 export function useAuth() {
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
 
   /**
-   * دخول بالبريد وكلمة المرور. يرمي الخطأ ليلتقطه المستدعي عبر useErrorHandler.
-   * يمنع الحساب المعطَّل: لو كانت حالته disabled يُسجَّل خروجه فوراً ويُرمى account_disabled.
+   * دخول برقم وظيفي (4 خانات) أو رقم هوية (9 خانات) وكلمة مرور.
+   * يرمي الخطأ ليلتقطه المستدعي عبر useErrorHandler: رفضٌ واحد، أو «محاولات كثيرة» عند تجاوز الحدّ.
+   * الحساب غير النشط: يُسجَّل خروجه فوراً ويُرمى account_disabled.
    */
-  async function signIn(email: string, password: string) {
+  async function signInWithIdentifier(identifier: string, password: string) {
+    const id = classifyLoginId(identifier)
+    if (id.kind === 'invalid') throw new Error(LOGIN_ID_ERROR)
+
+    const email = id.kind === 'staff' ? staffEmailFromNumber(id.id) : studentEmailFromIdentity(id.id)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+    if (error) throw new Error(loginErrorMessage(error))
 
     const { data: auth } = await supabase.auth.getUser()
-    if (auth.user) {
-      const { data: profile } = await supabase.from('profiles').select('status').eq('id', auth.user.id).single()
-      if (profile?.status === 'disabled') {
-        await supabase.auth.signOut()
-        throw new Error('account_disabled')
-      }
+    if (!auth.user) throw new Error(LOGIN_REJECTION)
+    const { data: profile } = await supabase.from('profiles').select('status').eq('id', auth.user.id).single()
+    if (profile?.status !== 'active') {
+      await supabase.auth.signOut()
+      throw new Error('account_disabled')
     }
   }
 
-  /** تسجيل الخروج ثم العودة لشاشة الدخول. */
+  /** تسجيل الخروج ثم العودة لشاشة الدخول — ومحوُ روابط الصور الموقَّعة (لا تصلح لمن بعده). */
   async function signOut() {
     await supabase.auth.signOut()
+    clearNuxtState([PROFILE_PHOTOS_SIGNED_KEY, PROFILE_PHOTOS_GENERATIONS_KEY])
     await navigateTo('/login')
   }
 
-  /** إرسال رابط استعادة كلمة المرور إلى البريد (استرجاع ذاتي — §4.1). */
-  async function sendPasswordReset(email: string) {
-    const redirectTo = import.meta.client ? `${window.location.origin}/auth/confirm` : undefined
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-    if (error) throw error
-  }
-
-  return { user, signIn, signOut, sendPasswordReset }
+  return { user, signInWithIdentifier, signOut }
 }

@@ -1,12 +1,33 @@
-/** تسميات الأدوار — مصدر واحد بدل نسخٍ متفرّقة في الصفحات. */
+/** الأدوار ومسمّياتها — مصدر واحد. المسمّى = الدور + جنس صاحب الحساب. */
 import type { Database } from '~/types/database.types'
 
 export type Role = Database['public']['Enums']['user_role']
+type Gender = 'male' | 'female'
 
-export const ROLE_LABEL: Record<Role, string> = {
-  manager: 'المدير',
-  quality: 'مشرف الجودة',
-  supervisor: 'المشرف',
-  teacher: 'المعلم',
-  examiner: 'المختبِر'
+const LABELS: Record<Role, Record<Gender, string>> = {
+  project_supervisor: { male: 'مشرف المشروع', female: 'مشرفة المشروع' },
+  // قرار 2026-10-18: المدير الإداري رجلٌ دائماً حالياً — المسمّى واحد لأيّ جنس (المديرة الإدارية = women_admin)
+  admin_manager: { male: 'المدير الإداري', female: 'المدير الإداري' },
+  technical_manager: { male: 'المدير الفني', female: 'المديرة الفنية' },
+  // دور نسائي حصراً (قسم البنات): المسمّى واحد لأيّ جنس ليبقى السجلّ كاملاً
+  women_admin: { male: 'المديرة الإدارية', female: 'المديرة الإدارية' },
+  field_supervisor: { male: 'مشرف ميداني', female: 'مشرفة ميدانية' },
+  examiner: { male: 'مختبِر', female: 'مختبِرة' },
+  teacher: { male: 'معلم', female: 'معلمة' },
+  student: { male: 'طالب', female: 'طالبة' }
 }
+
+export function roleLabel(role: Role, gender: Gender | null): string {
+  return LABELS[role][gender ?? 'male']
+}
+
+export const MANAGER_ROLES: Role[] = ['admin_manager', 'technical_manager']
+export const STAFF_ROLES: Role[] = [
+  'project_supervisor',
+  'admin_manager',
+  'technical_manager',
+  'women_admin',
+  'field_supervisor',
+  'examiner',
+  'teacher'
+]

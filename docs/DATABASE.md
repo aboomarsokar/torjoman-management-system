@@ -622,6 +622,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `admin_alerts_guard_update` ← `guard_alert_update` | المعلم المعنيّ لا يغيّر إلا الحالة ووقت الإقرار؛ المُصدِر والمدير الإداري يغيّران المحتوى |
 | `profiles_photo_clear_on_female` ← `clear_photo_on_female` | حين يصير الحسابُ أنثى يُفرغ `photo_path` آلياً (بدل خطأ `23514` على المدير) |
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |
+| `halaqat_guard_staff` ← `guard_halaqa_staff` | **لكل كاتبٍ حتى الخدمة:** جنس الحلقة مطلوب؛ المعلم (`teacher`) والمشرف (`field_supervisor`) والمختبِر من جنسها؛ المعلم على حلقةٍ نشطة واحدة (يُفحص عند تغيّر المعلم أو تفعيل الحلقة فقط)؛ لا يتغيّر جنس حلقةٍ فيها طلاب من الجنس الآخر؛ ويختم `assigned_by` بالمستدعي عند الإنشاء وتغيير المعلم/المشرف (`23514`) |
+| `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
 
 > **ترتيب مُشغِّلات BEFORE على `profiles`:** `profiles_guard_privileged` ← `profiles_photo_clear_on_female` ← `trg_profiles_updated_at` (أبجدياً)، فالحارس يرفض تغيير الجنس غير المأذون قبل أن يُفرَغ شيء.
 

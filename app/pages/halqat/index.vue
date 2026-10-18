@@ -2,7 +2,8 @@
 /**
  * الحلقات (§4.13) — الإدارة للمديرَين الإداري والفني (والحذف للإداري)، والبقية للاطّلاع ضمن نطاقهم.
  * إنشاء/تعديل/حذف حلقة وتعيين معلّم ومشرف ومختبِر لها، مع تصفية بالجنس والحالة.
- * المختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنس الحلقة.
+ * الجنس أوّل حقل، والطاقم (معلم/مشرف/مختبِر) من جنس الحلقة وحدَه (useHalaqaStaffOptions)،
+ * والمختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنسها. الحكم الأخير لحارس القاعدة.
  */
 import type { Database } from '~/types/database.types'
 
@@ -18,8 +19,6 @@ type HalaqaRow = Database['public']['Tables']['halaqat']['Row'] & {
   examiner: { full_name: string } | null
   student_count: { count: number }[]
 }
-type NameRow = { id: string, full_name: string }
-type ExaminerRow = NameRow & { gender: Gender | null }
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
@@ -46,23 +45,7 @@ const { data: halqat, refresh, pending } = useLazyAsyncData<HalaqaRow[]>(
   },
   { server: false, default: () => [] }
 )
-const { data: teachers } = useLazyAsyncData<NameRow[]>('teachers-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
-const { data: supervisors } = useLazyAsyncData<NameRow[]>('supervisors-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
-
-const { data: examiners } = useLazyAsyncData<ExaminerRow[]>('examiners-options', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name, gender').eq('role', 'examiner').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
-
-const NO_SUP = 'none'
-const teacherItems = computed(() => (teachers.value ?? []).map(t => ({ label: t.full_name, value: t.id })))
-const supervisorItems = computed(() => [{ label: 'بلا مشرف', value: NO_SUP }, ...(supervisors.value ?? []).map(s => ({ label: s.full_name, value: s.id }))])
+const NO_SUP = NO_STAFF
 
 const genderF = ref<Gender | 'all'>('all')
 const statusF = ref<Status | 'all'>('all')
@@ -105,31 +88,17 @@ const saving = ref(false)
 const editingId = ref<string | null>(null)
 const form = reactive({
   name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: NO_SUP, daily_time: '',
-  gender: 'male' as Gender, classification: 'a' as Classification, status: 'active' as Status
+  gender: '' as Gender | '', classification: 'a' as Classification, status: 'active' as Status
 })
 const genderItems = [{ label: 'بنين', value: 'male' }, { label: 'بنات', value: 'female' }]
 
-// المختبِرون من جنس الحلقة (ومَن لم يُحدَّد جنسه) — والاقتراح حين يكون واحداً فقط
-const examinersFor = (g: Gender) => (examiners.value ?? []).filter(e => !e.gender || e.gender === g)
-const examinerItems = computed(() => [
-  { label: 'بلا مختبِر', value: NO_SUP },
-  ...examinersFor(form.gender).map(e => ({ label: e.full_name, value: e.id }))
-])
-function suggestedExaminer(g: Gender) {
-  const exact = (examiners.value ?? []).filter(e => e.gender === g)
-  return exact.length === 1 ? exact[0]!.id : NO_SUP
-}
-// تغيير جنس الحلقة يُسقط مختبِراً من الجنس الآخر ويقترح البديل (ولا يمسّ مختبِراً
-// غير ظاهرٍ في القائمة — كأن يكون معطَّلاً — كي لا يُفرَّغ إسنادٌ قائم بصمت)
-watch(() => form.gender, (g) => {
-  const cur = (examiners.value ?? []).find(e => e.id === form.examiner_id)
-  if (form.examiner_id === NO_SUP || (cur?.gender && cur.gender !== g)) form.examiner_id = suggestedExaminer(g)
-})
+// الطاقم من جنس الحلقة وحدَه، ولا قائمة قبل اختياره (والمختبِر يُقترح حين يكون واحداً)
+const { teacherItems, supervisorItems, examinerItems } = useHalaqaStaffOptions(form, halqat, editingId)
 const classItems = [{ label: 'الفئة أ', value: 'a' }, { label: 'الفئة ب', value: 'b' }]
 const statusItems = [{ label: 'نشطة', value: 'active' }, { label: 'متوقفة', value: 'stopped' }]
 function openCreate() {
   editingId.value = null
-  Object.assign(form, { name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: suggestedExaminer('male'), daily_time: '', gender: 'male', classification: 'a', status: 'active' })
+  Object.assign(form, { name: '', teacher_id: '', supervisor_id: NO_SUP, examiner_id: NO_SUP, daily_time: '', gender: '', classification: 'a', status: 'active' })
   modalOpen.value = true
 }
 function openEdit(h: HalaqaRow) {
@@ -140,7 +109,7 @@ function openEdit(h: HalaqaRow) {
     supervisor_id: h.supervisor_id ?? NO_SUP,
     examiner_id: h.examiner_id ?? NO_SUP,
     daily_time: h.daily_time ? h.daily_time.slice(0, 5) : '',
-    gender: h.gender ?? 'male',
+    gender: h.gender ?? '',
     classification: h.classification ?? 'a',
     status: h.status
   })
@@ -148,6 +117,7 @@ function openEdit(h: HalaqaRow) {
 }
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
+  if (!s.gender) errors.push({ name: 'gender', message: 'اختر جنس الحلقة أولاً.' })
   if (!s.name.trim()) errors.push({ name: 'name', message: 'اسم الحلقة مطلوب.' })
   if (!s.teacher_id) errors.push({ name: 'teacher_id', message: 'تعيين المعلّم مطلوب.' })
   return errors
@@ -161,7 +131,7 @@ async function save() {
       supervisor_id: form.supervisor_id === NO_SUP ? null : form.supervisor_id,
       examiner_id: form.examiner_id === NO_SUP ? null : form.examiner_id,
       daily_time: form.daily_time || null,
-      gender: form.gender,
+      gender: form.gender as Gender, // validate يشترطه قبل الحفظ
       classification: form.classification,
       status: form.status
     }
@@ -373,43 +343,75 @@ async function confirmDelete() {
           class="form"
           @submit="save"
         >
-          <UFormField
-            label="اسم الحلقة"
-            name="name"
-          >
-            <UInput
-              v-model="form.name"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
           <div class="row">
             <UFormField
-              label="المعلّم"
+              label="الجنس"
+              name="gender"
+              class="f"
+            >
+              <USelect
+                v-model="form.gender"
+                :items="genderItems"
+                placeholder="بنين أم بنات؟"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+            <UFormField
+              label="اسم الحلقة"
+              name="name"
+              class="f"
+            >
+              <UInput
+                v-model="form.name"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+          </div>
+          <div class="row">
+            <UFormField
+              :label="form.gender === 'female' ? 'المعلّمة' : 'المعلّم'"
               name="teacher_id"
               class="f"
             >
               <UiSelect
                 v-model="form.teacher_id"
                 :items="teacherItems"
-                placeholder="اختر معلّماً"
+                :placeholder="form.gender ? 'اختر من القائمة' : 'اختر الجنس أولاً'"
+                :disabled="!form.gender"
                 size="lg"
               />
             </UFormField>
             <UFormField
-              label="المشرف"
+              :label="form.gender === 'female' ? 'المشرفة' : 'المشرف'"
               name="supervisor_id"
               class="f"
             >
               <UiSelect
                 v-model="form.supervisor_id"
                 :items="supervisorItems"
+                :disabled="!form.gender"
                 size="lg"
               />
             </UFormField>
           </div>
           <div class="row">
+            <UFormField
+              :label="form.gender === 'female' ? 'المختبِرة' : 'المختبِر'"
+              name="examiner_id"
+              class="f"
+              hint="يرصد ترشيحاتها"
+            >
+              <UiSelect
+                v-model="form.examiner_id"
+                :items="examinerItems"
+                :disabled="!form.gender"
+                size="lg"
+              />
+            </UFormField>
             <UFormField
               label="الوقت اليومي"
               name="daily_time"
@@ -424,31 +426,7 @@ async function confirmDelete() {
                 :ui="{ base: 'rounded-[13px]' }"
               />
             </UFormField>
-            <UFormField
-              label="الجنس"
-              name="gender"
-              class="f"
-            >
-              <USelect
-                v-model="form.gender"
-                :items="genderItems"
-                size="lg"
-                class="w-full"
-                :ui="{ base: 'rounded-[13px]' }"
-              />
-            </UFormField>
           </div>
-          <UFormField
-            label="المختبِر"
-            name="examiner_id"
-            hint="تذهب ترشيحات الحلقة إليه ليرصدها"
-          >
-            <UiSelect
-              v-model="form.examiner_id"
-              :items="examinerItems"
-              size="lg"
-            />
-          </UFormField>
           <div class="row">
             <UFormField
               label="التصنيف"

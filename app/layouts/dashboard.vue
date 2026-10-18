@@ -149,6 +149,7 @@ const isActive = (item: Item) => item.to === route.path
                 v-for="item in managerItems"
                 :key="item.key"
                 class="nav-item"
+                :class="{ active: isActive(item) }"
                 @click="go(item)"
               >
                 <UIcon
@@ -162,6 +163,7 @@ const isActive = (item: Item) => item.to === route.path
             <template v-if="showMetrics">
               <button
                 class="nav-item"
+                :class="{ active: isActive(metricsItem) }"
                 @click="go(metricsItem)"
               >
                 <UIcon
@@ -178,6 +180,7 @@ const isActive = (item: Item) => item.to === route.path
               </div>
               <button
                 class="nav-item"
+                :class="{ active: isActive(profileItem) }"
                 @click="go(profileItem)"
               >
                 <UIcon
@@ -336,16 +339,25 @@ const isActive = (item: Item) => item.to === route.path
 .shell { display: flex; min-height: 100vh; background: var(--bg); color: var(--ink); }
 
 /* SIDEBAR */
-.side { width: 274px; flex-shrink: 0; background: var(--side-bg); display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
-.side-head { padding: 24px 22px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--side-line); }
-.side-logo { height: 56px; width: auto; filter: brightness(0) invert(1); }
-.side-nav { flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 3px; }
-.nav-group { font-size: 11.5px; font-weight: 600; color: var(--side-ink); padding: 14px 12px 8px; opacity: .75; }
-.nav-item { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 14px; border-radius: 11px; background: transparent; border: none; color: var(--side-ink); font-size: 15px; font-weight: 500; font-family: inherit; cursor: pointer; width: 100%; text-align: start; transition: background .15s, color .15s; }
+/* القائمة الجانبية: عرضٌ يلين بين 236 و274، ورأسٌ وذيلٌ ثابتان، والقائمة وحدها تُمرَّر.
+   عناصر القائمة لا تنكمش (flex-shrink: 0) — كانت تنضغط فوق بعضها في الشاشات القصيرة بدل أن تُمرَّر */
+.side { width: clamp(236px, 20vw, 274px); flex-shrink: 0; background: var(--side-bg); display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: sticky; top: 0; }
+.side-head { flex-shrink: 0; padding: 22px 22px 18px; display: flex; align-items: center; border-bottom: 1px solid var(--side-line); }
+.side-logo { height: 52px; width: auto; filter: brightness(0) invert(1); }
+.side-nav { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 2px; scrollbar-width: thin; scrollbar-color: var(--side-line) transparent; }
+.side-nav > * { flex-shrink: 0; }
+.side-nav::-webkit-scrollbar { width: 6px; }
+.side-nav::-webkit-scrollbar-thumb { background: var(--side-line); border-radius: 6px; }
+.nav-group { font-size: 11.5px; font-weight: 600; color: var(--side-ink); padding: 16px 12px 6px; opacity: .75; }
+.nav-group:first-child { padding-top: 6px; }
+.nav-item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 14px; border-radius: 11px; background: transparent; border: none; color: var(--side-ink); font-size: 15px; font-weight: 500; font-family: inherit; cursor: pointer; width: 100%; text-align: start; transition: background .15s, color .15s; }
+.nav-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-item > :first-child { flex-shrink: 0; }
+.nav-item:focus-visible { outline: 2px solid var(--side-strong); outline-offset: -2px; }
 .nav-item:hover { background: var(--side-hover); color: var(--side-strong); }
 .nav-item.active { background: var(--side-active); color: var(--side-strong); }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
-.side-foot { padding: 14px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 8px; }
+.side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }
 .user-av { width: 38px; height: 38px; border-radius: 11px; background: #fff; color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; overflow: hidden; }
 .user-meta { min-width: 0; flex: 1; }
@@ -380,19 +392,30 @@ const isActive = (item: Item) => item.to === route.path
 .tu-role { font-size: 12.5px; color: var(--ink-3); }
 .top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; overflow: hidden; }
 /* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
-.content { --content-pad: 32px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
+.content { --content-pad: 24px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
 
 /* RESPONSIVE */
 .overlay { display: none; }
+/* الشاشات القصيرة (حاسوبٌ محمول 768px وما دونه ارتفاعاً): كثافةٌ أعلى كي تتّسع القائمة بلا تمرير غالباً */
+@media (max-height: 860px) {
+  .side-head { padding: 14px 20px 12px; }
+  .side-logo { height: 42px; }
+  .nav-item { min-height: 40px; font-size: 14.5px; }
+  .nav-group { padding: 12px 12px 4px; }
+  .side-foot { padding: 10px 12px; }
+  .side-foot .nav-item { min-height: 38px; }
+  .user-card { padding: 6px 8px; }
+  .user-av { width: 34px; height: 34px; }
+}
 @media (max-width: 1024px) {
-  .side { position: fixed; top: 0; right: 0; height: 100vh; transform: translateX(106%); box-shadow: -18px 0 50px rgba(0, 0, 0, .28); z-index: 60; transition: transform .28s ease; }
+  .side { position: fixed; top: 0; right: 0; width: min(300px, 86vw); height: 100vh; height: 100dvh; transform: translateX(106%); box-shadow: -18px 0 50px rgba(0, 0, 0, .28); z-index: 60; transition: transform .28s cubic-bezier(.22, 1, .36, 1); }
   .side.side-open { transform: translateX(0); }
   .hamburger { display: flex; }
   .overlay { display: block; position: fixed; inset: 0; background: rgba(2, 15, 25, .5); z-index: 55; }
 }
 @media (max-width: 620px) {
   .topbar { padding: 0 16px; }
-  .content { --content-pad: 18px; }
+  .content { --content-pad: 16px; }
   .top-usertext { display: none; }
 }
 </style>

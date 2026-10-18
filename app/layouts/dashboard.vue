@@ -6,7 +6,9 @@
  */
 import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 
-const { profile, role, status, fullName, initial, pending: profilePending } = useProfile()
+const { profile, role, status, fullName, pending: profilePending } = useProfile()
+// صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
+const { url: myPhotoUrl } = useMyPhoto()
 const { signOut } = useAuth()
 const toast = useToast()
 const route = useRoute()
@@ -198,7 +200,10 @@ const isActive = (item: Item) => item.to === route.path
         </button>
         <div class="user-card">
           <div class="user-av">
-            {{ initial }}
+            <ProfileAvatar
+              :name="fullName"
+              :photo-url="myPhotoUrl"
+            />
           </div>
           <div class="user-meta">
             <div class="user-name">
@@ -307,7 +312,10 @@ const isActive = (item: Item) => item.to === route.path
               </div>
             </div>
             <div class="top-av">
-              {{ initial }}
+              <ProfileAvatar
+                :name="fullName"
+                :photo-url="myPhotoUrl"
+              />
             </div>
           </div>
         </div>
@@ -335,7 +343,7 @@ const isActive = (item: Item) => item.to === route.path
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { padding: 14px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 8px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }
-.user-av { width: 38px; height: 38px; border-radius: 11px; background: #fff; color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.user-av { width: 38px; height: 38px; border-radius: 11px; background: #fff; color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; overflow: hidden; }
 .user-meta { min-width: 0; flex: 1; }
 .user-name { font-size: 14.5px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-role { font-size: 12px; color: var(--side-ink); }
@@ -366,7 +374,7 @@ const isActive = (item: Item) => item.to === route.path
 .top-usertext { text-align: start; }
 .tu-name { font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.2; }
 .tu-role { font-size: 12.5px; color: var(--ink-3); }
-.top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; }
+.top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; overflow: hidden; }
 /* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
 .content { --content-pad: 32px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
 

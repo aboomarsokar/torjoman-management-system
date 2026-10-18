@@ -9,6 +9,7 @@
 import type { Database } from '~/types/database.types'
 import { DEFAULT_PASSWORD } from '~/constants/auth'
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
+import { displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الطلاب — ترجمان' })
@@ -99,9 +100,21 @@ const columns = computed(() => {
   // عمود الإجراءات للجميع: «عرض الملف» متاح لكل من يرى الطالب، والتعديل والحذف مقيّدان داخله
   return [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }]
 })
-function initialOf(name: string) {
-  return name.trim().charAt(0) || '؟'
+// الصور الشخصية: صورة الطالب على حسابه (profiles عبر students.user_id). لا مفتاح بين الجدولين
+// لـPostgREST، فتُجلب مسارات حسابات الطلاب ذوات الصور وحدها (قليلة) في طلبٍ واحد بلا قائمة معرّفات.
+const { data: studentPhotoPaths } = useLazyAsyncData<Record<string, string>>('students-photo-paths', async () => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, photo_path')
+    .eq('role', 'student')
+    .not('photo_path', 'is', null)
+  return Object.fromEntries((data ?? []).flatMap(p => p.photo_path ? [[p.id, p.photo_path]] : []))
+}, { server: false, default: () => ({}) })
+function studentPhotoPath(s: StudentRow) {
+  return displayPhotoPath({ gender: s.gender, photo_path: s.user_id ? studentPhotoPaths.value?.[s.user_id] : null })
 }
+const { prime: primePhotos, urlFor: photoUrlFor } = useProfilePhotoUrls()
+watch([paged, studentPhotoPaths], ([rows]) => void primePhotos(rows.map(studentPhotoPath)), { immediate: true })
 // ── إضافة/تعديل ──
 const modalOpen = ref(false)
 const saving = ref(false)
@@ -316,7 +329,10 @@ async function confirmDelete() {
         <template #student="{ row }">
           <div class="user-cell">
             <div class="av">
-              {{ initialOf(row.full_name) }}
+              <ProfileAvatar
+                :name="row.full_name"
+                :photo-url="photoUrlFor(studentPhotoPath(row))"
+              />
             </div>
             <div>
               <div class="u-name">
@@ -667,7 +683,7 @@ async function confirmDelete() {
 .halqa-sel { min-width: 180px; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
-.av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; }
+.av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
 .u-name { font-weight: 600; color: var(--ink); }
 .u-sub { font-size: 13px; color: var(--ink-3); }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }

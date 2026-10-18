@@ -408,3 +408,153 @@ set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', '808c23f2-736c-4284-aa53-342cefce5080', 'role', 'authenticated')::text, true);
 update profiles set must_change_password = true where id = '808c23f2-736c-4284-aa53-342cefce5080';
 rollback;
+
+
+-- ============================================================================
+-- الصورة الشخصية (Task 6b) — الهجرة: supabase/migrations/20261018080234_profile_photos.sql
+-- المستودع الخاص profile-photos، والمسار الثابت <profile_id>/photo.webp، ولا صور لحساب أنثى.
+--
+-- البيانات مُسحت (2026-10-18: حسابٌ واحد، المدير الإداري 1001 ذكر)، فكلُّ بلوكٍ ينشئ حساباته
+-- داخل معاملته بصلاحية postgres (auth.users ثم profiles) ثم يُلغيها (rollback):
+--   00000000-0000-4000-8000-0000000006b1  معلم ذكر نشط (9601)
+--   00000000-0000-4000-8000-0000000006b2  معلم ذكر نشط آخر (9602)
+--   00000000-0000-4000-8000-0000000006b3  معلمة أنثى نشطة (9603)
+--   00000000-0000-4000-8000-0000000006b4  طالب ذكر نشط (حساب student)
+-- النتائج الفعلية مسجَّلة بعد «الفعلي:» (تشغيل 2026-10-18 عبر MCP execute_sql).
+-- ============================================================================
+
+
+-- (ص-1) موظف ذكر يرفع صورته ويثبّت مسارها في صفّه — ينجح (وحارس الأعمدة لا يمنع photo_path)
+-- المتوقّع: uploaded = 1، photo_path = '…6b1/photo.webp'
+-- الفعلي:   uploaded = 1، photo_path = '00000000-0000-4000-8000-0000000006b1/photo.webp' ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b1','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b1','teacher','معلم اختبار أ','male','active','9601');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b1', 'role', 'authenticated')::text, true);
+insert into storage.objects (bucket_id, name) values ('profile-photos', '00000000-0000-4000-8000-0000000006b1/photo.webp');
+update profiles set photo_path = '00000000-0000-4000-8000-0000000006b1/photo.webp' where id = '00000000-0000-4000-8000-0000000006b1';
+reset role;
+select (select count(*) from storage.objects where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b1/photo.webp') uploaded,
+       (select photo_path from profiles where id = '00000000-0000-4000-8000-0000000006b1') photo_path;
+rollback;
+
+
+-- (ص-2) موظف ذكر يرفع في مجلّد موظفٍ آخر — يُرفض
+-- المتوقّع: ERROR 42501 new row violates row-level security policy for table "objects"
+-- الفعلي:   ERROR 42501 new row violates row-level security policy for table "objects" ✅
+begin;
+insert into auth.users (id, aud, role) values
+  ('00000000-0000-4000-8000-0000000006b1','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006b2','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b1','teacher','معلم اختبار أ','male','active','9601'),
+  ('00000000-0000-4000-8000-0000000006b2','teacher','معلم اختبار ب','male','active','9602');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b1', 'role', 'authenticated')::text, true);
+insert into storage.objects (bucket_id, name) values ('profile-photos', '00000000-0000-4000-8000-0000000006b2/photo.webp');
+rollback;
+
+
+-- (ص-3) معلمة (أنثى) ترفع صورتها — يُرفض (سياسة المستودع)
+-- المتوقّع: ERROR 42501 new row violates row-level security policy for table "objects"
+-- الفعلي:   ERROR 42501 new row violates row-level security policy for table "objects" ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b3','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b3','teacher','معلمة اختبار','female','active','9603');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b3', 'role', 'authenticated')::text, true);
+insert into storage.objects (bucket_id, name) values ('profile-photos', '00000000-0000-4000-8000-0000000006b3/photo.webp');
+rollback;
+
+
+-- (ص-4) معلمة (أنثى) تكتب مساراً في صفّها مباشرةً — يُرفض (قيد الجدول)
+-- المتوقّع: ERROR 23514 new row for relation "profiles" violates check constraint "profiles_photo_path_shape"
+-- الفعلي:   ERROR 23514 … violates check constraint "profiles_photo_path_shape" ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b3','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b3','teacher','معلمة اختبار','female','active','9603');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b3', 'role', 'authenticated')::text, true);
+update profiles set photo_path = '00000000-0000-4000-8000-0000000006b3/photo.webp' where id = '00000000-0000-4000-8000-0000000006b3';
+rollback;
+
+
+-- (ص-5) المدير الإداري يرفع صورة موظفٍ ذكر ويثبّت مسارها — ينجح
+-- (المعرّف يُقرأ قبل الانتحال: المدير الإداري النشط الوحيد)
+-- المتوقّع: uploaded = 1، photo_path = '…6b1/photo.webp'
+-- الفعلي:   uploaded = 1، photo_path = '00000000-0000-4000-8000-0000000006b1/photo.webp' ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b1','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b1','teacher','معلم اختبار أ','male','active','9601');
+select set_config('request.jwt.claims', json_build_object('sub', (select id from profiles where role = 'admin_manager' and status = 'active'), 'role', 'authenticated')::text, true);
+set local role authenticated;
+insert into storage.objects (bucket_id, name) values ('profile-photos', '00000000-0000-4000-8000-0000000006b1/photo.webp');
+update profiles set photo_path = '00000000-0000-4000-8000-0000000006b1/photo.webp' where id = '00000000-0000-4000-8000-0000000006b1';
+reset role;
+select (select count(*) from storage.objects where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b1/photo.webp') uploaded,
+       (select photo_path from profiles where id = '00000000-0000-4000-8000-0000000006b1') photo_path;
+rollback;
+
+
+-- (ص-6) الطالب لا يرى كائنَ صورة غيره (فلا يولّد له رابطاً موقَّعاً)، ويرى صورته؛ والموظف يرى الاثنين
+-- المتوقّع: student → other_seen = 0، own_seen = 1 ؛ staff → other_seen = 1، own_seen = 1
+-- الفعلي:   student → 0، 1 ؛ staff → 1، 1 ✅
+begin;
+insert into auth.users (id, aud, role) values
+  ('00000000-0000-4000-8000-0000000006b1','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006b2','authenticated','authenticated'),
+  ('00000000-0000-4000-8000-0000000006b4','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b1','teacher','معلم اختبار أ','male','active','9601'),
+  ('00000000-0000-4000-8000-0000000006b2','teacher','معلم اختبار ب','male','active','9602'),
+  ('00000000-0000-4000-8000-0000000006b4','student','طالب اختبار','male','active',null);
+insert into storage.objects (bucket_id, name) values
+  ('profile-photos', '00000000-0000-4000-8000-0000000006b1/photo.webp'),
+  ('profile-photos', '00000000-0000-4000-8000-0000000006b4/photo.webp');
+create temp table _r (who text, other_seen bigint, own_seen bigint) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b4', 'role', 'authenticated')::text, true);
+insert into _r select 'student',
+  (select count(*) from storage.objects where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b1/photo.webp'),
+  (select count(*) from storage.objects where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b4/photo.webp');
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b2', 'role', 'authenticated')::text, true);
+insert into _r select 'staff',
+  (select count(*) from storage.objects where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b1/photo.webp'),
+  (select count(*) from storage.objects where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b4/photo.webp');
+reset role;
+select * from _r;
+rollback;
+
+
+-- (ص-7) اسمٌ جذريّ بلا مجلّد (`photo.webp`) — يُرفض (foldername فارغ ⇒ coalesce ⇒ false)
+-- المتوقّع: ERROR 42501 new row violates row-level security policy for table "objects"
+-- الفعلي:   ERROR 42501 … for table "objects" ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b1','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b1','teacher','معلم اختبار أ','male','active','9601');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b1', 'role', 'authenticated')::text, true);
+insert into storage.objects (bucket_id, name) values ('profile-photos', 'photo.webp');
+rollback;
+
+
+-- (ص-8) صاحب الصورة ينقلها إلى اسمٍ حرّ — يُرفض (with check يفرض الاسم الثابت)
+-- المتوقّع: ERROR 42501 new row violates row-level security policy for table "objects"
+-- الفعلي:   ERROR 42501 … for table "objects" ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000006b1','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status, employee_number) values
+  ('00000000-0000-4000-8000-0000000006b1','teacher','معلم اختبار أ','male','active','9601');
+insert into storage.objects (bucket_id, name) values ('profile-photos', '00000000-0000-4000-8000-0000000006b1/photo.webp');
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000006b1', 'role', 'authenticated')::text, true);
+update storage.objects set name = '00000000-0000-4000-8000-0000000006b1/selfie.jpg'
+ where bucket_id = 'profile-photos' and name = '00000000-0000-4000-8000-0000000006b1/photo.webp';
+rollback;

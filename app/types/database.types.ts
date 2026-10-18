@@ -1020,6 +1020,7 @@ export type Database = {
           national_id: string | null
           nearest_mosque: string | null
           phone: string | null
+          photo_path: string | null
           quran_parts: number | null
           residence_area: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1049,6 +1050,7 @@ export type Database = {
           national_id?: string | null
           nearest_mosque?: string | null
           phone?: string | null
+          photo_path?: string | null
           quran_parts?: number | null
           residence_area?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1078,6 +1080,7 @@ export type Database = {
           national_id?: string | null
           nearest_mosque?: string | null
           phone?: string | null
+          photo_path?: string | null
           quran_parts?: number | null
           residence_area?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -1295,7 +1298,9 @@ export type Database = {
       can_approve_in_halaqa: { Args: { hid: string }, Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }, Returns: boolean }
       can_manage_halaqa: { Args: { hid: string }, Returns: boolean }
+      can_manage_profile_photo: { Args: { p_folder: string }, Returns: boolean }
       can_view_halaqa: { Args: { hid: string }, Returns: boolean }
+      can_view_profile_photo: { Args: { p_folder: string }, Returns: boolean }
       claim_employee_number: { Args: never, Returns: string }
       current_user_role: {
         Args: never

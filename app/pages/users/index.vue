@@ -7,6 +7,7 @@
 import type { Database } from '~/types/database.types'
 import { DEFAULT_PASSWORD } from '~/constants/auth'
 import { roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
+import { displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'إدارة المستخدمين — ترجمان' })
@@ -74,9 +75,9 @@ const columns = [
   { key: 'status', label: 'الحالة' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
-function initialOf(name: string) {
-  return name.trim().charAt(0) || '؟'
-}
+// الصور الشخصية: توقيعٌ دفعةً واحدة لصفحة القائمة الظاهرة، والمخبأ يمنع التكرار
+const { prime: primePhotos, urlFor: photoUrlFor } = useProfilePhotoUrls()
+watch(paged, rows => void primePhotos(rows.map(displayPhotoPath)), { immediate: true })
 
 // ── إنشاء مستخدم ──
 const modalOpen = ref(false)
@@ -227,7 +228,10 @@ async function confirmReset() {
           <template #user="{ row }">
             <div class="user-cell">
               <div class="av">
-                {{ initialOf(row.full_name) }}
+                <ProfileAvatar
+                  :name="row.full_name"
+                  :photo-url="photoUrlFor(displayPhotoPath(row))"
+                />
               </div>
               <div class="u-name">
                 {{ row.full_name }}
@@ -470,7 +474,7 @@ async function confirmReset() {
 .mb-4 { margin-bottom: 16px; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
-.av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; }
+.av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
 .u-name { font-weight: 600; color: var(--ink); }
 .emp-no { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }

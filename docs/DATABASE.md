@@ -76,7 +76,8 @@ news (الأخبار — المدير ينشرها، عامّة على Landing)
 | `email` | text | البريد الإلكتروني |
 | `status` | enum | `pending` / `active` / `disabled` (تُشتقّ من حالة Auth) |
 | `assigned_by` | uuid FK → profiles | «عيّنه» — مَن أنشأ/عيّن هذا الحساب |
-| `avatar_url` | text | الصورة الشخصية |
+| `avatar_url` | text | ⚠️ متروك منذ Task 6b (لا يُقرأ ولا يُكتب) — يُسقط بعد النشر |
+| `photo_path` | text | الصورة الشخصية الاختيارية: مسارٌ في المستودع **الخاص** `profile-photos`، شكلُه ثابت `<id>/photo.webp` (قيد `profiles_photo_path_shape`)، و**لا صورة لحساب أنثى**. القراءة بروابط موقَّعة لساعة: لصاحبها ولكل حسابٍ نشطٍ غير طالب (`can_view_profile_photo`)؛ الرفع/الحذف لصاحب المجلّد أو المدير الإداري (`can_manage_profile_photo`). الهجرة `20261018080234_profile_photos.sql` |
 
 **بيانات مالية (🔒 صلاحية المدير فقط — يُفضّل جدول منفصل `profile_financials` بـ RLS صارم):**
 

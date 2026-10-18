@@ -1,6 +1,7 @@
 import type { Database } from '~/types/database.types'
 import { classifyLoginId, LOGIN_ID_ERROR } from '~/constants/identity'
 import { studentEmailFromIdentity } from '~/constants/accounts'
+import { PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
 
 /** رسالة رفض الدخول الموحّدة — لا تفرّق بين رقم خاطئ وكلمة مرور خاطئة. */
 const LOGIN_REJECTION = 'الرقم أو كلمة المرور غير صحيحة.'
@@ -42,9 +43,10 @@ export function useAuth() {
     }
   }
 
-  /** تسجيل الخروج ثم العودة لشاشة الدخول. */
+  /** تسجيل الخروج ثم العودة لشاشة الدخول — ومحوُ روابط الصور الموقَّعة (لا تصلح لمن بعده). */
   async function signOut() {
     await supabase.auth.signOut()
+    clearNuxtState([PROFILE_PHOTOS_SIGNED_KEY])
     await navigateTo('/login')
   }
 

@@ -3,8 +3,10 @@
  * ملف الطالب (§4.23) — عرض تفصيلي لسجلّ الطالب.
  * بيانات أساسية + قرآنية + سكن + وليّ الأمر والتواصل. رحلة الطالب (§4.22)
  * تُضاف مع وحدتي التقارير والاختبارات.
+ * الصورة الشخصية (Task 6b) تُعرض من حساب الطالب، ولا صورة لطالبة.
  */
 import type { Database } from '~/types/database.types'
+import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -78,7 +80,21 @@ function ageFrom(d: string | null) {
 }
 const dash = (v: string | number | null | undefined) => (v === null || v === undefined || v === '') ? '—' : String(v)
 
-const initial = computed(() => student.value?.full_name?.trim().charAt(0) || '؟')
+// الصورة الشخصية على حساب الطالب (profiles عبر user_id) — ولا صورة لطالبة: الحرف الأول دائماً
+const { prime: primePhoto, urlFor: photoUrlFor } = useProfilePhotoUrls()
+const { data: accountPhotoPath } = useLazyAsyncData<string | null>(
+  () => `student-photo-${id.value}`,
+  async () => {
+    const s = student.value
+    if (!s?.user_id || !canHavePhoto(s.gender)) return null
+    const { data } = await supabase.from('profiles').select('photo_path').eq('id', s.user_id).maybeSingle()
+    return data?.photo_path ?? null
+  },
+  { server: false, default: () => null, watch: [student] }
+)
+const photoPath = computed(() => displayPhotoPath({ gender: student.value?.gender, photo_path: accountPhotoPath.value }))
+watch(photoPath, path => void primePhoto([path]), { immediate: true })
+const photoUrl = computed(() => photoUrlFor(photoPath.value))
 
 // رابط الاطّلاع العام (للقراءة فقط)
 function copyLink() {
@@ -188,7 +204,10 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
         <!-- شريط علوي -->
         <div class="band">
           <div class="av">
-            {{ initial }}
+            <ProfileAvatar
+              :name="student.full_name"
+              :photo-url="photoUrl"
+            />
           </div>
           <div class="band-info">
             <div class="band-top">
@@ -304,7 +323,7 @@ const sections = computed<{ title: string, icon: string, tone: string, fields: F
 .back:hover { color: var(--ink); }
 
 .band { background: var(--band); border-radius: 22px; padding: 28px 30px; box-shadow: var(--shadow-lg); margin-bottom: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; }
+.av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; overflow: hidden; }
 .band-info { min-width: 0; flex: 1; }
 .band-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .band-top h2 { margin: 0; font-size: 25px; font-weight: 700; color: #fff; }

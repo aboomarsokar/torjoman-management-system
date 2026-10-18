@@ -1,21 +1,25 @@
 <script setup lang="ts">
 /**
- * محاضر الاجتماعات الإدارية (§4.19) — المدير فقط (إنشاء/اطّلاع/تعديل/حذف).
- * الحاضرون يُختارون من العاملين المؤهّلين (مدير/جودة/مشرف) — لا معلّمين/طلاب.
+ * محاضر الاجتماعات الإدارية (§4.19) — المدير الإداري (إنشاء/اطّلاع/تعديل/حذف)،
+ * ومشرف المشروع للاطّلاع فقط.
+ * الحاضرون يُختارون من الطاقم الإداري والإشرافي — لا معلّمين/مختبِرين/طلاب.
  * المرفقات خارج نطاق هذه المرحلة.
  */
 import type { Database } from '~/types/database.types'
+import { roleLabel, type Role } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'محاضر الاجتماعات — ترجمان' })
 
+/** أدوار المؤهّلين لحضور الاجتماعات الإدارية. */
+const ATTENDEE_ROLES: Role[] = ['project_supervisor', 'admin_manager', 'technical_manager', 'women_admin', 'field_supervisor']
+
 const supabase = useSupabaseClient<Database>()
-const { role, profile } = useProfile()
+const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isManager = computed(() => role.value === 'manager')
-
-const ROLE_LABEL: Record<string, string> = { manager: 'المدير', quality: 'مشرف الجودة', supervisor: 'المشرف' }
+const { isAdmin, isReadOnly } = usePermissions()
+const canView = computed(() => isAdmin.value || isReadOnly.value)
 
 type MinuteRow = {
   id: string
@@ -27,7 +31,7 @@ type MinuteRow = {
   attendee_ids: string[]
   status: 'draft' | 'final'
 }
-type Staff = { id: string, full_name: string, role: string }
+type Staff = { id: string, full_name: string, role: Role, gender: Database['public']['Enums']['gender_type'] | null }
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً
 const { data: minutes, refresh, pending } = useLazyAsyncData<MinuteRow[]>('minutes-list', async () => {
@@ -40,12 +44,12 @@ const { data: minutes, refresh, pending } = useLazyAsyncData<MinuteRow[]>('minut
 }, { server: false, default: () => [] })
 
 const { data: staff } = useLazyAsyncData<Staff[]>('minutes-staff', async () => {
-  if (!isManager.value) return []
+  if (!canView.value) return []
   const { data } = await supabase
-    .from('profiles').select('id, full_name, role')
-    .in('role', ['manager', 'quality', 'supervisor']).eq('status', 'active').order('full_name')
+    .from('profiles').select('id, full_name, role, gender')
+    .in('role', ATTENDEE_ROLES).eq('status', 'active').order('full_name')
   return data ?? []
-}, { server: false, default: () => [], watch: [isManager] })
+}, { server: false, default: () => [], watch: [canView] })
 const staffMap = computed(() => Object.fromEntries((staff.value ?? []).map(s => [s.id, s])))
 const attendeeNames = (ids: string[]) => ids.map(id => staffMap.value[id]?.full_name).filter(Boolean)
 
@@ -140,7 +144,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
       subtitle="توثيق الاجتماعات الإدارية: جدول الأعمال والقرارات والمهام والحاضرون."
     >
       <template
-        v-if="isManager"
+        v-if="isAdmin"
         #actions
       >
         <UButton
@@ -155,9 +159,9 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
     </UiPageHeader>
 
     <UiEmptyState
-      v-if="!isManager"
+      v-if="!canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير فقط."
+      title="هذه الصفحة للمدير الإداري فقط."
     />
 
     <ClientOnly v-else>
@@ -222,6 +226,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
               @click="reading = m"
             />
             <UButton
+              v-if="isAdmin"
               color="neutral"
               variant="outline"
               size="sm"
@@ -231,6 +236,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
               @click="openEdit(m)"
             />
             <UButton
+              v-if="isAdmin"
               color="error"
               variant="outline"
               size="sm"
@@ -294,7 +300,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                   class="size-[14px]"
                 />
                 {{ s.full_name }}
-                <span class="att-role">{{ ROLE_LABEL[s.role] }}</span>
+                <span class="att-role">{{ roleLabel(s.role, s.gender) }}</span>
               </button>
               <span
                 v-if="!staff || !staff.length"

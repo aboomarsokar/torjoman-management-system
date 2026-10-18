@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * تفاصيل المشرف (§4.14ب) — للمدير ومشرف الجودة.
+ * تفاصيل المشرف (§4.14ب) — للمديرَين الإداري والفني (ومشرف المشروع اطّلاعاً).
  * ترويسة المشرف + حلقاته (ومعلّموها) + التزام الزيارات + آخر الزيارات.
  */
 import type { Database } from '~/types/database.types'
@@ -11,12 +11,12 @@ const route = useRoute()
 const id = computed(() => String(route.params.id))
 const supabase = useSupabaseClient<Database>()
 
-type Sup = { id: string, full_name: string, email: string | null, role: string }
+type Sup = { id: string, full_name: string, employee_number: string | null, role: string }
 type Halqa = { id: string, name: string, teacher: { full_name: string } | null }
 type Visit = { id: string, scheduled_at: string, executed_at: string | null, status: string, halaqa: { name: string } | null }
 
 const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async () => {
-  const { data: sup } = await supabase.from('profiles').select('id, full_name, email, role').eq('id', id.value).maybeSingle<Sup>()
+  const { data: sup } = await supabase.from('profiles').select('id, full_name, employee_number, role').eq('id', id.value).maybeSingle<Sup>()
   if (!sup) return null
 
   const [{ data: halqat }, { data: visits }] = await Promise.all([
@@ -88,10 +88,10 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
                   color="info"
                   variant="soft"
                 />
-                <span v-if="data.sup.email"><UIcon
-                  name="i-lucide-mail"
+                <span v-if="data.sup.employee_number"><UIcon
+                  name="i-lucide-id-card"
                   class="size-4"
-                />{{ data.sup.email }}</span>
+                /><bdi dir="ltr">{{ data.sup.employee_number }}</bdi></span>
               </div>
             </div>
           </div>

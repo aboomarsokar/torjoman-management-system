@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * لوحة التحكم (§4.3) داخل الهيكل العام.
- * لوحة المدير: بطاقات إحصائية (أعداد حقيقية) + بطاقات إعدادات مربوطة بـ app_settings.
- * بقية الأدوار: ترحيب أساسي يُوسَّع لاحقاً بلوحاتها الخاصة.
+ * لوحة المدير الإداري: بطاقات إحصائية (أعداد حقيقية) + بطاقات إعدادات مربوطة بـ app_settings
+ * (ومشرف المشروع يراها بلا تعديل). لوحة المدير الفني: المشرفون الميدانيون والتقارير بانتظار الاعتماد.
+ * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
 import { buildJourney, type PlanInput, type ResultInput } from '~/utils/journey'
@@ -15,18 +16,20 @@ const { role, fullName, profile, pending: profilePending } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const isManager = computed(() => role.value === 'manager')
-const isTeacher = computed(() => role.value === 'teacher')
-const isSupervisor = computed(() => role.value === 'supervisor')
-const isQuality = computed(() => role.value === 'quality')
+const { isAdmin, isReadOnly, isTeacher, isFieldSupervisor: isSupervisor, isTechnical } = usePermissions()
+/** لوحة النظرة العامة والإعدادات: المدير الإداري، ومشرف المشروع عرضاً. */
+const showOverview = computed(() => isAdmin.value || isReadOnly.value)
 
-// المختبِر لا لوحة له — عمله كلّه في الاختبارات (الدخول يوجّه إلى /dashboard)
+// المختبِر لا لوحة له — عمله كلّه في الاختبارات؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)؛
+// والمديرة الإدارية لا لوحة لها في قائمتها — تبدأ من حلقات قسمها
 watch(role, (r) => {
   if (r === 'examiner') navigateTo('/exams', { replace: true })
+  if (r === 'student') navigateTo('/me', { replace: true })
+  if (r === 'women_admin') navigateTo('/halqat', { replace: true })
 }, { immediate: true })
 
-// ── أعداد البطاقات (للمدير) ──
-const counts = reactive({ students: 0, teachers: 0, supervisors: 0, quality: 0, halqat: 0 })
+// ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) ──
+const counts = reactive({ students: 0, teachers: 0, supervisors: 0, examiners: 0, halqat: 0 })
 
 async function countOf(table: 'students' | 'halaqat') {
   const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
@@ -79,19 +82,19 @@ async function saveSetting(key: SettingKey, unit: string) {
 }
 
 async function loadManagerData() {
-  const [st, te, su, qu, ha] = await Promise.all([
-    countOf('students'), countRole('teacher'), countRole('supervisor'), countRole('quality'), countOf('halaqat')
+  const [st, te, su, ex, ha] = await Promise.all([
+    countOf('students'), countRole('teacher'), countRole('field_supervisor'), countRole('examiner'), countOf('halaqat')
   ])
   counts.students = st
   counts.teachers = te
   counts.supervisors = su
-  counts.quality = qu
+  counts.examiners = ex
   counts.halqat = ha
   await loadSettings()
 }
 
 // يُحمَّل عند معرفة الدور (الملف قد يصل بعد أول تصيير على العميل)
-watch(isManager, (v) => {
+watch(showOverview, (v) => {
   if (v) loadManagerData()
 }, { immediate: true })
 
@@ -198,7 +201,7 @@ const fmtDateTime = (iso: string) => {
   return `${d.toLocaleDateString('ar', { weekday: 'short', day: 'numeric', month: 'short' })} · ${d.toTimeString().slice(0, 5)}`
 }
 
-// ── لوحة الجودة ──
+// ── لوحة المدير الفني (كانت لوحة الجودة) — نطاقه القسمان، فكلّ المشرفين الميدانيين ──
 type QSup = { id: string, name: string, halqat: number }
 type QReport = { id: string, halqa: string, label: string }
 const qSupervisors = ref<QSup[]>([])
@@ -206,12 +209,11 @@ const qHalqatCount = ref(0)
 const qVisitsCount = ref(0)
 const qReports = ref<QReport[]>([])
 
-async function loadQualityData() {
+async function loadTechnicalData() {
   try {
-    const me = profile.value?.id ?? ''
     const { data: sups } = await supabase
       .from('profiles').select('id, full_name')
-      .eq('role', 'supervisor').eq('quality_supervisor_id', me).eq('status', 'active').order('full_name')
+      .eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
 
     const { data: halqat } = await supabase.from('halaqat').select('id, supervisor_id')
     const halqaCount: Record<string, number> = {}
@@ -237,8 +239,8 @@ async function loadQualityData() {
   }
 }
 
-watch(isQuality, (v) => {
-  if (v) loadQualityData()
+watch(isTechnical, (v) => {
+  if (v) loadTechnicalData()
 }, { immediate: true })
 
 type Tone = 'blue' | 'green' | 'neutral' | 'err'
@@ -246,7 +248,7 @@ const statCards = computed(() => [
   { icon: 'i-lucide-graduation-cap', tone: 'blue' as Tone, value: counts.students, label: 'إجمالي الطلاب' },
   { icon: 'i-lucide-users', tone: 'green' as Tone, value: counts.teachers, label: 'المعلمون' },
   { icon: 'i-lucide-shield-check', tone: 'blue' as Tone, value: counts.supervisors, label: 'المشرفون الميدانيون' },
-  { icon: 'i-lucide-award', tone: 'green' as Tone, value: counts.quality, label: 'مشرفو الجودة' },
+  { icon: 'i-lucide-award', tone: 'green' as Tone, value: counts.examiners, label: 'المختبِرون' },
   { icon: 'i-lucide-book-open', tone: 'neutral' as Tone, value: counts.halqat, label: 'الحلقات النشطة' }
 ])
 
@@ -276,7 +278,7 @@ const settingCards = [
           />
         </div>
       </template>
-      <template v-else-if="isManager">
+      <template v-else-if="showOverview">
         <!-- بطاقات إحصائية -->
         <div class="stats">
           <UiStatCard
@@ -312,7 +314,10 @@ const settingCards = [
                 <p>{{ s.desc }} <span class="cur">المعتمد: {{ settings[s.key] }} {{ s.unit }}</span></p>
               </div>
             </div>
-            <div class="setting-edit">
+            <div
+              v-if="isAdmin"
+              class="setting-edit"
+            >
               <UInput
                 v-model="drafts[s.key]"
                 inputmode="numeric"
@@ -577,14 +582,14 @@ const settingCards = [
         </ClientOnly>
       </template>
 
-      <template v-else-if="isQuality">
+      <template v-else-if="isTechnical">
         <ClientOnly>
           <div class="stats stats-4">
             <UiStatCard
               icon="i-lucide-shield-check"
               tone="blue"
               :value="qSupervisors.length"
-              label="مشرفوني"
+              label="المشرفون الميدانيون"
               stacked
             />
             <UiStatCard
@@ -611,10 +616,10 @@ const settingCards = [
           </div>
 
           <div class="sup-grid">
-            <!-- مشرفوني -->
+            <!-- المشرفون الميدانيون -->
             <div class="card sec">
               <div class="sec-head">
-                <h3>مشرفوني</h3>
+                <h3>المشرفون الميدانيون</h3>
                 <UButton
                   to="/supervisors"
                   label="المشرفون"

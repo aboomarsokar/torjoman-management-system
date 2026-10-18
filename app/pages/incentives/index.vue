@@ -14,7 +14,8 @@ const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isTeacher = computed(() => role.value === 'teacher')
+const { isTeacher, canApprove, isReadOnly } = usePermissions()
+const canReview = computed(() => canApprove.value || isReadOnly.value)
 
 const CATEGORIES = ['جوائز', 'أنشطة', 'ضيافة', 'أخرى']
 const categoryItems = CATEGORIES.map(c => ({ label: c, value: c }))
@@ -39,7 +40,8 @@ const statement = ref<{ id: string, status: StatementStatus } | null>(null)
 const allocated = ref(0)
 const rows = ref<ItemRow[]>([])
 
-const canEdit = computed(() => isTeacher.value && statement.value?.status !== 'reviewed')
+// المعلّم يعدّل المسودّة فقط (أو كشفاً لم يُحفظ بعد) — حارس القاعدة يرفض أيّ تعديل بعد الإرسال
+const canEdit = computed(() => isTeacher.value && (!statement.value || statement.value.status === 'draft'))
 const num = (v: number | string) => (v === '' || v === null) ? 0 : Number(v)
 const spent = computed(() => rows.value.reduce((s, r) => s + num(r.amount), 0))
 const remaining = computed(() => allocated.value - spent.value)
@@ -137,12 +139,18 @@ const fmt = (n: number) => n.toLocaleString('ar')
 <template>
   <div class="inc">
     <UiPageHeader
-      title="كشف حوافز الحلقة"
-      subtitle="مصروفات مبلغ الحوافز الشهري لحلقتك — أضِف البنود وارفع الكشف للمدير."
+      :title="canReview ? 'كشوف حوافز الحلقات' : 'كشف حوافز الحلقة'"
+      :subtitle="canReview ? 'الكشوف الواردة من المعلّمين لكل شهر — مراجعتها واعتمادها بـ«تمّ الاطّلاع».' : 'مصروفات مبلغ الحوافز الشهري لحلقتك — أضِف البنود وارفع الكشف للمدير.'"
+    />
+
+    <!-- المعتمِدون ومشرف المشروع: مراجعة الكشوف الواردة في نطاقهم (RLS) بلا تخصيص -->
+    <FinanceIncentives
+      v-if="canReview"
+      review-only
     />
 
     <UiEmptyState
-      v-if="!isTeacher"
+      v-else-if="!isTeacher"
       icon="i-lucide-lock"
       title="هذه الصفحة للمعلّم."
     />
@@ -247,6 +255,17 @@ const fmt = (n: number) => n.toLocaleString('ar')
               class="size-4"
             />
             تجاوز المصروف المبلغ المخصّص بمقدار {{ fmt(Math.abs(remaining)) }}.
+          </div>
+
+          <div
+            v-if="statement && statement.status !== 'draft'"
+            class="locked"
+          >
+            <UIcon
+              name="i-lucide-lock"
+              class="size-4"
+            />
+            {{ statement.status === 'reviewed' ? 'تمّت مراجعة الكشف — للقراءة فقط.' : 'أُرسل — بانتظار الاعتماد. لا يُعدَّل بعد الإرسال.' }}
           </div>
 
           <!-- بنود المصروفات -->
@@ -395,6 +414,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
 .sm-card.neg .sm-val { color: var(--err); }
 .sm-lbl { font-size: 13px; color: var(--ink-3); margin-top: 7px; }
 .sm-status { flex: none; }
+.locked { display: flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
 .warn { display: flex; align-items: center; gap: 8px; background: var(--err-soft); color: var(--err); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 

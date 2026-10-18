@@ -4,9 +4,11 @@
  * مشترك بين كل الأدوار العاملة. القوائم تظهر حسب دور المستخدم.
  * المسارات غير المبنيّة بعد تُظهر تنبيه «قيد الإنشاء» (تُربط عند بناء كل شاشة).
  */
-import { ROLE_LABEL } from '~/constants/roles'
+import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 
-const { role, status, fullName, initial, pending: profilePending } = useProfile()
+const { profile, role, status, fullName, pending: profilePending } = useProfile()
+// صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
+const { url: myPhotoUrl } = useMyPhoto()
 const { signOut } = useAuth()
 const toast = useToast()
 const route = useRoute()
@@ -33,42 +35,54 @@ function comingSoon() {
   toast.add({ title: 'هذه الشاشة قيد الإنشاء — قريباً.', icon: 'i-lucide-hammer', color: 'info' })
 }
 
-type Item = { key: string, label: string, icon: string, to?: string, roles: string[] }
+type Item = { key: string, label: string, icon: string, to?: string, roles: Role[] }
+
+// مجموعات الأدوار — مشرف المشروع (PS) يرى كل شاشة قراءة، والكتابة تُحجب داخل الشاشات (isReadOnly)
+const PS: Role = 'project_supervisor'
+const ADMIN: Role = 'admin_manager'
+const TECH: Role = 'technical_manager'
+const WOMEN: Role = 'women_admin'
+const FIELD: Role = 'field_supervisor'
+const LEADERS: Role[] = [PS, ADMIN, TECH]
+const SCOPED_STAFF: Role[] = [...LEADERS, WOMEN, FIELD]
 
 const mainNav: Item[] = [
-  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: ['manager'] },
-  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: ['manager', 'quality'] },
-  { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: ['manager', 'quality', 'supervisor'] },
-  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: ['manager', 'quality', 'supervisor'] },
-  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] },
-  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] },
-  { key: 'reports', label: 'التقارير الشهرية', icon: 'i-lucide-file-text', to: '/reports', roles: ['manager', 'quality', 'supervisor', 'teacher'] },
-  { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: ['teacher'] },
-  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: ['manager', 'quality', 'supervisor', 'teacher'] }
+  { key: 'me', label: 'صفحتي', icon: 'i-lucide-house', to: '/me', roles: ['student'] },
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher'] },
+  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN] },
+  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS },
+  { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF },
+  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'] },
+  { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: SCOPED_STAFF },
+  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
+  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
+  { key: 'reports', label: 'التقارير الشهرية', icon: 'i-lucide-file-text', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'] },
+  { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [...LEADERS, WOMEN, 'teacher'] },
+  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...SCOPED_STAFF, 'teacher'] }
 ]
 
 const managerNav: Item[] = [
-  { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: ['manager'] },
-  { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: ['manager'] },
-  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: ['manager'] }
+  { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: [PS, ADMIN] },
+  { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN] },
+  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN] }
 ]
 
-const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: ['manager', 'quality'] }
-const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: ['manager', 'quality', 'supervisor', 'teacher', 'examiner'] }
+const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: LEADERS }
+// الطالب بلا «ملف شخصي» وظيفيّ: بياناته وكلمة مروره وصورته في «صفحتي» (/me)
+const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] }
 
 const visible = (items: Item[]) => computed(() => items.filter(i => role.value && i.roles.includes(role.value)))
 const mainItems = visible(mainNav)
 const managerItems = visible(managerNav)
 const showMetrics = computed(() => role.value && metricsItem.roles.includes(role.value))
+const showProfile = computed(() => role.value && profileItem.roles.includes(role.value))
 
 const navTitle = computed(() => {
   const all = [...mainNav, ...managerNav, metricsItem, profileItem]
   return all.find(i => i.to && i.to === route.path)?.label ?? 'لوحة التحكم'
 })
 
-const roleLabel = computed(() => (role.value ? ROLE_LABEL[role.value] : ''))
+const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
 function go(item: Item) {
   drawerOpen.value = false
@@ -158,19 +172,21 @@ const isActive = (item: Item) => item.to === route.path
               </button>
             </template>
 
-            <div class="nav-group">
-              الحساب
-            </div>
-            <button
-              class="nav-item"
-              @click="go(profileItem)"
-            >
-              <UIcon
-                :name="profileItem.icon"
-                class="size-5"
-              />
-              <span>{{ profileItem.label }}</span>
-            </button>
+            <template v-if="showProfile">
+              <div class="nav-group">
+                الحساب
+              </div>
+              <button
+                class="nav-item"
+                @click="go(profileItem)"
+              >
+                <UIcon
+                  :name="profileItem.icon"
+                  class="size-5"
+                />
+                <span>{{ profileItem.label }}</span>
+              </button>
+            </template>
           </template>
         </ClientOnly>
       </nav>
@@ -188,7 +204,10 @@ const isActive = (item: Item) => item.to === route.path
         </button>
         <div class="user-card">
           <div class="user-av">
-            {{ initial }}
+            <ProfileAvatar
+              :name="fullName"
+              :photo-url="myPhotoUrl"
+            />
           </div>
           <div class="user-meta">
             <div class="user-name">
@@ -297,7 +316,10 @@ const isActive = (item: Item) => item.to === route.path
               </div>
             </div>
             <div class="top-av">
-              {{ initial }}
+              <ProfileAvatar
+                :name="fullName"
+                :photo-url="myPhotoUrl"
+              />
             </div>
           </div>
         </div>
@@ -325,7 +347,7 @@ const isActive = (item: Item) => item.to === route.path
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { padding: 14px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 8px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }
-.user-av { width: 38px; height: 38px; border-radius: 11px; background: #fff; color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.user-av { width: 38px; height: 38px; border-radius: 11px; background: #fff; color: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; overflow: hidden; }
 .user-meta { min-width: 0; flex: 1; }
 .user-name { font-size: 14.5px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-role { font-size: 12px; color: var(--side-ink); }
@@ -356,7 +378,7 @@ const isActive = (item: Item) => item.to === route.path
 .top-usertext { text-align: start; }
 .tu-name { font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.2; }
 .tu-role { font-size: 12.5px; color: var(--ink-3); }
-.top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; }
+.top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; overflow: hidden; }
 /* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
 .content { --content-pad: 32px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
 

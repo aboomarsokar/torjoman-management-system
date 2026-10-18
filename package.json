@@ -8,8 +8,10 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "nuxt typecheck",
-    "db:types": "supabase gen types typescript --project-id xozbosrjpnyfbiyqkeom > app/types/database.types.ts"
+    "db:types": "supabase gen types typescript --project-id qwtqfkayupzijcoguqrf > app/types/database.types.ts"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.112",
@@ -17,6 +19,7 @@
     "@nuxt/ui": "^4.8.2",
     "@nuxtjs/supabase": "^2.0.9",
     "@pinia/nuxt": "^0.11.3",
+    "@supabase/supabase-js": "^2.108.2",
     "@vite-pwa/nuxt": "1.1.1",
     "exceljs": "^4.4.0",
     "nuxt": "^4.4.8",
@@ -27,6 +30,7 @@
     "@nuxt/eslint": "^1.16.0",
     "eslint": "^10.5.0",
     "typescript": "^6.0.3",
+    "vitest": "^4.1.12",
     "vue-tsc": "^3.3.5"
   },
   "packageManager": "pnpm@10.25.0"

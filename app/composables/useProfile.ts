@@ -30,11 +30,13 @@ async function fetchCurrentProfile(): Promise<Profile | null> {
  * supabase.auth.getUser() داخل الجلب لتفادي سباق توقيت الـ ref التفاعلي.
  * مصدر الدور لإظهار قوائم التنقّل وصلاحيات الواجهة (RLS يفرضها الخادم).
  *
- * المراقبة على هويّة المستخدم (user.value?.id) لا على مرجع user كاملاً:
+ * المراقبة على هويّة المستخدم (user.value?.sub) لا على مرجع user كاملاً:
  * موديول Supabase يُحدّث مرجع user عند كل تنقّل (إعادة التحقّق من الجلسة)،
  * فمراقبة المرجع كلّه كانت تُعيد جلب الملف عند كل تنقّل → pending يرجع true
  * → يومض سكيلتون الدور (الشريط الجانبي/البوّابات) ويتأخّر المحتوى. مراقبة
  * الـ id تُعيد الجلب فقط عند تسجيل دخول/خروج فعلي (تغيّر الهويّة).
+ * ⚠️ useSupabaseUser في @nuxtjs/supabase v2 يحمل claims الـJWT: المعرّف في `sub` لا `id`
+ * (كان `id` دائماً undefined فلا يُعاد الجلب بعد خروجٍ ثم دخولٍ بحسابٍ آخر في الجلسة نفسها).
  */
 export function useProfile() {
   const user = useSupabaseUser()
@@ -46,7 +48,7 @@ export function useProfile() {
   )
 
   // إعادة الجلب عند تغيّر هويّة المستخدم فقط (دخول/خروج)، لا عند تنقّل الصفحات
-  watch(() => user.value?.id, (id, prev) => {
+  watch(() => user.value?.sub, (id, prev) => {
     if (id !== prev) refresh()
   })
 

@@ -1,10 +1,16 @@
 <script setup lang="ts">
 /**
- * دليل الطلاب (§4.23) — الطالب سجلّ بيانات بلا حساب.
- * قائمة + إضافة/تعديل/حذف وربط بالحلقة، تصفية بالحالة والحلقة.
- * RLS: المدير يدير الكل، المعلّم طلاب حلقته، الحذف للمدير.
+ * دليل الطلاب (§4.23) — لكل طالب حساب يدخل به برقم هويته.
+ * قائمة + إضافة/تعديل/حذف وإسناد للحلقة، تصفية بالحالة والحلقة.
+ * الإضافة للمدير الإداري وحده عبر POST /api/students (ينشئ الحساب في الخطوة نفسها)،
+ * والإسناد (الحلقة) لمن يملكه في نطاقه (canAssign)، والمعلّم يعدّل بيانات طلاب حلقته فقط.
+ * الهوية والجنس للمدير الإداري وحده (حارس القاعدة)، والحذف له.
+ * الحذف وتصحيح الهوية عبر مسارَي الخادم (يمسّان حساب الدخول نفسه)، والكلمة المؤقّتة تظهر مرّةً واحدة بعد الإضافة.
  */
 import type { Database } from '~/types/database.types'
+import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
+import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
+import { displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الطلاب — ترجمان' })
@@ -14,15 +20,17 @@ type StudentStatus = Database['public']['Enums']['student_status']
 type StudentRow = Database['public']['Tables']['students']['Row'] & {
   halaqa: { name: string, teacher: { full_name: string } | null } | null
 }
-type HalqaOpt = { id: string, name: string, daily_time: string | null, teacher: { full_name: string } | null }
+type HalqaOpt = { id: string, name: string, gender: Gender, daily_time: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
-const { role: myRole, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const canManage = computed(() => myRole.value === 'manager' || myRole.value === 'teacher')
-const canDelete = computed(() => myRole.value === 'manager')
+const { isAdmin, canAssign, isTeacher, isReadOnly } = usePermissions()
+/** التعديل: من يملك الإسناد في نطاقه أو معلّم الحلقة — لا مشرف المشروع. */
+const canManage = computed(() => !isReadOnly.value && (canAssign.value || isTeacher.value))
+const canCreate = isAdmin
+const canDelete = isAdmin
 const HALQA_NONE = 'none'
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً
@@ -46,7 +54,7 @@ const { data: students, refresh, pending } = useLazyAsyncData<StudentRow[]>(
 const { data: halqat } = useLazyAsyncData<HalqaOpt[]>('students-halqat', async () => {
   const { data } = await supabase
     .from('halaqat')
-    .select('id, name, daily_time, teacher:teacher_id(full_name)')
+    .select('id, name, gender, daily_time, teacher:teacher_id(full_name)')
     .order('name')
     .returns<HalqaOpt[]>()
   return data ?? []
@@ -55,7 +63,11 @@ function halqaLabel(h: HalqaOpt) {
   return h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name
 }
 // قائمة الإسناد: تفاصيل كاملة لتمييز الحلقة. قائمة التصفية: الاسم فقط (أوجز).
-const halqaItems = computed(() => [{ label: 'بلا حلقة', value: HALQA_NONE }, ...(halqat.value ?? []).map(h => ({ label: halqaLabel(h), value: h.id }))])
+// قائمة الإسناد مقصورة على حلقات جنس الطالب المختار (جنس الطالب يطابق جنس الحلقة)
+const halqaItems = computed(() => [
+  { label: 'بلا حلقة', value: HALQA_NONE },
+  ...(halqat.value ?? []).filter(h => h.gender === form.gender).map(h => ({ label: halqaLabel(h), value: h.id }))
+])
 const halqaFilterItems = computed(() => [{ label: 'كل الحلقات', value: 'all' }, ...(halqat.value ?? []).map(h => ({ label: h.name, value: h.id }))])
 
 const statusF = ref<StudentStatus | 'all'>('all')
@@ -86,11 +98,24 @@ const columns = computed(() => {
     { key: 'parts', label: 'الأجزاء المحفوظة' },
     { key: 'status', label: 'الحالة' }
   ]
-  return canManage.value ? [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }] : base
+  // عمود الإجراءات للجميع: «عرض الملف» متاح لكل من يرى الطالب، والتعديل والحذف مقيّدان داخله
+  return [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }]
 })
-function initialOf(name: string) {
-  return name.trim().charAt(0) || '؟'
+// الصور الشخصية: صورة الطالب على حسابه (profiles عبر students.user_id). لا مفتاح بين الجدولين
+// لـPostgREST، فتُجلب مسارات حسابات الطلاب ذوات الصور وحدها (قليلة) في طلبٍ واحد بلا قائمة معرّفات.
+const { data: studentPhotoPaths } = useLazyAsyncData<Record<string, string>>('students-photo-paths', async () => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, photo_path')
+    .eq('role', 'student')
+    .not('photo_path', 'is', null)
+  return Object.fromEntries((data ?? []).flatMap(p => p.photo_path ? [[p.id, p.photo_path]] : []))
+}, { server: false, default: () => ({}) })
+function studentPhotoPath(s: StudentRow) {
+  return displayPhotoPath({ gender: s.gender, photo_path: s.user_id ? studentPhotoPaths.value?.[s.user_id] : null })
 }
+const { prime: primePhotos, urlFor: photoUrlFor } = useProfilePhotoUrls()
+watch([paged, studentPhotoPaths], ([rows]) => void primePhotos(rows.map(studentPhotoPath)), { immediate: true })
 // ── إضافة/تعديل ──
 const modalOpen = ref(false)
 const saving = ref(false)
@@ -102,6 +127,11 @@ const form = reactive({
   residence: '', nearest_mosque: '',
   guardian_name: '', guardian_phone: '', phone: '', guardian_email: '', enrollment_date: '',
   status: 'active' as StudentStatus
+})
+// تغيير الجنس إلى الآخر يُسقط حلقةً من غير جنسه (القاعدة والخادم يرفضانها)
+watch(() => form.gender, (g) => {
+  const cur = (halqat.value ?? []).find(h => h.id === form.halaqa_id)
+  if (cur && cur.gender !== g) form.halaqa_id = HALQA_NONE
 })
 const tajweedItems = [
   { label: '—', value: TAJWEED_NONE },
@@ -153,19 +183,57 @@ function openEdit(s: StudentRow) {
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
   if (!s.full_name.trim()) errors.push({ name: 'full_name', message: 'اسم الطالب مطلوب.' })
+  // الهوية إلزامية عند الإضافة (معرّف دخول الطالب)، وتُفحص صيغتها متى عدّلها المدير الإداري
+  if ((!editingId.value || isAdmin.value) && !isValidIdentity(s.national_id)) errors.push({ name: 'national_id', message: IDENTITY_ERROR })
   if (s.quran_parts && (Number(s.quran_parts) < 0 || Number(s.quran_parts) > 30)) errors.push({ name: 'quran_parts', message: 'الأجزاء بين 0 و30.' })
   return errors
 }
+const { createStudent: createStudentAccount, deleteStudent, changeStudentNationalId } = useAccountAdmin()
+// بعد الإضافة: الهوية والكلمة المؤقّتة (مرّةً واحدة، قابلتان للنسخ)
+const credentials = ref<AccountCredentials | null>(null)
+
+/** إضافة طالب (المدير الإداري): الخادم ينشئ الحساب وصفّ الطالب، ثم تُكمَل بقية البيانات بتحديث. */
+async function createStudent(details: Database['public']['Tables']['students']['Update']) {
+  credentials.value = null
+  const nationalId = normalizeDigits(form.national_id.trim())
+  const created = await createStudentAccount({
+    full_name: form.full_name.trim(),
+    gender: form.gender,
+    national_id: nationalId,
+    halaqa_id: form.halaqa_id === HALQA_NONE ? undefined : form.halaqa_id,
+    birth_date: form.birth_date || undefined,
+    guardian_phone: form.guardian_phone.trim() || undefined
+  })
+  // الحساب أُنشئ: تُعرض بياناته ولو فشل استكمال التفاصيل (لا تُفقد الكلمة المؤقّتة)
+  credentials.value = studentCredentials(form.full_name.trim(), nationalId, created.temp_password, 'created')
+  const { error } = await supabase.from('students').update(details).eq('id', created.id)
+  if (error) throw error
+}
+
+/** تعديل طالب: الهوية (إن تغيّرت) عبر الخادم لأنها معرّف الدخول، والباقي تحديثٌ مباشر تحكمه RLS. */
+async function updateStudent(id: string, details: Database['public']['Tables']['students']['Update']) {
+  const original = (students.value ?? []).find(s => s.id === id)
+  const nationalId = normalizeDigits(form.national_id.trim())
+  if (isAdmin.value && nationalId && nationalId !== original?.national_id) {
+    await changeStudentNationalId(id, nationalId)
+  }
+  // الجنس للمدير الإداري وحده، والحلقة لمن يملك الإسناد — لا تُرسل لغيرهما (حارس القاعدة يرفضها)
+  const payload = {
+    ...details,
+    ...(isAdmin.value ? { gender: form.gender } : {}),
+    ...(canAssign.value ? { halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id } : {})
+  }
+  const { error } = await supabase.from('students').update(payload).eq('id', id)
+  if (error) throw error
+}
+
 async function save() {
   saving.value = true
   try {
-    const payload = {
+    const details = {
       full_name: form.full_name.trim(),
-      national_id: form.national_id.trim() || null,
-      gender: form.gender,
       birth_date: form.birth_date || null,
       family_count: form.family_count ? Number(form.family_count) : null,
-      halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id,
       quran_parts: form.quran_parts ? Number(form.quran_parts) : null,
       tajweed_level: form.tajweed_level === TAJWEED_NONE ? null : form.tajweed_level,
       residence: form.residence.trim() || null,
@@ -177,15 +245,21 @@ async function save() {
       enrollment_date: form.enrollment_date || null,
       status: form.status
     }
-    const { error } = editingId.value
-      ? await supabase.from('students').update(payload).eq('id', editingId.value)
-      : await supabase.from('students').insert({ ...payload, created_by: profile.value?.id ?? null })
-    if (error) throw error
-    toast.add({ title: editingId.value ? 'تم تحديث بيانات الطالب.' : 'تمت إضافة الطالب.', color: 'success', icon: 'i-lucide-circle-check' })
+    if (editingId.value) {
+      await updateStudent(editingId.value, details)
+      toast.add({ title: 'تم تحديث بيانات الطالب.', color: 'success', icon: 'i-lucide-circle-check' })
+    } else {
+      await createStudent(details)
+    }
     modalOpen.value = false
     await refresh()
   } catch (err) {
     handle(err)
+    // أُنشئ الحساب وفشل استكمال التفاصيل: تُغلق النافذة كي لا يُعاد الإنشاء بالهوية نفسها (409)
+    if (credentials.value) {
+      modalOpen.value = false
+      await refresh()
+    }
   } finally {
     saving.value = false
   }
@@ -198,8 +272,8 @@ async function confirmDelete() {
   if (!deleteTarget.value) return
   deleting.value = true
   try {
-    const { error } = await supabase.from('students').delete().eq('id', deleteTarget.value.id)
-    if (error) throw error
+    // عبر الخادم: صفّ الطالب ثم ملف حسابه ثم حساب الدخول — فلا يبقى دخولٌ لطالبٍ محذوف
+    await deleteStudent(deleteTarget.value.id)
     toast.add({ title: 'تم حذف الطالب.', color: 'neutral', icon: 'i-lucide-trash-2' })
     deleteTarget.value = null
     await refresh()
@@ -215,11 +289,11 @@ async function confirmDelete() {
   <div class="students">
     <UiPageHeader
       title="الطلاب"
-      subtitle="سجلّ الطلاب وبياناتهم وربطهم بالحلقات — الطالب سجلّ بيانات بلا حساب دخول."
+      subtitle="سجلّ الطلاب وبياناتهم وإسنادهم للحلقات — يدخل الطالب برقم هويته."
     >
       <template #actions>
         <UButton
-          v-if="canManage"
+          v-if="canCreate"
           label="إضافة طالب"
           color="primary"
           size="lg"
@@ -253,7 +327,7 @@ async function confirmDelete() {
         v-else-if="filtered.length === 0"
         icon="i-lucide-graduation-cap"
         title="لا طلاب بعد"
-        :description="canManage ? 'أضِف أول طالب واربطه بحلقته ليظهر هنا.' : 'لا طلاب في نطاقك حاليّاً.'"
+        :description="canCreate ? 'أضِف أول طالب واربطه بحلقته ليظهر هنا.' : 'لا طلاب في نطاقك حاليّاً.'"
       />
       <UiDataTable
         v-else
@@ -267,7 +341,10 @@ async function confirmDelete() {
         <template #student="{ row }">
           <div class="user-cell">
             <div class="av">
-              {{ initialOf(row.full_name) }}
+              <ProfileAvatar
+                :name="row.full_name"
+                :photo-url="photoUrlFor(studentPhotoPath(row))"
+              />
             </div>
             <div>
               <div class="u-name">
@@ -311,6 +388,7 @@ async function confirmDelete() {
               @click="navigateTo(`/students/${row.id}`)"
             />
             <UButton
+              v-if="canManage"
               color="neutral"
               variant="outline"
               size="sm"
@@ -374,6 +452,7 @@ async function confirmDelete() {
               <UiSelect
                 v-model="form.gender"
                 :items="genderItems"
+                :disabled="!!editingId && !isAdmin"
                 size="lg"
               />
             </UFormField>
@@ -385,6 +464,7 @@ async function confirmDelete() {
               <UiSelect
                 v-model="form.halaqa_id"
                 :items="halqaItems"
+                :disabled="!canAssign"
                 size="lg"
               />
             </UFormField>
@@ -394,9 +474,13 @@ async function confirmDelete() {
               label="رقم الهوية"
               name="national_id"
               class="f"
+              :required="!editingId"
+              :hint="editingId ? undefined : 'معرّف دخول الطالب'"
             >
               <UInput
                 v-model="form.national_id"
+                :disabled="!!editingId && !isAdmin"
+                inputmode="numeric"
                 dir="ltr"
                 size="lg"
                 class="w-full"
@@ -600,8 +684,14 @@ async function confirmDelete() {
       @update:open="v => { if (!v) deleteTarget = null }"
       @confirm="confirmDelete"
     >
-      هل أنت متأكّد من حذف الطالب «<strong>{{ deleteTarget?.full_name }}</strong>»؟ لا يمكن التراجع.
+      هل أنت متأكّد من حذف الطالب «<strong>{{ deleteTarget?.full_name }}</strong>»؟ يُحذف سجلّه ونتائجه وحساب دخوله، ولا يمكن التراجع.
     </UiConfirmModal>
+
+    <!-- الهوية والكلمة المؤقّتة بعد الإضافة -->
+    <AccountCredentialsModal
+      :credentials="credentials"
+      @close="credentials = null"
+    />
   </div>
 </template>
 
@@ -611,7 +701,7 @@ async function confirmDelete() {
 .halqa-sel { min-width: 180px; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
-.av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; }
+.av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
 .u-name { font-weight: 600; color: var(--ink); }
 .u-sub { font-size: 13px; color: var(--ink-3); }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }

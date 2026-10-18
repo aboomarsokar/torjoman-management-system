@@ -2,27 +2,39 @@
 /**
  * الملف الشخصي للعامل (§4.4/4.5) — عرض وتعديل بيانات عامل.
  * المسار: /profile/[id]، و«me» تعني المستخدم الحالي. العرض متاح للعاملين،
- * والتعديل للمدير أو لصاحب الملف نفسه (RLS). رقم الهوية يُقنَّع لغير المخوّل.
+ * والتعديل للمدير الإداري أو لصاحب الملف نفسه (RLS). رقم الهوية يُقنَّع لغير المخوّل.
+ * الجنس للمدير الإداري وحده (حارس القاعدة يمنع صاحب الملف من تغييره).
+ * الصورة الشخصية اختيارية في مستودعٍ خاص (Task 6b) — يرفعها صاحب الملف أو المدير الإداري،
+ * ولا صورة لحساب أنثى (لا حقل، والترويسة بالحرف الأول دائماً).
+ * الطالب لا يملك ملفّاً وظيفيّاً: يُحوَّل إلى «صفحتي» (/me) حيث بياناته للقراءة وكلمة مروره وصورته.
  */
 import type { Database } from '~/types/database.types'
-import { ROLE_LABEL } from '~/constants/roles'
+import { roleLabel } from '~/constants/roles'
+import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
-const { profile: myProfile, role: myRole } = useProfile()
+const { profile: myProfile } = useProfile()
+const { isAdmin, isStudent } = usePermissions()
 const { handle } = useErrorHandler()
-const { uploadImage } = useUpload()
+const { prime, urlFor } = useProfilePhotoUrls()
+const { refresh: refreshMyPhoto } = useMyPhoto()
 const toast = useToast()
 
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
 
+// الطالب لا يعدّل حقولاً وظيفيّة (المسمّى، التعيين، الاسم) — صفحته /me. الدور يصل غير متزامن، فيُراقَب.
+watch(isStudent, (student) => {
+  if (student) void navigateTo('/me', { replace: true })
+}, { immediate: true })
+
 const targetId = computed(() => route.params.id === 'me' ? (myProfile.value?.id ?? '') : String(route.params.id))
 const isSelf = computed(() => !!targetId.value && targetId.value === myProfile.value?.id)
-const canEdit = computed(() => myRole.value === 'manager' || isSelf.value)
-const canSeeId = computed(() => myRole.value === 'manager' || isSelf.value)
+const canEdit = computed(() => isAdmin.value || isSelf.value)
+const canSeeId = computed(() => isAdmin.value || isSelf.value)
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type Scope = { label: string, value: string | number }
@@ -40,16 +52,9 @@ const { data, pending, refresh } = useLazyAsyncData(() => `profile-${targetId.va
       const { count } = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('halaqa_id', h.id).eq('status', 'active')
       scope.push({ label: 'الحلقة', value: h.name }, { label: 'عدد الطلاب', value: count ?? 0 })
     }
-  } else if (p.role === 'supervisor') {
+  } else if (p.role === 'field_supervisor') {
     const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('supervisor_id', p.id)
     scope.push({ label: 'الحلقات المُسندة', value: count ?? 0 })
-    if (p.quality_supervisor_id) {
-      const { data: q } = await supabase.from('profiles').select('full_name').eq('id', p.quality_supervisor_id).maybeSingle()
-      if (q) scope.push({ label: 'مشرف الجودة المسؤول', value: q.full_name })
-    }
-  } else if (p.role === 'quality') {
-    const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('quality_supervisor_id', p.id).eq('role', 'supervisor')
-    scope.push({ label: 'المشرفون التابعون', value: count ?? 0 })
   } else if (p.role === 'examiner') {
     const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('examiner_id', p.id)
     scope.push({ label: 'الحلقات المُسندة للاختبار', value: count ?? 0 })
@@ -57,18 +62,19 @@ const { data, pending, refresh } = useLazyAsyncData(() => `profile-${targetId.va
   return { p, scope }
 }, { server: false, default: () => null, watch: [targetId] })
 
-// قائمة مشرفي الجودة (لإسناد المشرف — للمدير)
-const QUALITY_NONE = 'none'
-const { data: qualityList } = useLazyAsyncData('quality-options', async () => {
-  if (myRole.value !== 'manager') return []
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'quality').eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [], watch: [myRole] })
-const qualityItems = computed(() => [{ label: 'بلا مشرف جودة', value: QUALITY_NONE }, ...(qualityList.value ?? []).map(q => ({ label: q.full_name, value: q.id }))])
-
 useSeoMeta({ title: () => data.value?.p ? `${data.value.p.full_name} — ترجمان` : 'الملف الشخصي — ترجمان' })
 
-const initial = computed(() => data.value?.p?.full_name?.trim().charAt(0) || '؟')
+const photoPath = computed(() => displayPhotoPath(data.value?.p))
+watch(photoPath, path => void prime([path]), { immediate: true })
+const photoUrl = computed(() => urlFor(photoPath.value))
+const showPhotoField = computed(() => canEdit.value && canHavePhoto(data.value?.p?.gender))
+
+/** بعد رفع الصورة أو إزالتها: يُعاد جلب الملف، وصورة الشريط إن كان الملف ملفي. */
+async function onPhotoChanged() {
+  await refresh()
+  if (isSelf.value) await refreshMyPhoto()
+}
+
 const dash = (v: string | number | null | undefined) => (v === null || v === undefined || v === '') ? '—' : String(v)
 const age = computed(() => {
   const b = data.value?.p?.birth_date
@@ -126,34 +132,19 @@ const sections = computed(() => {
 const modalOpen = ref(false)
 const saving = ref(false)
 const form = reactive({
-  full_name: '', avatar_url: '', gender: '' as '' | 'male' | 'female', birth_date: '', national_id: '', marital_status: '', family_count: '',
-  job_title: '', hire_date: '', years_experience: '', quality_supervisor_id: QUALITY_NONE,
+  full_name: '', gender: '' as '' | 'male' | 'female', birth_date: '', national_id: '', marital_status: '', family_count: '',
+  job_title: '', hire_date: '', years_experience: '',
   residence_area: '', nearest_mosque: '', address_detail: '', phone: '',
   education_level: '', academic_major: '', quran_parts: '', tajweed_level: ''
 })
 const numStr = (v: number | null) => v != null ? String(v) : ''
 
-const uploading = ref(false)
-async function onPickAvatar(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  uploading.value = true
-  try {
-    form.avatar_url = await uploadImage(file, 'avatars')
-    toast.add({ title: 'رُفعت الصورة.', color: 'success', icon: 'i-lucide-image' })
-  } catch (err) {
-    toast.add({ title: (err as Error).message || 'تعذّر رفع الصورة.', color: 'error', icon: 'i-lucide-circle-alert' })
-  } finally {
-    uploading.value = false
-  }
-}
-
 function openEdit() {
   const p = data.value?.p
   if (!p) return
   Object.assign(form, {
-    full_name: p.full_name, avatar_url: p.avatar_url ?? '', gender: p.gender ?? '', birth_date: p.birth_date ?? '', national_id: p.national_id ?? '', marital_status: p.marital_status ?? '', family_count: numStr(p.family_count),
-    job_title: p.job_title ?? '', hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience), quality_supervisor_id: p.quality_supervisor_id ?? QUALITY_NONE,
+    full_name: p.full_name, gender: p.gender ?? '', birth_date: p.birth_date ?? '', national_id: p.national_id ?? '', marital_status: p.marital_status ?? '', family_count: numStr(p.family_count),
+    job_title: p.job_title ?? '', hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience),
     residence_area: p.residence_area ?? '', nearest_mosque: p.nearest_mosque ?? '', address_detail: p.address_detail ?? '', phone: p.phone ?? '',
     education_level: p.education_level ?? '', academic_major: p.academic_major ?? '', quran_parts: numStr(p.quran_parts), tajweed_level: p.tajweed_level ?? ''
   })
@@ -172,8 +163,8 @@ async function save() {
   try {
     const patch: Database['public']['Tables']['profiles']['Update'] = {
       full_name: form.full_name.trim(),
-      avatar_url: form.avatar_url || null,
-      gender: form.gender || null,
+      // الجنس للمدير الإداري وحده — لا يُرسل من غيره (حارس القاعدة يرفض التغيير)
+      ...(isAdmin.value ? { gender: form.gender || null } : {}),
       birth_date: strOrNull(form.birth_date),
       national_id: strOrNull(form.national_id),
       marital_status: strOrNull(form.marital_status),
@@ -181,10 +172,6 @@ async function save() {
       job_title: strOrNull(form.job_title),
       hire_date: strOrNull(form.hire_date),
       years_experience: numOrNull(form.years_experience),
-      // إسناد مشرف الجودة — للمشرف فقط ومن المدير
-      ...(data.value?.p?.role === 'supervisor' && myRole.value === 'manager'
-        ? { quality_supervisor_id: form.quality_supervisor_id === QUALITY_NONE ? null : form.quality_supervisor_id }
-        : {}),
       residence_area: strOrNull(form.residence_area),
       nearest_mosque: strOrNull(form.nearest_mosque),
       address_detail: strOrNull(form.address_detail),
@@ -208,42 +195,12 @@ async function save() {
 
 // ── تغيير كلمة المرور (لصاحب الملف) ──
 const pwOpen = ref(false)
-const pwSaving = ref(false)
-const pw = reactive({ next: '', confirm: '' })
-function openChangePw() {
-  pw.next = ''
-  pw.confirm = ''
-  pwOpen.value = true
-}
-async function changePassword() {
-  if (pw.next.length < 8) {
-    toast.add({ title: 'كلمة المرور 8 أحرف على الأقل.', color: 'error', icon: 'i-lucide-circle-alert' })
-    return
-  }
-  if (pw.next !== pw.confirm) {
-    toast.add({ title: 'الكلمتان غير متطابقتين.', color: 'error', icon: 'i-lucide-circle-alert' })
-    return
-  }
-  pwSaving.value = true
-  try {
-    const { error } = await supabase.auth.updateUser({ password: pw.next })
-    if (error) throw error
-    await supabase.from('profiles').update({ must_change_password: false }).eq('id', targetId.value)
-    toast.add({ title: 'تم تغيير كلمة المرور.', color: 'success', icon: 'i-lucide-circle-check' })
-    pwOpen.value = false
-    await refresh()
-  } catch (err) {
-    handle(err)
-  } finally {
-    pwSaving.value = false
-  }
-}
 </script>
 
 <template>
   <div class="profile">
     <ClientOnly>
-      <template v-if="pending">
+      <template v-if="pending || isStudent">
         <UiSkeletonBand :actions="2" />
         <div class="sections">
           <UiSkeletonLines
@@ -264,27 +221,23 @@ async function changePassword() {
         <div class="band">
           <div class="band-id">
             <div class="av">
-              <img
-                v-if="data.p.avatar_url"
-                :src="data.p.avatar_url"
-                :alt="data.p.full_name"
-              >
-              <template v-else>
-                {{ initial }}
-              </template>
+              <ProfileAvatar
+                :name="data.p.full_name"
+                :photo-url="photoUrl"
+              />
             </div>
             <div>
               <h1>{{ data.p.full_name }}</h1>
               <div class="band-sub">
                 <UBadge
-                  :label="ROLE_LABEL[data.p.role]"
+                  :label="roleLabel(data.p.role, data.p.gender)"
                   color="info"
                   variant="soft"
                 />
-                <span v-if="data.p.email"><UIcon
-                  name="i-lucide-mail"
+                <span v-if="data.p.employee_number"><UIcon
+                  name="i-lucide-id-card"
                   class="size-4"
-                />{{ data.p.email }}</span>
+                /><bdi dir="ltr">{{ data.p.employee_number }}</bdi></span>
               </div>
             </div>
           </div>
@@ -297,7 +250,7 @@ async function changePassword() {
               size="lg"
               icon="i-lucide-key-round"
               :ui="{ base: 'rounded-[13px] font-semibold' }"
-              @click="openChangePw"
+              @click="pwOpen = true"
             />
             <UButton
               v-if="canEdit"
@@ -312,24 +265,24 @@ async function changePassword() {
         </div>
 
         <!-- تنبيه الكلمة الافتراضية -->
-        <div
+        <ProfilePasswordBanner
           v-if="isSelf && data.p.must_change_password"
-          class="pw-banner"
+          @change="pwOpen = true"
+        />
+
+        <!-- الصورة الشخصية (اختيارية؛ لا تُعرض لحساب أنثى) -->
+        <section
+          v-if="showPhotoField"
+          class="card photo-card"
         >
-          <UIcon
-            name="i-lucide-shield-alert"
-            class="size-5"
+          <ProfilePhotoField
+            :profile-id="data.p.id"
+            :name="data.p.full_name"
+            :photo-path="photoPath"
+            :gender="data.p.gender"
+            @changed="onPhotoChanged"
           />
-          <span>كلمة مرورك ما زالت الافتراضية — يُرجى تغييرها لحماية حسابك.</span>
-          <UButton
-            label="تغيير الآن"
-            color="warning"
-            size="sm"
-            icon="i-lucide-key-round"
-            :ui="{ base: 'rounded-[11px] font-semibold' }"
-            @click="openChangePw"
-          />
-        </div>
+        </section>
 
         <!-- النطاق -->
         <div
@@ -379,56 +332,11 @@ async function changePassword() {
     </ClientOnly>
 
     <!-- نافذة تغيير كلمة المرور -->
-    <UModal
+    <ProfilePasswordModal
       v-model:open="pwOpen"
-      title="تغيير كلمة المرور"
-    >
-      <template #body>
-        <div class="form">
-          <UFormField
-            label="كلمة المرور الجديدة"
-            hint="8 أحرف على الأقل"
-          >
-            <UInput
-              v-model="pw.next"
-              type="password"
-              dir="ltr"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField label="تأكيد كلمة المرور">
-            <UInput
-              v-model="pw.confirm"
-              type="password"
-              dir="ltr"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="modal-foot">
-          <UButton
-            label="إلغاء"
-            color="neutral"
-            variant="ghost"
-            @click="pwOpen = false"
-          />
-          <UButton
-            label="حفظ"
-            color="primary"
-            icon="i-lucide-check"
-            :loading="pwSaving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
-            @click="changePassword"
-          />
-        </div>
-      </template>
-    </UModal>
+      :profile-id="targetId"
+      @changed="refresh"
+    />
 
     <!-- نافذة التعديل -->
     <UModal
@@ -438,44 +346,6 @@ async function changePassword() {
     >
       <template #body>
         <div class="form">
-          <div class="avatar-edit">
-            <div class="ae-preview">
-              <img
-                v-if="form.avatar_url"
-                :src="form.avatar_url"
-                alt=""
-              >
-              <UIcon
-                v-else
-                name="i-lucide-user"
-                class="size-7 opacity-40"
-              />
-            </div>
-            <label class="up-btn">
-              <UIcon
-                :name="uploading ? 'i-lucide-loader-circle' : 'i-lucide-upload'"
-                :class="['size-4', uploading && 'spin']"
-              />
-              {{ uploading ? 'يجري الرفع…' : 'صورة شخصية' }}
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                :disabled="uploading"
-                @change="onPickAvatar"
-              >
-            </label>
-            <UButton
-              v-if="form.avatar_url"
-              label="إزالة"
-              color="error"
-              variant="ghost"
-              size="sm"
-              icon="i-lucide-x"
-              @click="form.avatar_url = ''"
-            />
-          </div>
-
           <div class="grp">
             بيانات أساسية
           </div>
@@ -499,6 +369,7 @@ async function changePassword() {
               <UiSelect
                 v-model="form.gender"
                 :items="genderItems"
+                :disabled="!isAdmin"
                 placeholder="—"
                 size="lg"
               />
@@ -590,16 +461,6 @@ async function changePassword() {
               size="lg"
               class="w-full"
               :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField
-            v-if="data?.p?.role === 'supervisor' && myRole === 'manager'"
-            label="مشرف الجودة المسؤول"
-          >
-            <UiSelect
-              v-model="form.quality_supervisor_id"
-              :items="qualityItems"
-              size="lg"
             />
           </UFormField>
 
@@ -737,18 +598,9 @@ async function changePassword() {
 
 .band { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
 .band-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.pw-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--warn-soft, #fef3c7); color: var(--warn-ink, #92400e); border: 1px solid var(--warn, #f59e0b); border-radius: 14px; padding: 12px 16px; font-size: 14.5px; font-weight: 600; margin-bottom: 18px; }
-.pw-banner span { flex: 1; min-width: 180px; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .av { width: 64px; height: 64px; border-radius: 18px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex: none; overflow: hidden; }
-.av img { width: 100%; height: 100%; object-fit: cover; }
-.avatar-edit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-bottom: 6px; }
-.ae-preview { width: 64px; height: 64px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
-.ae-preview img { width: 100%; height: 100%; object-fit: cover; }
-.up-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; }
-.up-btn:hover { border-color: var(--blue); }
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.photo-card { padding: 18px 22px; margin-bottom: 18px; }
 .band h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; color: var(--ink); }
 .band-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .band-sub span { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-2); }

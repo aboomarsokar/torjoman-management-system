@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
  * الزيارات الإشرافية (§4.15).
- * المدير/المشرف يجدول زيارة لحلقة ثم يرفع نتائجها (نقاط قوة/تحسين/توصيات/تقييم).
- * الزائر قد يكون مشرفاً أو المدير نفسه (يزور بصفته مديراً).
- * RLS: المدير يدير الكل، المشرف زياراته. الحذف للمدير.
+ * المديران (الإداري والفني) والمشرف الميداني يجدولون زيارة لحلقة ثم ترفع نتائجها (نقاط قوة/تحسين/توصيات/تقييم).
+ * الزائر قد يكون مشرفاً ميدانياً أو أحد المديرَين (يزور بصفته).
+ * RLS: المديران يديران الكل، والمشرف الميداني زياراته. الحذف للمديرَين. مشرف المشروع والمديرة الإدارية للاطّلاع.
  */
 import type { Database } from '~/types/database.types'
+import { roleLabel, type Role } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
@@ -13,17 +14,29 @@ useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
 type VisitStatus = Database['public']['Enums']['visit_status']
 type VisitRow = Database['public']['Tables']['supervision_visits']['Row'] & {
   halaqa: { name: string, teacher: { full_name: string } | null } | null
-  supervisor: { full_name: string, role: string } | null
+  supervisor: { full_name: string, role: Role, gender: Gender | null } | null
 }
-type VisitorRow = { id: string, full_name: string, role: string }
+type Gender = Database['public']['Enums']['gender_type']
+type VisitorRow = { id: string, full_name: string, role: Role, gender: Gender | null }
+/** أدوار الزائر: المديران والمشرف الميداني. */
+const VISITOR_ROLES: Role[] = ['admin_manager', 'technical_manager', 'field_supervisor']
 type HalqaOption = { id: string, name: string, daily_time: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
-const { role: myRole, profile } = useProfile()
+const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const isManager = computed(() => myRole.value === 'manager')
-const canSchedule = computed(() => myRole.value === 'manager' || myRole.value === 'supervisor')
+const { isManager, isFieldSupervisor } = usePermissions()
+const canSchedule = computed(() => isManager.value || isFieldSupervisor.value)
+/**
+ * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): المديران لكل زيارة، والمشرف الميداني لزياراته هو وحده
+ * (visits_update: supervisor_id = auth.uid()) — لا لزيارةٍ جدولها مديرٌ لحلقته باسم غيره.
+ */
+function canEditVisit(v: VisitRow) {
+  return isManager.value || (isFieldSupervisor.value && v.supervisor_id === profile.value?.id)
+}
+/** تحديثٌ لم يمسّ صفّاً = رفضته RLS بصمت — يُعرض خطأً لا نجاحاً. */
+const VISIT_NOT_UPDATED = 'لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.'
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي تلقائياً
 const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(
@@ -31,7 +44,7 @@ const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(
   async () => {
     const { data, error } = await supabase
       .from('supervision_visits')
-      .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role)')
+      .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
       .order('scheduled_at', { ascending: false })
       .returns<VisitRow[]>()
     if (error) {
@@ -50,22 +63,21 @@ const { data: halqat } = useLazyAsyncData<HalqaOption[]>('visits-halqat', async 
     .returns<HalqaOption[]>()
   return data ?? []
 }, { server: false, default: () => [] })
-// الزائر: مدير أو مشرف ميداني (المدير يزور بصفته مديراً أيضاً)
+// الزائر: أحد المديرَين أو مشرف ميداني (المدير يزور بصفته أيضاً)
 const { data: visitors } = useLazyAsyncData<VisitorRow[]>('visits-visitors', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name, role').in('role', ['manager', 'supervisor']).eq('status', 'active').order('full_name')
-  return (data ?? []) as VisitorRow[]
+  const { data } = await supabase.from('profiles').select('id, full_name, role, gender').in('role', VISITOR_ROLES).eq('status', 'active').order('full_name')
+  return data ?? []
 }, { server: false, default: () => [] })
 const halqaItems = computed(() => (halqat.value ?? []).map(h => ({
   label: h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name,
   value: h.id
 })))
 const visitorItems = computed(() => (visitors.value ?? []).map(v => ({
-  label: v.role === 'manager' ? `${v.full_name} (المدير)` : v.full_name,
+  label: v.role === 'field_supervisor' ? v.full_name : `${v.full_name} (${roleLabel(v.role, v.gender)})`,
   value: v.id
 })))
 
 const statusF = ref<VisitStatus | 'all'>('all')
-const VISITOR_ROLE: Record<string, string> = { manager: 'مدير', supervisor: 'مشرف', quality: 'مشرف جودة' }
 const chipOptions = [
   { value: 'all' as const, label: 'الكل' },
   { value: 'scheduled' as const, label: 'مجدولة' },
@@ -86,7 +98,7 @@ const columns = [
   { key: 'num', label: '#' },
   { key: 'halqa', label: 'الحلقة' },
   { key: 'teacher', label: 'المعلّم' },
-  { key: 'supervisor', label: 'الزائر' },
+  { key: 'visitor', label: 'الزائر' },
   { key: 'date', label: 'الموعد' },
   { key: 'rating', label: 'التقييم' },
   { key: 'status', label: 'الحالة' },
@@ -110,8 +122,8 @@ const selectedHalqaTime = computed(() => {
 function openSchedule() {
   editingId.value = null
   sched.halaqa_id = ''
-  // المدير والمشرف يُعيَّنان زائرَين افتراضيّاً (أنفسهما)
-  sched.supervisor_id = (myRole.value === 'supervisor' || myRole.value === 'manager') ? (profile.value?.id ?? '') : ''
+  // من يجدول (المديران والمشرف الميداني) يُعيَّن زائراً افتراضيّاً (نفسه)
+  sched.supervisor_id = canSchedule.value ? (profile.value?.id ?? '') : ''
   sched.scheduled_at = ''
   schedOpen.value = true
 }
@@ -133,10 +145,14 @@ async function saveSchedule() {
   saving.value = true
   try {
     const payload = { halaqa_id: sched.halaqa_id, supervisor_id: sched.supervisor_id, scheduled_at: new Date(sched.scheduled_at).toISOString() }
-    const { error } = editingId.value
-      ? await supabase.from('supervision_visits').update(payload).eq('id', editingId.value)
-      : await supabase.from('supervision_visits').insert(payload)
-    if (error) throw error
+    if (editingId.value) {
+      const { data, error } = await supabase.from('supervision_visits').update(payload).eq('id', editingId.value).select('id')
+      if (error) throw error
+      if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
+    } else {
+      const { error } = await supabase.from('supervision_visits').insert(payload)
+      if (error) throw error
+    }
     toast.add({ title: editingId.value ? 'تم تحديث موعد الزيارة.' : 'تمت جدولة الزيارة.', color: 'success', icon: 'i-lucide-calendar-check' })
     schedOpen.value = false
     await refresh()
@@ -180,8 +196,9 @@ async function saveResult() {
       executed_at: execTarget.value.executed_at ?? new Date().toISOString(),
       status: 'done' as VisitStatus
     }
-    const { error } = await supabase.from('supervision_visits').update(payload).eq('id', execTarget.value.id)
+    const { data, error } = await supabase.from('supervision_visits').update(payload).eq('id', execTarget.value.id).select('id')
     if (error) throw error
+    if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
     toast.add({ title: 'تم رفع نتيجة الزيارة.', color: 'success', icon: 'i-lucide-circle-check' })
     execOpen.value = false
     await refresh()
@@ -284,13 +301,13 @@ async function confirmDelete() {
         <template #teacher="{ row }">
           <span class="muted">{{ row.halaqa?.teacher?.full_name || '—' }}</span>
         </template>
-        <template #supervisor="{ row }">
+        <template #visitor="{ row }">
           <div class="visitor-cell">
             <span class="strong">{{ row.supervisor?.full_name || '—' }}</span>
             <UBadge
               v-if="row.supervisor"
-              :label="VISITOR_ROLE[row.supervisor.role] || row.supervisor.role"
-              :color="row.supervisor.role === 'manager' ? 'primary' : 'info'"
+              :label="roleLabel(row.supervisor.role, row.supervisor.gender)"
+              :color="row.supervisor.role === 'field_supervisor' ? 'info' : 'primary'"
               variant="soft"
               size="sm"
             />
@@ -312,6 +329,7 @@ async function confirmDelete() {
         <template #actions="{ row }">
           <div class="actions">
             <UButton
+              v-if="row.status === 'done' || canEditVisit(row)"
               :label="row.status === 'done' ? 'النتيجة' : 'تنفيذ'"
               :color="row.status === 'done' ? 'neutral' : 'primary'"
               :variant="row.status === 'done' ? 'outline' : 'solid'"
@@ -321,7 +339,7 @@ async function confirmDelete() {
               @click="openExec(row)"
             />
             <UButton
-              v-if="canSchedule"
+              v-if="canEditVisit(row)"
               color="neutral"
               variant="outline"
               size="sm"
@@ -478,6 +496,7 @@ async function confirmDelete() {
               @click="execOpen = false"
             />
             <UButton
+              v-if="execTarget && canEditVisit(execTarget)"
               label="حفظ النتيجة"
               color="primary"
               size="lg"

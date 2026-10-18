@@ -4,6 +4,7 @@ import type { Database } from '~/types/database.types'
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
+const { isReadOnly } = usePermissions()
 const { handle } = useErrorHandler()
 const { exportXlsx } = useExport()
 const toast = useToast()
@@ -155,6 +156,7 @@ async function doExport() {
           @click="doExport"
         />
         <UButton
+          v-if="!isReadOnly"
           label="حركة جديدة"
           color="primary"
           size="md"
@@ -234,7 +236,10 @@ async function doExport() {
                 {{ fmt(t.balance) }}
               </td>
               <td>
-                <div class="rowact">
+                <div
+                  v-if="!isReadOnly"
+                  class="rowact"
+                >
                   <UButton
                     color="neutral"
                     variant="ghost"

@@ -195,7 +195,6 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
 </template>
 
 <style scoped>
-.sp { max-width: 1000px; margin: 0 auto; }
 .back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
 .back:hover { color: var(--ink); }
 

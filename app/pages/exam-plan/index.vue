@@ -361,7 +361,6 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.plan { max-width: 1000px; margin: 0 auto; }
 .muted { color: var(--ink-2); }
 .g-num { font-weight: 600; color: var(--ink); white-space: nowrap; }
 .pill { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: 999px; font-size: 14.5px; font-weight: 700; }

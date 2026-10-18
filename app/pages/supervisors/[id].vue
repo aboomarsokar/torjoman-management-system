@@ -211,7 +211,6 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
 </template>
 
 <style scoped>
-.sd { max-width: 1080px; margin: 0 auto; }
 .back { margin-bottom: 14px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 

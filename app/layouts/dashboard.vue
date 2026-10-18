@@ -77,9 +77,14 @@ const managerItems = visible(managerNav)
 const showMetrics = computed(() => role.value && metricsItem.roles.includes(role.value))
 const showProfile = computed(() => role.value && profileItem.roles.includes(role.value))
 
+// المسار أو ما تحته: صفحات التفاصيل (/halqat/<id>، /students/<id>…) تحمل عنوان قسمها وتُبرزه في القائمة
+// (الملف الشخصي استثناء: /profile/<id> ملفّ غيرك، فلا يُبرز «الملف الشخصي» إلا لـ/profile/me)
+const matches = (item: Item) => !!item.to
+  && (item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
 const navTitle = computed(() => {
   const all = [...mainNav, ...managerNav, metricsItem, profileItem]
-  return all.find(i => i.to && i.to === route.path)?.label ?? 'لوحة التحكم'
+  if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
+  return all.find(matches)?.label ?? 'لوحة التحكم'
 })
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
@@ -89,7 +94,7 @@ function go(item: Item) {
   if (item.to) navigateTo(item.to)
   else comingSoon()
 }
-const isActive = (item: Item) => item.to === route.path
+const isActive = matches
 </script>
 
 <template>

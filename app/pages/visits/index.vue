@@ -524,7 +524,6 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.visits { max-width: 1280px; margin: 0 auto; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 22px; }
 .mb-4 { margin-bottom: 18px; }
 .strong { font-weight: 600; color: var(--ink); white-space: nowrap; }

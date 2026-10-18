@@ -413,7 +413,6 @@ async function confirmReset() {
 </template>
 
 <style scoped>
-.users { max-width: 1280px; margin: 0 auto; }
 .mb-4 { margin-bottom: 16px; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }

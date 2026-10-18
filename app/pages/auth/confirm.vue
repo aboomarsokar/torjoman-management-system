@@ -41,8 +41,9 @@ async function submit() {
   try {
     const { error } = await supabase.auth.updateUser({ password: next.value })
     if (error) throw error
-    if (user.value?.id) {
-      await supabase.from('profiles').update({ must_change_password: false }).eq('id', user.value.id)
+    if (user.value?.sub) {
+      const { error: flagErr } = await supabase.from('profiles').update({ must_change_password: false }).eq('id', user.value.sub)
+      if (flagErr) throw flagErr
     }
     done.value = true
     toast.add({ title: 'تم ضبط كلمة المرور.', color: 'success', icon: 'i-lucide-circle-check' })

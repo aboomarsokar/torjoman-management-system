@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * نافذة تغيير كلمة المرور لصاحب الحساب — مشتركة بين الملف الشخصي للعامل وصفحة الطالب «صفحتي».
- * تغيّر كلمة المرور في Supabase Auth ثم تُنزل علَم must_change_password عن صفّ الحساب
+ * المنطق في useChangePassword: كلمة Auth ثم إنزال علَم must_change_password مع فحص ناتجه
  * (الحارس في القاعدة يسمح لصاحب الحساب بإنزاله وحده، لا برفعه).
  */
-import type { Database } from '~/types/database.types'
 import { PASSWORD_MIN_LENGTH } from '~/constants/auth'
+import { passwordChangeError } from '~/composables/useChangePassword'
 
 interface Props {
   /** معرّف الحساب (profiles.id) الذي يُنزَل عنه علَم التغيير. */
@@ -16,7 +16,7 @@ const props = defineProps<Props>()
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ changed: [] }>()
 
-const supabase = useSupabaseClient<Database>()
+const { changeOwnPassword } = useChangePassword()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
@@ -31,19 +31,14 @@ watch(open, (isOpen) => {
 })
 
 async function changePassword() {
-  if (pw.next.length < PASSWORD_MIN_LENGTH) {
-    toast.add({ title: `كلمة المرور ${PASSWORD_MIN_LENGTH} أحرف على الأقل.`, color: 'error', icon: 'i-lucide-circle-alert' })
-    return
-  }
-  if (pw.next !== pw.confirm) {
-    toast.add({ title: 'الكلمتان غير متطابقتين.', color: 'error', icon: 'i-lucide-circle-alert' })
+  const invalid = passwordChangeError(pw.next, pw.confirm)
+  if (invalid) {
+    toast.add({ title: invalid, color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
   saving.value = true
   try {
-    const { error } = await supabase.auth.updateUser({ password: pw.next })
-    if (error) throw error
-    await supabase.from('profiles').update({ must_change_password: false }).eq('id', props.profileId)
+    await changeOwnPassword(props.profileId, pw.next)
     toast.add({ title: 'تم تغيير كلمة المرور.', color: 'success', icon: 'i-lucide-circle-check' })
     open.value = false
     emit('changed')

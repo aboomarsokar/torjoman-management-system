@@ -28,6 +28,15 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 const { isManager, isFieldSupervisor } = usePermissions()
 const canSchedule = computed(() => isManager.value || isFieldSupervisor.value)
+/**
+ * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): المديران لكل زيارة، والمشرف الميداني لزياراته هو وحده
+ * (visits_update: supervisor_id = auth.uid()) — لا لزيارةٍ جدولها مديرٌ لحلقته باسم غيره.
+ */
+function canEditVisit(v: VisitRow) {
+  return isManager.value || (isFieldSupervisor.value && v.supervisor_id === profile.value?.id)
+}
+/** تحديثٌ لم يمسّ صفّاً = رفضته RLS بصمت — يُعرض خطأً لا نجاحاً. */
+const VISIT_NOT_UPDATED = 'لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.'
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي تلقائياً
 const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(
@@ -136,10 +145,14 @@ async function saveSchedule() {
   saving.value = true
   try {
     const payload = { halaqa_id: sched.halaqa_id, supervisor_id: sched.supervisor_id, scheduled_at: new Date(sched.scheduled_at).toISOString() }
-    const { error } = editingId.value
-      ? await supabase.from('supervision_visits').update(payload).eq('id', editingId.value)
-      : await supabase.from('supervision_visits').insert(payload)
-    if (error) throw error
+    if (editingId.value) {
+      const { data, error } = await supabase.from('supervision_visits').update(payload).eq('id', editingId.value).select('id')
+      if (error) throw error
+      if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
+    } else {
+      const { error } = await supabase.from('supervision_visits').insert(payload)
+      if (error) throw error
+    }
     toast.add({ title: editingId.value ? 'تم تحديث موعد الزيارة.' : 'تمت جدولة الزيارة.', color: 'success', icon: 'i-lucide-calendar-check' })
     schedOpen.value = false
     await refresh()
@@ -183,8 +196,9 @@ async function saveResult() {
       executed_at: execTarget.value.executed_at ?? new Date().toISOString(),
       status: 'done' as VisitStatus
     }
-    const { error } = await supabase.from('supervision_visits').update(payload).eq('id', execTarget.value.id)
+    const { data, error } = await supabase.from('supervision_visits').update(payload).eq('id', execTarget.value.id).select('id')
     if (error) throw error
+    if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
     toast.add({ title: 'تم رفع نتيجة الزيارة.', color: 'success', icon: 'i-lucide-circle-check' })
     execOpen.value = false
     await refresh()
@@ -315,7 +329,7 @@ async function confirmDelete() {
         <template #actions="{ row }">
           <div class="actions">
             <UButton
-              v-if="row.status === 'done' || canSchedule"
+              v-if="row.status === 'done' || canEditVisit(row)"
               :label="row.status === 'done' ? 'النتيجة' : 'تنفيذ'"
               :color="row.status === 'done' ? 'neutral' : 'primary'"
               :variant="row.status === 'done' ? 'outline' : 'solid'"
@@ -325,7 +339,7 @@ async function confirmDelete() {
               @click="openExec(row)"
             />
             <UButton
-              v-if="canSchedule"
+              v-if="canEditVisit(row)"
               color="neutral"
               variant="outline"
               size="sm"
@@ -482,7 +496,7 @@ async function confirmDelete() {
               @click="execOpen = false"
             />
             <UButton
-              v-if="canSchedule"
+              v-if="execTarget && canEditVisit(execTarget)"
               label="حفظ النتيجة"
               color="primary"
               size="lg"

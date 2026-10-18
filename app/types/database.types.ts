@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -1295,13 +1295,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      can_approve_in_halaqa: { Args: { hid: string }, Returns: boolean }
-      can_assign_in_halaqa: { Args: { hid: string }, Returns: boolean }
-      can_manage_halaqa: { Args: { hid: string }, Returns: boolean }
-      can_manage_profile_photo: { Args: { p_folder: string }, Returns: boolean }
-      can_view_halaqa: { Args: { hid: string }, Returns: boolean }
-      can_view_profile_photo: { Args: { p_folder: string }, Returns: boolean }
-      claim_employee_number: { Args: never, Returns: string }
+      can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_manage_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_manage_profile_photo: { Args: { p_folder: string }; Returns: boolean }
+      can_view_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
+      claim_employee_number: { Args: never; Returns: string }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1310,13 +1310,13 @@ export type Database = {
         Args: { g: Database["public"]["Enums"]["gender_type"] }
         Returns: boolean
       }
-      is_admin_manager: { Args: never, Returns: boolean }
-      is_halaqa_examiner: { Args: { hid: string }, Returns: boolean }
-      is_halaqa_supervisor: { Args: { hid: string }, Returns: boolean }
-      is_halaqa_teacher: { Args: { hid: string }, Returns: boolean }
-      is_project_supervisor: { Args: never, Returns: boolean }
-      is_women_admin: { Args: never, Returns: boolean }
-      my_approved_pages: { Args: never, Returns: number }
+      is_admin_manager: { Args: never; Returns: boolean }
+      is_halaqa_examiner: { Args: { hid: string }; Returns: boolean }
+      is_halaqa_supervisor: { Args: { hid: string }; Returns: boolean }
+      is_halaqa_teacher: { Args: { hid: string }; Returns: boolean }
+      is_project_supervisor: { Args: never; Returns: boolean }
+      is_women_admin: { Args: never; Returns: boolean }
+      my_approved_pages: { Args: never; Returns: number }
       my_exam_results: {
         Args: never
         Returns: {
@@ -1326,8 +1326,8 @@ export type Database = {
           total_score: number
         }[]
       }
-      my_halaqa_id: { Args: never, Returns: string }
-      my_student_id: { Args: never, Returns: string }
+      my_halaqa_id: { Args: never; Returns: string }
+      my_student_id: { Args: never; Returns: string }
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"
@@ -1384,12 +1384,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1413,11 +1413,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1438,11 +1438,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1463,11 +1463,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1480,11 +1480,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

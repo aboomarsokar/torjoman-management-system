@@ -398,7 +398,6 @@ const fmt = (n: number) => n.toLocaleString('ar')
 </template>
 
 <style scoped>
-.inc { max-width: 1080px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
 
 .pick-fields { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }

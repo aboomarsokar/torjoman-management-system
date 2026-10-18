@@ -57,7 +57,6 @@ const tab = ref('overview')
 </template>
 
 <style scoped>
-.finance { max-width: 1280px; margin: 0 auto; }
 .tabs { display: flex; gap: 6px; margin-bottom: 22px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .tab { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; font-size: 14.5px; font-weight: 600; color: var(--ink-3); background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s; margin-bottom: -1px; }
 .tab:hover { color: var(--ink); }

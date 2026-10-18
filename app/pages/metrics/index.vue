@@ -223,7 +223,6 @@ const sections = computed<Section[]>(() => [
 </template>
 
 <style scoped>
-.metrics { max-width: 1280px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 
 .section { margin-bottom: 30px; }

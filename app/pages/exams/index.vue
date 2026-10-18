@@ -382,7 +382,6 @@ async function onGraded() {
 </template>
 
 <style scoped>
-.exams { max-width: 1280px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
 .table-wrap { overflow-x: auto; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 15px; }

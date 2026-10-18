@@ -454,7 +454,6 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
 </template>
 
 <style scoped>
-.news-admin { max-width: 1280px; margin: 0 auto; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }

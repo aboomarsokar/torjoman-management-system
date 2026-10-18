@@ -5,7 +5,7 @@
  * الطلاب لا يظهرون هنا (حساباتهم تُنشأ من شاشة الطلاب).
  */
 import type { Database } from '~/types/database.types'
-import { DEFAULT_PASSWORD } from '~/constants/auth'
+import { staffCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 import { roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
 import { displayPhotoPath } from '~/constants/profilePhoto'
 
@@ -82,7 +82,8 @@ watch(paged, rows => void primePhotos(rows.map(displayPhotoPath)), { immediate: 
 // ── إنشاء مستخدم ──
 const modalOpen = ref(false)
 const creating = ref(false)
-const form = reactive({ full_name: '', password: DEFAULT_PASSWORD, role: 'teacher' as Role, phone: '', gender: 'male' as Gender })
+const form = reactive({ full_name: '', role: 'teacher' as Role, phone: '', gender: 'male' as Gender })
+const { createStaff, resetPassword } = useAccountAdmin()
 // المسمّى بجنس الحساب المختار؛ والمديرة الإدارية تُميَّز بقسمها كي لا تلتبس بالمدير الإداري الأنثى
 const roleItems = computed(() => STAFF_ROLES.map(r => ({
   label: r === 'women_admin' ? `${roleLabel(r, form.gender)} — قسم البنات` : roleLabel(r, form.gender),
@@ -94,40 +95,28 @@ watch(() => form.role, (r) => {
   if (r === 'women_admin') form.gender = 'female'
 })
 function openCreate() {
-  Object.assign(form, { full_name: '', password: DEFAULT_PASSWORD, role: 'teacher', phone: '', gender: 'male' })
+  Object.assign(form, { full_name: '', role: 'teacher', phone: '', gender: 'male' })
   modalOpen.value = true
 }
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
   if (!s.full_name.trim()) errors.push({ name: 'full_name', message: 'الاسم الكامل مطلوب.' })
-  if (s.password.length < 8) errors.push({ name: 'password', message: 'كلمة المرور 8 أحرف على الأقل.' })
   return errors
 }
 
-// بعد الإنشاء: نافذة صغيرة بالرقم الوظيفي المولَّد (قابل للنسخ) — هو معرّف الدخول
-const createdAccount = ref<{ name: string, employeeNumber: string } | null>(null)
-async function copyEmployeeNumber() {
-  if (!createdAccount.value) return
-  try {
-    await navigator.clipboard.writeText(createdAccount.value.employeeNumber)
-    toast.add({ title: 'نُسخ الرقم الوظيفي.', color: 'success', icon: 'i-lucide-copy-check' })
-  } catch {
-    toast.add({ title: 'تعذّر النسخ — انسخ الرقم يدوياً.', color: 'warning', icon: 'i-lucide-circle-alert' })
-  }
-}
+// بعد الإنشاء أو إعادة التعيين: الرقم الوظيفي والكلمة المؤقّتة (مرّةً واحدة، قابلان للنسخ)
+const credentials = ref<AccountCredentials | null>(null)
 
 async function submitCreate() {
   creating.value = true
   try {
-    const body = { full_name: form.full_name.trim(), role: form.role, gender: form.gender, phone: form.phone.trim() || undefined, password: form.password }
-    const created = await $fetch('/api/users', { method: 'POST', body })
-    createdAccount.value = { name: body.full_name, employeeNumber: created.employee_number }
+    const body = { full_name: form.full_name.trim(), role: form.role, gender: form.gender, phone: form.phone.trim() || undefined }
+    const created = await createStaff(body)
+    credentials.value = staffCredentials(body.full_name, created.employee_number, created.temp_password, 'created')
     modalOpen.value = false
     await refresh()
   } catch (err) {
-    const msg = (err as { data?: { statusMessage?: string }, statusMessage?: string })?.data?.statusMessage
-      || (err as { statusMessage?: string })?.statusMessage
-    toast.add({ title: msg || 'تعذّر إنشاء الحساب.', color: 'error', icon: 'i-lucide-circle-alert' })
+    handle(err, 'تعذّر إنشاء الحساب.')
   } finally {
     creating.value = false
   }
@@ -154,15 +143,15 @@ async function toggleStatus(u: UserRow) {
 const resetTarget = ref<UserRow | null>(null)
 const resetting = ref(false)
 async function confirmReset() {
-  if (!resetTarget.value) return
+  const target = resetTarget.value
+  if (!target) return
   resetting.value = true
   try {
-    await $fetch('/api/users/reset-password', { method: 'POST', body: { user_id: resetTarget.value.id, password: DEFAULT_PASSWORD } })
-    toast.add({ title: `أُعيدت كلمة مرور «${resetTarget.value.full_name}» إلى الافتراضية.`, color: 'success', icon: 'i-lucide-key-round' })
+    const password = await resetPassword(target.id)
+    credentials.value = staffCredentials(target.full_name, target.employee_number ?? '—', password, 'reset')
     resetTarget.value = null
   } catch (err) {
-    const msg = (err as { data?: { statusMessage?: string } })?.data?.statusMessage
-    toast.add({ title: msg || 'تعذّرت إعادة التعيين.', color: 'error', icon: 'i-lucide-circle-alert' })
+    handle(err, 'تعذّرت إعادة التعيين.')
   } finally {
     resetting.value = false
   }
@@ -330,21 +319,6 @@ async function confirmReset() {
               :ui="{ base: 'rounded-[13px]' }"
             />
           </UFormField>
-          <UFormField
-            label="كلمة المرور المبدئية"
-            name="password"
-            hint="افتراضية موحّدة — أبلغها للعامل ليغيّرها لاحقاً"
-          >
-            <UInput
-              v-model="form.password"
-              type="text"
-              dir="ltr"
-              icon="i-lucide-key-round"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
           <div class="row">
             <UFormField
               label="الدور"
@@ -393,7 +367,7 @@ async function confirmReset() {
               name="i-lucide-info"
               class="size-4"
             />
-            يُولَّد الرقم الوظيفي تلقائياً بعد الإنشاء، وهو معرّف الدخول مع كلمة المرور.
+            يُولَّد الرقم الوظيفي وكلمة مرورٍ مؤقّتة بعد الإنشاء — تظهران مرّةً واحدة، ويغيّر العامل الكلمة عند أول دخول.
           </p>
           <div class="form-actions">
             <UButton
@@ -417,48 +391,17 @@ async function confirmReset() {
       </template>
     </UModal>
 
-    <!-- الرقم الوظيفي المولَّد بعد الإنشاء -->
-    <UModal
-      :open="!!createdAccount"
-      title="تم إنشاء الحساب"
-      @update:open="(v) => { if (!v) createdAccount = null }"
-    >
-      <template #body>
-        <div class="created">
-          <p class="created-msg">
-            أُنشئ حساب «{{ createdAccount?.name }}». يدخل بهذا الرقم الوظيفي وكلمة المرور المبدئية:
-          </p>
-          <div class="created-no">
-            <span dir="ltr">{{ createdAccount?.employeeNumber }}</span>
-            <UButton
-              label="نسخ"
-              color="primary"
-              variant="soft"
-              size="lg"
-              icon="i-lucide-copy"
-              :ui="{ base: 'rounded-[12px]' }"
-              @click="copyEmployeeNumber"
-            />
-          </div>
-          <div class="form-actions">
-            <UButton
-              label="تمّ"
-              color="neutral"
-              variant="outline"
-              size="lg"
-              :ui="{ base: 'rounded-[13px]' }"
-              @click="createdAccount = null"
-            />
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <!-- الرقم الوظيفي والكلمة المؤقّتة بعد الإنشاء أو إعادة التعيين -->
+    <AccountCredentialsModal
+      :credentials="credentials"
+      @close="credentials = null"
+    />
 
     <!-- تأكيد إعادة تعيين كلمة المرور -->
     <UiConfirmModal
       :open="!!resetTarget"
       title="إعادة تعيين كلمة المرور"
-      :message="`ستُعاد كلمة مرور «${resetTarget?.full_name}» إلى الافتراضية (${DEFAULT_PASSWORD})، ويُطلب منه تغييرها عند الدخول.`"
+      :message="`ستُولَّد لـ«${resetTarget?.full_name}» كلمة مرورٍ مؤقّتة جديدة تظهر لك مرّةً واحدة، وتبطل كلمته الحالية، ويُطلب منه تغييرها عند الدخول.`"
       confirm-label="إعادة التعيين"
       confirm-color="primary"
       confirm-icon="i-lucide-key-round"
@@ -484,9 +427,4 @@ async function confirmReset() {
 .row > * { flex: 1; min-width: 160px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 .form-note { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--ink-3); }
-
-.created { display: flex; flex-direction: column; gap: 14px; }
-.created-msg { margin: 0; color: var(--ink-2); line-height: 1.7; }
-.created-no { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
-.created-no span { font-size: 32px; font-weight: 700; color: var(--ink); letter-spacing: .12em; font-variant-numeric: tabular-nums; }
 </style>

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  authCreateError, HALAQA_GENDER_MISMATCH_MESSAGE, HALAQA_NOT_FOUND_MESSAGE, parseResetPasswordInput, parseStaffInput,
-  parseStudentInput, staffProfileError, studentHalaqaError, studentRowError, trimmedString
+  authCreateError, HALAQA_GENDER_MISMATCH_MESSAGE, HALAQA_NOT_FOUND_MESSAGE, INVALID_ID_MESSAGE, parseNationalIdInput,
+  parseRecordId, parseResetPasswordInput, parseStaffInput, parseStudentInput, staffProfileError, studentHalaqaError,
+  studentRowError, trimmedString, WOMEN_ADMIN_GENDER_MESSAGE
 } from './accountInput'
 
-const staff = { full_name: ' أحمد ', role: 'teacher', gender: 'male', password: '12345678' }
-const student = { full_name: 'سارة', gender: 'female', national_id: '٤٠١٢٣٤٥٦٧', password: '12345678' }
+const staff = { full_name: ' أحمد ', role: 'teacher', gender: 'male' }
+const student = { full_name: 'سارة', gender: 'female', national_id: '٤٠١٢٣٤٥٦٧' }
 
 describe('trimmedString', () => {
   it('يقصّ النصّ ويُسقط غير النصّ', () => {
@@ -25,14 +26,21 @@ describe('parseStaffInput', () => {
     expect(parseStaffInput({ ...staff, role: 'student' })).toMatchObject({ ok: false, message: 'الدور غير صالح.' })
     expect(parseStaffInput({ ...staff, role: 'owner' })).toMatchObject({ ok: false })
   })
-  it('يقبل women_admin كدورٍ يُنشأ', () => {
+  it('يقبل women_admin كدورٍ يُنشأ (أنثى)', () => {
     expect(parseStaffInput({ ...staff, role: 'women_admin', gender: 'female' }).ok).toBe(true)
+  })
+  it('يرفض women_admin بجنس الذكر', () => {
+    expect(parseStaffInput({ ...staff, role: 'women_admin', gender: 'male' })).toEqual({ ok: false, message: WOMEN_ADMIN_GENDER_MESSAGE })
+  })
+  it('لا يقبل كلمة مرورٍ من العميل ولا يعيدها', () => {
+    const r = parseStaffInput({ ...staff, password: 'Client-Chosen-1' })
+    expect(r.ok).toBe(true)
+    expect(r.ok && 'password' in r.value).toBe(false)
   })
   it('حقولٌ غير نصّيّة تعود رفضاً لا استثناءً', () => {
     expect(() => parseStaffInput({ ...staff, full_name: 5 })).not.toThrow()
     expect(parseStaffInput({ ...staff, full_name: 5 })).toMatchObject({ ok: false, message: 'الاسم الكامل مطلوب.' })
     expect(parseStaffInput({ ...staff, role: ['teacher'] })).toMatchObject({ ok: false })
-    expect(parseStaffInput({ ...staff, password: 12345678 })).toMatchObject({ ok: false })
     expect(parseStaffInput({ ...staff, phone: 5 })).toMatchObject({ ok: true, value: { phone: null } })
   })
   it('جسمٌ غير كائن يعود رفضاً', () => {
@@ -40,9 +48,8 @@ describe('parseStaffInput', () => {
     expect(parseStaffInput(null).ok).toBe(false)
     expect(parseStaffInput('x').ok).toBe(false)
   })
-  it('يشترط الجنس وكلمة مرور 8 أحرف', () => {
+  it('يشترط الجنس', () => {
     expect(parseStaffInput({ ...staff, gender: 'other' })).toMatchObject({ ok: false, message: 'الجنس مطلوب.' })
-    expect(parseStaffInput({ ...staff, password: '1234567' })).toMatchObject({ ok: false })
   })
 })
 
@@ -58,10 +65,30 @@ describe('parseStudentInput', () => {
     const r = parseStudentInput({ ...student, halaqa_id: 7, birth_date: '', guardian_phone: ' 059 ' })
     expect(r).toMatchObject({ ok: true, value: { halaqaId: null, birthDate: null, guardianPhone: '059' } })
   })
-  it('يشترط الاسم والجنس وكلمة المرور', () => {
+  it('يشترط الاسم والجنس', () => {
     expect(parseStudentInput({ ...student, full_name: '  ' }).ok).toBe(false)
     expect(parseStudentInput({ ...student, gender: undefined }).ok).toBe(false)
-    expect(parseStudentInput({ ...student, password: 'short' }).ok).toBe(false)
+  })
+})
+
+describe('parseNationalIdInput', () => {
+  it('يطبّع الأرقام العربية ويقبل تسع خانات', () => {
+    expect(parseNationalIdInput({ national_id: ' ٤٠١٢٣٤٥٦٧ ' })).toEqual({ ok: true, value: { nationalId: '401234567' } })
+  })
+  it('يرفض الطول الخاطئ وغير النصّ والجسم الفارغ', () => {
+    expect(parseNationalIdInput({ national_id: '12345678' }).ok).toBe(false)
+    expect(parseNationalIdInput({ national_id: 401234567 }).ok).toBe(false)
+    expect(parseNationalIdInput(undefined).ok).toBe(false)
+  })
+})
+
+describe('parseRecordId', () => {
+  it('يقبل UUID ويوحّد الحالة', () => {
+    expect(parseRecordId('6AA5D0D4-2A9F-4483-B6C8-0CF4C6C98AC4')).toEqual({ ok: true, value: '6aa5d0d4-2a9f-4483-b6c8-0cf4c6c98ac4' })
+  })
+  it('يرفض غير UUID', () => {
+    expect(parseRecordId('1; drop')).toEqual({ ok: false, message: INVALID_ID_MESSAGE })
+    expect(parseRecordId(undefined).ok).toBe(false)
   })
 })
 
@@ -83,10 +110,10 @@ describe('studentHalaqaError', () => {
 })
 
 describe('parseResetPasswordInput', () => {
-  it('يقبل الصحيح ويرفض غير النصّ', () => {
-    expect(parseResetPasswordInput({ user_id: ' u1 ', password: '12345678' })).toMatchObject({ ok: true, value: { userId: 'u1' } })
-    expect(parseResetPasswordInput({ user_id: 9, password: '12345678' }).ok).toBe(false)
-    expect(parseResetPasswordInput({ user_id: 'u1', password: '1234' }).ok).toBe(false)
+  it('يقبل المعرّف وحده ويرفض غير النصّ', () => {
+    expect(parseResetPasswordInput({ user_id: ' u1 ' })).toEqual({ ok: true, value: { userId: 'u1' } })
+    expect(parseResetPasswordInput({ user_id: 9 }).ok).toBe(false)
+    expect(parseResetPasswordInput({}).ok).toBe(false)
   })
 })
 

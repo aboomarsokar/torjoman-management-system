@@ -1,14 +1,14 @@
 /**
  * التحقّق من مدخلات إنشاء الحسابات وترجمة أخطاء القاعدة — دوالّ نقيّة بلا Nuxt ولا قاعدة (قابلة للاختبار).
  * ⚠️ كل حقل يُفحص نوعُه قبل `.trim()`: جسمٌ بحقلٍ غير نصّيّ يعود 400 لا 500.
+ * ⚠️ لا كلمة مرور في أي مدخل: الخادم يولّد المؤقّتة (tempPassword.ts) ويعيدها مرّةً واحدة.
  */
 import { STAFF_ROLES, type Role } from '~/constants/roles'
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
 
 export type AccountGender = 'male' | 'female'
 
-export const MIN_PASSWORD_LENGTH = 8
-export const PASSWORD_ERROR = `كلمة المرور ${MIN_PASSWORD_LENGTH} أحرف على الأقل.`
+export const WOMEN_ADMIN_GENDER_MESSAGE = 'المديرة الإدارية دورٌ نسائيّ لقسم البنات — اختر «أنثى».'
 
 /** رمز Postgres لانتهاك التفرّد — يرفعه فهرس الفريد والحارسُ على المدير الإداري. */
 export const UNIQUE_VIOLATION = '23505'
@@ -33,28 +33,23 @@ function isGender(value: unknown): value is AccountGender {
   return value === 'male' || value === 'female'
 }
 
-function passwordOf(value: unknown): string {
-  return typeof value === 'string' ? value : ''
-}
-
 export interface StaffInput {
   fullName: string
   role: Role
   gender: AccountGender
   phone: string | null
-  password: string
 }
 
 export function parseStaffInput(body: unknown): Parsed<StaffInput> {
   const raw = asRecord(body)
   const fullName = trimmedString(raw.full_name)
-  const password = passwordOf(raw.password)
   if (!fullName) return { ok: false, message: 'الاسم الكامل مطلوب.' }
   const role = raw.role
   if (typeof role !== 'string' || !STAFF_ROLES.includes(role as Role)) return { ok: false, message: 'الدور غير صالح.' }
   if (!isGender(raw.gender)) return { ok: false, message: 'الجنس مطلوب.' }
-  if (password.length < MIN_PASSWORD_LENGTH) return { ok: false, message: PASSWORD_ERROR }
-  return { ok: true, value: { fullName, role: role as Role, gender: raw.gender, phone: optionalString(raw.phone), password } }
+  // الواجهة تفرض الأنثى للمديرة الإدارية، والخادم يكرّر الفحص لمن يتجاوز الواجهة
+  if (role === 'women_admin' && raw.gender !== 'female') return { ok: false, message: WOMEN_ADMIN_GENDER_MESSAGE }
+  return { ok: true, value: { fullName, role: role as Role, gender: raw.gender, phone: optionalString(raw.phone) } }
 }
 
 export interface StudentInput {
@@ -64,18 +59,15 @@ export interface StudentInput {
   halaqaId: string | null
   birthDate: string | null
   guardianPhone: string | null
-  password: string
 }
 
 export function parseStudentInput(body: unknown): Parsed<StudentInput> {
   const raw = asRecord(body)
   const fullName = trimmedString(raw.full_name)
   const nationalId = normalizeDigits(trimmedString(raw.national_id))
-  const password = passwordOf(raw.password)
   if (!fullName) return { ok: false, message: 'اسم الطالب مطلوب.' }
   if (!isGender(raw.gender)) return { ok: false, message: 'الجنس مطلوب.' }
   if (!isValidIdentity(nationalId)) return { ok: false, message: IDENTITY_ERROR }
-  if (password.length < MIN_PASSWORD_LENGTH) return { ok: false, message: PASSWORD_ERROR }
   return {
     ok: true,
     value: {
@@ -84,24 +76,36 @@ export function parseStudentInput(body: unknown): Parsed<StudentInput> {
       nationalId,
       halaqaId: optionalString(raw.halaqa_id),
       birthDate: optionalString(raw.birth_date),
-      guardianPhone: optionalString(raw.guardian_phone),
-      password
+      guardianPhone: optionalString(raw.guardian_phone)
     }
   }
 }
 
 export interface ResetPasswordInput {
   userId: string
-  password: string
 }
 
 export function parseResetPasswordInput(body: unknown): Parsed<ResetPasswordInput> {
-  const raw = asRecord(body)
-  const userId = trimmedString(raw.user_id)
-  const password = passwordOf(raw.password)
+  const userId = trimmedString(asRecord(body).user_id)
   if (!userId) return { ok: false, message: 'معرّف المستخدم مطلوب.' }
-  if (password.length < MIN_PASSWORD_LENGTH) return { ok: false, message: PASSWORD_ERROR }
-  return { ok: true, value: { userId, password } }
+  return { ok: true, value: { userId } }
+}
+
+/** معرّف السجلّ في مسار الخادم (`/api/students/:id`) — UUID بالصيغة القياسية وإلا رفض. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const INVALID_ID_MESSAGE = 'معرّف غير صالح.'
+
+export function parseRecordId(value: unknown): Parsed<string> {
+  const id = trimmedString(value)
+  if (!UUID_PATTERN.test(id)) return { ok: false, message: INVALID_ID_MESSAGE }
+  return { ok: true, value: id.toLowerCase() }
+}
+
+/** تعديل رقم هوية الطالب (المدير الإداري): تسع خانات بعد التطبيع — وهي معرّف الدخول. */
+export function parseNationalIdInput(body: unknown): Parsed<{ nationalId: string }> {
+  const nationalId = normalizeDigits(trimmedString(asRecord(body).national_id))
+  if (!isValidIdentity(nationalId)) return { ok: false, message: IDENTITY_ERROR }
+  return { ok: true, value: { nationalId } }
 }
 
 /**

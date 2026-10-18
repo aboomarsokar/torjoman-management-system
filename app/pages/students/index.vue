@@ -5,9 +5,10 @@
  * الإضافة للمدير الإداري وحده عبر POST /api/students (ينشئ الحساب في الخطوة نفسها)،
  * والإسناد (الحلقة) لمن يملكه في نطاقه (canAssign)، والمعلّم يعدّل بيانات طلاب حلقته فقط.
  * الهوية والجنس للمدير الإداري وحده (حارس القاعدة)، والحذف له.
+ * الحذف وتصحيح الهوية عبر مسارَي الخادم (يمسّان حساب الدخول نفسه)، والكلمة المؤقّتة تظهر مرّةً واحدة بعد الإضافة.
  */
 import type { Database } from '~/types/database.types'
-import { DEFAULT_PASSWORD } from '~/constants/auth'
+import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
 import { displayPhotoPath } from '~/constants/profilePhoto'
 
@@ -187,31 +188,48 @@ function validate(s: typeof form) {
   if (s.quran_parts && (Number(s.quran_parts) < 0 || Number(s.quran_parts) > 30)) errors.push({ name: 'quran_parts', message: 'الأجزاء بين 0 و30.' })
   return errors
 }
+const { createStudent: createStudentAccount, deleteStudent, changeStudentNationalId } = useAccountAdmin()
+// بعد الإضافة: الهوية والكلمة المؤقّتة (مرّةً واحدة، قابلتان للنسخ)
+const credentials = ref<AccountCredentials | null>(null)
+
 /** إضافة طالب (المدير الإداري): الخادم ينشئ الحساب وصفّ الطالب، ثم تُكمَل بقية البيانات بتحديث. */
 async function createStudent(details: Database['public']['Tables']['students']['Update']) {
-  const created = await $fetch('/api/students', {
-    method: 'POST',
-    body: {
-      full_name: form.full_name.trim(),
-      gender: form.gender,
-      national_id: normalizeDigits(form.national_id.trim()),
-      halaqa_id: form.halaqa_id === HALQA_NONE ? undefined : form.halaqa_id,
-      birth_date: form.birth_date || undefined,
-      guardian_phone: form.guardian_phone.trim() || undefined,
-      password: DEFAULT_PASSWORD
-    }
+  credentials.value = null
+  const nationalId = normalizeDigits(form.national_id.trim())
+  const created = await createStudentAccount({
+    full_name: form.full_name.trim(),
+    gender: form.gender,
+    national_id: nationalId,
+    halaqa_id: form.halaqa_id === HALQA_NONE ? undefined : form.halaqa_id,
+    birth_date: form.birth_date || undefined,
+    guardian_phone: form.guardian_phone.trim() || undefined
   })
+  // الحساب أُنشئ: تُعرض بياناته ولو فشل استكمال التفاصيل (لا تُفقد الكلمة المؤقّتة)
+  credentials.value = studentCredentials(form.full_name.trim(), nationalId, created.temp_password, 'created')
   const { error } = await supabase.from('students').update(details).eq('id', created.id)
+  if (error) throw error
+}
+
+/** تعديل طالب: الهوية (إن تغيّرت) عبر الخادم لأنها معرّف الدخول، والباقي تحديثٌ مباشر تحكمه RLS. */
+async function updateStudent(id: string, details: Database['public']['Tables']['students']['Update']) {
+  const original = (students.value ?? []).find(s => s.id === id)
+  const nationalId = normalizeDigits(form.national_id.trim())
+  if (isAdmin.value && nationalId && nationalId !== original?.national_id) {
+    await changeStudentNationalId(id, nationalId)
+  }
+  // الجنس للمدير الإداري وحده، والحلقة لمن يملك الإسناد — لا تُرسل لغيرهما (حارس القاعدة يرفضها)
+  const payload = {
+    ...details,
+    ...(isAdmin.value ? { gender: form.gender } : {}),
+    ...(canAssign.value ? { halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id } : {})
+  }
+  const { error } = await supabase.from('students').update(payload).eq('id', id)
   if (error) throw error
 }
 
 async function save() {
   saving.value = true
   try {
-    const identity = {
-      national_id: normalizeDigits(form.national_id.trim()) || null,
-      gender: form.gender
-    }
     const details = {
       full_name: form.full_name.trim(),
       birth_date: form.birth_date || null,
@@ -228,26 +246,20 @@ async function save() {
       status: form.status
     }
     if (editingId.value) {
-      // الهوية والجنس للمدير الإداري وحده، والحلقة لمن يملك الإسناد — لا تُرسل لغيرهما (حارس القاعدة يرفضها)
-      const payload = {
-        ...details,
-        ...(isAdmin.value ? identity : {}),
-        ...(canAssign.value ? { halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id } : {})
-      }
-      const { error } = await supabase.from('students').update(payload).eq('id', editingId.value)
-      if (error) throw error
+      await updateStudent(editingId.value, details)
+      toast.add({ title: 'تم تحديث بيانات الطالب.', color: 'success', icon: 'i-lucide-circle-check' })
     } else {
       await createStudent(details)
     }
-    toast.add({
-      title: editingId.value ? 'تم تحديث بيانات الطالب.' : 'تمت إضافة الطالب — يدخل برقم هويته وكلمة المرور المبدئية.',
-      color: 'success',
-      icon: 'i-lucide-circle-check'
-    })
     modalOpen.value = false
     await refresh()
   } catch (err) {
     handle(err)
+    // أُنشئ الحساب وفشل استكمال التفاصيل: تُغلق النافذة كي لا يُعاد الإنشاء بالهوية نفسها (409)
+    if (credentials.value) {
+      modalOpen.value = false
+      await refresh()
+    }
   } finally {
     saving.value = false
   }
@@ -260,8 +272,8 @@ async function confirmDelete() {
   if (!deleteTarget.value) return
   deleting.value = true
   try {
-    const { error } = await supabase.from('students').delete().eq('id', deleteTarget.value.id)
-    if (error) throw error
+    // عبر الخادم: صفّ الطالب ثم ملف حسابه ثم حساب الدخول — فلا يبقى دخولٌ لطالبٍ محذوف
+    await deleteStudent(deleteTarget.value.id)
     toast.add({ title: 'تم حذف الطالب.', color: 'neutral', icon: 'i-lucide-trash-2' })
     deleteTarget.value = null
     await refresh()
@@ -672,8 +684,14 @@ async function confirmDelete() {
       @update:open="v => { if (!v) deleteTarget = null }"
       @confirm="confirmDelete"
     >
-      هل أنت متأكّد من حذف الطالب «<strong>{{ deleteTarget?.full_name }}</strong>»؟ لا يمكن التراجع.
+      هل أنت متأكّد من حذف الطالب «<strong>{{ deleteTarget?.full_name }}</strong>»؟ يُحذف سجلّه ونتائجه وحساب دخوله، ولا يمكن التراجع.
     </UiConfirmModal>
+
+    <!-- الهوية والكلمة المؤقّتة بعد الإضافة -->
+    <AccountCredentialsModal
+      :credentials="credentials"
+      @close="credentials = null"
+    />
   </div>
 </template>
 

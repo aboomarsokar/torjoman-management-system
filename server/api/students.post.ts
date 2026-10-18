@@ -1,16 +1,19 @@
 import { requireAdminManager } from '../utils/supabaseAdmin'
 import { authCreateError, DUPLICATE_IDENTITY_MESSAGE, parseStudentInput, studentHalaqaError, studentRowError } from '../utils/accountInput'
+import { generateTempPassword } from '../utils/tempPassword'
 import { studentEmailFromIdentity } from '~/constants/accounts'
 
 /**
  * إنشاء حساب طالب (المدير الإداري فقط): حساب Auth ببريد الهوية + ملف بدور student + صفّ students مربوط.
+ * كلمة المرور مؤقّتة يولّدها الخادم وتُعاد في الردّ مرّةً واحدة (لا تُسجَّل)، ويغيّرها الطالب عند أول دخول.
  * أي فشلٍ بعد إنشاء حساب Auth يتراجع عمّا سبق كي لا تبقى بقايا.
  */
 export default defineEventHandler(async (event) => {
   const { admin, user } = await requireAdminManager(event)
   const parsed = parseStudentInput(await readBody(event))
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
-  const { fullName, gender, nationalId, halaqaId, birthDate, guardianPhone, password } = parsed.value
+  const { fullName, gender, nationalId, halaqaId, birthDate, guardianPhone } = parsed.value
+  const password = generateTempPassword()
 
   // فحصٌ مسبق: صفّ طالبٍ قديمٌ بلا حساب يحمل الهوية نفسها — فلا يُنشأ حساب Auth ثم يُحذف
   const { data: existing } = await admin.from('students').select('id').eq('national_id', nationalId).maybeSingle()
@@ -61,5 +64,5 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: failure.statusCode, statusMessage: failure.message })
   }
 
-  return { id: student.id, user_id: uid }
+  return { id: student.id, user_id: uid, temp_password: password }
 })

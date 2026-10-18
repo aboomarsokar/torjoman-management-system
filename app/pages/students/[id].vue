@@ -4,6 +4,7 @@
  * بيانات أساسية + قرآنية + سكن + وليّ الأمر والتواصل. رحلة الطالب (§4.22)
  * تُضاف مع وحدتي التقارير والاختبارات.
  * الصورة الشخصية (Task 6b) تُعرض من حساب الطالب، ولا صورة لطالبة.
+ * حساب الدخول (إعادة تعيين الكلمة وتعطيل الدخول) للمدير الإداري وحده — StudentAccountActions.
  */
 import type { Database } from '~/types/database.types'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
@@ -170,6 +171,14 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
             />
           </div>
         </div>
+
+        <!-- حساب الدخول (المدير الإداري): إعادة تعيين الكلمة وتعطيل الدخول -->
+        <StudentAccountActions
+          v-if="isAdmin && student.user_id"
+          :user-id="student.user_id"
+          :student-name="student.full_name"
+          :national-id="student.national_id"
+        />
 
         <!-- بطاقات البيانات -->
         <StudentDetailCards :sections="sections" />

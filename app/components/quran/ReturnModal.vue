@@ -46,7 +46,7 @@ const valid = computed(() => trimmed.value.length > 0 && trimmed.value.length <=
             color="neutral"
             variant="ghost"
             size="lg"
-            :ui="{ base: 'rounded-[13px]' }"
+            :ui="{ base: 'rounded-[13px] min-h-11' }"
             @click="open = false"
           />
           <UButton
@@ -56,7 +56,7 @@ const valid = computed(() => trimmed.value.length > 0 && trimmed.value.length <=
             icon="i-lucide-undo-2"
             :disabled="!valid"
             :loading="loading"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"
             @click="emit('confirm', trimmed)"
           />
         </div>

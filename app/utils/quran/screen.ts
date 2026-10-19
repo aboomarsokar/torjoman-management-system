@@ -5,6 +5,7 @@
  */
 import { MUSHAF_PAGES } from '~/constants/quran'
 import { arabicFold } from '~/utils/arabicSearch'
+import { openingDay, shiftMonth } from '~/utils/reportWindow'
 import type { StudentMonthRow } from './month'
 import type { Outcome } from './plan'
 import { OUTCOME_LABELS } from './plan'
@@ -12,6 +13,34 @@ import type { Position } from './position'
 import { isInMemorizationOrder } from './position'
 
 export type ReportStatus = 'draft' | 'submitted' | 'approved'
+
+export interface Period { year: number, month: number }
+
+/** سنواتُ منتقي الشهر قبل سنة اليوم (والسنةُ الحالية معها). */
+export const PERIOD_YEARS_BACK = 1
+
+/**
+ * الشهرُ الذي تفتح عليه الشاشة: الإرسالُ يُفتح في آخر يومٍ من الشهر فيقع الاعتمادُ في الذي يليه،
+ * فقبل يوم فتح الشهر الجاري يُعرض السابقُ — إلا أن يكون معتمَداً (حالةُ حلقة المعلم). `previousStatus`
+ * null = لا حلقةَ مختارة (قائمةُ المعتمِد/المدير) فيُعرض السابقُ ليظهر ما أُرسل فيه.
+ */
+export function defaultPeriod(today: string, opts: { previousStatus: ReportStatus | 'none' | null }): Period {
+  const current = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }
+  if (today >= openingDay(current.year, current.month) || opts.previousStatus === 'approved') return current
+  return shiftMonth(current.year, current.month, -1)
+}
+
+/** شهرُ الرابط `?y=YYYY&m=MM` إن صحّ ووقع في مدى المنتقي (لا مستقبل ولا قبل سنته الأولى)، وإلا null. */
+export function periodFromQuery(y: unknown, m: unknown, today: string): Period | null {
+  if (typeof y !== 'string' || typeof m !== 'string' || !/^\d{4}$/.test(y) || !/^\d{1,2}$/.test(m)) return null
+  const year = Number(y)
+  const month = Number(m)
+  const nowYear = Number(today.slice(0, 4))
+  const nowMonth = Number(today.slice(5, 7))
+  if (month < 1 || month > 12 || year < nowYear - PERIOD_YEARS_BACK) return null
+  if (year * 12 + month > nowYear * 12 + nowMonth) return null
+  return { year, month }
+}
 
 /** حالةُ رصد الشهر للحلقة؛ `none` = لم يُنشأ رأسُ الشهر بعد. */
 export const REPORT_STATUS_LABELS: Record<ReportStatus | 'none', string> = {

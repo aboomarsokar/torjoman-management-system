@@ -3,12 +3,11 @@
  * منتقي الشهر بالأرقام: سهما شهرٍ سابق/لاحق، وشهرٌ `01..12` وسنة. لا شهرَ بعد `max`
  * (شهرُ اليوم بتوقيت غزة)، وتغييرُ السنة إلى سنة `max` يُرجع الشهرَ المستقبليّ إلى حدّه.
  */
+import { PERIOD_YEARS_BACK as YEARS_BACK } from '~/utils/quran/screen'
+
 const props = defineProps<{ max: { year: number, month: number }, disabled?: boolean }>()
 const year = defineModel<number>('year', { required: true })
 const month = defineModel<number>('month', { required: true })
-
-/** سنواتُ المنتقي: سنةُ الحدّ والتي قبلها. */
-const YEARS_BACK = 1
 
 const atMax = computed(() => year.value * 12 + month.value >= props.max.year * 12 + props.max.month)
 const atMin = computed(() => year.value <= props.max.year - YEARS_BACK && month.value <= 1)

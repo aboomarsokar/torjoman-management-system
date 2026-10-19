@@ -46,6 +46,10 @@ describe('buildStudentRows — اقتراح البداية', () => {
     expect(row!.suggestedFrom).toBeNull()
     expect(row!.khatm).toBe(true)
   })
+  it('مصدرُ الاقتراح: نهايةٌ سابقة ← true، وبدايةُ الطالب الجديد ← false', () => {
+    expect(build({ previousEnds: { s1: { surah: 112, ayah: 2 } } })[0]!.suggestedFromPrevious).toBe(true)
+    expect(build()[0]!.suggestedFromPrevious).toBe(false)
+  })
 })
 
 describe('buildStudentRows — الحضور والمطلوب', () => {

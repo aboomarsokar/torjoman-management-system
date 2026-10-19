@@ -127,6 +127,7 @@ async function onReturn(note: string) {
         color="warning"
         variant="soft"
         size="lg"
+        :disabled="busy"
         :ui="{ base: 'rounded-[13px] justify-center' }"
         @click="returnMode = 'reopen'"
       />
@@ -157,10 +158,11 @@ async function onReturn(note: string) {
 .returned { display: flex; align-items: flex-start; gap: 10px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); border-radius: var(--r-control); padding: 12px 16px; font-size: 14.5px; line-height: 1.7; margin-bottom: 16px; }
 .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); }
 .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-inline-start: auto; }
+.acts > * { min-height: 44px; }
 .muted { font-size: 14px; color: var(--ink-2); }
 
 @media (max-width: 520px) {
   .acts { width: 100%; }
-  .acts > * { flex: 1; min-height: 44px; }
+  .acts > * { flex: 1; }
 }
 </style>

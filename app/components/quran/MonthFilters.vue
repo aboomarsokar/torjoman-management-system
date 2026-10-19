@@ -82,7 +82,7 @@ const windowText = computed(() =>
         placeholder="ابحث باسم الطالب…"
         size="lg"
         class="w-full"
-        :ui="{ base: 'rounded-[13px]' }"
+        :ui="{ base: 'rounded-[13px] min-h-11' }"
       />
     </div>
   </div>

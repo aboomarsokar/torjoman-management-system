@@ -88,7 +88,18 @@ const formError = computed(() => recordFormError({
   none: state.none, from: from.value, to: to.value, pages: state.pages, reviewed: state.reviewed, notes: state.notes
 }, ayahCountOf))
 const juzText = computed(() => monthlyJuzLabel(state.pages ?? 0))
-const liveOutcome = computed(() => props.row ? outcomeOf(state.pages, props.row.plan) : 'unrecorded')
+// آخرُ صفٍّ عُرض يبقى في النافذة أثناء حركة إغلاقها (الأبُ يُفرغ `row` فور الإغلاق)
+const shown = ref<StudentMonthRow | null>(props.row)
+watch(() => props.row, (r) => {
+  if (r) shown.value = r
+})
+const liveOutcome = computed(() => shown.value ? outcomeOf(state.pages, shown.value.plan) : 'unrecorded')
+/** مصدرُ البداية المقترحة لسجلٍّ جديد. */
+const startHint = computed(() => {
+  const r = shown.value
+  if (!r || r.record || !r.suggestedFrom) return undefined
+  return r.suggestedFromPrevious ? 'بعد آخر ما رُصد له' : 'بدايةُ ما بعد محفوظه'
+})
 const locked = computed(() => props.readOnly || !!props.saving)
 
 function save() {
@@ -106,12 +117,12 @@ function save() {
 <template>
   <UModal
     v-model:open="open"
-    :title="row ? `رصد ${row.name}` : ''"
+    :title="shown ? `رصد ${shown.name}` : ''"
     description="من الناس إلى الفاتحة: السورةُ تنازلياً والآيةُ داخلها تصاعدياً."
   >
     <template #body>
       <form
-        v-if="row"
+        v-if="shown"
         class="rec"
         @submit.prevent="save"
       >
@@ -127,11 +138,12 @@ function save() {
         >
           <UFormField
             label="من سورة"
-            :hint="!row.record && row.suggestedFrom ? 'بعد آخر ما رُصد له' : undefined"
+            :hint="startHint"
           >
             <USelectMenu
               v-model="state.fromSurah"
               v-model:search-term="fromQuery"
+              aria-label="اختر السورة — من"
               :items="fromItems"
               value-key="value"
               ignore-filter
@@ -155,6 +167,7 @@ function save() {
             <USelectMenu
               v-model="state.toSurah"
               v-model:search-term="toQuery"
+              aria-label="اختر السورة — إلى"
               :items="toItems"
               value-key="value"
               ignore-filter
@@ -215,7 +228,7 @@ function save() {
             :color="OUTCOME_COLORS[liveOutcome]"
             variant="soft"
             size="lg"
-            :label="planBadge({ plan: row.plan, outcome: liveOutcome })"
+            :label="planBadge({ plan: shown.plan, outcome: liveOutcome })"
           />
         </div>
         <UFormField
@@ -245,7 +258,7 @@ function save() {
             color="neutral"
             variant="ghost"
             size="lg"
-            :ui="{ base: 'rounded-[13px]' }"
+            :ui="{ base: 'rounded-[13px] min-h-11' }"
             @click="open = false"
           />
           <UButton
@@ -256,7 +269,7 @@ function save() {
             size="lg"
             :disabled="!!formError"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"
           />
         </div>
       </form>

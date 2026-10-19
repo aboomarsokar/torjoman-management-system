@@ -3,7 +3,9 @@ import type { StudentMonthRow } from './month'
 import {
   canEditMonth,
   cardAction,
+  defaultPeriod,
   exportRows,
+  periodFromQuery,
   planBadge,
   positionLabel,
   recordFormError,
@@ -17,6 +19,7 @@ function row(over: Partial<StudentMonthRow> = {}): StudentMonthRow {
     name: 'أحمد علي',
     record: null,
     suggestedFrom: { surah: 114, ayah: 1 },
+    suggestedFromPrevious: false,
     daysHeld: 10,
     daysAttended: 8,
     plan: { required: 16, full: 20, basis: 'prorated' },
@@ -35,6 +38,40 @@ const surahName = (n: number) => names[n] ?? ''
 function draft(over: Partial<RecordDraft> = {}): RecordDraft {
   return { none: false, from: { surah: 114, ayah: 1 }, to: { surah: 113, ayah: 5 }, pages: 1, reviewed: null, notes: '', ...over }
 }
+
+describe('defaultPeriod', () => {
+  it('قبل يوم فتح الشهر الجاري ← الشهرُ السابق ما لم يُعتمد', () => {
+    expect(defaultPeriod('2026-10-19', { previousStatus: 'submitted' })).toEqual({ year: 2026, month: 9 })
+    expect(defaultPeriod('2026-10-19', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 9 })
+    expect(defaultPeriod('2026-10-19', { previousStatus: 'none' })).toEqual({ year: 2026, month: 9 })
+    expect(defaultPeriod('2026-10-19', { previousStatus: 'approved' })).toEqual({ year: 2026, month: 10 })
+  })
+  it('بلا حلقةٍ مختارة (null) ← السابقُ قبل يوم الفتح', () => {
+    expect(defaultPeriod('2026-10-30', { previousStatus: null })).toEqual({ year: 2026, month: 9 })
+  })
+  it('من يوم الفتح ← الشهرُ الجاري أيّاً كان السابق', () => {
+    expect(defaultPeriod('2026-10-31', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-10-31', { previousStatus: null })).toEqual({ year: 2026, month: 10 })
+  })
+  it('يعبر حدَّ السنة', () => {
+    expect(defaultPeriod('2027-01-10', { previousStatus: null })).toEqual({ year: 2026, month: 12 })
+  })
+})
+
+describe('periodFromQuery', () => {
+  it('شهرٌ صحيحٌ في المدى', () => {
+    expect(periodFromQuery('2026', '09', '2026-10-19')).toEqual({ year: 2026, month: 9 })
+    expect(periodFromQuery('2025', '1', '2026-10-19')).toEqual({ year: 2025, month: 1 })
+  })
+  it('المستقبلُ وما قبل المدى والقيمُ الفاسدة ← null', () => {
+    expect(periodFromQuery('2026', '11', '2026-10-19')).toBeNull()
+    expect(periodFromQuery('2024', '12', '2026-10-19')).toBeNull()
+    expect(periodFromQuery('2026', '13', '2026-10-19')).toBeNull()
+    expect(periodFromQuery('2026', 'x', '2026-10-19')).toBeNull()
+    expect(periodFromQuery(undefined, '9', '2026-10-19')).toBeNull()
+    expect(periodFromQuery(['2026'], '9', '2026-10-19')).toBeNull()
+  })
+})
 
 describe('canEditMonth', () => {
   it('المعلم يكتب في المسوّدة وقبل البدء، لا بعد الإرسال', () => {

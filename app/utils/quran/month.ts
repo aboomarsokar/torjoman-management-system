@@ -30,6 +30,8 @@ export interface StudentMonthRow {
   record: MonthRecord | null
   /** بعد آخر نهايةٍ سابقة، وإلا بدايةُ الطالب الجديد؛ null بعد الختم. */
   suggestedFrom: Position | null
+  /** الاقتراحُ من نهايةٍ سابقةٍ مرصودة (لا من بداية الطالب الجديد بحسب محفوظه). */
+  suggestedFromPrevious: boolean
   /** أيامُ الحلقة في الشهر منذ التحاقه. */
   daysHeld: number
   daysAttended: number
@@ -97,6 +99,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
       name: s.full_name,
       record,
       suggestedFrom: previous ? nextPosition(previous, input.ayahCountOf) : startForNewStudent(s.quran_parts ?? 0, input.juz),
+      suggestedFromPrevious: previous !== null,
       daysHeld,
       daysAttended,
       plan,

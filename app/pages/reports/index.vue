@@ -10,7 +10,7 @@ import type { StudentMonthRow } from '~/utils/quran/month'
 import { canApproveReport, summarizeOutcomes } from '~/utils/quran/month'
 import type { Outcome } from '~/utils/quran/plan'
 import type { RecordInput, ReportStatus } from '~/utils/quran/screen'
-import { EXPORT_HEADERS, canEditMonth, cardAction, exportRows, visibleRows } from '~/utils/quran/screen'
+import { EXPORT_HEADERS, canEditMonth, cardAction, defaultPeriod, exportRows, periodFromQuery, visibleRows } from '~/utils/quran/screen'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الإنجاز القرآني — ترجمان' })
@@ -27,14 +27,19 @@ const reference = useQuranReference()
 
 const today = gazaToday()
 const now = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }
-const year = ref(now.year)
-const month = ref(now.month)
+// `?y=YYYY&m=MM` يفتح شهراً بعينه، وإلا فالشهرُ المنتظَر (السابقُ قبل يوم فتح الجاري)
+const route = useRoute()
+const linked = periodFromQuery(route.query.y, route.query.m, today)
+const initial = linked ?? defaultPeriod(today, { previousStatus: null })
+const year = ref(initial.year)
+const month = ref(initial.month)
 const halaqaId = ref<string | null>(null)
+let periodSettled = !!linked
 
-// المعلم حلقتُه، والمشرفُ الميدانيّ حلقاتُه وحدَها، وغيرُهما ما تسمح به RLS
+// المعلم حلقتُه، والمشرفُ الميدانيّ حلقاتُه وحدَها، وغيرُهما ما تسمح به RLS — النشطةُ وحدَها
 const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<HalaqaRow[]>('quran-halaqat', async () => {
   if (!role.value) return []
-  let query = supabase.from('halaqat').select('id, name, gender, supervisor_id').order('name')
+  let query = supabase.from('halaqat').select('id, name, gender, supervisor_id').eq('status', 'active').order('name')
   if (role.value === 'teacher') query = query.eq('teacher_id', profile.value?.id ?? '')
   else if (role.value === 'field_supervisor') query = query.eq('supervisor_id', profile.value?.id ?? '')
   const { data, error } = await query
@@ -42,9 +47,28 @@ const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<HalaqaRow[]>
   return data ?? []
 }, { server: false, default: () => [], watch: [role] })
 
-watch(halaqat, (list) => {
-  if (isTeacher.value) halaqaId.value = list[0]?.id ?? null
-  else if (!list.some(h => h.id === halaqaId.value)) halaqaId.value = null
+/** المعلم: السابقُ المعتمَد لا ينتظر شيئاً فيُفتح الجاري (مرّةً، وما لم يغيّر الشهرَ بيده). */
+async function settleTeacherPeriod(hid: string) {
+  periodSettled = true
+  const prev = shiftMonth(now.year, now.month, -1)
+  if (initial.year !== prev.year || initial.month !== prev.month) return
+  const { data } = await supabase.from('monthly_reports').select('status')
+    .eq('halaqa_id', hid).eq('report_year', prev.year).eq('report_month', prev.month).maybeSingle()
+  const p = defaultPeriod(today, { previousStatus: data?.status ?? 'none' })
+  if (year.value === initial.year && month.value === initial.month) {
+    year.value = p.year
+    month.value = p.month
+  }
+}
+
+watch(halaqat, async (list) => {
+  if (!isTeacher.value) {
+    if (!list.some(h => h.id === halaqaId.value)) halaqaId.value = null
+    return
+  }
+  const id = list[0]?.id ?? null
+  if (id && !periodSettled) await settleTeacherPeriod(id)
+  halaqaId.value = id
 }, { immediate: true })
 
 // حالةُ الشهر لكلّ حلقة (قائمةُ غير المعلم)

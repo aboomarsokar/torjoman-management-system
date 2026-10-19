@@ -6,7 +6,7 @@
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
-import { buildJourney, type PlanInput, type ResultInput } from '~/utils/journey'
+import { buildJourneyFromPlan, type PlanInput, type ResultInput } from '~/utils/journey'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'لوحة التحكم — ترجمان' })
@@ -125,7 +125,7 @@ async function loadTeacherData() {
       resultsByStudent.set(r.student_id, arr)
     }
     teacherRows.value = (studs ?? []).map((s) => {
-      const j = buildJourney(s.quran_parts, planArr, resultsByStudent.get(s.id) ?? [])
+      const j = buildJourneyFromPlan(s.quran_parts, planArr, resultsByStudent.get(s.id) ?? [])
       return {
         id: s.id,
         full_name: s.full_name,

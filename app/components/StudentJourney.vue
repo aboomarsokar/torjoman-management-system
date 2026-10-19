@@ -5,7 +5,7 @@
  * يجمع: الأجزاء المثبتة + نتائج الاختبارات (نجح/يعيد بالدرجة) + إجمالي صفحات
  * الحفظ من التقارير المعتمدة + الزمن منذ الالتحاق.
  */
-import { buildJourney, stageLabel, sinceLabel, type PlanInput, type ResultInput } from '~/utils/journey'
+import { buildJourneyFromPlan, stageLabel, sinceLabel, type PlanInput, type ResultInput } from '~/utils/journey'
 
 const props = defineProps<{
   quranParts: number | null
@@ -16,7 +16,7 @@ const props = defineProps<{
   enrollmentDate?: string | null
 }>()
 
-const j = computed(() => buildJourney(props.quranParts, props.plan, props.results ?? []))
+const j = computed(() => buildJourneyFromPlan(props.quranParts, props.plan, props.results ?? []))
 const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100)))
 </script>
 

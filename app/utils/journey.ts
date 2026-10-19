@@ -1,16 +1,19 @@
 /**
- * رحلة الطالب على خطة الاختبارات — حسب الحفظ (الأجزاء المثبتة)، لا الزمن.
- * يستحقّ المحطة عند بلوغ حدّها الأعلى (parts_to ≤ المثبتة)، وتُظهر نتيجتها إن وُجدت.
+ * رحلة الطالب على دورات الاختبار — حسب الحفظ (الأجزاء المثبتة)، لا الزمن.
+ * المحطّةُ = دورة؛ تُستحقّ حين يبلغ الطالبُ ما تحقّقه بالاجتياز (`partsAfterPass`)، وتُظهر نتيجتها إن وُجدت.
  */
-export type PlanStage = 'partial' | 'cumulative'
-export type PlanInput = { id: number, parts_from: number, parts_to: number, stage_type: PlanStage }
-export type ResultInput = { exam_plan_id: number | null, passed: boolean | null, total_score: number | null }
-export type StationResult = 'passed' | 'failed' | null
+import { partsAfterPass, type ExamCycle } from '~/utils/exams/cycles'
+import type { StationResult } from './journeyPlan'
+
+// المحوِّلُ القديم على exam_plan باقٍ مؤقتاً لمستهلكيه حتى المهمة 5
+export { buildJourneyFromPlan, stageLabel } from './journeyPlan'
+export type { PlanStage, PlanInput, ResultInput, PlanStation } from './journeyPlan'
+
+export type CycleResultInput = { exam_cycle_id: number | null, passed: boolean | null, total_score: number | null }
+export type { StationResult }
 export type JourneyStation = {
   id: number
-  from: number
-  to: number
-  stage: PlanStage
+  cycle: ExamCycle
   reached: boolean
   isNext: boolean
   result: StationResult
@@ -19,38 +22,34 @@ export type JourneyStation = {
 
 export function buildJourney(
   quranParts: number | null | undefined,
-  plan: PlanInput[],
-  results: ResultInput[] = []
+  cycles: ExamCycle[],
+  results: CycleResultInput[] = []
 ) {
   const parts = quranParts ?? 0
-  const byPlan = new Map<number, { result: StationResult, score: number | null }>()
+  const byCycle = new Map<number, { result: StationResult, score: number | null }>()
   for (const r of results) {
-    if (r.exam_plan_id == null) continue
+    if (r.exam_cycle_id == null) continue
     // النجاح يَغلِب: إن وُجد اجتياز لا يُلغى برسوب لاحق
-    const prev = byPlan.get(r.exam_plan_id)
-    if (prev?.result === 'passed') continue
-    byPlan.set(r.exam_plan_id, { result: r.passed ? 'passed' : 'failed', score: r.total_score })
+    if (byCycle.get(r.exam_cycle_id)?.result === 'passed') continue
+    byCycle.set(r.exam_cycle_id, { result: r.passed ? 'passed' : 'failed', score: r.total_score })
   }
 
-  const stations: JourneyStation[] = [...plan]
-    .map(p => ({
-      id: p.id,
-      from: p.parts_from,
-      to: p.parts_to,
-      stage: p.stage_type,
-      reached: parts >= p.parts_to,
+  const stations: JourneyStation[] = [...cycles]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map(c => ({
+      id: c.id,
+      cycle: c,
+      reached: parts >= partsAfterPass(c),
       isNext: false,
-      result: byPlan.get(p.id)?.result ?? null,
-      score: byPlan.get(p.id)?.score ?? null
+      result: byCycle.get(c.id)?.result ?? null,
+      score: byCycle.get(c.id)?.score ?? null
     }))
-    .sort((a, b) => (a.to - b.to) || (a.stage === 'partial' ? -1 : 1))
 
-  // المستحقّة القادمة (للاختبار الآن): أوّل محطة بلغها ولم يجتزها بعد
+  // المستحقّة الآن: أوّلُ محطّةٍ بلغها ولم يجتزها
   const nextIdx = stations.findIndex(s => s.reached && s.result !== 'passed')
   if (nextIdx >= 0) stations[nextIdx]!.isNext = true
 
-  // القادمة بترتيب الخطة (بصرف النظر عن البلوغ) — لعرض "المحطة القادمة" حتى
-  // قبل بلوغها؛ لا تُخلَط بـ nextStation (خاصّة بأهلية الاختبار الآن فقط)
+  // القادمة بترتيب الخطة (بصرف النظر عن البلوغ) — لا تُخلَط بـ nextStation (أهليةُ الاختبار الآن فقط)
   const upcomingIdx = stations.findIndex(s => s.result !== 'passed')
 
   return {
@@ -63,8 +62,6 @@ export function buildJourney(
     upcomingStation: upcomingIdx >= 0 ? stations[upcomingIdx]! : null
   }
 }
-
-export const stageLabel = (s: PlanStage) => s === 'partial' ? 'مرحلي (3 أجزاء)' : 'تجميعي (5 أجزاء)'
 
 /** «منذ الالتحاق» نصّاً عربيّاً مبسّطاً. */
 export function sinceLabel(date: string | null | undefined): string {

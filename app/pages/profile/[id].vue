@@ -12,6 +12,7 @@ import type { Database } from '~/types/database.types'
 import { roleLabel } from '~/constants/roles'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
 import { maritalItems, maritalLabel } from '~/constants/maritalStatus'
+import { educationItems } from '~/constants/educationLevel'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -143,6 +144,7 @@ const numStr = (v: number | null) => v != null ? String(v) : ''
 // المسمّى من الدور وجنس النموذج (يتبع تغيير الجنس قبل الحفظ)، والحالة الاجتماعية قائمةٌ بجنسه
 const jobTitle = computed(() => data.value?.p ? roleLabel(data.value.p.role, form.gender || null) : '')
 const maritalOptions = computed(() => maritalItems(form.gender || null, data.value?.p?.marital_status))
+const educationOptions = computed(() => educationItems(data.value?.p?.education_level))
 
 function openEdit() {
   const p = data.value?.p
@@ -532,8 +534,10 @@ const pwOpen = ref(false)
               label="المؤهل التعليمي"
               class="f1"
             >
-              <UInput
+              <USelect
                 v-model="form.education_level"
+                :items="educationOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

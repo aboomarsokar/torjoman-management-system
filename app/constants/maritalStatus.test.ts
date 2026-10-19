@@ -3,6 +3,15 @@
  */
 import { describe, expect, it } from 'vitest'
 import { maritalItems, maritalLabel } from './maritalStatus'
+import { educationItems } from './educationLevel'
+
+describe('educationItems', () => {
+  it('ستة خيارات، والقيمة القديمة غير المعروفة تبقى خياراً', () => {
+    expect(educationItems().map(i => i.value)).toEqual(['دكتوراة', 'ماجستير', 'بكالوريوس', 'دبلوم', 'ثانوية', 'أخرى'])
+    expect(educationItems('دبلوم عالٍ').map(i => i.value)).toContain('دبلوم عالٍ')
+    expect(educationItems('بكالوريوس')).toHaveLength(6)
+  })
+})
 
 describe('maritalLabel', () => {
   it('يؤنّث للأنثى ويُبقي المذكّر للذكر', () => {

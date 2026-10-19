@@ -813,14 +813,12 @@ async function confirmDelete() {
 .scard-actions { display: flex; gap: 8px; margin-top: 14px; }
 .scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
 .filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.filters :deep(.search-field) { width: 300px; max-width: 100%; }
+.search { width: 300px; max-width: 100%; }
 .filter-sel { width: 180px; }
 /* على الجوال: البحثُ سطرٌ كامل، والقائمتان تتقاسمان السطر الثاني */
-/* شبكةٌ لا flex: جذرُ UiSearchField لا يحمل سِمةَ نطاق الصفحة فلا تبلغه `.search` */
 @media (max-width: 600px) {
-  .filters { display: grid; grid-template-columns: 1fr 1fr; }
-  .filters :deep(.search-field) { grid-column: 1 / -1; width: 100%; }
-  .filter-sel { width: auto; min-width: 0; }
+  .search { width: 100%; }
+  .filter-sel { flex: 1 1 0; width: auto; min-width: 0; }
 }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }

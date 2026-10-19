@@ -74,8 +74,6 @@ export type Database = {
       app_settings: {
         Row: {
           created_at: string
-          default_attendance_days: number | null
-          default_points: number
           id: number
           pass_mark: number
           target_memorization_pages: number
@@ -83,8 +81,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          default_attendance_days?: number | null
-          default_points?: number
           id?: number
           pass_mark?: number
           target_memorization_pages?: number
@@ -92,8 +88,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          default_attendance_days?: number | null
-          default_points?: number
           id?: number
           pass_mark?: number
           target_memorization_pages?: number
@@ -762,126 +756,11 @@ export type Database = {
           },
         ]
       }
-      monthly_report_activities: {
-        Row: {
-          activity_key: Database["public"]["Enums"]["activity_key"]
-          created_at: string
-          done: boolean
-          id: string
-          note: string | null
-          report_id: string
-          updated_at: string
-        }
-        Insert: {
-          activity_key: Database["public"]["Enums"]["activity_key"]
-          created_at?: string
-          done?: boolean
-          id?: string
-          note?: string | null
-          report_id: string
-          updated_at?: string
-        }
-        Update: {
-          activity_key?: Database["public"]["Enums"]["activity_key"]
-          created_at?: string
-          done?: boolean
-          id?: string
-          note?: string | null
-          report_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "monthly_report_activities_report_id_fkey"
-            columns: ["report_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_reports"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      monthly_report_students: {
-        Row: {
-          absence_excused: number
-          absence_unexcused: number
-          created_at: string
-          id: string
-          memorization_from: number | null
-          memorization_pages: number | null
-          memorization_to: number | null
-          monthly_points: number | null
-          notes: string | null
-          report_id: string
-          review_pages: number | null
-          review_to: number | null
-          student_grade: number | null
-          student_id: string
-          updated_at: string
-        }
-        Insert: {
-          absence_excused?: number
-          absence_unexcused?: number
-          created_at?: string
-          id?: string
-          memorization_from?: number | null
-          memorization_pages?: number | null
-          memorization_to?: number | null
-          monthly_points?: number | null
-          notes?: string | null
-          report_id: string
-          review_pages?: number | null
-          review_to?: number | null
-          student_grade?: number | null
-          student_id: string
-          updated_at?: string
-        }
-        Update: {
-          absence_excused?: number
-          absence_unexcused?: number
-          created_at?: string
-          id?: string
-          memorization_from?: number | null
-          memorization_pages?: number | null
-          memorization_to?: number | null
-          monthly_points?: number | null
-          notes?: string | null
-          report_id?: string
-          review_pages?: number | null
-          review_to?: number | null
-          student_grade?: number | null
-          student_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "monthly_report_students_report_id_fkey"
-            columns: ["report_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_reports"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "monthly_report_students_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       monthly_reports: {
         Row: {
-          activities_done: number
-          activities_notes: string | null
-          activities_total: number
-          actual_days: number | null
           approved_at: string | null
           approved_by: string | null
-          attendance_rate: number | null
           created_at: string
-          default_days_snapshot: number | null
-          default_points_snapshot: number | null
-          general_notes: string | null
           halaqa_id: string
           id: string
           report_month: number
@@ -893,17 +772,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          activities_done?: number
-          activities_notes?: string | null
-          activities_total?: number
-          actual_days?: number | null
           approved_at?: string | null
           approved_by?: string | null
-          attendance_rate?: number | null
           created_at?: string
-          default_days_snapshot?: number | null
-          default_points_snapshot?: number | null
-          general_notes?: string | null
           halaqa_id: string
           id?: string
           report_month: number
@@ -915,17 +786,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          activities_done?: number
-          activities_notes?: string | null
-          activities_total?: number
-          actual_days?: number | null
           approved_at?: string | null
           approved_by?: string | null
-          attendance_rate?: number | null
           created_at?: string
-          default_days_snapshot?: number | null
-          default_points_snapshot?: number | null
-          general_notes?: string | null
           halaqa_id?: string
           id?: string
           report_month?: number
@@ -1652,21 +1515,6 @@ export type Database = {
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"
-      activity_key:
-        | "reflection_1"
-        | "reflection_2"
-        | "reflection_3"
-        | "reflection_4"
-        | "weekly_review_1"
-        | "weekly_review_2"
-        | "weekly_review_3"
-        | "weekly_review_4"
-        | "edu_curriculum_1"
-        | "edu_curriculum_2"
-        | "edu_curriculum_3"
-        | "edu_curriculum_4"
-        | "video_lecture"
-        | "values_followup"
       alert_severity: "note" | "first_warning" | "final_warning"
       alert_status: "new" | "acknowledged"
       exam_list_status: "sent" | "in_progress" | "completed"
@@ -1818,22 +1666,6 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["jawwalpay", "palpay", "bank_palestine"],
-      activity_key: [
-        "reflection_1",
-        "reflection_2",
-        "reflection_3",
-        "reflection_4",
-        "weekly_review_1",
-        "weekly_review_2",
-        "weekly_review_3",
-        "weekly_review_4",
-        "edu_curriculum_1",
-        "edu_curriculum_2",
-        "edu_curriculum_3",
-        "edu_curriculum_4",
-        "video_lecture",
-        "values_followup",
-      ],
       alert_severity: ["note", "first_warning", "final_warning"],
       alert_status: ["new", "acknowledged"],
       exam_list_status: ["sent", "in_progress", "completed"],

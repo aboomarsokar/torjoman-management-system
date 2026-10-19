@@ -1,6 +1,6 @@
 # مخطط قاعدة البيانات — ترجمان القرآني
 
-> **الحالة (2026-10-19):** يطابق الهجرات حتى `20261019092530_attendance_guards_cascade` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18)، ومراجعُ المصحف (§19)، والحضورُ اليوميّ بالاستثناء (§20). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات ← §19 مراجع المصحف ← §20 الحضور اليوميّ.
+> **الحالة (2026-10-19):** يطابق الهجرات حتى `20261019110259_quran_records_final_fixes` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18)، ومراجعُ المصحف (§19)، والحضورُ اليوميّ بالاستثناء (§20)، والرصدُ القرآنيّ الشهريّ ومسارُ اعتماد المشرف (§21). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات ← §19 مراجع المصحف ← §20 الحضور اليوميّ ← §21 الرصد القرآنيّ الشهريّ.
 > هذا الملف **مصدر الحقيقة** لبنية القاعدة، ويطابق آخر migration دائماً.
 > أي تغيير = migration جديد + تحديث هذا الملف + إعادة توليد الأنواع.
 
@@ -26,7 +26,7 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     │       │
     │       ├─< students (halaqa_id)           سجلّ الطالب — مربوط بحسابه بـ students.user_id (→ auth.users ← profiles بدور student)
     │       ├─< supervision_visits (halaqa_id) زيارات الحلقة
-    │       ├─< monthly_reports (halaqa_id)    تقارير الحلقة الشهرية
+    │       ├─< monthly_reports (halaqa_id)    رأسُ رصد الحلقة الشهريّ ← quran_records (report_id, student_id) (§21)
     │       ├─< halaqa_incentives (halaqa_id)  تخصيص حوافز الحلقة الشهري (المدير الإداري)
     │       └─< incentive_statements (halaqa_id) كشف حوافز الحلقة (المعلم)
     │
@@ -296,6 +296,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## 8. `monthly_reports` — التقرير الشهري للحلقة
 
+> **⚠️ نموذجٌ مُستبدَل (2026-10-19):** الرصدُ الشهريّ صار بالسورة والآية في `quran_records` ومسارُه ومعتمِدُه في **§21**. لا أنشطةَ ولا نقاطَ ولا درجاتَ ولا أيامَ دوامٍ يدوية. ما يلي من هذا القسم من الجدولين القديمين `monthly_report_students` و`monthly_report_activities` ومن أعمدة `monthly_reports` القديمة (`actual_days` و`default_days_snapshot` و`default_points_snapshot` و`attendance_rate` و`activities_done` و`activities_total` و`general_notes` و`activities_notes`) **ما زال موجوداً في القاعدة ولا يقرؤه ولا يكتبه أحدٌ** حتى هجرة الحذف بعد النشر (Task 10 من الخطة، بإذنٍ صريح)، ثم يُحذف هذا الوصف معه. العمودان `status` و`approved_by/at` و`submitted_at` حيّةٌ ويضبطها المسارُ في §21.
+
 المعلم يسلّم تقريراً شهرياً: بيانات الحلقة + سجلّ كل طالب.
 
 **مستوى التقرير:**
@@ -366,10 +368,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **التكامل:** الغياب بعذر هنا يغذّي مؤشر التقدّم الزمني (§4.18). إنجاز الحلقة = (متوسط الطلاب × 0.8) + (نسبة الأنشطة × 0.2).
 
-**RLS** (`reports_*` و`rstudents_*` و`ractivities_*`):
-- **القراءة:** `can_view_halaqa(halaqa_id)`؛ والطالب سطره في `monthly_report_students` (`student_id = my_student_id()`).
-- **الكتابة:** معلّم الحلقة أو نطاق الاعتماد (`can_approve_in_halaqa`: المديران + المديرة لحلقات البنات). أسطر الطلاب والأنشطة يكتبها المعلم **ما دام التقرير `draft`** فقط.
-- **الحارس `guard_report_status`** (§17): المعلم ينقل `draft→submitted` ويعدّل ما دام مسودّة؛ `approved` وحقول `approved_by/at` لنطاق الاعتماد وحده؛ وبعد الإرسال لا تعديل ولا حذف إلا بيد من يعتمد.
+**RLS** (`reports_*` و`rstudents_*` و`ractivities_*`) — **منذ `20261019094547` تكتب `reports_write` بـ`can_approve_report_in_halaqa` لا `can_approve_in_halaqa` (§21):**
+- **القراءة:** `can_view_halaqa(halaqa_id)`؛ والطالب سطره في `monthly_report_students` (`student_id = my_student_id()`) — جدولٌ قديم لا يُكتب.
+- **الكتابة:** معلّم الحلقة أو معتمِدُ الرصد في الحلقة (`can_approve_report_in_halaqa`: المشرف الميداني لها، والمدير الإداري، والمديرة لحلقات البنات — **لا المدير الفني**). أسطر الطلاب والأنشطة القديمة لا تُكتب.
+- **الحارس `guard_report_status`** (§17، §21): المعلم ينقل `draft→submitted` ويعدّل ما دام مسودّة؛ `approved` وحقول `approved_by/at` لمعتمِد الحلقة وحده؛ وبعد الإرسال لا تعديل إلا بيد المعتمِد، ولا حذف إلا بيد المدير الإداري.
 
 ---
 
@@ -603,15 +605,17 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `can_view_halaqa(hid)` | **القراءة:** مشرف المشروع والمديران (الكل)، والمديرة (حلقات البنات)، ومن أُسند إليها مشرفاً أو مختبِراً أو معلّماً (وحسابه نشط) |
 | `can_manage_halaqa(hid)` | **الإدارة البنيوية** (تعديل الحلقة، قوائم الاختبار، النتائج، الزيارات): `admin_manager` و`technical_manager` فقط — لا المديرة |
 | `can_approve_in_halaqa(hid)` | **اعتماد** التقارير وكشوف الحوافز: المديران + المديرة لحلقات البنات |
+| `can_approve_report_in_halaqa(hid)` | **اعتماد الرصد القرآنيّ الشهريّ وتعديلُ سجلّاته حتى الاعتماد** (منذ `20261019094547`، قرار 2026-10-19): المشرف الميداني للحلقة (`halaqat.supervisor_id = auth.uid()`)، والمدير الإداري، والمديرة الإدارية لحلقات البنات (`gender='female'`) — **لا المدير الفني** (يطّلع ولا يعتمد). مستقلّةٌ عن `can_approve_in_halaqa` التي يعتمد عليها الإسناد وكشف الحوافز فلا تُمسّ. التفصيل §21 |
 | `can_assign_in_halaqa(hid)` | **إسناد الطلاب وإخراجهم:** نطاق الاعتماد + المشرف الميداني لحلقاته |
 | `is_halaqa_teacher(hid)` / `is_halaqa_examiner(hid)` / `is_halaqa_supervisor(hid)` | الإسناد المباشر (المعلم والمختبِر وهذا الأخير للمشرف الميداني فقط)؛ المعلم والمختبِر يشترطان حساباً نشطاً |
 | `my_student_id()` / `my_halaqa_id()` | سجلّ الطالب وحلقته من `students.user_id = auth.uid()` |
 | `my_exam_results()` | **رحلة الطالب:** `(exam_plan_id, passed, total_score, exam_date)` لنتائج الطالب نفسه (مقصورة على `my_student_id()`، بلا `teacher_note`) |
-| `my_approved_pages()` | مجموع `memorization_pages` من تقارير حلقته **المعتمدة** وحدها |
+| `my_approved_pages()` | مجموع `pages_memorized` من `quran_records` الطالب نفسه في الشهور **المعتمدة** وحدها (حُوِّلت من الجدول القديم في `20261019094547`) |
+| `my_quran_months()` | **سجلُّ الطالب:** `(report_year, report_month, from_surah, from_ayah, to_surah, to_ayah, pages_memorized, pages_reviewed)` لشهوره المعتمدة وحدها مرتَّبةً بالأقدم، مقصورةً على `my_student_id()` (§21) |
 | `can_view_profile_photo(folder)` / `can_manage_profile_photo(folder)` | سياسات مستودع الصور (§ المستودعات) |
 | `claim_employee_number()` | `nextval` من `employee_number_seq` (يبدأ 1001، حدّه 9999) — **للخدمة وحدها** (`grant … to service_role` فقط، مسحوب من `authenticated`) |
 
-> سبب `my_exam_results()` و`my_approved_pages()`: الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) فتصله التضمينات `null` — محطّاتٌ مجتازة تظهر «مستحقّة» وصفحاتُ الحفظ المعتمدة صفر. الدالّتان تفتحان له سطوره وحدها دون فتح الجدولين (`20261018083507`).
+> سبب `my_exam_results()` و`my_approved_pages()` و`my_quran_months()`: الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) ولا يقرأ `quran_records` مباشرةً (أُسقط فرعُ الطالب منها في `20261019095659`) فتصله التضمينات `null` — محطّاتٌ مجتازة تظهر «مستحقّة» وصفحاتُ الحفظ المعتمدة صفر. الدوال تفتح له سطوره المعتمدة وحدها دون فتح الجداول (`20261018083507`، و`20261019094547` للأخيرتين).
 
 ### الحرّاس (مُشغِّلات `SECURITY DEFINER`؛ الخدمة والهجرات `auth.uid() is null` تمرّ دائماً)
 
@@ -619,7 +623,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 |---|---|
 | `profiles_guard_privileged` ← `guard_profile_privileged` | `role`/`status`/`employee_number`/**`gender`** للمدير الإداري وحده؛ و`must_change_password`: صاحبه يطفئه فقط (`true→false`) ولا يرفعه إلا المدير الإداري أو الخدمة |
 | `students_guard_assignment` ← `guard_student_assignment` | `user_id`/`gender`/`national_id`/`view_token` للمدير الإداري وحده؛ الإخراج من حلقةٍ يحتاج `can_assign_in_halaqa` فيها؛ الإدخال إلى حلقةٍ يحتاجه وتطابقَ جنس الطالب وجنس الحلقة (`23514`) |
-| `monthly_reports_guard_status` ← `guard_report_status` | المعلم: `draft→submitted` وتعديل المسودّة فقط؛ `approved` وحقلا `approved_by/at` ولا حذف/تعديل بعد الإرسال إلا لنطاق الاعتماد |
+| `monthly_reports_guard_status` ← `guard_report_status` | المعلم: `draft→submitted` وتعديل المسودّة فقط؛ `approved` وحقلا `approved_by/at` لمعتمِد الحلقة (`can_approve_report_in_halaqa`) وحده؛ ولا تعديل بعد الإرسال إلا بيده؛ **وحذفُ غير المسوّدة للمدير الإداري وحده** (منذ `20261019095659`). يعمل بعد `monthly_reports_flow` أبجدياً ولا يحلّ محلّه (§21) |
 | `incentive_statements_guard_status` ← `guard_statement_status` | مثله لـ`reviewed` وحقلَي `reviewed_by/at` — لكن بنطاق `can_review_statement_in_halaqa` (المدير الإداري، والمديرة الإدارية للبنات؛ **بلا المدير الفني** منذ هجرة `20261019082403`)، والقراءة `can_view_statements_in_halaqa` (معلم الحلقة، مشرف المشروع، المراجِع) |
 | `admin_alerts_guard_update` ← `guard_alert_update` | المعلم المعنيّ لا يغيّر إلا الحالة ووقت الإقرار؛ المُصدِر والمدير الإداري يغيّران المحتوى |
 | `profiles_photo_clear_on_female` ← `clear_photo_on_female` | حين يصير الحسابُ أنثى يُفرغ `photo_path` آلياً (بدل خطأ `23514` على المدير) |
@@ -803,3 +807,103 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - مُفعَّل على الجدولين، وفيهما أربع سياسات لكلٍّ منهما: قراءةٌ واحدة وثلاث للكتابة.
 - **المنح:** `select, insert, update, delete` لـ`authenticated` بعد سحب الكلّ من `public` و`anon` و`authenticated`؛ و`anon` لا يصل إليهما.
 - **الفحص الذاتي:** الهجرة الأولى تتحقّق من تفعيل RLS وعدد السياسات والمنح والمُشغِّلين؛ والثانية تتحقّق من منح `authenticated` الأربعة، ومنعِ `anon`، وأن الحارسين `security definer` بـ`search_path` فارغ، وأن فيهما فحصَ `pg_trigger_depth() > 1`.
+
+---
+
+## 21. الرصد القرآنيّ الشهريّ: `quran_records` ومسارُ اعتماد المشرف (الدفعة الثانية، الجزء ٢)
+
+> الهجرات: `20261019094547_quran_records` (الجدول والمعتمِد والحارس والسياسات والمسار والمُنتِجات وقراءتا الطالب) ← `20261019095659_quran_records_flow_hardening` (تصليبُ المسار وحذفُ غير المسوّدة وقراءةُ السجلّ وإشعارُ الاحتياط) ← `20261019110259_quran_records_final_fixes` (لقطةٌ لا تُزوَّر، واختصارُ التفريغ التتابعيّ قبل فحص المعتمَد، وروابطُ الإشعارات بالسنة والشهر، ومنعُ المستقبل بتاريخ غزة). الشاشة: `/reports` («الإنجاز القرآني»). المواصفة: `docs/superpowers/specs/2026-10-19-v2-batch2-design.md` (الجزء ٢).
+
+**المبدأ:** رأسُ الشهر لكلّ حلقة هو `monthly_reports` (الحالة والأختام)، وسجلُّ كلّ طالبٍ فيه هو `quran_records`: من (سورة:آية) إلى (سورة:آية) بترتيب الحفظ (من الناس إلى الفاتحة)، وصفحاتُ الحفظ والمراجعة. لا أنشطةَ ولا نقاطَ ولا درجات.
+
+> **القديم باقٍ بلا استعمال:** الجدولان `monthly_report_students` و`monthly_report_activities` ونوعُ `activity_key` وأعمدةُ `monthly_reports` القديمة (§8) ما زالت في القاعدة، ولا يقرؤها ولا يكتبها كودٌ بعد هذا الجزء. تُحذف **بعد نشر الكود وبإذنٍ صريح** في هجرةٍ لاحقة (Task 10)، مع `app_settings.default_points` و`default_attendance_days`.
+
+### `public.quran_records`
+
+| العمود | النوع | ملاحظات |
+|---|---|---|
+| `id` | uuid PK | `gen_random_uuid()` |
+| `report_id` | uuid FK → `monthly_reports` | `on delete cascade`، غير فارغ |
+| `student_id` | uuid FK → `students` | `on delete cascade`، غير فارغ |
+| `from_surah` / `to_surah` | smallint FK → `surahs(number)` | بداية المسار ونهايتُه (سورة) |
+| `from_ayah` / `to_ayah` | smallint | بداية المسار ونهايتُه (آية) |
+| `pages_memorized` | smallint | `not null default 0`، `check (between 0 and 604)` — تُملأ محسوبةً من العميل ويعدّلها المعلم |
+| `pages_reviewed` | smallint | اختياري، `check (between 0 and 604)` |
+| `notes` | text | `check (null or char_length <= 500)` |
+| `recorded_by` | uuid FK → `profiles` | `on delete set null`، والافتراضيّ `auth.uid()` |
+| `created_at` / `updated_at` | timestamptz | `trg_quran_records_updated_at` يضبط الثاني |
+
+**القيود:** `unique (report_id, student_id)` (سجلٌّ واحد لكلّ طالب في الشهر)؛ `quran_records_positions_all_or_none` (المواضعُ الأربعة كلُّها فارغة = «لم يحفظ جديداً» أو كلُّها معبّأة)؛ `quran_records_pages_need_range` (لا صفحاتِ حفظٍ بلا مدى: `from_surah is not null or pages_memorized = 0`). فهرس: `quran_records_student_idx (student_id)`.
+
+### الحارس `quran_records_guard` ← `private.guard_quran_record()` (`BEFORE INSERT OR UPDATE OR DELETE`، `security definer`، `search_path=''`)
+
+| القاعدة | التفصيل |
+|---|---|
+| **لا كتابة في شهرٍ معتمَد** | إدراجٌ أو تعديلٌ أو حذفٌ مباشرٌ على سجلّ تقريرٍ `approved` يُرفض: «الشهر معتمَد — يُعيده المعتمِد أوّلاً» (يُفحص تقرير السجلّ القديم ثم الجديد) |
+| **حدودُ الآيات** | `from_ayah` و`to_ayah` بين 1 وعدد آيات سورتيهما من `surahs.ayah_count` |
+| **ترتيبُ الحفظ** | السورة تنازلياً والآية داخلها تصاعدياً: `from_surah > to_surah` أو (نفس السورة و`from_ayah <= to_ayah`)؛ وإلا «بدايةُ المسار يجب أن تسبق نهايتَه بترتيب الحفظ (من الناس إلى الفاتحة)» |
+| **الطالب في حلقة التقرير** | عند الإدراج أو تغيّر الطالب/التقرير: `students.halaqa_id` يطابق `monthly_reports.halaqa_id` وإلا «الطالب ليس في حلقة هذا التقرير» |
+| **الحذف التتابعيّ يُتجاوَز** | `pg_trigger_depth() > 1` (حذفُ طالبٍ/تقريرٍ/حلقة) يمرّ حتى في شهرٍ معتمَد؛ المباشرُ يبقى محظوراً |
+| **تفريغ `recorded_by`** | تعديلٌ لا يغيّر إلا `recorded_by` يمرّ بلا فحص؛ وفي العمق ≥ ٢ (`on delete set null` عند حذف حساب) يمرّ **قبل فحص الشهر المعتمَد** فلا يعطّل حذفَ حسابٍ سجّل في شهرٍ معتمَد (منذ `20261019110259`) |
+
+### السياسات (4، RLS مفعّل؛ `select, insert, update, delete` لـ`authenticated` وحده، وسُحب الكلُّ من `public` و`anon`)
+
+| السياسة | الشرط |
+|---|---|
+| `quran_records_read` | `can_view_halaqa(report.halaqa_id)` — **بلا فرع الطالب** (أُسقط في `20261019095659`: الطالب لا يقرأ تقرير حلقته بـRLS فلا ينفع فرعٌ له؛ يقرأ رصده المعتمَد عبر `my_quran_months()` / `my_approved_pages()`) |
+| `quran_records_insert` / `_update` / `_delete` | معلّم الحلقة **والتقرير `draft`**، أو `can_approve_report_in_halaqa(halaqa)` (يعدّل المعتمِدُ حتى الاعتماد؛ ويمنعه الحارسُ بعده) |
+
+### `monthly_reports` — ما أُضيف أو تغيّر
+
+- **`return_note`** `text check (null or char_length <= 500)`: ملاحظةُ المعتمِد عند إعادة الرصد إلى المعلم، إلزاميةٌ عند الإعادة.
+- **`target_pages_snapshot`** تُملأ عند الإدراج من `app_settings.target_memorization_pages` (مُشغِّل `monthly_reports_target_snapshot` ← `private.monthly_reports_target_snapshot()`، `BEFORE INSERT`، تملأ ما كان فارغاً). **لا تُزوَّر** (منذ `20261019110259`): بيد مستخدمٍ يصفّرها `monthly_reports_flow` عند الإدراج (يسبق `monthly_reports_target_snapshot` أبجدياً فيملؤها من الإعدادات، والهجرةُ تفحص الترتيب)، وعند التحديث تُستعاد القديمة. تُلتقط عند إنشاء رأس الشهر (أول سجلّ يُحفظ) لا عند الإرسال، فلا يغيّرها تعديلُ الإعدادات بأثرٍ رجعيّ. الخدمةُ والهجراتُ (`auth.uid() is null`) تكتبها كما تشاء.
+- **`reports_write`** (`for all`): `is_halaqa_teacher(halaqa_id) or can_approve_report_in_halaqa(halaqa_id)` للشرط والفحص معاً — بعد أن كانت `can_approve_in_halaqa` (المدير الفنيّ يقرأ ولا يكتب).
+- **`guard_report_status`** (`monthly_reports_guard_status`): المنطقُ القديم نفسُه بدالّة المعتمِد الجديدة: معتمِدُ الحلقة يمرّ؛ غيرُه لا يعدّل بعد الإرسال، ولا يضع حالةً غير `draft`/`submitted`، ولا يمسّ `approved_by/at`. **الحذفُ بعد الإرسال للمدير الإداري وحده** (`current_user_role() is distinct from 'admin_manager'` ← `42501`)؛ المسوّداتُ تُحذف كما كانت.
+- **`prevent_future_report_month`** (`trg_reports_no_future`): لا رأسَ لشهرٍ لم يبدأ بعد، والمقارنةُ بـ`private.attendance_today()` (توقيت غزة) لا بـ`current_date` (UTC) منذ `20261019110259`؛ الدالّة `security definer` و`search_path=''`، والرسالة: «لا يمكن إنشاء تقرير لشهر لم يبدأ بعد».
+
+### معتمِدُ الرصد `public.can_approve_report_in_halaqa(hid uuid)`
+
+`language sql stable security definer set search_path = public`، تُرجع true إن وُجدت الحلقة و: دورُ المستدعي `admin_manager`، أو `women_admin` والحلقةُ `female`، أو `field_supervisor` و`halaqat.supervisor_id = auth.uid()`. **المدير الفنيّ false** (يطّلع بـ`can_view_halaqa`). `revoke … from public, anon`، و`grant execute … to authenticated, service_role`. لا تُمسّ `can_approve_in_halaqa` (الإسنادُ وكشفُ الحوافز يعتمدان عليها).
+
+### مسارُ الحالات `monthly_reports_flow` ← `private.monthly_reports_flow()` (`BEFORE INSERT OR UPDATE`، `security definer`، `search_path=''`)
+
+يعمل قبل `monthly_reports_guard_status` أبجدياً ولا يحلّ محلّه. الخدمةُ والهجرات (`auth.uid() is null`) تمرّ.
+
+| الحالة | القاعدة |
+|---|---|
+| **الإدراج** | مسوّدةً فقط (وإلا «يُنشأ الرصدُ مسوّدةً ثم يُرسَل»)، وتُصفَّر `submitted_at` و`approved_by` و`approved_at` و`return_note` و`target_pages_snapshot` (الأخيرةُ يملؤها مُشغِّل اللقطة) فلا يزوّرها العميل |
+| **التحديثُ التتابعيّ** | `pg_trigger_depth() > 1` (مثل `on delete set null` لـ`approved_by` عند حذف حساب) لا يمسّه المسار |
+| **لا نقل** | تغيّر `halaqa_id` أو `report_month` أو `report_year` ← «لا يُنقل الرصدُ إلى حلقةٍ أو شهرٍ آخر» |
+| **أختام المسار** | `submitted_at` و`approved_by` و`approved_at` و`target_pages_snapshot` تُستعاد دائماً إلى قديمها ثم يضبطها الانتقالُ وحده؛ فالتحديثُ بلا تغيّر حالةٍ يُبقي الأختامَ كما هي |
+| **ملاحظةُ الإعادة** | من لا يملك `can_approve_report_in_halaqa` (المعلم) لا يغيّر `return_note` (تُستعاد القديمة) |
+| **قائمةٌ بيضاء للانتقالات** | `draft→submitted` و`submitted→approved` و`submitted→draft` و`approved→draft` فقط؛ غيرُها «انتقالٌ غيرُ مسموح» |
+| **`draft→submitted` (قفل الشهر)** | لا يُرسَل قبل `private.report_opening_day(سنة, شهر)` = **آخرُ يومٍ في الشهر، والخميس إن كان آخرُه جمعة**؛ مقارنةٌ بـ`private.attendance_today()` (توقيت غزة): «يُرصَد الشهر ابتداءً من DD-MM-YYYY». ثم `submitted_at := attendance_today()` وتُفرَّغ `return_note` |
+| **`submitted→approved`** | `approved_by := auth.uid()` و`approved_at := now()` (والصلاحيةُ للحارس) |
+| **`submitted\|approved→draft` (إعادة)** | `return_note` إلزاميةٌ غيرُ فارغة وإلا «الإعادةُ تحتاج ملاحظة»؛ وتُصفَّر `approved_by` و`approved_at`. المعتمَدُ يُعاد فتحُه بهذا الطريق |
+
+> **الأيامُ المعروفة:** `report_opening_day(2026, 7)` = 2026-07-30 (آخرُه جمعة)، و`(2026, 10)` = 2026-10-31. المسوّدةُ مفتوحةٌ قبل ذلك للرصد؛ المقفلُ هو الإرسال وحدَه.
+
+### مُنتِجو الإشعارات `monthly_reports_notify_status` ← `private.notify_report_status()`
+
+مُشغِّل `AFTER UPDATE OF status … WHEN (old.status is distinct from new.status)`، يستدعي `private.notify` (§18) ورابطُه `/reports?y=<سنة>&m=<شهر>` (يفتح الشهرَ بعينه؛ يطابق قيدَ رابط الإشعارات `?=&`) ومصدرُه `monthly_reports`، ونصُّه «اسم الحلقة · MM-YYYY»:
+
+| النوع | الحدث | المستلم |
+|---|---|---|
+| `report_submitted` | الانتقال إلى `submitted` | **مشرفُ الحلقة**؛ وإن لم يكن لها مشرفٌ فالمعتمِدون الاحتياط (المدير الإداري، والمديرة الإدارية إن كانت الحلقة للبنات) — **و**المدير الفنيّ دائماً (يطّلع ولا يعتمد). الاحتياطُ والفنيّ من الحسابات النشطة وحدها |
+| `report_approved` | الانتقال إلى `approved` | معلّمُ الحلقة |
+| `report_returned` | `submitted\|approved → draft` | معلّمُ الحلقة، والنصُّ «… — <ملاحظة الإعادة>» |
+
+(`private.notify` لا يُشعِر المنادي بفعله هو، فمن أرسل أو اعتمد أو أعاد لا يصله شيء.)
+
+### قراءةُ الطالب لرصده المعتمَد (`security definer`، `search_path=''`، `revoke … from public, anon`، `grant execute … to authenticated`)
+
+| الدالّة | ما تُرجعه |
+|---|---|
+| `my_approved_pages()` | `bigint`: مجموعُ `pages_memorized` للطالب (`my_student_id()`) في الشهور **المعتمَدة** وحدها |
+| `my_quran_months()` | `(report_year, report_month, from_surah, from_ayah, to_surah, to_ayah, pages_memorized, pages_reviewed)` للشهور المعتمَدة وحدها، مرتَّبةً بالأقدم |
+
+المسوّدةُ والمُرسَلُ لا يظهران للطالب ولا في رابطه العام؛ و«وصل N من 30» يُحسب من نهاية آخر شهرٍ **معتمَد** (`program_juz`).
+
+### الفحص الذاتي
+
+الهجرتان تُلغيان نفسيهما عند أيّ خلل: RLS غير مفعّل على `quran_records`، أو السياساتُ ليست 4 (قراءةٌ واحدة)، أو منحٌ ناقص لـ`authenticated` أو زائدٌ لـ`anon`/`PUBLIC`، أو مُشغِّلاتُ `quran_records` (2) و`monthly_reports` (4: flow وnotify_status وtarget_snapshot وguard_status) ناقصة، أو `reports_write` لا تستعمل المعتمِد الجديد، أو `guard_report_status` ما زال يستعمل `can_approve_in_halaqa`، أو `my_approved_pages` ما زالت على الجدول القديم، أو منحُ الدوالّ خطأ، أو `report_opening_day` يخالف 2026-07-30/2026-10-31، أو المديرُ الفنيّ «يعتمد»/لا يقرأ والإداريُّ لا يعتمد (بجلساتٍ حقيقية داخل الكتلة). وتضيف الثانية: المسارُ قبل الإدراج والتحديث وفيه القواعد الثلاث، وحذفُ غير المسوّدة للإداري وحده، وسياسةُ القراءة بلا فرع الطالب، وإشعارُ الاحتياط، واختصارُ `recorded_by` قبل فحص الشهر المعتمَد في حارسَي الحضور.

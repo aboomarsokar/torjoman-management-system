@@ -1,5 +1,8 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '~/types/database.types'
+import { toProgramJuz } from '~/utils/quran/position'
+import { juzReached, toMonthHistory, totalPages } from '~/utils/quran/studentHistory'
+import type { ApprovedMonth } from '~/utils/quran/studentHistory'
 
 /**
  * رابط اطّلاع الطالب (عام، بلا حساب) — يجلب الطالب بالـ view_token بصلاحية الخدمة
@@ -39,19 +42,28 @@ export default defineEventHandler(async (event) => {
     total_score: r.total_score
   }))
 
-  // إجمالي صفحات الحفظ من التقارير المعتمدة
-  const { data: pagesRows } = await admin
-    .from('monthly_report_students')
-    .select('memorization_pages, report:report_id(status)')
+  // الشهورُ المعتمَدة من سجلّات القرآن: صفحاتُها وسطورُ السجلّ وأجزاءُ البرنامج المكتملة
+  const { data: recordRows } = await admin
+    .from('quran_records')
+    .select('from_surah, from_ayah, to_surah, to_ayah, pages_memorized, report:report_id!inner(status, report_year, report_month)')
     .eq('student_id', data.id)
-  const memorization_pages = (pagesRows ?? [])
-    .filter((r: { report: { status: string } | null }) => r.report?.status === 'approved')
-    .reduce((sum: number, r: { memorization_pages: number | null }) => sum + (r.memorization_pages ?? 0), 0)
+    .eq('report.status', 'approved')
+    .returns<(Omit<ApprovedMonth, 'report_year' | 'report_month'> & { report: { status: string, report_year: number, report_month: number } | null })[]>()
+  const months: ApprovedMonth[] = (recordRows ?? []).flatMap(({ report, ...r }) =>
+    report?.status === 'approved' ? [{ ...r, report_year: report.report_year, report_month: report.report_month }] : [])
+  const [{ data: surahRows }, { data: juzRows }] = await Promise.all([
+    admin.from('surahs').select('number, name'),
+    admin.from('program_juz').select('number, start_surah, start_ayah, end_surah, end_ayah')
+  ])
+  const surahNames = new Map((surahRows ?? []).map(r => [r.number, r.name]))
+  const memorization_pages = totalPages(months)
+  const quran_history = toMonthHistory(months, n => surahNames.get(n) ?? '')
+  const juz_done = juzReached(months, data.quran_parts, toProgramJuz(juzRows ?? []))
 
   // الهدف الشهري لمؤشّر التقدّم الزمني (إعدادات المدير)
   const { data: settings } = await admin.from('app_settings').select('target_memorization_pages').eq('id', 1).single()
   const target_per_month = settings?.target_memorization_pages ?? 30
 
   const { id: _id, ...safe } = data
-  return { ...safe, exam_plan: plan ?? [], results, memorization_pages, target_per_month }
+  return { ...safe, exam_plan: plan ?? [], results, memorization_pages, target_per_month, quran_history, juz_done }
 })

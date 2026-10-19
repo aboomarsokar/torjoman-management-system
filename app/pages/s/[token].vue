@@ -3,6 +3,8 @@
  * صفحة اطّلاع الطالب العامّة (§4.23) — للقراءة فقط، بلا حساب دخول.
  * تُفتح برابط يحوي view_token. تعرض حقولاً آمنة فقط (دون بيانات حسّاسة).
  */
+import type { MonthHistoryItem } from '~/utils/quran/studentHistory'
+
 definePageMeta({ layout: false })
 
 const route = useRoute()
@@ -19,6 +21,8 @@ type PublicStudent = {
   results: { exam_plan_id: number | null, passed: boolean | null, total_score: number | null }[]
   memorization_pages: number
   target_per_month: number
+  quran_history: MonthHistoryItem[]
+  juz_done: number
 }
 
 const { data: student, error } = await useFetch<PublicStudent>(`/api/public/student/${token.value}`)
@@ -138,6 +142,10 @@ const fields = computed(() => {
           :memorization-pages="student.memorization_pages"
           :target-per-month="student.target_per_month"
           :enrollment-date="student.enrollment_date"
+        />
+        <StudentQuranHistory
+          :items="student.quran_history"
+          :juz-done="student.juz_done"
         />
       </div>
     </main>

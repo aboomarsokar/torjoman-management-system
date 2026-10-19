@@ -1,5 +1,6 @@
 import type { Database } from '~/types/database.types'
 import type { MushafPage } from '~/utils/quran/mushaf'
+import { toProgramJuz } from '~/utils/quran/position'
 import type { ProgramJuz } from '~/utils/quran/position'
 
 /**
@@ -8,18 +9,8 @@ import type { ProgramJuz } from '~/utils/quran/position'
  */
 export interface SurahRef { number: number, name: string, ayahCount: number }
 
-type ProgramJuzRow = Database['public']['Tables']['program_juz']['Row']
-
-/** صفوفُ `program_juz` ← أجزاءُ الموضع بترتيب الحفظ (الجزء 30 أولاً ثم 29 … 1)؛ لا تغيّر المدخلات. */
-export function toProgramJuz(rows: Pick<ProgramJuzRow, 'number' | 'start_surah' | 'start_ayah' | 'end_surah' | 'end_ayah'>[]): ProgramJuz[] {
-  return rows
-    .map(r => ({
-      number: r.number,
-      start: { surah: r.start_surah, ayah: r.start_ayah },
-      end: { surah: r.end_surah, ayah: r.end_ayah }
-    }))
-    .sort((a, b) => b.number - a.number)
-}
+// يعيش المحوِّل في utils كي يستعمله الخادم (الرابط العامّ) دون سحب composable الواجهة
+export { toProgramJuz }
 
 /** التحميلُ الجاري (إن تزامن استدعاءان لا يُطلب الجدول مرّتين). على العميل وحده، يُفرَّغ عند الانتهاء. */
 let inflight: Promise<void> | null = null

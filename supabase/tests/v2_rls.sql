@@ -654,7 +654,9 @@ rollback;
 -- رحلة الطالب في /me: my_exam_results() و my_approved_pages()
 -- الهجرة: supabase/migrations/20261018083507_student_journey_rpcs.sql (Task 7، جولة الإصلاح 1)
 -- التجهيز: معلّم وحلقة بنين مؤقّتان (البيانات التجريبية مُسحت) وثلاثة طلاب (أ، ب، ج) فيها؛ لأ نتيجةٌ بدرجة 90 ومحطّتُها محدّدة، ولب
--- نتيجةٌ بدرجة 70؛ ولج لا شيء. تقريران: معتمدٌ (أ: 30 صفحة، ب: 7) ومُرسَلٌ (أ: 50 صفحة لا تُحتسب).
+-- نتيجةٌ بدرجة 70؛ ولج لا شيء. تقريران: معتمدٌ (أ: 30 صفحة، ب: 7) ومُرسَلٌ (أ: 50 صفحة لا تُحتسب) — الصفحاتُ سجلّاتُ `quran_records`
+-- (منذ 2026-10-19 يقرأ my_approved_pages() الرصدَ الجديد لا monthly_report_students)؛ تُدرَج مسوّدةً ثم تُنقل الحالةُ بصلاحية postgres.
+-- (ترشيحُ الطالب يمرّ بحارس تسلسل المحطات فتُؤخذ أدنى محطة: order by parts_to.)
 -- (memorization_pages مولَّد = إلى − من؛ passed وtotal_score مولَّدان، وكل سؤال 0–10: الدرجة 90 = عشرة تسعات (اجتاز)، و70 = عشرة سبعات (لم يجتز).)
 -- التجهيز بصلاحية postgres قبل الانتحال فلا تعترضه الحراس (auth.uid() فارغ).
 -- ============================================================================
@@ -683,18 +685,20 @@ insert into students (id, full_name, gender, user_id, halaqa_id) values
 insert into exam_lists (id, teacher_id, halaqa_id, week_date) values
   ('00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006b9','00000000-0000-4000-8000-0000000006b0','2026-10-01');
 insert into exam_list_items (id, exam_list_id, student_id, exam_plan_id, teacher_note) values
-  ('00000000-0000-4000-8000-0000000006f1','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d1',(select min(id) from exam_plan),'ملاحظة سرّية'),
-  ('00000000-0000-4000-8000-0000000006f2','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d2',(select min(id) from exam_plan),'ملاحظة سرّية');
+  ('00000000-0000-4000-8000-0000000006f1','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d1',(select id from exam_plan order by parts_to limit 1),'ملاحظة سرّية'),
+  ('00000000-0000-4000-8000-0000000006f2','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d2',(select id from exam_plan order by parts_to limit 1),'ملاحظة سرّية');
 insert into exam_results (student_id, exam_list_item_id, pass_mark_snapshot, q1_memorization, q1_understanding, q1_reflection, q2_memorization, q2_understanding, q2_reflection, q3_memorization, q3_understanding, q3_reflection, tajweed_score, exam_date) values
   ('00000000-0000-4000-8000-0000000006d1','00000000-0000-4000-8000-0000000006f1',80,9,9,9,9,9,9,9,9,9,9,'2026-10-02'),
   ('00000000-0000-4000-8000-0000000006d2','00000000-0000-4000-8000-0000000006f2',80,7,7,7,7,7,7,7,7,7,7,'2026-10-02');
 insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
-  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006b0',8,2026,'approved'),
-  ('00000000-0000-4000-8000-0000000006a2','00000000-0000-4000-8000-0000000006b0',9,2026,'submitted');
-insert into monthly_report_students (report_id, student_id, memorization_from, memorization_to) values
-  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d1',0,30),
-  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d2',0,7),
-  ('00000000-0000-4000-8000-0000000006a2','00000000-0000-4000-8000-0000000006d1',0,50);
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006b0',8,2026,'draft'),
+  ('00000000-0000-4000-8000-0000000006a2','00000000-0000-4000-8000-0000000006b0',9,2026,'draft');
+insert into quran_records (report_id, student_id, from_surah, from_ayah, to_surah, to_ayah, pages_memorized) values
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d1',114,1,114,6,30),
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d2',114,1,114,6,7),
+  ('00000000-0000-4000-8000-0000000006a2','00000000-0000-4000-8000-0000000006d1',114,1,114,6,50);
+update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000006a1';
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000006a2';
 create temp table _r (k text, v text) on commit drop;
 grant all on _r to authenticated;
 set local role authenticated;
@@ -734,16 +738,17 @@ insert into students (id, full_name, gender, user_id, halaqa_id) values
 insert into exam_lists (id, teacher_id, halaqa_id, week_date) values
   ('00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006b9','00000000-0000-4000-8000-0000000006b0','2026-10-01');
 insert into exam_list_items (id, exam_list_id, student_id, exam_plan_id, teacher_note) values
-  ('00000000-0000-4000-8000-0000000006f1','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d1',(select min(id) from exam_plan),'ملاحظة سرّية'),
-  ('00000000-0000-4000-8000-0000000006f2','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d2',(select min(id) from exam_plan),'ملاحظة سرّية');
+  ('00000000-0000-4000-8000-0000000006f1','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d1',(select id from exam_plan order by parts_to limit 1),'ملاحظة سرّية'),
+  ('00000000-0000-4000-8000-0000000006f2','00000000-0000-4000-8000-0000000006e1','00000000-0000-4000-8000-0000000006d2',(select id from exam_plan order by parts_to limit 1),'ملاحظة سرّية');
 insert into exam_results (student_id, exam_list_item_id, pass_mark_snapshot, q1_memorization, q1_understanding, q1_reflection, q2_memorization, q2_understanding, q2_reflection, q3_memorization, q3_understanding, q3_reflection, tajweed_score, exam_date) values
   ('00000000-0000-4000-8000-0000000006d1','00000000-0000-4000-8000-0000000006f1',80,9,9,9,9,9,9,9,9,9,9,'2026-10-02'),
   ('00000000-0000-4000-8000-0000000006d2','00000000-0000-4000-8000-0000000006f2',80,7,7,7,7,7,7,7,7,7,7,'2026-10-02');
 insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
-  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006b0',8,2026,'approved');
-insert into monthly_report_students (report_id, student_id, memorization_from, memorization_to) values
-  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d1',0,30),
-  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d2',0,7);
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006b0',8,2026,'draft');
+insert into quran_records (report_id, student_id, from_surah, from_ayah, to_surah, to_ayah, pages_memorized) values
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d1',114,1,114,6,30),
+  ('00000000-0000-4000-8000-0000000006a1','00000000-0000-4000-8000-0000000006d2',114,1,114,6,7);
+update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000006a1';
 create temp table _r (k text, v text) on commit drop;
 grant all on _r to authenticated;
 set local role authenticated;
@@ -781,3 +786,238 @@ select p.proname,
 from pg_proc p
 where p.pronamespace = 'public'::regnamespace and p.proname in ('my_exam_results', 'my_approved_pages')
 order by 1;
+
+
+-- ============================================================================
+-- الرصد القرآني الشهري: مسار الإرسال والاعتماد وقراءة السجلّ (الدفعة الثانية، الجزء ٢، المراجعة النهائية)
+-- الهجرات: 20261019094547_quran_records ← 20261019095659_quran_records_flow_hardening ← 20261019110259_quran_records_final_fixes
+-- البيانات: حلقة «الفرقان» التجريبية (معلّمها 1010، مشرفها الميداني 1005)، مشرفٌ آخر 1006 (حلقتا البنات)، المدير الإداري 1001،
+-- الفني 1002، المديرة 1004. نُدرج التقرير مسوّدةً ثم نُغيّر حالته بصلاحية postgres (auth.uid() فارغ فيمرّ المسار) ثم ننتحل الدور؛ وكلُّ كتلةٍ تُلغى بـrollback.
+-- النتائج الفعلية: تشغيل 2026-10-19 عبر MCP execute_sql على القاعدة الإنتاجية.
+-- ============================================================================
+
+-- (ر-5) المعلّم يُرسل رصدَ الشهر الجاري قبل يوم الفتح (آخرُ يوم دراسيّ منه) — يُرفض
+-- ⚠️ يعتمد على التاريخ: صحيحٌ ما دام اليومُ قبل 2026-10-31 (يوم فتح أكتوبر 2026)؛ بعده استبدل الشهرَ بشهرٍ لم يُفتح بعد.
+-- المتوقّع: ERROR P0001 يُرصَد الشهر ابتداءً من 31-10-2026
+-- الفعلي:   ERROR P0001 يُرصَد الشهر ابتداءً من 31-10-2026 ✅
+begin;
+insert into monthly_reports (halaqa_id, report_month, report_year, status)
+  values ('155bc35c-102f-43db-a7f2-ab084effeff4', 10, 2026, 'draft')
+  on conflict (halaqa_id, report_month, report_year) do nothing;
+select set_config('request.jwt.claims', json_build_object('sub', '25de17dd-6ceb-4dcd-8fa6-57e04cd923f1', 'role', 'authenticated')::text, true);
+set local role authenticated;
+update monthly_reports set status = 'submitted'
+ where halaqa_id = '155bc35c-102f-43db-a7f2-ab084effeff4' and report_month = 10 and report_year = 2026;
+rollback;
+
+
+-- (ر-6) المعلّم يعدّل سجلَّ تقريرٍ مُرسَل أو يحذفه — لا يُغيَّر شيء (RLS: التقرير ليس مسوّدة)؛ والمشرفُ الميداني للحلقة يعدّله (ضابط)
+-- المتوقّع: teacher_update_rows = 0، teacher_delete_rows = 0، pages_after = 12، supervisor_update_rows = 1
+-- الفعلي:   0، 0، 12، 1 ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+insert into quran_records (id, report_id, student_id, from_surah, from_ayah, to_surah, to_ayah, pages_memorized) values
+  ('00000000-0000-4000-8000-0000000007b1','00000000-0000-4000-8000-0000000007a1','42d93768-7d6e-464c-ab8d-292ba43b9972',114,1,114,6,12);
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '25de17dd-6ceb-4dcd-8fa6-57e04cd923f1', 'role', 'authenticated')::text, true);
+with u as (update quran_records set pages_memorized = 99 where id = '00000000-0000-4000-8000-0000000007b1' returning 1)
+  insert into _r select 'teacher_update_rows', count(*)::text from u;
+with d as (delete from quran_records where id = '00000000-0000-4000-8000-0000000007b1' returning 1)
+  insert into _r select 'teacher_delete_rows', count(*)::text from d;
+insert into _r select 'pages_after', pages_memorized::text from quran_records where id = '00000000-0000-4000-8000-0000000007b1';
+select set_config('request.jwt.claims', json_build_object('sub', '5508bd8a-b0ba-4043-9eda-d766d17497fe', 'role', 'authenticated')::text, true);
+with u as (update quran_records set pages_memorized = 15 where id = '00000000-0000-4000-8000-0000000007b1' returning 1)
+  insert into _r select 'supervisor_update_rows', count(*)::text from u;
+reset role;
+select * from _r;
+rollback;
+
+
+-- (ر-7) المعلّم يُدرج سجلاً جديداً في تقريرٍ مُرسَل — يُرفض
+-- المتوقّع: ERROR 42501 new row violates row-level security policy for table "quran_records"
+-- الفعلي:   ERROR 42501 new row violates row-level security policy for table "quran_records" ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+select set_config('request.jwt.claims', json_build_object('sub', '25de17dd-6ceb-4dcd-8fa6-57e04cd923f1', 'role', 'authenticated')::text, true);
+set local role authenticated;
+insert into quran_records (report_id, student_id, from_surah, from_ayah, to_surah, to_ayah, pages_memorized)
+  values ('00000000-0000-4000-8000-0000000007a1','42d93768-7d6e-464c-ab8d-292ba43b9972',114,1,114,6,12);
+rollback;
+
+
+-- (ر-8) مشرفٌ ميدانيّ لحلقةٍ أخرى (1006) يعتمد رصدَ «الفرقان» — 0 صفوف والحالةُ كما هي؛ ومشرفُ الحلقة نفسها (1005) يعتمد (ضابط)
+-- المتوقّع: other_supervisor_rows = 0، status_after_other = submitted، own_supervisor_rows = 1، status_after_own = approved
+-- الفعلي:   0، submitted، 1، approved ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '968369a7-5b7a-42e0-ad25-693b3aa7afef', 'role', 'authenticated')::text, true);
+with u as (update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1' returning 1)
+  insert into _r select 'other_supervisor_rows', count(*)::text from u;
+reset role;
+insert into _r select 'status_after_other', status::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '5508bd8a-b0ba-4043-9eda-d766d17497fe', 'role', 'authenticated')::text, true);
+with u as (update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1' returning 1)
+  insert into _r select 'own_supervisor_rows', count(*)::text from u;
+reset role;
+insert into _r select 'status_after_own', status::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+select * from _r;
+rollback;
+
+
+-- (ر-9) المدير الفنيّ (1002) يرى الرصد ولا يعتمده؛ والمديرُ الإداريّ (1001) يعتمد (ضابط)
+-- المتوقّع: technical_sees_report = 1، technical_approve_rows = 0، status_after_technical = submitted، admin_approve_rows = 1، status_after_admin = approved
+-- الفعلي:   1، 0، submitted، 1، approved ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'fd7e9cca-ad80-47d8-85cb-c017c954b07b', 'role', 'authenticated')::text, true);
+insert into _r select 'technical_sees_report', count(*)::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+with u as (update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1' returning 1)
+  insert into _r select 'technical_approve_rows', count(*)::text from u;
+reset role;
+insert into _r select 'status_after_technical', status::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '2be1eea9-b5d6-4d10-bace-d948db8b1c67', 'role', 'authenticated')::text, true);
+with u as (update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1' returning 1)
+  insert into _r select 'admin_approve_rows', count(*)::text from u;
+reset role;
+insert into _r select 'status_after_admin', status::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+select * from _r;
+rollback;
+
+
+-- (ر-10) المديرة الإدارية (1004) على حلقة بنين: لا ترى الرصد ولا تعتمده
+-- المتوقّع: women_admin_sees_boys_report = 0، women_admin_approve_rows = 0، status_after_women_admin = submitted
+-- الفعلي:   0، 0، submitted ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'af841110-d221-4fd4-993e-842013784f0c', 'role', 'authenticated')::text, true);
+insert into _r select 'women_admin_sees_boys_report', count(*)::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+with u as (update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1' returning 1)
+  insert into _r select 'women_admin_approve_rows', count(*)::text from u;
+reset role;
+insert into _r select 'status_after_women_admin', status::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+select * from _r;
+rollback;
+
+
+-- (ر-11) المشرف الميداني يعيد رصداً مُرسَلاً بلا ملاحظة — يُرفض
+-- المتوقّع: ERROR P0001 الإعادةُ تحتاج ملاحظة
+-- الفعلي:   ERROR P0001 الإعادةُ تحتاج ملاحظة ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+select set_config('request.jwt.claims', json_build_object('sub', '5508bd8a-b0ba-4043-9eda-d766d17497fe', 'role', 'authenticated')::text, true);
+set local role authenticated;
+update monthly_reports set status = 'draft' where id = '00000000-0000-4000-8000-0000000007a1';
+rollback;
+
+
+-- (ر-12) كتابةُ سجلٍّ في شهرٍ معتمَد (حتى من المدير الإداري) — تُرفض حتى يُعاد الرصد
+-- المتوقّع: ERROR P0001 الشهر معتمَد — يُعيده المعتمِد أوّلاً
+-- الفعلي:   ERROR P0001 الشهر معتمَد — يُعيده المعتمِد أوّلاً ✅
+begin;
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+insert into quran_records (id, report_id, student_id, from_surah, from_ayah, to_surah, to_ayah, pages_memorized) values
+  ('00000000-0000-4000-8000-0000000007b1','00000000-0000-4000-8000-0000000007a1','42d93768-7d6e-464c-ab8d-292ba43b9972',114,1,114,6,12);
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1';
+select set_config('request.jwt.claims', json_build_object('sub', '2be1eea9-b5d6-4d10-bace-d948db8b1c67', 'role', 'authenticated')::text, true);
+set local role authenticated;
+update quran_records set pages_memorized = 20 where id = '00000000-0000-4000-8000-0000000007b1';
+rollback;
+
+
+-- (ر-13) الطالب لا يقرأ quran_records مباشرةً (لا فرعَ له في سياسة القراءة)، ويقرأ رصدَه المعتمَد عبر الدالّتين فقط
+-- المتوقّع: direct_records_visible = 0، my_approved_pages = 12، my_quran_months_rows = 1
+-- الفعلي:   0، 12، 1 ✅
+begin;
+insert into auth.users (id, aud, role) values ('00000000-0000-4000-8000-0000000007c1','authenticated','authenticated');
+insert into profiles (id, role, full_name, gender, status) values
+  ('00000000-0000-4000-8000-0000000007c1','student','طالب اختبار','male','active');
+insert into students (id, full_name, gender, user_id, halaqa_id) values
+  ('00000000-0000-4000-8000-0000000007d1','طالب اختبار','male','00000000-0000-4000-8000-0000000007c1','155bc35c-102f-43db-a7f2-ab084effeff4');
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft');
+insert into quran_records (report_id, student_id, from_surah, from_ayah, to_surah, to_ayah, pages_memorized) values
+  ('00000000-0000-4000-8000-0000000007a1','00000000-0000-4000-8000-0000000007d1',114,1,114,6,12);
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1';
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-4000-8000-0000000007c1', 'role', 'authenticated')::text, true);
+insert into _r select 'direct_records_visible', count(*)::text from quran_records;
+insert into _r select 'my_approved_pages', my_approved_pages()::text;
+insert into _r select 'my_quran_months_rows', count(*)::text from my_quran_months();
+reset role;
+select * from _r;
+rollback;
+
+
+-- (ر-14) إصلاحاتُ المراجعة النهائية (20261019110259): اللقطةُ لا تُزوَّر، وروابطُ الإشعارات بالسنة والشهر، ومنعُ المستقبل بتاريخ غزة
+-- المتوقّع: snapshot_after_insert_forged_1 = 35 (= settings_target)، snapshot_after_update_forged_5 = 35، رابطا الإرسال والاعتماد = /reports?y=2026&m=9،
+--           current_gaza_month_header = inserted، future_guard_uses_gaza_date = true
+-- الفعلي:   35، 35، 35، /reports?y=2026&m=9 ×2، inserted، true ✅
+begin;
+create temp table _r (k text, v text) on commit drop;
+grant all on _r to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '25de17dd-6ceb-4dcd-8fa6-57e04cd923f1', 'role', 'authenticated')::text, true);
+insert into monthly_reports (id, halaqa_id, report_month, report_year, status, target_pages_snapshot) values
+  ('00000000-0000-4000-8000-0000000007a1','155bc35c-102f-43db-a7f2-ab084effeff4',9,2026,'draft',1);
+insert into _r select 'snapshot_after_insert_forged_1', target_pages_snapshot::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+update monthly_reports set target_pages_snapshot = 5 where id = '00000000-0000-4000-8000-0000000007a1';
+insert into _r select 'snapshot_after_update_forged_5', target_pages_snapshot::text from monthly_reports where id = '00000000-0000-4000-8000-0000000007a1';
+update monthly_reports set status = 'submitted' where id = '00000000-0000-4000-8000-0000000007a1';
+reset role;
+insert into _r select 'settings_target', target_memorization_pages::text from app_settings limit 1;
+insert into _r select 'submit_notification_link', string_agg(distinct link, ',') from notifications where source_id = '00000000-0000-4000-8000-0000000007a1' and kind = 'report_submitted';
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '2be1eea9-b5d6-4d10-bace-d948db8b1c67', 'role', 'authenticated')::text, true);
+update monthly_reports set status = 'approved' where id = '00000000-0000-4000-8000-0000000007a1';
+reset role;
+insert into _r select 'approve_notification_link', string_agg(distinct link, ',') from notifications where source_id = '00000000-0000-4000-8000-0000000007a1' and kind = 'report_approved';
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '2be1eea9-b5d6-4d10-bace-d948db8b1c67', 'role', 'authenticated')::text, true);
+insert into monthly_reports (halaqa_id, report_month, report_year, status)
+  values ('bd53baf9-850e-4a2e-b055-385c9139df60', extract(month from private.attendance_today())::int, extract(year from private.attendance_today())::int, 'draft');
+insert into _r values ('current_gaza_month_header', 'inserted');
+reset role;
+insert into _r select 'future_guard_uses_gaza_date', (position('private.attendance_today()' in pg_get_functiondef('public.prevent_future_report_month()'::regprocedure)) > 0 and position('current_date' in pg_get_functiondef('public.prevent_future_report_month()'::regprocedure)) = 0)::text;
+select * from _r;
+rollback;
+
+
+-- (ر-15) الشهرُ التالي للشهر الجاري بتاريخ غزة — يُرفض
+-- المتوقّع: ERROR P0001 لا يمكن إنشاء تقرير لشهر لم يبدأ بعد
+-- الفعلي:   ERROR P0001 لا يمكن إنشاء تقرير لشهر لم يبدأ بعد ✅
+begin;
+select set_config('request.jwt.claims', json_build_object('sub', '2be1eea9-b5d6-4d10-bace-d948db8b1c67', 'role', 'authenticated')::text, true);
+set local role authenticated;
+insert into monthly_reports (halaqa_id, report_month, report_year, status)
+  values ('bd53baf9-850e-4a2e-b055-385c9139df60', extract(month from (private.attendance_today() + interval '1 month'))::int, extract(year from (private.attendance_today() + interval '1 month'))::int, 'draft');
+rollback;

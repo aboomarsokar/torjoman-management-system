@@ -2,7 +2,7 @@
 /**
  * لوحة التحكم (§4.3) داخل الهيكل العام.
  * لوحة المدير الإداري: بطاقات إحصائية (أعداد حقيقية) + بطاقات إعدادات مربوطة بـ app_settings
- * (ومشرف المشروع يراها بلا تعديل). لوحة المدير الفني: المشرفون الميدانيون والتقارير بانتظار الاعتماد.
+ * (ومشرف المشروع يراها بلا تعديل). لوحة المدير الفني: المشرفون الميدانيون والتقارير المُرسلة للاطّلاع (يعتمدها المشرفون الميدانيون، لا هو).
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
@@ -41,19 +41,17 @@ async function countRole(r: Database['public']['Enums']['user_role']) {
 }
 
 // ── إعدادات المدير (app_settings) ──
-// النقاط أُلغيت (2026-10-19): default_points يبقى في القاعدة ولا يُعرض ولا يُضبط
-const settings = reactive({ pass_mark: 80, target_memorization_pages: 30, default_attendance_days: 26 })
-const drafts = reactive({ pass_mark: '80', target_memorization_pages: '30', default_attendance_days: '26' })
+// النقاط وأيام الدوام الافتراضية أُلغيت (2026-10-19): تبقى أعمدتها في القاعدة ولا تُعرض ولا تُضبط
+const settings = reactive({ pass_mark: 80, target_memorization_pages: 30 })
+const drafts = reactive({ pass_mark: '80', target_memorization_pages: '30' })
 
 async function loadSettings() {
   const { data } = await supabase.from('app_settings').select('*').eq('id', 1).single()
   if (data) {
     settings.pass_mark = data.pass_mark
     settings.target_memorization_pages = data.target_memorization_pages
-    settings.default_attendance_days = data.default_attendance_days ?? 26
     drafts.pass_mark = String(settings.pass_mark)
     drafts.target_memorization_pages = String(settings.target_memorization_pages)
-    drafts.default_attendance_days = String(settings.default_attendance_days)
   }
 }
 
@@ -232,7 +230,7 @@ async function loadTechnicalData() {
       .eq('status', 'submitted')
       .order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(8)
       .returns<{ id: string, report_month: number, report_year: number, halaqa: { name: string } | null }[]>()
-    qReports.value = (reps ?? []).map(r => ({ id: r.id, halqa: r.halaqa?.name ?? '—', label: `${monthName(r.report_month)} ${r.report_year}` }))
+    qReports.value = (reps ?? []).map(r => ({ id: r.id, halqa: r.halaqa?.name ?? '—', label: periodLabel(r.report_year, r.report_month) }))
   } catch (err) {
     handle(err)
   }
@@ -252,8 +250,7 @@ const statCards = computed(() => [
 ])
 
 const settingCards = [
-  { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'صفحات الحفظ المستهدفة شهرياً', unit: 'صفحة', desc: 'الحدّ الأدنى لصفحات الحفظ لكل طالب — يُحتسب عليه المكوّن الأكاديمي.' },
-  { key: 'default_attendance_days' as const, icon: 'i-lucide-calendar-check', tone: 'neutral', title: 'أيام الدوام الافتراضية شهرياً', unit: 'يوم', desc: 'مقام ثابت لحساب نسبة الانتظام، يظهر للمعلم للقراءة فقط.' },
+  { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'المطلوب الشهريّ (صفحات)', unit: 'صفحة', desc: 'ما يُطالَب به كلُّ طالبٍ حفظاً في الشهر، ويُقسَّط بحضوره؛ عليه يُحكم بـ«أنجز» أو «مقصّر».' },
   { key: 'pass_mark' as const, icon: 'i-lucide-check-check', tone: 'green', title: 'علامة الاجتياز في الاختبار', unit: '%', desc: 'الحدّ الأدنى من 100 لاجتياز اختبار الطالب — يسري على الاختبارات اللاحقة.' }
 ]
 </script>
@@ -608,7 +605,7 @@ const settingCards = [
               icon="i-lucide-file-text"
               tone="blue"
               :value="qReports.length"
-              label="تقارير بانتظار الاعتماد"
+              label="تقارير مُرسلة (للاطّلاع)"
               stacked
             />
           </div>
@@ -651,10 +648,10 @@ const settingCards = [
               </ul>
             </div>
 
-            <!-- تقارير بانتظار الاعتماد -->
+            <!-- تقارير مُرسلة للاطّلاع -->
             <div class="card sec">
               <div class="sec-head">
-                <h3>تقارير بانتظار الاعتماد</h3>
+                <h3>تقارير مُرسلة — يعتمدها المشرفون الميدانيون</h3>
                 <UButton
                   to="/reports"
                   label="التقارير"

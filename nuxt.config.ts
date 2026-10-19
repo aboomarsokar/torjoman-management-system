@@ -78,8 +78,16 @@ export default defineNuxtConfig({
         { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
       ]
     },
+    // التنقّلُ من الشبكة دائماً (لا رجوعَ إلى نسخةٍ محفوظة من «/»): كانت كلُّ صفحةٍ تُقدَّم من هيكل النشر
+    // السابق حتى ينزل عاملُ الخدمة الجديد ويعيد التحميل — فيرى المستخدم الشاشةَ القديمة ثم الجديدة بعد التحديث،
+    // وتُبنى الصفحات على هيكل «/» فلا تطابق (Hydration mismatch). العملُ بلا إنترنت غيرُ مبنيٍّ أصلاً (ROADMAP #14).
+    // `null` لا حذفُ المفتاح: @vite-pwa/nuxt يضع «/» إن غاب.
     workbox: {
-      navigateFallback: '/'
+      navigateFallback: null
+    },
+    // فحصُ نسخةٍ جديدة كلَّ ساعة (وعند العودة إلى التبويب — plugins/pwa-update.client.ts)، و autoUpdate يعيد التحميل
+    client: {
+      periodicSyncForUpdates: 3600
     }
   },
 

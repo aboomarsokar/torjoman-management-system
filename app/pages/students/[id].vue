@@ -137,7 +137,7 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
             <div class="band-sub">
               {{ student.halaqa?.name || 'بلا حلقة' }}
               <template v-if="student.halaqa?.teacher?.full_name">
-                · المعلّم {{ student.halaqa.teacher.full_name }}
+                · {{ student.gender === 'female' ? 'المعلّمة' : 'المعلّم' }} {{ student.halaqa.teacher.full_name }}
               </template>
               <template v-if="student.halaqa?.daily_time">
                 · {{ student.halaqa.daily_time.slice(0, 5) }}

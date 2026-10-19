@@ -68,12 +68,14 @@ const balanceUntil = (m: number, y: number) => allTx.value
   })
   .reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0)
 
-type Delta = { dir: 'up' | 'down' | 'flat', pct: number }
+// pct = null حين يكون الشهر السابق صفراً: لا نسبة له (كانت تُعرض «100%» فتوهم بتغيّرٍ لا يُقاس)
+type Delta = { dir: 'up' | 'down' | 'flat', pct: number | null }
 const delta = (curr: number, prev: number): Delta => {
-  if (prev === 0) return { dir: curr === 0 ? 'flat' : 'up', pct: curr === 0 ? 0 : 100 }
+  if (prev === 0) return { dir: curr === 0 ? 'flat' : 'up', pct: null }
   const d = (curr - prev) / Math.abs(prev) * 100
   return { dir: d > 0.5 ? 'up' : d < -0.5 ? 'down' : 'flat', pct: Math.abs(Math.round(d)) }
 }
+const deltaText = (d: Delta) => (d.pct == null ? 'لا شهر سابق للمقارنة' : `${d.pct}% عن الشهر السابق`)
 const incomeDelta = computed(() => delta(income.value, sumMonth(prevM.value, prevY.value, 'income')))
 const expenseDelta = computed(() => delta(expense.value, sumMonth(prevM.value, prevY.value, 'expense')))
 const balanceDelta = computed(() => delta(balance.value, balanceUntil(prevM.value, prevY.value)))
@@ -88,7 +90,8 @@ const series = computed(() => {
       m += 12
       y -= 1
     }
-    arr.push({ label: MONTH_NAMES[m - 1]!.slice(0, 3), value: balanceUntil(m, y) })
+    // الشهر برقمه — الاختصار («يون، يول») كان يصعب قراءته
+    arr.push({ label: String(m), value: balanceUntil(m, y) })
   }
   return arr
 })
@@ -145,7 +148,7 @@ const ARROW = { up: 'i-lucide-trending-up', down: 'i-lucide-trending-down', flat
               :name="ARROW[balanceDelta.dir]"
               class="size-4"
             />
-            {{ balanceDelta.pct }}% عن الشهر السابق
+            {{ deltaText(balanceDelta) }}
           </div>
         </div>
         <div class="card">
@@ -163,7 +166,7 @@ const ARROW = { up: 'i-lucide-trending-up', down: 'i-lucide-trending-down', flat
               :name="ARROW[incomeDelta.dir]"
               class="size-4"
             />
-            {{ incomeDelta.pct }}%
+            {{ deltaText(incomeDelta) }}
           </div>
         </div>
         <div class="card">
@@ -181,7 +184,7 @@ const ARROW = { up: 'i-lucide-trending-up', down: 'i-lucide-trending-down', flat
               :name="ARROW[expenseDelta.dir]"
               class="size-4"
             />
-            {{ expenseDelta.pct }}%
+            {{ deltaText(expenseDelta) }}
           </div>
         </div>
       </div>

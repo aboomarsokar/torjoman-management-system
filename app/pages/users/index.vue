@@ -6,7 +6,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { staffCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
-import { roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
+import { MANAGER_ROLES, roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
 import { displayPhotoPath } from '~/constants/profilePhoto'
 
 definePageMeta({ layout: 'dashboard' })
@@ -60,12 +60,14 @@ const chipOptions = computed(() => ([
   { value: 'all' as const, label: 'الكل' },
   ...STAFF_ROLES.map(r => ({ value: r, label: roleLabel(r, null) }))
 ]).map(c => ({ ...c, count: countFor(c.value) })))
-const filteredUsers = computed(() => {
-  const list = users.value ?? []
-  return filter.value === 'all' ? list : list.filter(u => u.role === filter.value)
-})
+// البحث بالاسم أو الرقم الوظيفي (يقبل الأرقام العربية) — فوق تصفية الدور
+const query = ref('')
+const filteredUsers = computed(() => (users.value ?? []).filter(u =>
+  (filter.value === 'all' || u.role === filter.value)
+  && matchesSearch(query.value, u.full_name, u.employee_number)
+))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filteredUsers, 12)
-watch(filter, resetPage)
+watch([filter, query], resetPage)
 const columns = [
   { key: 'num', label: '#' },
   { key: 'user', label: 'المستخدم' },
@@ -82,25 +84,32 @@ watch(paged, rows => void primePhotos(rows.map(displayPhotoPath)), { immediate: 
 // ── إنشاء مستخدم ──
 const modalOpen = ref(false)
 const creating = ref(false)
-const form = reactive({ full_name: '', role: 'teacher' as Role, phone: '', gender: 'male' as Gender })
+// الجنس بلا قيمة افتراضية: يحدّد المسمّى والقسم (حلقات البنات لا تقبل إلا أنثى) — فلا يُنسى فيصير «ذكراً»
+const form = reactive({ full_name: '', role: 'teacher' as Role, phone: '', gender: '' as Gender | '' })
 const { createStaff, resetPassword } = useAccountAdmin()
+// المدير الإداري والفني شخصٌ واحد نشط لكلٍّ منهما: يظهر الدور معطّلاً ما دام له شاغل (والخادم يرفض أيضاً)
+const occupiedRoles = computed(() => new Set((users.value ?? [])
+  .filter(u => u.status === 'active' && MANAGER_ROLES.includes(u.role))
+  .map(u => u.role)))
 // المسمّى بجنس الحساب المختار؛ والمديرة الإدارية تُميَّز بقسمها كي لا تلتبس بالمدير الإداري الأنثى
-const roleItems = computed(() => STAFF_ROLES.map(r => ({
-  label: r === 'women_admin' ? `${roleLabel(r, form.gender)} — قسم البنات` : roleLabel(r, form.gender),
-  value: r
-})))
+const roleItems = computed(() => STAFF_ROLES.map((r) => {
+  const label = r === 'women_admin' ? `${roleLabel(r, form.gender || null)} — قسم البنات` : roleLabel(r, form.gender || null)
+  const occupied = occupiedRoles.value.has(r)
+  return { label: occupied ? `${label} — له شاغلٌ نشط` : label, value: r, disabled: occupied }
+}))
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
 // دور المديرة الإدارية نسائيّ حصراً (قسم البنات)
 watch(() => form.role, (r) => {
   if (r === 'women_admin') form.gender = 'female'
 })
 function openCreate() {
-  Object.assign(form, { full_name: '', role: 'teacher', phone: '', gender: 'male' })
+  Object.assign(form, { full_name: '', role: 'teacher', phone: '', gender: '' })
   modalOpen.value = true
 }
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
   if (!s.full_name.trim()) errors.push({ name: 'full_name', message: 'الاسم الكامل مطلوب.' })
+  if (!s.gender) errors.push({ name: 'gender', message: 'اختر الجنس.' })
   return errors
 }
 
@@ -110,7 +119,7 @@ const credentials = ref<AccountCredentials | null>(null)
 async function submitCreate() {
   creating.value = true
   try {
-    const body = { full_name: form.full_name.trim(), role: form.role, gender: form.gender, phone: form.phone.trim() || undefined }
+    const body = { full_name: form.full_name.trim(), role: form.role, gender: form.gender as Gender, phone: form.phone.trim() || undefined }
     const created = await createStaff(body)
     credentials.value = staffCredentials(body.full_name, created.employee_number, created.temp_password, 'created')
     modalOpen.value = false
@@ -171,7 +180,7 @@ async function confirmReset() {
     <template v-else>
       <UiPageHeader
         title="إدارة المستخدمين"
-        :subtitle="`${(users || []).length} مستخدم في المنظومة — الحسابات يُنشئها المدير الإداري وحده.`"
+        :subtitle="pending ? 'الحسابات يُنشئها المدير الإداري وحده.' : `${(users || []).length} مستخدم في المنظومة — الحسابات يُنشئها المدير الإداري وحده.`"
       >
         <template
           v-if="isAdmin"
@@ -188,11 +197,20 @@ async function confirmReset() {
         </template>
       </UiPageHeader>
 
-      <UiFilterChips
-        v-model="filter"
-        :options="chipOptions"
-        class="mb-4"
-      />
+      <div class="toolbar">
+        <UInput
+          v-model="query"
+          icon="i-lucide-search"
+          placeholder="ابحث بالاسم أو الرقم الوظيفي"
+          size="md"
+          class="search"
+          :ui="{ base: 'rounded-[11px]' }"
+        />
+        <UiFilterChips
+          v-model="filter"
+          :options="chipOptions"
+        />
+      </div>
 
       <ClientOnly>
         <UiSkeletonTable
@@ -357,6 +375,7 @@ async function confirmReset() {
               v-model="form.gender"
               :items="genderItems"
               :disabled="form.role === 'women_admin'"
+              placeholder="ذكر أم أنثى؟"
               size="lg"
               class="w-full"
               :ui="{ base: 'rounded-[13px]' }"
@@ -413,7 +432,8 @@ async function confirmReset() {
 </template>
 
 <style scoped>
-.mb-4 { margin-bottom: 16px; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.search { width: 280px; max-width: 100%; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }

@@ -25,6 +25,7 @@ type Halqa = {
   status: string
   teacher: { full_name: string } | null
   supervisor: { full_name: string } | null
+  examiner: { full_name: string } | null
 }
 type StudentRow = { id: string, full_name: string, quran_parts: number | null, next: string, done: boolean }
 type ReportRow = { id: string, report_month: number, report_year: number, status: string } | null
@@ -34,7 +35,7 @@ type ExamResultRow = { student_id: string, passed: boolean | null, total_score: 
 const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, async () => {
   const { data: halqa } = await supabase
     .from('halaqat')
-    .select('id, name, daily_time, gender, classification, status, teacher:teacher_id(full_name), supervisor:supervisor_id(full_name)')
+    .select('id, name, daily_time, gender, classification, status, teacher:teacher_id(full_name), supervisor:supervisor_id(full_name), examiner:examiner_id(full_name)')
     .eq('id', id.value)
     .maybeSingle<Halqa>()
   if (!halqa) return null
@@ -127,14 +128,18 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
             <div>
               <h1>{{ data.halqa.name }}</h1>
               <div class="band-sub">
-                <span><UIcon
+                <span title="المعلّم"><UIcon
                   name="i-lucide-user"
                   class="size-4"
                 />{{ data.halqa.teacher?.full_name || 'بلا معلّم' }}</span>
-                <span><UIcon
+                <span title="المشرف الميداني"><UIcon
                   name="i-lucide-shield"
                   class="size-4"
                 />{{ data.halqa.supervisor?.full_name || 'بلا مشرف' }}</span>
+                <span title="المختبِر"><UIcon
+                  name="i-lucide-square-check-big"
+                  class="size-4"
+                />{{ data.halqa.examiner?.full_name || 'بلا مختبِر' }}</span>
                 <span v-if="data.halqa.daily_time"><UIcon
                   name="i-lucide-clock"
                   class="size-4"

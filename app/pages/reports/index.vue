@@ -359,7 +359,7 @@ async function setStatus(status: ReportStatus) {
           v-else-if="!listFiltered.length"
           icon="i-lucide-folder"
           title="لا تقارير في هذا التصنيف"
-          description="أنشئ تقريراً جديداً من الأسفل (اختر حلقة وشهراً)."
+          :description="isTeacher ? 'أنشئ تقرير حلقتك من الأسفل (اختر الشهر).' : 'تظهر هنا تقارير الحلقات حين يحفظها المعلّمون أو يرفعونها.'"
         />
         <div
           v-else
@@ -483,8 +483,9 @@ async function setStatus(status: ReportStatus) {
     </div>
 
     <ClientOnly>
+      <!-- للمعلّم وحده: المدير يكفيه سطر «اختر تقريراً من القائمة أعلاه» (كانت بطاقةٌ فارغةٌ ثانية تكرّره) -->
       <UiEmptyState
-        v-if="!loaded"
+        v-if="!loaded && isTeacher"
         icon="i-lucide-calendar-range"
         :title="isTeacher ? 'اختر الشهر ثم اضغط «تحميل / إنشاء»' : 'افتح تقريراً من القائمة أعلاه'"
         :description="isTeacher ? 'يظهر تقرير حلقتك للتعبئة، ويُنشأ تلقائيّاً عند أول حفظ.' : 'بعد فتح التقرير تستطيع مراجعته واعتماده.'"

@@ -46,7 +46,8 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
       commitment: a && a.due > 0 ? Math.round(a.done / a.due * 100) : null
     }
   })
-}, { server: false, default: () => [] })
+  // يُعاد الجلب حين يصل الدور: عند التحميل الكامل يُستدعى قبل الملف فيردّ [] (كانت الصفحة تقول «لا مشرفين»)
+}, { server: false, default: () => [], watch: [canView] })
 
 const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'success' : c >= 70 ? 'info' : 'error'
 </script>

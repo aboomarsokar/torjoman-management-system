@@ -20,7 +20,7 @@ type Gender = Database['public']['Enums']['gender_type']
 type VisitorRow = { id: string, full_name: string, role: Role, gender: Gender | null }
 /** أدوار الزائر: المديران والمشرف الميداني. */
 const VISITOR_ROLES: Role[] = ['admin_manager', 'technical_manager', 'field_supervisor']
-type HalqaOption = { id: string, name: string, daily_time: string | null, teacher: { full_name: string } | null }
+type HalqaOption = { id: string, name: string, daily_time: string | null, supervisor_id: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
@@ -58,7 +58,7 @@ const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(
 const { data: halqat } = useLazyAsyncData<HalqaOption[]>('visits-halqat', async () => {
   const { data } = await supabase
     .from('halaqat')
-    .select('id, name, daily_time, teacher:teacher_id(full_name)')
+    .select('id, name, daily_time, supervisor_id, teacher:teacher_id(full_name)')
     .order('name')
     .returns<HalqaOption[]>()
   return data ?? []
@@ -72,10 +72,14 @@ const halqaItems = computed(() => (halqat.value ?? []).map(h => ({
   label: h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name,
   value: h.id
 })))
-const visitorItems = computed(() => (visitors.value ?? []).map(v => ({
-  label: v.role === 'field_supervisor' ? v.full_name : `${v.full_name} (${roleLabel(v.role, v.gender)})`,
-  value: v.id
-})))
+// الزائر: المديران، ومشرف الحلقة المختارة وحده (لا مشرف حلقةٍ أخرى ولا مشرف القسم الآخر) — والقاعدة تحرس ذلك
+const halqaSupervisorId = computed(() => (halqat.value ?? []).find(h => h.id === sched.halaqa_id)?.supervisor_id ?? null)
+const visitorItems = computed(() => (visitors.value ?? [])
+  .filter(v => v.role !== 'field_supervisor' || v.id === halqaSupervisorId.value)
+  .map(v => ({
+    label: v.role === 'field_supervisor' ? v.full_name : `${v.full_name} (${roleLabel(v.role, v.gender)})`,
+    value: v.id
+  })))
 
 const statusF = ref<VisitStatus | 'all'>('all')
 const chipOptions = [
@@ -118,6 +122,12 @@ const sched = reactive({ halaqa_id: '', supervisor_id: '', scheduled_at: '' })
 const selectedHalqaTime = computed(() => {
   const h = (halqat.value ?? []).find(x => x.id === sched.halaqa_id)
   return h?.daily_time ? h.daily_time.slice(0, 5) : ''
+})
+// تغيير الحلقة يُسقط زائراً لم يعد مسموحاً (مشرف الحلقة السابقة) ويقترح مشرف الجديدة
+watch(() => sched.halaqa_id, () => {
+  if (sched.supervisor_id && !visitorItems.value.some(v => v.value === sched.supervisor_id)) {
+    sched.supervisor_id = halqaSupervisorId.value ?? ''
+  }
 })
 function openSchedule() {
   editingId.value = null

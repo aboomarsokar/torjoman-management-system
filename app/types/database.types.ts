@@ -101,6 +101,91 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_absences: {
+        Row: {
+          created_at: string
+          day: string
+          halaqa_id: string
+          kind: string
+          recorded_by: string | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          halaqa_id: string
+          kind: string
+          recorded_by?: string | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          halaqa_id?: string
+          kind?: string
+          recorded_by?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_absences_halaqa_id_day_fkey"
+            columns: ["halaqa_id", "day"]
+            isOneToOne: false
+            referencedRelation: "attendance_days"
+            referencedColumns: ["halaqa_id", "day"]
+          },
+          {
+            foreignKeyName: "attendance_absences_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_absences_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_days: {
+        Row: {
+          created_at: string
+          day: string
+          halaqa_id: string
+          recorded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          halaqa_id: string
+          recorded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          halaqa_id?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_days_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_days_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_list_items: {
         Row: {
           created_at: string

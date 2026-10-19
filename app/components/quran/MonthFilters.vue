@@ -63,7 +63,7 @@ const windowText = computed(() =>
         />
       </div>
     </div>
-    <div class="pf fit">
+    <div class="pf">
       <label>الشهر</label>
       <QuranMonthPicker
         v-model:year="year"
@@ -94,8 +94,6 @@ const windowText = computed(() =>
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
 .pick { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .pf { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; }
-.pf.fit { flex: 0 1 auto; min-width: 0; max-width: 100%; }
-@media (max-width: 480px) { .pf.fit { flex-grow: 1; } }
 .pf.wide { flex-basis: 100%; }
 .pf label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .row-pick { display: flex; gap: 8px; }

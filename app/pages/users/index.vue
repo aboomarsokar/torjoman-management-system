@@ -485,8 +485,9 @@ async function confirmReset() {
 
 <style scoped>
 .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.search { width: 300px; max-width: 100%; }
-@media (max-width: 600px) { .search { width: 100%; } }
+/* `:deep`: جذرُ UiSearchField لا يحمل سِمةَ نطاق الصفحة */
+.toolbar :deep(.search-field) { width: 300px; max-width: 100%; }
+@media (max-width: 600px) { .toolbar :deep(.search-field) { width: 100%; } }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }

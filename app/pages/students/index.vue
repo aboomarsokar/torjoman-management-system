@@ -813,7 +813,7 @@ async function confirmDelete() {
 .scard-actions { display: flex; gap: 8px; margin-top: 14px; }
 .scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
 .filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.search { width: 300px; max-width: 100%; }
+.filters :deep(.search-field) { width: 300px; max-width: 100%; }
 .filter-sel { width: 180px; }
 /* على الجوال: البحثُ سطرٌ كامل، والقائمتان تتقاسمان السطر الثاني */
 /* شبكةٌ لا flex: جذرُ UiSearchField لا يحمل سِمةَ نطاق الصفحة فلا تبلغه `.search` */

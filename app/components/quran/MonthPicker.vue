@@ -84,15 +84,16 @@ function step(by: number) {
 </template>
 
 <style scoped>
-.mp { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+/* يملأ عرضَ حاويته: السهمان ثابتان والحقلان يتقاسمان الباقي */
+.mp { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
 .mp-step { flex: none; min-width: 48px; min-height: 48px; }
-.mp-field { flex: 0 1 104px; width: auto; min-width: 0; min-height: 48px; font-variant-numeric: tabular-nums; }
+.mp-field { flex: 1 1 0; width: auto; min-width: 0; min-height: 48px; font-variant-numeric: tabular-nums; }
 .mp-sep { flex: none; color: var(--ink-3); }
 /* جوال ضيّق: يضيق الصفّ بالحقلين لا بالسهمين (أهدافُ اللمس تبقى ≥ 44px) */
 @media (max-width: 480px) {
   .mp { gap: 4px; }
   .mp-step { min-width: 44px; min-height: 44px; }
-  .mp-field { flex: 1 1 0; padding-inline: 8px 24px; }
+  .mp-field { padding-inline: 8px 24px; }
   .mp-field :deep([data-slot='trailing']) { padding-inline-end: 6px; }
 }
 </style>

@@ -15,8 +15,10 @@ const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 // role (من useProfile أعلاه): ما دام فارغاً لا قفل ولا محتوى (كان «للمعلّم» يومض للمدير عند التحميل الكامل)
-const { isTeacher, canApprove, isReadOnly } = usePermissions()
-const canReview = computed(() => canApprove.value || isReadOnly.value)
+const { isTeacher, isAdmin, isWomenAdmin, isReadOnly } = usePermissions()
+// المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً — بلا المدير الفني (قرار 2026-10-19؛
+// القاعدة: can_review_statement_in_halaqa). canApprove يشمل الفني لأنه يعتمد التقارير، فلا يصلح هنا.
+const canReview = computed(() => isAdmin.value || isWomenAdmin.value || isReadOnly.value)
 
 const CATEGORIES = ['جوائز', 'أنشطة', 'ضيافة', 'أخرى']
 const categoryItems = CATEGORIES.map(c => ({ label: c, value: c }))
@@ -141,7 +143,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
   <div class="inc">
     <UiPageHeader
       :title="canReview ? 'كشوف حوافز الحلقات' : 'كشف حوافز الحلقة'"
-      :subtitle="canReview ? 'الكشوف الواردة من المعلّمين لكل شهر — مراجعتها واعتمادها بـ«تمّ الاطّلاع».' : 'مصروفات مبلغ الحوافز الشهري لحلقتك — أضِف البنود وارفع الكشف للمدير.'"
+      :subtitle="canReview ? 'الكشوف الواردة من المعلّمين لكل شهر — مراجعتها واعتمادها بـ«تمّ الاطّلاع».' : isTeacher ? 'مصروفات مبلغ الحوافز الشهري لحلقتك — أضِف البنود وارفع الكشف للمدير.' : undefined"
     />
 
     <!-- المعتمِدون ومشرف المشروع: مراجعة الكشوف الواردة في نطاقهم (RLS) بلا تخصيص -->
@@ -153,7 +155,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
     <UiEmptyState
       v-else-if="role && !isTeacher"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمعلّم."
+      title="كشف الحوافز للمعلّم والمدير الإداري والمديرة الإدارية."
     />
 
     <template v-else-if="isTeacher">

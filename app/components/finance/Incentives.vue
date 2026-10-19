@@ -13,7 +13,7 @@ interface Props {
 }
 const props = withDefaults(defineProps<Props>(), { reviewOnly: false })
 
-const { isReadOnly, canApprove } = usePermissions()
+const { isReadOnly, isAdmin, isWomenAdmin } = usePermissions()
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
@@ -32,7 +32,8 @@ const approved = ref(false)
 const loaded = ref(false)
 const loading = ref(false)
 const canEdit = computed(() => !approved.value && !isReadOnly.value && !props.reviewOnly)
-const canReview = computed(() => canApprove.value && !isReadOnly.value)
+// مراجعة الكشوف للمدير الإداري والمديرة الإدارية (بلا الفني — can_review_statement_in_halaqa في القاعدة)
+const canReview = computed(() => (isAdmin.value || isWomenAdmin.value) && !isReadOnly.value)
 const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.amount) || 0), 0))
 const fmt = (n: number) => n.toLocaleString('ar')
 

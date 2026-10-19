@@ -67,7 +67,6 @@ type Row = {
   review_to: number | string
   absence_excused: number | string
   absence_unexcused: number | string
-  monthly_points: number | string
   student_grade: number | string
   notes: string
 }
@@ -93,8 +92,7 @@ onMounted(loadSettings)
 const gradeOf = (r: Row) => computeStudentGrade({
   memoPages: pagesOf(r),
   reviewPages: reviewOf(r),
-  absenceUnexcused: num(r.absence_unexcused) ?? 0,
-  points: num(r.monthly_points) ?? 0
+  absenceUnexcused: num(r.absence_unexcused) ?? 0
 }, gradeCfg.value).total
 const activitiesPct = computed(() => Math.round(ALL_KEYS.filter(k => acts[k]).length / ALL_KEYS.length * 100))
 const halqaAchievement = computed(() => computeHalqaAchievement(rows.value.map(gradeOf), activitiesPct.value))
@@ -103,11 +101,11 @@ const exporting = ref(false)
 async function doExport() {
   exporting.value = true
   try {
-    const headers = ['الطالب', 'من', 'إلى', 'صفحات الحفظ', 'مراجعة لـ', 'صفحات المراجعة', 'غياب بعذر', 'بلا عذر', 'النقاط', 'الدرجة']
+    const headers = ['الطالب', 'من', 'إلى', 'صفحات الحفظ', 'مراجعة لـ', 'صفحات المراجعة', 'غياب بعذر', 'بلا عذر', 'الدرجة']
     const data = rows.value.map(r => [
       r.full_name, num(r.memorization_from) ?? '', num(r.memorization_to) ?? '', pagesOf(r),
       num(r.review_to) ?? '', reviewOf(r), num(r.absence_excused) ?? 0, num(r.absence_unexcused) ?? 0,
-      num(r.monthly_points) ?? '', gradeOf(r)
+      gradeOf(r)
     ])
     const label = `${MONTH_NAMES[month.value - 1]}-${year.value}`
     await exportXlsx(`تقرير-${label}`, headers, data, 'التقرير')
@@ -129,7 +127,7 @@ async function load() {
     meta.general_notes = rep?.general_notes ?? ''
     meta.activities_notes = rep?.activities_notes ?? ''
 
-    let repRows: { student_id: string, memorization_from: number | null, memorization_to: number | null, review_to: number | null, absence_excused: number, absence_unexcused: number, monthly_points: number | null, student_grade: number | null, notes: string | null }[] = []
+    let repRows: { student_id: string, memorization_from: number | null, memorization_to: number | null, review_to: number | null, absence_excused: number, absence_unexcused: number, student_grade: number | null, notes: string | null }[] = []
     const doneKeys = new Set<string>()
     if (rep) {
       const [{ data: rs }, { data: ra }] = await Promise.all([
@@ -151,7 +149,6 @@ async function load() {
         review_to: ex?.review_to ?? '',
         absence_excused: ex?.absence_excused ?? '',
         absence_unexcused: ex?.absence_unexcused ?? '',
-        monthly_points: ex?.monthly_points ?? '',
         student_grade: ex?.student_grade ?? '',
         notes: ex?.notes ?? ''
       }
@@ -173,13 +170,13 @@ type ListRow = {
   report_year: number
   status: ReportStatus
   halaqa: { name: string, teacher: { full_name: string } | null } | null
-  students: { memorization_pages: number | null, review_pages: number | null, absence_unexcused: number, monthly_points: number | null }[]
+  students: { memorization_pages: number | null, review_pages: number | null, absence_unexcused: number }[]
   activities: { done: boolean }[]
 }
 const { data: reportsList, refresh: refreshList, pending: listPending } = useLazyAsyncData<ListRow[]>('reports-list', async () => {
   const { data } = await supabase
     .from('monthly_reports')
-    .select('id, halaqa_id, report_month, report_year, status, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), students:monthly_report_students(memorization_pages, review_pages, absence_unexcused, monthly_points), activities:monthly_report_activities(done)')
+    .select('id, halaqa_id, report_month, report_year, status, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), students:monthly_report_students(memorization_pages, review_pages, absence_unexcused), activities:monthly_report_activities(done)')
     .order('report_year', { ascending: false })
     .order('report_month', { ascending: false })
     .returns<ListRow[]>()
@@ -194,8 +191,7 @@ function cardOf(r: ListRow) {
   const totals = (r.students ?? []).map(s => computeStudentGrade({
     memoPages: s.memorization_pages ?? 0,
     reviewPages: s.review_pages ?? 0,
-    absenceUnexcused: s.absence_unexcused ?? 0,
-    points: s.monthly_points ?? 0
+    absenceUnexcused: s.absence_unexcused ?? 0
   }, gradeCfg.value))
   const reg = totals.length ? Math.round(totals.reduce((a, b) => a + b.regularity, 0) / totals.length) : 0
   const actPct = Math.round((r.activities ?? []).filter(a => a.done).length / ALL_KEYS.length * 100)
@@ -248,7 +244,7 @@ async function save() {
     // الطلاب: استبدال كامل
     await supabase.from('monthly_report_students').delete().eq('report_id', rid)
     const rowPayload = rows.value
-      .filter(r => [r.memorization_from, r.memorization_to, r.review_to, r.absence_excused, r.absence_unexcused, r.monthly_points, r.notes].some(v => v !== '' && v !== null))
+      .filter(r => [r.memorization_from, r.memorization_to, r.review_to, r.absence_excused, r.absence_unexcused, r.notes].some(v => v !== '' && v !== null))
       .map(r => ({
         report_id: rid!,
         student_id: r.student_id,
@@ -257,8 +253,8 @@ async function save() {
         review_to: num(r.review_to),
         absence_excused: num(r.absence_excused) ?? 0,
         absence_unexcused: num(r.absence_unexcused) ?? 0,
-        monthly_points: num(r.monthly_points),
-        student_grade: gradeOf(r), // محسوبة تلقائيّاً (60/20/20)
+        // النقاط أُلغيت (2026-10-19): العمود يبقى في القاعدة ولا يُكتب
+        student_grade: gradeOf(r), // محسوبة تلقائيّاً (أكاديمي 75 / انتظام 25)
         notes: r.notes.trim() || null
       }))
     if (rowPayload.length) {
@@ -576,10 +572,6 @@ async function setStatus(status: ReportStatus) {
             class="size-4"
           />صفحات الحفظ المستهدفة: <strong>{{ gradeCfg.target }}</strong></span>
           <span class="sr-item"><UIcon
-            name="i-lucide-star"
-            class="size-4"
-          />النقاط الافتراضية: <strong>{{ gradeCfg.points }}</strong></span>
-          <span class="sr-item"><UIcon
             name="i-lucide-calendar-check"
             class="size-4"
           />أيام الدوام الفعلي: <strong>{{ gradeCfg.attendanceDays }}</strong></span>
@@ -638,7 +630,6 @@ async function setStatus(status: ReportStatus) {
                 <th>صفحات المراجعة</th>
                 <th>غياب بعذر</th>
                 <th>بلا عذر</th>
-                <th>النقاط</th>
                 <th>الدرجة (محسوبة)</th>
               </tr>
             </thead>
@@ -698,15 +689,6 @@ async function setStatus(status: ReportStatus) {
                 <td>
                   <input
                     v-model="r.absence_unexcused"
-                    :disabled="!canEdit"
-                    type="number"
-                    class="cell"
-                    dir="ltr"
-                  >
-                </td>
-                <td>
-                  <input
-                    v-model="r.monthly_points"
                     :disabled="!canEdit"
                     type="number"
                     class="cell"

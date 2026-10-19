@@ -278,7 +278,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `q3_memorization` | int | س3 حفظ (0–10) |
 | `q3_understanding` | int | س3 فهم (0–10) |
 | `q3_reflection` | int | س3 تدبر (0–10) |
-| `tajweed_score` | int | الأحكام (0–10) — مرة واحدة |
+| `tajweed_score` | int | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
 | `total_score` | int | يُحسب آلياً (المجموع = 100) |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها) |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |
@@ -336,7 +336,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `review_pages` | int | صفحات المراجعة = (review_to − memorization_from)، محسوب |
 | `absence_excused` | int | غياب بعذر (يوقف عدّاد الزمن) |
 | `absence_unexcused` | int | غياب بغير عذر (يُحتسب) |
-| `monthly_points` | int | النقاط النهائية (محسوبة خارجاً، إدخال الرقم فقط) |
+| `monthly_points` | int | **مُلغى 2026-10-19** — لا يُعرض ولا يُكتب، ولا يدخل الدرجة (الدرجة = أكاديمي 75% + انتظام 25%). يبقى للبيانات القديمة |
 | `student_grade` | numeric | درجة الطالب = أكاديمي 60% + انتظام 20% + نقاط 20% (محسوبة) |
 | `notes` | text | ملاحظات على الطالب |
 
@@ -449,7 +449,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `id` | int PK | 1 | صف واحد |
 | `pass_mark` | int | 80 | علامة اجتياز الاختبار |
 | `target_memorization_pages` | int | 30 | صفحات الحفظ المستهدفة |
-| `default_points` | int | 100 | النقاط الافتراضية |
+| `default_points` | int | 100 | **مُلغى 2026-10-19** (النقاط أُلغيت من التقرير والدرجة) — لا يُعرض ولا يُضبط |
 | `default_attendance_days` | int | — | أيام الدوام الافتراضي (مقام الانتظام) |
 
 **RLS** (`settings_*`): قراءة لكل حساب مسجَّل، كتابة `admin_manager` فقط.
@@ -620,13 +620,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `profiles_guard_privileged` ← `guard_profile_privileged` | `role`/`status`/`employee_number`/**`gender`** للمدير الإداري وحده؛ و`must_change_password`: صاحبه يطفئه فقط (`true→false`) ولا يرفعه إلا المدير الإداري أو الخدمة |
 | `students_guard_assignment` ← `guard_student_assignment` | `user_id`/`gender`/`national_id`/`view_token` للمدير الإداري وحده؛ الإخراج من حلقةٍ يحتاج `can_assign_in_halaqa` فيها؛ الإدخال إلى حلقةٍ يحتاجه وتطابقَ جنس الطالب وجنس الحلقة (`23514`) |
 | `monthly_reports_guard_status` ← `guard_report_status` | المعلم: `draft→submitted` وتعديل المسودّة فقط؛ `approved` وحقلا `approved_by/at` ولا حذف/تعديل بعد الإرسال إلا لنطاق الاعتماد |
-| `incentive_statements_guard_status` ← `guard_statement_status` | مثله لـ`reviewed` وحقلَي `reviewed_by/at` |
+| `incentive_statements_guard_status` ← `guard_statement_status` | مثله لـ`reviewed` وحقلَي `reviewed_by/at` — لكن بنطاق `can_review_statement_in_halaqa` (المدير الإداري، والمديرة الإدارية للبنات؛ **بلا المدير الفني** منذ هجرة `20261019082403`)، والقراءة `can_view_statements_in_halaqa` (معلم الحلقة، مشرف المشروع، المراجِع) |
 | `admin_alerts_guard_update` ← `guard_alert_update` | المعلم المعنيّ لا يغيّر إلا الحالة ووقت الإقرار؛ المُصدِر والمدير الإداري يغيّران المحتوى |
 | `profiles_photo_clear_on_female` ← `clear_photo_on_female` | حين يصير الحسابُ أنثى يُفرغ `photo_path` آلياً (بدل خطأ `23514` على المدير) |
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |
 | `halaqat_guard_staff` ← `guard_halaqa_staff` | **لكل كاتبٍ حتى الخدمة:** جنس الحلقة مطلوب؛ المعلم (`teacher`) والمشرف (`field_supervisor`) والمختبِر من جنسها؛ المعلم على حلقةٍ نشطة واحدة (يُفحص عند تغيّر المعلم أو تفعيل الحلقة فقط)؛ لا يتغيّر جنس حلقةٍ فيها طلاب من الجنس الآخر؛ ويختم `assigned_by` بالمستدعي عند الإنشاء وتغيير المعلم/المشرف (`23514`) |
 | `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
-| `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر أحد المديرَين (الإداري/الفني) أو المشرف الميداني المُسنَد للحلقة نفسها؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`) |
+| `exam_list_items_guard_sequence` ← `guard_station_sequence` | **لكل كاتب:** لا يُرشَّح طالبٌ لمحطة قبل اجتياز كل محطةٍ قبلها — الترتيب بـ`exam_plan.parts_to` تصاعدياً (لا بالمعرّف)؛ يُفحص عند الإدراج وتغيير المحطة أو الطالب (`23514`). ⚠️ يتغيّر مفتاح الترتيب إن قُلبت الخطة لتبدأ من الناس |
+| `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر المشرف الميداني المُسنَد للحلقة نفسها (منذ `20261019091015`؛ كان يقبل المديرَين)؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`). والسياسات: الإدراج والتعديل وسجلّ إعادة الجدولة لصاحب الزيارة، والحذف له وللمدير الإداري، والقراءة `can_view_halaqa` |
 
 > المُشغِّلان `admin_alerts_notify` و`supervision_visits_notify` ليسا حرّاساً: هما مُنتِجا الإشعارات (§18).
 

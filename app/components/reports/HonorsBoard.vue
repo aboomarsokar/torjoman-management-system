@@ -13,7 +13,6 @@ type Row = {
   memorization_pages: number | null
   review_pages: number | null
   absence_unexcused: number
-  monthly_points: number | null
   student: { full_name: string, halaqa: { name: string } | null } | null
   report: { status: string } | null
 }
@@ -22,7 +21,7 @@ const { data: top, pending } = useLazyAsyncData('honors-board', async () => {
   await loadSettings()
   const { data } = await supabase
     .from('monthly_report_students')
-    .select('memorization_pages, review_pages, absence_unexcused, monthly_points, student:student_id(full_name, halaqa:halaqa_id(name)), report:report_id(status)')
+    .select('memorization_pages, review_pages, absence_unexcused, student:student_id(full_name, halaqa:halaqa_id(name)), report:report_id(status)')
     .returns<Row[]>()
   const ranked = (data ?? [])
     .filter(r => r.report?.status === 'approved' && r.student)
@@ -30,8 +29,7 @@ const { data: top, pending } = useLazyAsyncData('honors-board', async () => {
       const g = computeStudentGrade({
         memoPages: r.memorization_pages ?? 0,
         reviewPages: r.review_pages ?? 0,
-        absenceUnexcused: r.absence_unexcused ?? 0,
-        points: r.monthly_points ?? 0
+        absenceUnexcused: r.absence_unexcused ?? 0
       }, settings.value)
       return { name: r.student!.full_name, halqa: r.student!.halaqa?.name ?? '—', total: g.total }
     })

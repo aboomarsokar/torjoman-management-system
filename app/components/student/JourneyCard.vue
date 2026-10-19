@@ -22,8 +22,11 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { ownRecords: false })
 
 const supabase = useSupabaseClient<Database>()
-const { settings: gradeCfg, loadSettings } = useGrades()
-onMounted(loadSettings)
+// المطلوبُ الشهريّ من الإعدادات مباشرةً (useGrades حُذف مع الدرجات القديمة؛ إعادةُ البطاقة في Task 8)
+const { data: targetPerMonth } = useLazyAsyncData<number>('journey-target-pages', async () => {
+  const { data } = await supabase.from('app_settings').select('target_memorization_pages').eq('id', 1).maybeSingle()
+  return data?.target_memorization_pages ?? 30
+}, { server: false, default: () => 30 })
 
 // جلب غير حاجز: الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي
 const { data: plan } = useLazyAsyncData('journey-exam-plan', async () => {
@@ -77,7 +80,7 @@ const { data: memorizationPages } = useLazyAsyncData(() => `journey-pages-${prop
       :plan="plan"
       :results="examResults"
       :memorization-pages="memorizationPages"
-      :target-per-month="gradeCfg.target"
+      :target-per-month="targetPerMonth"
       :enrollment-date="enrollmentDate"
     />
   </section>

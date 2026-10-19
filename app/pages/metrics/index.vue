@@ -13,12 +13,11 @@ const supabase = useSupabaseClient<Database>()
 
 // جلب غير حاجز: الصفحة تعرض قيماً افتراضية معقولة فوراً وتُحدَّث عند وصول الإعدادات
 const { data: settings } = useLazyAsyncData('metrics-settings', async () => {
-  const { data } = await supabase.from('app_settings').select('pass_mark, target_memorization_pages, default_points, default_attendance_days').eq('id', 1).single()
+  const { data } = await supabase.from('app_settings').select('pass_mark, target_memorization_pages, default_attendance_days').eq('id', 1).single()
   return data
 }, { server: false, default: () => null })
 
 const targetPages = computed(() => settings.value?.target_memorization_pages ?? 30)
-const defaultPoints = computed(() => settings.value?.default_points ?? 100)
 const attendanceDays = computed(() => settings.value?.default_attendance_days ?? 26)
 const passMark = computed(() => settings.value?.pass_mark ?? 80)
 
@@ -33,11 +32,11 @@ const sections = computed<Section[]>(() => [
     cards: [
       {
         title: 'درجة الطالب (من 100)',
-        def: 'الدرجة الكلّية للطالب في الشهر، مركّبة من ثلاثة مكوّنات.',
-        formula: 'الدرجة = (الأكاديمي × 0.6) + (الانتظام × 0.2) + (النقاط × 0.2)\n• الأكاديمي = متوسط( نسبة الحفظ ، نسبة المراجعة )\n   نسبة الحفظ = صفحات الحفظ ÷ الهدف الشهري\n   نسبة المراجعة = صفحات المراجعة ÷ صفحات الحفظ\n• الانتظام = (أيام الدوام الفعلي − الغياب بدون عذر) ÷ أيام الدوام الفعلي\n• النقاط = النقاط المحصّلة ÷ المجموع الافتراضي',
-        read: 'كلّما اقتربت من 100 كان أداء الطالب أعلى. الغياب بعذر لا يُخصم، ولا يُحاسَب على أيام لم تنعقد فيها الحلقة.',
-        example: `حفظ ${targetPages.value} صفحة (هدف ${targetPages.value}) ومراجعة ${targetPages.value} ⇒ أكاديمي 100% · انتظام 100% · نقاط ${defaultPoints.value}/${defaultPoints.value}=100% ⇒ الدرجة = 100.`,
-        source: 'التقرير الشهري للطالب (صفحات الحفظ/المراجعة، الغياب، النقاط) + إعدادات المدير.'
+        def: 'الدرجة الكلّية للطالب في الشهر، مركّبة من مكوّنين.',
+        formula: 'الدرجة = (الأكاديمي × 0.75) + (الانتظام × 0.25)\n• الأكاديمي = متوسط( نسبة الحفظ ، نسبة المراجعة )\n   نسبة الحفظ = صفحات الحفظ ÷ الهدف الشهري\n   نسبة المراجعة = صفحات المراجعة ÷ صفحات الحفظ\n• الانتظام = (أيام الدوام الفعلي − الغياب بدون عذر) ÷ أيام الدوام الفعلي',
+        read: 'كلّما اقتربت من 100 كان أداء الطالب أعلى. الغياب بعذر لا يُخصم، ولا يُحاسَب على أيام لم تنعقد فيها الحلقة. (أُلغيت النقاط ووُزّع وزنها على المكوّنين.)',
+        example: `حفظ ${targetPages.value} صفحة (هدف ${targetPages.value}) ومراجعة ${targetPages.value} ⇒ أكاديمي 100% · انتظام 100% ⇒ الدرجة = 100.`,
+        source: 'التقرير الشهري للطالب (صفحات الحفظ/المراجعة، الغياب) + إعدادات المدير.'
       },
       {
         title: 'إنجاز الحلقة (شارة البطاقة)',
@@ -139,14 +138,6 @@ const sections = computed<Section[]>(() => [
         read: 'يضبطها المدير من لوحته؛ تظهر للمعلّم للقراءة فقط.',
         example: `حفظ 24 صفحة من هدف ${targetPages.value} ⇒ نسبة الحفظ = ${Math.round(24 / targetPages.value * 100)}%.`,
         source: 'app_settings.target_memorization_pages'
-      },
-      {
-        title: 'النقاط الافتراضية الشهرية',
-        def: 'سقف النقاط الذي تُقاس عليه نسبة النقاط.',
-        formula: `القيمة الحالية = ${defaultPoints.value} نقطة (افتراضي 100)`,
-        read: 'يضبطها المدير شهريّاً؛ تبقى النسبة عادلة مع اختلاف السقف.',
-        example: `${Math.round(defaultPoints.value * 0.9)} نقطة من ${defaultPoints.value} ⇒ 90%.`,
-        source: 'app_settings.default_points'
       },
       {
         title: 'أيام الدوام الافتراضية',

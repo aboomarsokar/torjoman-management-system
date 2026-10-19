@@ -41,19 +41,18 @@ async function countRole(r: Database['public']['Enums']['user_role']) {
 }
 
 // ── إعدادات المدير (app_settings) ──
-const settings = reactive({ pass_mark: 80, target_memorization_pages: 30, default_points: 100, default_attendance_days: 26 })
-const drafts = reactive({ pass_mark: '80', target_memorization_pages: '30', default_points: '100', default_attendance_days: '26' })
+// النقاط أُلغيت (2026-10-19): default_points يبقى في القاعدة ولا يُعرض ولا يُضبط
+const settings = reactive({ pass_mark: 80, target_memorization_pages: 30, default_attendance_days: 26 })
+const drafts = reactive({ pass_mark: '80', target_memorization_pages: '30', default_attendance_days: '26' })
 
 async function loadSettings() {
   const { data } = await supabase.from('app_settings').select('*').eq('id', 1).single()
   if (data) {
     settings.pass_mark = data.pass_mark
     settings.target_memorization_pages = data.target_memorization_pages
-    settings.default_points = data.default_points
     settings.default_attendance_days = data.default_attendance_days ?? 26
     drafts.pass_mark = String(settings.pass_mark)
     drafts.target_memorization_pages = String(settings.target_memorization_pages)
-    drafts.default_points = String(settings.default_points)
     drafts.default_attendance_days = String(settings.default_attendance_days)
   }
 }
@@ -254,7 +253,6 @@ const statCards = computed(() => [
 
 const settingCards = [
   { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'صفحات الحفظ المستهدفة شهرياً', unit: 'صفحة', desc: 'الحدّ الأدنى لصفحات الحفظ لكل طالب — يُحتسب عليه المكوّن الأكاديمي.' },
-  { key: 'default_points' as const, icon: 'i-lucide-star', tone: 'green', title: 'النقاط الافتراضية الشهرية', unit: 'نقطة', desc: 'الحدّ الأقصى لنقاط الطالب هذا الشهر — يُحتسب عليه مكوّن النقاط.' },
   { key: 'default_attendance_days' as const, icon: 'i-lucide-calendar-check', tone: 'neutral', title: 'أيام الدوام الافتراضية شهرياً', unit: 'يوم', desc: 'مقام ثابت لحساب نسبة الانتظام، يظهر للمعلم للقراءة فقط.' },
   { key: 'pass_mark' as const, icon: 'i-lucide-check-check', tone: 'green', title: 'علامة الاجتياز في الاختبار', unit: '%', desc: 'الحدّ الأدنى من 100 لاجتياز اختبار الطالب — يسري على الاختبارات اللاحقة.' }
 ]

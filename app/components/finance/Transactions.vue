@@ -180,7 +180,7 @@ async function doExport() {
       />
       <div
         v-else
-        class="table-wrap"
+        class="table-wrap stack-wrap"
       >
         <table>
           <thead>
@@ -206,39 +206,50 @@ async function doExport() {
               v-for="(t, i) in filtered"
               :key="t.id"
             >
-              <td class="ta-start muted">
+              <td class="ta-start muted stack-hide">
                 {{ i + 1 }}
               </td>
-              <td class="ta-start nowrap">
+              <td
+                class="ta-start nowrap"
+                data-label="التاريخ"
+              >
                 {{ fmtDate(t.transaction_date) }}
               </td>
-              <td class="ta-start">
+              <td
+                class="ta-start strong-sm"
+                data-label="البيان"
+              >
                 {{ t.description || '—' }}
               </td>
-              <td>
+              <td data-label="التصنيف">
                 <UBadge
                   :label="t.category || '—'"
                   color="neutral"
                   variant="soft"
                   size="sm"
+                  class="stack-keep"
                 />
               </td>
-              <td>
+              <td data-label="النوع">
                 <span :class="t.type === 'income' ? 'in' : 'out'">{{ t.type === 'income' ? 'وارد' : 'صادر' }}</span>
               </td>
               <td
                 class="num"
                 :class="t.type === 'income' ? 'in' : 'out'"
+                data-label="المبلغ"
               >
                 {{ t.type === 'income' ? '+' : '−' }}{{ fmt(t.amount) }}
               </td>
-              <td class="num strong">
+              <td
+                class="num strong"
+                data-label="الرصيد"
+              >
                 {{ fmt(t.balance) }}
               </td>
               <td>
                 <div
                   v-if="!isReadOnly"
-                  class="rowact"
+                  class="rowact stack-keep"
                 >
                   <UButton
                     color="neutral"

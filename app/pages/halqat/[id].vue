@@ -236,6 +236,25 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 </tbody>
               </table>
             </div>
+            <!-- الجوال: بطاقات بدل الجدول (الضغط على البطاقة يفتح ملف الطالب) -->
+            <ul
+              v-if="data.students.length"
+              class="hd-cards"
+            >
+              <li
+                v-for="s in data.students"
+                :key="s.id"
+              >
+                <UiCardRow
+                  :title="s.full_name"
+                  :to="`/students/${s.id}`"
+                  :fields="[
+                    { label: 'الأجزاء', value: s.quran_parts != null ? `${s.quran_parts} / 30` : null },
+                    { label: 'المحطة القادمة', value: s.next }
+                  ]"
+                />
+              </li>
+            </ul>
           </div>
 
           <!-- الجانب -->
@@ -335,6 +354,16 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
 .sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
 .count { background: var(--surface-3); color: var(--ink-2); font-size: 13px; font-weight: 700; border-radius: 999px; padding: 2px 10px; }
 
+/* عمود الطلاب دون 560px (الجوال): بطاقات بدل الجدول المتمرّر */
+.main-col { container: hdstudents / inline-size; }
+.hd-cards { display: none; list-style: none; margin: 0; padding: 0; }
+@container hdstudents (max-width: 559px) {
+  .main-col .table-wrap { display: none; }
+  .hd-cards { display: block; }
+}
+/* البطاقات داخل قسمٍ أبيض: بلا حدود ولا خلفية، والفصل خطٌّ رقيق بين كل بطاقة والتي تليها */
+.hd-cards :deep(.crow) { padding: 12px 0; border-radius: 0; background: transparent; }
+.hd-cards li + li { border-top: 1px solid var(--line); }
 .table-wrap { overflow-x: auto; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 480px; }
 .table-wrap thead tr { background: var(--surface-2); }

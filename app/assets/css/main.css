@@ -329,3 +329,22 @@ body {
     transform: none;
   }
 }
+
+/* ══ جدول قابل للتعديل يتكدّس على الجوال (.stack-wrap) ══
+   الجداول ذات الخانات (بنود الحوافز، الرواتب، التخصيص): دون 600px تصير كلُّ صفٍّ بطاقةً،
+   وكلُّ خانةٍ سطراً بعنوانها من `data-label` — بلا تمرير أفقيّ وبلا تكرار للخانات.
+   `stack-hide` يُخفي خانةً لا لزوم لها في البطاقة (كالترقيم). */
+.stack-wrap { container: stack / inline-size; }
+@container stack (max-width: 600px) {
+  .stack-wrap table { min-width: 0 !important; }
+  .stack-wrap thead { display: none; }
+  .stack-wrap table, .stack-wrap tbody, .stack-wrap tfoot, .stack-wrap tr, .stack-wrap td { display: block; width: 100%; }
+  /* الصفوف بلا حدود (الجدول نفسه داخل بطاقة)، وبين كلّ صفٍّ والذي يليه خطٌّ فاصل */
+  .stack-wrap tbody tr { border: 0 !important; padding: 12px 16px; margin: 0; background: transparent; }
+  .stack-wrap tbody tr + tr { border-top: 1px solid var(--line) !important; }
+  .stack-wrap td { border: 0 !important; padding: 6px 0 !important; display: flex; align-items: center; gap: 12px; text-align: start !important; }
+  .stack-wrap td[data-label]::before { content: attr(data-label); flex: 0 0 72px; font-size: 12.5px; color: var(--ink-3); }
+  .stack-wrap td > *:not(.stack-keep) { flex: 1; min-width: 0; width: auto !important; }
+  .stack-wrap td.stack-hide { display: none; }
+  .stack-wrap tfoot tr { padding: 10px 12px; border-top: 1px solid var(--line); }
+}

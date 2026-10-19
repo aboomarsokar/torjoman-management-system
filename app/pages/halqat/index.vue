@@ -562,7 +562,7 @@ async function confirmDelete() {
   .toolbar { align-items: stretch; }
   .create { width: 100%; justify-content: center; }
 }
-.hcard { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.hcard { background: var(--surface); border-radius: 16px; padding: 16px; }
 .hcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 .hcard-actions { display: flex; gap: 8px; margin-top: 16px; }
 .hcard-actions > :first-child { flex: 1; justify-content: center; }

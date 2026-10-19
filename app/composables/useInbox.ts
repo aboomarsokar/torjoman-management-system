@@ -17,7 +17,7 @@ export interface InboxRow {
 /** يدمج صفّاً واصلاً (فوريّاً أو باستطلاع) بلا تكرار، بترتيب الوقت النازل، مقصوصاً عند الحدّ. */
 export function mergeIncoming(rows: InboxRow[], row: InboxRow, limit = INBOX_LIMIT): InboxRow[] {
   return [row, ...rows.filter(r => r.id !== row.id)]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
     .slice(0, limit)
 }
 

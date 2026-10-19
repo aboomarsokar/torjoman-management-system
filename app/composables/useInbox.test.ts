@@ -23,6 +23,12 @@ describe('mergeIncoming', () => {
     const rows = [row('a', '2026-10-19T08:00:00Z'), row('b', '2026-10-19T07:00:00Z')]
     expect(mergeIncoming(rows, row('c', '2026-10-19T09:00:00Z'), 2).map(r => r.id)).toEqual(['c', 'a'])
   })
+
+  it('يرتّب بالقيمة الزمنية لا بالنصّ (صيغٌ مختلفة: Z و+00:00 و+03:00)', () => {
+    const rows = [row('a', '2026-10-19T08:00:00.5+00:00'), row('b', '2026-10-19T08:00:00Z')]
+    const out = mergeIncoming(rows, row('c', '2026-10-19T09:00:00+03:00'))
+    expect(out.map(r => r.id)).toEqual(['a', 'b', 'c'])
+  })
 })
 
 describe('markRowsRead', () => {
@@ -45,7 +51,9 @@ describe('relativeTimeAr', () => {
     ['2026-10-19T11:59:30Z', 'الآن'],
     ['2026-10-19T11:55:00Z', 'منذ 5 د'],
     ['2026-10-19T09:00:00Z', 'منذ 3 س'],
-    ['2026-10-17T09:00:00Z', '17-10']
+    ['2026-10-17T09:00:00Z', '17-10'],
+    // 22:30 بالتوقيت العالمي = 01:30 يوم 18 في غزة (UTC+3) — يحرس خيار Asia/Gaza
+    ['2026-10-17T22:30:00Z', '18-10']
   ])('%s ← %s', (iso, expected) => {
     expect(relativeTimeAr(iso, now)).toBe(expected)
   })

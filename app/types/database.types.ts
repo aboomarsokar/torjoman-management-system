@@ -219,9 +219,8 @@ export type Database = {
       exam_list_items: {
         Row: {
           created_at: string
-          exam_cycle_id: number | null
+          exam_cycle_id: number
           exam_list_id: string
-          exam_plan_id: number | null
           id: string
           student_id: string
           teacher_note: string | null
@@ -229,9 +228,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          exam_cycle_id?: number | null
+          exam_cycle_id: number
           exam_list_id: string
-          exam_plan_id?: number | null
           id?: string
           student_id: string
           teacher_note?: string | null
@@ -239,9 +237,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          exam_cycle_id?: number | null
+          exam_cycle_id?: number
           exam_list_id?: string
-          exam_plan_id?: number | null
           id?: string
           student_id?: string
           teacher_note?: string | null
@@ -260,13 +257,6 @@ export type Database = {
             columns: ["exam_list_id"]
             isOneToOne: false
             referencedRelation: "exam_lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_list_items_exam_plan_id_fkey"
-            columns: ["exam_plan_id"]
-            isOneToOne: false
-            referencedRelation: "exam_plan"
             referencedColumns: ["id"]
           },
           {
@@ -322,36 +312,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      exam_plan: {
-        Row: {
-          created_at: string
-          group_number: number
-          id: number
-          parts_from: number
-          parts_to: number
-          stage_type: Database["public"]["Enums"]["exam_stage_type"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          group_number: number
-          id?: never
-          parts_from: number
-          parts_to: number
-          stage_type: Database["public"]["Enums"]["exam_stage_type"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          group_number?: number
-          id?: never
-          parts_from?: number
-          parts_to?: number
-          stage_type?: Database["public"]["Enums"]["exam_stage_type"]
-          updated_at?: string
-        }
-        Relationships: []
       }
       exam_results: {
         Row: {
@@ -1603,15 +1563,6 @@ export type Database = {
           total_score: number
         }[]
       }
-      my_exam_results: {
-        Args: never
-        Returns: {
-          exam_date: string
-          exam_plan_id: number
-          passed: boolean
-          total_score: number
-        }[]
-      }
       my_halaqa_id: { Args: never; Returns: string }
       my_quran_months: {
         Args: never
@@ -1645,7 +1596,6 @@ export type Database = {
       alert_severity: "note" | "first_warning" | "final_warning"
       alert_status: "new" | "acknowledged"
       exam_list_status: "sent" | "in_progress" | "completed"
-      exam_stage_type: "partial" | "cumulative"
       gender_type: "male" | "female"
       halaqa_classification: "a" | "b"
       halaqa_status: "active" | "stopped"
@@ -1796,7 +1746,6 @@ export const Constants = {
       alert_severity: ["note", "first_warning", "final_warning"],
       alert_status: ["new", "acknowledged"],
       exam_list_status: ["sent", "in_progress", "completed"],
-      exam_stage_type: ["partial", "cumulative"],
       gender_type: ["male", "female"],
       halaqa_classification: ["a", "b"],
       halaqa_status: ["active", "stopped"],

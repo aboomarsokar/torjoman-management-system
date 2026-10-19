@@ -45,8 +45,9 @@ export default defineEventHandler(async (event) => {
   // الشهورُ المعتمَدة من سجلّات القرآن: صفحاتُها وسطورُ السجلّ وأجزاءُ البرنامج المكتملة
   const { data: recordRows } = await admin
     .from('quran_records')
-    .select('from_surah, from_ayah, to_surah, to_ayah, pages_memorized, report:report_id(status, report_year, report_month)')
+    .select('from_surah, from_ayah, to_surah, to_ayah, pages_memorized, report:report_id!inner(status, report_year, report_month)')
     .eq('student_id', data.id)
+    .eq('report.status', 'approved')
     .returns<(Omit<ApprovedMonth, 'report_year' | 'report_month'> & { report: { status: string, report_year: number, report_month: number } | null })[]>()
   const months: ApprovedMonth[] = (recordRows ?? []).flatMap(({ report, ...r }) =>
     report?.status === 'approved' ? [{ ...r, report_year: report.report_year, report_month: report.report_month }] : [])

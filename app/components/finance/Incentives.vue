@@ -131,7 +131,7 @@ async function postAsTransaction() {
   try {
     const { error } = await supabase.from('financial_transactions').upsert({
       transaction_date: new Date().toISOString().slice(0, 10),
-      description: `حوافز الحلقات ${monthName(month.value)} ${year.value}`,
+      description: `حوافز الحلقات ${periodLabel(year.value, month.value)}`,
       category: 'حوافز', type: 'expense', amount: total.value, created_by: profile.value?.id ?? null,
       source_key: monthSourceKey('incentives', month.value, year.value)
     }, { onConflict: 'source_key' })

@@ -135,7 +135,7 @@ const ARROW = { up: 'i-lucide-trending-up', down: 'i-lucide-trending-down', flat
       <div class="cards">
         <div class="card hero">
           <div class="c-lbl">
-            الرصيد الحالي (حتى {{ monthName(month) }})
+            الرصيد الحالي (حتى {{ periodLabel(year, month) }})
           </div>
           <div class="c-val">
             {{ fmt(balance) }} <span class="cur">₪</span>

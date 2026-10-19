@@ -120,7 +120,7 @@ async function postAsTransaction() {
     // حركةٌ واحدة لكل شهر (source_key فريد): إعادة الترحيل تُحدّث مبلغها لا تُضيف حركةً ثانية
     const { error } = await supabase.from('financial_transactions').upsert({
       transaction_date: new Date().toISOString().slice(0, 10),
-      description: `رواتب ${monthName(month.value)} ${year.value}`,
+      description: `رواتب ${periodLabel(year.value, month.value)}`,
       category: 'رواتب', type: 'expense', amount: total.value, created_by: profile.value?.id ?? null,
       source_key: monthSourceKey('salaries', month.value, year.value)
     }, { onConflict: 'source_key' })

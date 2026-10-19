@@ -492,10 +492,12 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 |---|---|---|
 | `id` | uuid PK | |
 | `statement_id` | uuid FK → incentive_statements | |
-| `description` | text | الوصف/البيان |
+| `description` | text NOT NULL | الوصف/البيان — 3 أحرف فأكثر بعد حذف المسافات (`incentive_statement_items_description_len`) |
 | `category` | text | جوائز / أنشطة / ضيافة / أخرى |
-| `amount` | numeric | المبلغ (₪) |
-| `item_date` | date | التاريخ |
+| `amount` | numeric | المبلغ (₪) — أكبر من صفر (`incentive_statement_items_amount_positive`) |
+| `item_date` | date NOT NULL | التاريخ — داخل شهر الكشف ولا يتجاوز اليوم بتوقيت غزة (المشغِّل `incentive_statement_items_guard_date` ← `guard_statement_item_date`) |
+
+> **التوثيق (هجرة `20261019124522`، ROADMAP #13):** القيدان `NOT VALID` — يُفرضان على كلّ إدراجٍ وتعديلٍ جديد ولا يُعاد فحص القديم (بيانات التجريب فيها بندٌ بمبلغ 0). والواجهة تتحقّق أولاً برسائل عربية (`useIncentiveStatement`)، والمراجِع يرى البنود في نافذة (`FinanceStatementReviewModal`) قبل «تمّ الاطّلاع».
 
 > **المصروف** = مجموع البنود (محسوب)، و**المتبقّي = المستلَم − المصروف** (محسوب، تحذير عند التجاوز). تفرّد: كشف واحد لكل حلقة لكل (شهر/سنة). يُقفل بعد التسليم. مصدر حقيقة واحد مع جدول المدير (§4.20د).
 

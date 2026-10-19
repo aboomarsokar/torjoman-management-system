@@ -147,15 +147,16 @@ async function postAsTransaction() {
 // الشهر الجاري يُحمَّل عند الفتح (كان يُطلب ضغط «تحميل» أولاً على شاشةٍ فارغة)
 onMounted(load)
 
-async function markReviewed(s: StmtRow) {
-  try {
-    const { error } = await supabase.from('incentive_statements').update({ status: 'reviewed', reviewed_by: profile.value?.id ?? null, reviewed_at: new Date().toISOString() }).eq('id', s.id)
-    if (error) throw error
-    s.status = 'reviewed'
-    toast.add({ title: 'تمّ الاطّلاع على الكشف.', color: 'success', icon: 'i-lucide-check' })
-  } catch (err) {
-    handle(err)
-  }
+// بنودُ الكشف تُفتح في نافذةٍ و«تمّ الاطّلاع» فيها — لا إقرارَ بلا رؤية البنود
+const reviewing = ref<StmtRow | null>(null)
+const reviewOpen = ref(false)
+function openStatement(s: StmtRow) {
+  reviewing.value = s
+  reviewOpen.value = true
+}
+function onReviewed(id: string) {
+  const s = statements.value.find(x => x.id === id)
+  if (s) s.status = 'reviewed'
 }
 </script>
 
@@ -371,14 +372,14 @@ async function markReviewed(s: StmtRow) {
                 </td>
                 <td>
                   <UButton
-                    v-if="canReview && s.status === 'submitted'"
-                    label="تمّ الاطّلاع"
-                    color="primary"
+                    :label="canReview && s.status === 'submitted' ? 'راجع البنود' : 'البنود'"
+                    :color="canReview && s.status === 'submitted' ? 'primary' : 'neutral'"
                     variant="outline"
-                    size="xs"
-                    icon="i-lucide-check"
+                    size="sm"
+                    icon="i-lucide-list"
+                    class="stack-keep"
                     :ui="{ base: 'rounded-[9px]' }"
-                    @click="markReviewed(s)"
+                    @click="openStatement(s)"
                   />
                 </td>
               </tr>
@@ -387,6 +388,13 @@ async function markReviewed(s: StmtRow) {
         </div>
       </template>
     </ClientOnly>
+
+    <FinanceStatementReviewModal
+      v-model:open="reviewOpen"
+      :statement="reviewing"
+      :can-review="canReview"
+      @reviewed="onReviewed"
+    />
   </div>
 </template>
 

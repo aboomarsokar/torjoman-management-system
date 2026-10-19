@@ -5,23 +5,21 @@
  * (للقراءة فقط)، والمتبقّي = المخصّص − المصروف. المدير يطّلع ويراجع (§4.20د).
  */
 import type { Database } from '~/types/database.types'
+import { STATEMENT_ITEM_CATEGORIES } from '~/constants/incentives'
+import type { StatementItemField } from '~/composables/useIncentiveStatement'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'كشف الحوافز — ترجمان' })
 
-type StatementStatus = Database['public']['Enums']['statement_status']
 const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
-const { handle } = useErrorHandler()
-const toast = useToast()
 // role (من useProfile أعلاه): ما دام فارغاً لا قفل ولا محتوى (كان «للمعلّم» يومض للمدير عند التحميل الكامل)
 const { isTeacher, isAdmin, isWomenAdmin, isReadOnly } = usePermissions()
 // المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً — بلا المدير الفني (قرار 2026-10-19؛
 // القاعدة: can_review_statement_in_halaqa). canApprove يشمل المدير الفني (يستعمله تسجيل الحضور)، فلا يصلح هنا.
 const canReview = computed(() => isAdmin.value || isWomenAdmin.value || isReadOnly.value)
 
-const CATEGORIES = ['جوائز', 'أنشطة', 'ضيافة', 'أخرى']
-const categoryItems = CATEGORIES.map(c => ({ label: c, value: c }))
+const categoryItems = STATEMENT_ITEM_CATEGORIES.map(c => ({ label: c, value: c }))
 const now = new Date()
 const yearItems = [now.getFullYear() - 1, now.getFullYear()].map(y => ({ label: String(y), value: y }))
 
@@ -36,104 +34,16 @@ const { data: myHalqa } = useLazyAsyncData<NameRow | null>('inc-my-halqa', async
 const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
-type ItemRow = { description: string, category: string, amount: number | string, item_date: string }
-const loaded = ref(false)
-const loading = ref(false)
-const statement = ref<{ id: string, status: StatementStatus } | null>(null)
-const allocated = ref(0)
-const rows = ref<ItemRow[]>([])
-
+const halaqaId = computed(() => myHalqa.value?.id ?? null)
+const {
+  loading, loaded, saving, submitting, showErrors, statement, allocated, rows, bounds,
+  canEdit: statementEditable, spent, remaining, errors, addRow, removeRow, save, submit
+} = useIncentiveStatement(halaqaId, month, year)
 // المعلّم يعدّل المسودّة فقط (أو كشفاً لم يُحفظ بعد) — حارس القاعدة يرفض أيّ تعديل بعد الإرسال
-const canEdit = computed(() => isTeacher.value && (!statement.value || statement.value.status === 'draft'))
-const num = (v: number | string) => (v === '' || v === null) ? 0 : Number(v)
-const spent = computed(() => rows.value.reduce((s, r) => s + num(r.amount), 0))
-const remaining = computed(() => allocated.value - spent.value)
-const today = new Date().toISOString().slice(0, 10)
-
-async function load() {
-  if (!myHalqa.value) return
-  loading.value = true
-  try {
-    const hid = myHalqa.value.id
-    const [{ data: alloc }, { data: st }] = await Promise.all([
-      supabase.from('halaqa_incentives').select('allocated_amount').eq('halaqa_id', hid).eq('incentive_month', month.value).eq('incentive_year', year.value).maybeSingle(),
-      supabase.from('incentive_statements').select('id, status, received_amount').eq('halaqa_id', hid).eq('statement_month', month.value).eq('statement_year', year.value).maybeSingle()
-    ])
-    allocated.value = alloc?.allocated_amount ?? 0
-    statement.value = st ? { id: st.id, status: st.status } : null
-
-    let items: { description: string | null, category: string | null, amount: number, item_date: string | null }[] = []
-    if (st) {
-      const { data } = await supabase.from('incentive_statement_items').select('description, category, amount, item_date').eq('statement_id', st.id)
-      items = data ?? []
-    }
-    rows.value = items.map(i => ({ description: i.description ?? '', category: i.category ?? 'جوائز', amount: i.amount, item_date: i.item_date ?? today }))
-    loaded.value = true
-  } catch (err) {
-    handle(err)
-  } finally {
-    loading.value = false
-  }
-}
-
-function addRow() {
-  rows.value.push({ description: '', category: 'جوائز', amount: '', item_date: today })
-}
-function removeRow(i: number) {
-  rows.value.splice(i, 1)
-}
-
-const saving = ref(false)
-async function save() {
-  if (!myHalqa.value) return
-  saving.value = true
-  try {
-    let sid = statement.value?.id
-    if (!sid) {
-      const { data, error } = await supabase.from('incentive_statements')
-        .insert({ halaqa_id: myHalqa.value.id, statement_month: month.value, statement_year: year.value, received_amount: allocated.value, status: 'draft', created_by: profile.value?.id ?? null })
-        .select('id, status').single()
-      if (error || !data) throw error
-      statement.value = { id: data.id, status: data.status }
-      sid = data.id
-    } else {
-      const { error } = await supabase.from('incentive_statements').update({ received_amount: allocated.value }).eq('id', sid)
-      if (error) throw error
-    }
-
-    await supabase.from('incentive_statement_items').delete().eq('statement_id', sid)
-    const payload = rows.value
-      .filter(r => r.description.trim() || num(r.amount) > 0)
-      .map(r => ({ statement_id: sid!, description: r.description.trim() || null, category: r.category, amount: num(r.amount), item_date: r.item_date || null }))
-    if (payload.length) {
-      const { error } = await supabase.from('incentive_statement_items').insert(payload)
-      if (error) throw error
-    }
-    toast.add({ title: 'حُفظ الكشف.', color: 'success', icon: 'i-lucide-save' })
-  } catch (err) {
-    handle(err)
-  } finally {
-    saving.value = false
-  }
-}
-
-const submitting = ref(false)
-async function submit() {
-  if (!statement.value) {
-    toast.add({ title: 'احفظ الكشف أولاً.', color: 'warning', icon: 'i-lucide-info' })
-    return
-  }
-  submitting.value = true
-  try {
-    const { error } = await supabase.from('incentive_statements').update({ status: 'submitted', submitted_at: new Date().toISOString() }).eq('id', statement.value.id)
-    if (error) throw error
-    statement.value.status = 'submitted'
-    toast.add({ title: 'أُرسل الكشف للمدير.', color: 'success', icon: 'i-lucide-send' })
-  } catch (err) {
-    handle(err)
-  } finally {
-    submitting.value = false
-  }
+const canEdit = computed(() => isTeacher.value && statementEditable.value)
+const errorOf = (i: number, field: StatementItemField) => (showErrors.value ? errors.value[i]?.[field] : undefined)
+async function saveDraft() {
+  await save()
 }
 
 const fmt = (n: number) => n.toLocaleString('ar')
@@ -188,25 +98,14 @@ const fmt = (n: number) => n.toLocaleString('ar')
               size="lg"
             />
           </div>
-          <UButton
-            label="تحميل / إنشاء"
-            color="primary"
-            size="lg"
-            icon="i-lucide-folder-open"
-            :disabled="!myHalqa"
-            :loading="loading"
-            :ui="{ base: 'rounded-[13px] font-semibold self-end' }"
-            @click="load"
-          />
         </div>
       </div>
 
       <ClientOnly>
         <UiEmptyState
           v-if="!loaded"
-          icon="i-lucide-gift"
-          title="اختر الشهر ثم اضغط «تحميل / إنشاء»"
-          description="يظهر المبلغ المخصّص وبنود المصروفات للتعبئة."
+          :icon="loading ? 'i-lucide-loader-circle' : 'i-lucide-gift'"
+          :title="loading ? 'يُحمَّل الكشف…' : myHalqa ? 'تعذّر تحميل الكشف' : 'لا حلقة معيّنة لك'"
         />
 
         <template v-else>
@@ -324,12 +223,17 @@ const fmt = (n: number) => n.toLocaleString('ar')
                       class="ta-start"
                       data-label="البيان"
                     >
-                      <input
-                        v-model="r.description"
-                        :disabled="!canEdit"
-                        class="cell wide"
-                        placeholder="وصف البند"
-                      >
+                      <div class="fld">
+                        <input
+                          v-model="r.description"
+                          :disabled="!canEdit"
+                          class="cell wide"
+                          :class="{ bad: errorOf(i, 'description') }"
+                          :aria-invalid="!!errorOf(i, 'description')"
+                          placeholder="مثال: جوائز المتفوّقين في حفظ جزء عمّ"
+                        >
+                        <small v-if="errorOf(i, 'description')">{{ errorOf(i, 'description') }}</small>
+                      </div>
                     </td>
                     <td data-label="التصنيف">
                       <UiSelect
@@ -340,22 +244,37 @@ const fmt = (n: number) => n.toLocaleString('ar')
                       />
                     </td>
                     <td data-label="المبلغ">
-                      <input
-                        v-model="r.amount"
-                        :disabled="!canEdit"
-                        type="number"
-                        class="cell"
-                        dir="ltr"
-                      >
+                      <div class="fld">
+                        <input
+                          v-model="r.amount"
+                          :disabled="!canEdit"
+                          type="number"
+                          min="0"
+                          step="any"
+                          inputmode="decimal"
+                          class="cell"
+                          :class="{ bad: errorOf(i, 'amount') }"
+                          :aria-invalid="!!errorOf(i, 'amount')"
+                          dir="ltr"
+                        >
+                        <small v-if="errorOf(i, 'amount')">{{ errorOf(i, 'amount') }}</small>
+                      </div>
                     </td>
                     <td data-label="التاريخ">
-                      <input
-                        v-model="r.item_date"
-                        :disabled="!canEdit"
-                        type="date"
-                        class="cell"
-                        dir="ltr"
-                      >
+                      <div class="fld">
+                        <input
+                          v-model="r.item_date"
+                          :disabled="!canEdit"
+                          type="date"
+                          :min="bounds.min"
+                          :max="bounds.max"
+                          class="cell"
+                          :class="{ bad: errorOf(i, 'item_date') }"
+                          :aria-invalid="!!errorOf(i, 'item_date')"
+                          dir="ltr"
+                        >
+                        <small v-if="errorOf(i, 'item_date')">{{ errorOf(i, 'item_date') }}</small>
+                      </div>
                     </td>
                     <td v-if="canEdit">
                       <UButton
@@ -384,11 +303,10 @@ const fmt = (n: number) => n.toLocaleString('ar')
                 icon="i-lucide-save"
                 :loading="saving"
                 :ui="{ base: 'rounded-[13px] font-semibold' }"
-                @click="save"
+                @click="saveDraft"
               />
               <UButton
-                v-if="statement && statement.status === 'draft'"
-                label="إرسال للمدير"
+                label="حفظ وإرسال للمراجعة"
                 color="success"
                 size="lg"
                 icon="i-lucide-send"
@@ -438,6 +356,9 @@ const fmt = (n: number) => n.toLocaleString('ar')
 .cell.wide { width: 100%; min-width: 160px; text-align: start; }
 .cell:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
 .cell:disabled { opacity: .6; cursor: not-allowed; }
+.cell.bad { border-color: var(--err); }
+.fld { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.fld small { color: var(--err); font-size: 12px; text-align: start; line-height: 1.4; }
 
 .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 

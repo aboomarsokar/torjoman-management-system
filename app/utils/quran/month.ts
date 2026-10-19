@@ -38,9 +38,9 @@ export interface StudentMonthRow {
   daysAttended: number
   plan: ProratedPlan
   outcome: Outcome
-  /** الأجزاءُ المكتملة حتى آخر موضعٍ **معتمَد** (لا يدخله الشهرُ الحاليّ ما لم يُعتمد). */
+  /** الأجزاءُ المنجزة: الأكبرُ من الأجزاء المكتملة حتى آخر نهايةٍ **معتمَدة** وما كان يحفظه عند التحاقه (`quran_parts`)؛ لا يدخله الشهرُ الحاليّ ما لم يُعتمد. */
   juzDone: number
-  /** بلغ الفاتحة 1:7 في سجلّ الشهر أو فيما سبقه. */
+  /** بلغ الفاتحة 1:7 في نهايةٍ **معتمَدة** أو كان محفوظُه عند الالتحاق 30 جزءاً؛ المسوّدةُ والمُرسَل لا يُختم بهما. */
   khatm: boolean
 }
 
@@ -90,7 +90,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
     const record = recordByStudent.get(s.id) ?? null
     const previous = input.previousEnds[s.id] ?? null
     const heldParts = Math.max(0, Math.min(PROGRAM_JUZ_COUNT, s.quran_parts ?? 0))
-    const plan = proratePlan({ required: input.target, daysHeld, daysAttended })
+    const plan = proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length })
 
     return {
       studentId: s.id,
@@ -104,7 +104,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
       outcome: outcomeOf(record ? record.pagesMemorized : null, plan),
       // الأعلى من المعتمَد في النظام وما كان يحفظه عند التحاقه
       juzDone: Math.max(completedJuz(input.approvedEnds[s.id] ?? null, input.juz), heldParts),
-      khatm: isKhatm(record?.to ?? previous) || heldParts >= PROGRAM_JUZ_COUNT
+      khatm: isKhatm(input.approvedEnds[s.id] ?? null) || heldParts >= PROGRAM_JUZ_COUNT
     }
   })
 }

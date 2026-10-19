@@ -97,11 +97,11 @@ export function visibleRows(rows: StudentMonthRow[], outcome: Outcome | null, qu
   return rows.filter(r => (!outcome || r.outcome === outcome) && (!needle || arabicFold(r.name).includes(needle)))
 }
 
-/** شارةُ المطلوب: «المطلوب 12 · أنجز»، و«لم يحضر · لا يُقاس» لمن لم يحضر، و«بلا مطلوب · …» بلا خطة. */
+/** شارةُ المطلوب: «المطلوب 12 · أنجز»، و«لم يحضر · لا يُقاس» لمن لم يحضر، و«التحق بعد الأيام · لا يُقاس» لمن لم تنعقد أيامٌ بعد التحاقه، و«بلا مطلوب · …» بلا خطة. */
 export function planBadge(row: Pick<StudentMonthRow, 'plan' | 'outcome'>): string {
   const head = row.plan.required !== null
     ? `المطلوب ${row.plan.required}`
-    : row.plan.basis === 'absent' ? 'لم يحضر' : 'بلا مطلوب'
+    : row.plan.basis === 'absent' ? 'لم يحضر' : row.plan.basis === 'unheld' ? 'التحق بعد الأيام' : 'بلا مطلوب'
   return `${head} · ${OUTCOME_LABELS[row.outcome]}`
 }
 

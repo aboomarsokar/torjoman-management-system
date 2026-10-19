@@ -17,6 +17,18 @@ describe('proratePlan', () => {
       .toEqual({ required: 35, full: 35, basis: 'full' })
   })
 
+  it('انعقدت أيامٌ في الشهر ولم ينعقد منها شيءٌ منذ الالتحاق: لا يُقاس (unheld)', () => {
+    expect(proratePlan({ required: 35, daysHeld: 0, daysAttended: 0, monthDays: 20 }))
+      .toEqual({ required: null, full: 35, basis: 'unheld' })
+    expect(proratePlan({ required: null, daysHeld: 0, daysAttended: 0, monthDays: 20 }))
+      .toEqual({ required: null, full: null, basis: 'full' })
+  })
+
+  it('لا أيامَ في الشهر أصلاً: كاملاً كما كان', () => {
+    expect(proratePlan({ required: 35, daysHeld: 0, daysAttended: 0, monthDays: 0 }))
+      .toEqual({ required: 35, full: 35, basis: 'full' })
+  })
+
   it('لم يحضر يوماً: لا مطلوب ولا يُقاس (absent)', () => {
     expect(proratePlan({ required: 35, daysHeld: 25, daysAttended: 0 }))
       .toEqual({ required: null, full: 35, basis: 'absent' })

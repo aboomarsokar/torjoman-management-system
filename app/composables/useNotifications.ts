@@ -90,7 +90,7 @@ export function useNotifications() {
         .order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(10)
         .returns<{ id: string, report_month: number, report_year: number, halaqa: { name: string } | null }[]>()
       for (const rep of data ?? []) {
-        out.push({ id: rep.id, label: 'تقرير بانتظار اعتمادك', sub: rep.halaqa?.name ?? '—', to: '/reports', icon: 'i-lucide-file-text' })
+        out.push({ id: rep.id, label: 'تقرير بانتظار اعتمادك', sub: rep.halaqa?.name ?? '—', to: `/reports?y=${rep.report_year}&m=${rep.report_month}`, icon: 'i-lucide-file-text' })
       }
     }
 

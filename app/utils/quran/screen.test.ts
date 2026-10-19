@@ -117,6 +117,7 @@ describe('planBadge', () => {
   it('المطلوبُ والتصنيف، ومن لم يحضر، ومن بلا خطة', () => {
     expect(planBadge(row({ outcome: 'done' }))).toBe('المطلوب 16 · أنجز')
     expect(planBadge(row({ plan: { required: null, full: 20, basis: 'absent' }, outcome: 'unmeasured' }))).toBe('لم يحضر · لا يُقاس')
+    expect(planBadge(row({ plan: { required: null, full: 20, basis: 'unheld' }, outcome: 'unmeasured' }))).toBe('التحق بعد الأيام · لا يُقاس')
     expect(planBadge(row({ plan: { required: null, full: null, basis: 'full' }, outcome: 'unrecorded' }))).toBe('بلا مطلوب · لم يُرصد')
   })
 })

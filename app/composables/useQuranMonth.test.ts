@@ -41,10 +41,12 @@ describe('buildStudentRows — اقتراح البداية', () => {
   it('آخرُ نهايةٍ آخرُ الإخلاص (112:4) ← أولُ الفلق (111:1)', () => {
     expect(build({ previousEnds: { s1: { surah: 112, ayah: 4 } } })[0]!.suggestedFrom).toEqual({ surah: 111, ayah: 1 })
   })
-  it('بعد الفاتحة 1:7 لا اقتراح', () => {
+  it('بعد الفاتحة 1:7 لا اقتراح، ولا ختمَ ما لم تكن النهايةُ معتمَدة', () => {
     const [row] = build({ previousEnds: { s1: { surah: 1, ayah: 7 } } })
     expect(row!.suggestedFrom).toBeNull()
-    expect(row!.khatm).toBe(true)
+    expect(row!.khatm).toBe(false)
+    const [approved] = build({ previousEnds: { s1: { surah: 1, ayah: 7 } }, approvedEnds: { s1: { surah: 1, ayah: 7 } } })
+    expect(approved!.khatm).toBe(true)
   })
   it('مصدرُ الاقتراح: نهايةٌ سابقة ← true، وبدايةُ الطالب الجديد ← false', () => {
     expect(build({ previousEnds: { s1: { surah: 112, ayah: 2 } } })[0]!.suggestedFromPrevious).toBe(true)
@@ -82,6 +84,17 @@ describe('buildStudentRows — الحضور والمطلوب', () => {
       absences: [{ student_id: 's1', day: '2026-10-12' }, { student_id: 's1', day: '2026-10-15' }]
     })
     expect(row!.plan).toEqual({ required: 28, full: 35, basis: 'prorated' })
+  })
+  it('انعقدت أيامٌ في الشهر ولم ينعقد منها شيءٌ بعد الالتحاق ← unheld ولا يُقاس', () => {
+    const rows = build({ students: [student({ enrollment_date: '2026-11-05' })], records: [record()] })
+    expect(rows[0]!.daysHeld).toBe(0)
+    expect(rows[0]!.plan).toEqual({ required: null, full: 35, basis: 'unheld' })
+    expect(rows[0]!.outcome).toBe('unmeasured')
+  })
+  it('شهرٌ بلا أيامٍ أصلاً ← المطلوبُ كاملاً كما كان', () => {
+    const [row] = build({ days: [], records: [record({ pages_memorized: 10 })] })
+    expect(row!.plan).toEqual({ required: 35, full: 35, basis: 'full' })
+    expect(row!.outcome).toBe('short')
   })
   it('بلا مطلوب (null) ← لا يُقاس بعد الرصد', () => {
     expect(build({ target: null, records: [record()] })[0]!.outcome).toBe('unmeasured')
@@ -145,8 +158,10 @@ describe('buildStudentRows — الأجزاء المنجزة', () => {
     expect(build({ students: [student({ quran_parts: 30 })] })[0]!.khatm).toBe(true)
     expect(build({ students: [student({ quran_parts: 29 })] })[0]!.khatm).toBe(false)
   })
-  it('الختم من نهاية سجلّ الشهر', () => {
-    expect(build({ records: [record({ to_surah: 1, to_ayah: 7 })] })[0]!.khatm).toBe(true)
+  it('الختم من نهايةٍ معتمَدة وحدها: مسوّدةُ الشهر وآخرُ نهايةٍ سابقة (أيّ حالة) لا يختمان', () => {
+    expect(build({ records: [record({ to_surah: 1, to_ayah: 7 })] })[0]!.khatm).toBe(false)
+    expect(build({ previousEnds: { s1: { surah: 1, ayah: 7 } } })[0]!.khatm).toBe(false)
+    expect(build({ approvedEnds: { s1: { surah: 1, ayah: 7 } } })[0]!.khatm).toBe(true)
   })
 })
 

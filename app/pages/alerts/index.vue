@@ -53,12 +53,20 @@ const { data: alerts, refresh, pending } = useLazyAsyncData<AlertRow[]>('alerts-
   return data ?? []
 }, { server: false, default: () => [], watch: [role] })
 
+// المعلم ومعه اسم حلقته (لتمييز المعلمين وتسريع الاختيار) — حلقته النشطة، وإلا «بلا حلقة»
 const { data: teachers } = useLazyAsyncData('alert-teachers', async () => {
   if (!canIssue.value) return []
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name')
-  return data ?? []
+  const [{ data: people }, { data: halqat }] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name'),
+    supabase.from('halaqat').select('teacher_id, name').eq('status', 'active')
+  ])
+  const halqaOf = new Map((halqat ?? []).map(h => [h.teacher_id, h.name]))
+  return (people ?? []).map(t => ({ ...t, halqa: halqaOf.get(t.id) ?? null }))
 }, { server: false, default: () => [], watch: [canIssue] })
-const teacherItems = computed(() => (teachers.value ?? []).map(t => ({ label: t.full_name, value: t.id })))
+const teacherItems = computed(() => (teachers.value ?? []).map(t => ({
+  label: `${t.full_name} (${t.halqa ?? 'بلا حلقة'})`,
+  value: t.id
+})))
 
 // ── إصدار تنبيه ──
 const modalOpen = ref(false)

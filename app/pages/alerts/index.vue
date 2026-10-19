@@ -15,7 +15,7 @@ const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { isTeacher, isManager, isFieldSupervisor } = usePermissions()
+const { role, isTeacher, isManager, isFieldSupervisor } = usePermissions()
 /** الإصدار كما يسمح RLS (alerts_insert): الإداري والفني والمشرف الميداني. */
 const canIssue = computed(() => isManager.value || isFieldSupervisor.value)
 
@@ -39,21 +39,34 @@ type AlertRow = {
 }
 
 // جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً
+// المعلم لا يرى مُصدِر التنبيه (قرار 2026-10-19): يظهر له «إدارة المشروع»، ولا يُطلب الاسم من القاعدة أصلاً
+// فلا يصل إلى متصفّحه. الإدارة ترى المُصدِر صراحةً. الدور شرطٌ للجلب، فيُنتظر (role) ثم يُعاد.
+const ISSUER_FOR_TEACHER = 'إدارة المشروع'
 const { data: alerts, refresh, pending } = useLazyAsyncData<AlertRow[]>('alerts-list', async () => {
+  if (!role.value) return []
+  const cols = 'id, alert_date, violation_type, description, severity, status, acknowledged_at, teacher:teacher_id(full_name)'
   const { data } = await supabase
     .from('admin_alerts')
-    .select('id, alert_date, violation_type, description, severity, status, acknowledged_at, teacher:teacher_id(full_name), issuer:issuer_id(full_name)')
+    .select(isTeacher.value ? cols : `${cols}, issuer:issuer_id(full_name)`)
     .order('alert_date', { ascending: false })
     .returns<AlertRow[]>()
   return data ?? []
-}, { server: false, default: () => [] })
+}, { server: false, default: () => [], watch: [role] })
 
+// المعلم ومعه اسم حلقته (لتمييز المعلمين وتسريع الاختيار) — حلقته النشطة، وإلا «بلا حلقة»
 const { data: teachers } = useLazyAsyncData('alert-teachers', async () => {
   if (!canIssue.value) return []
-  const { data } = await supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name')
-  return data ?? []
+  const [{ data: people }, { data: halqat }] = await Promise.all([
+    supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name'),
+    supabase.from('halaqat').select('teacher_id, name').eq('status', 'active')
+  ])
+  const halqaOf = new Map((halqat ?? []).map(h => [h.teacher_id, h.name]))
+  return (people ?? []).map(t => ({ ...t, halqa: halqaOf.get(t.id) ?? null }))
 }, { server: false, default: () => [], watch: [canIssue] })
-const teacherItems = computed(() => (teachers.value ?? []).map(t => ({ label: t.full_name, value: t.id })))
+const teacherItems = computed(() => (teachers.value ?? []).map(t => ({
+  label: `${t.full_name} (${t.halqa ?? 'بلا حلقة'})`,
+  value: t.id
+})))
 
 // ── إصدار تنبيه ──
 const modalOpen = ref(false)
@@ -210,7 +223,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
                 <span><UIcon
                   name="i-lucide-shield"
                   class="size-[13px]"
-                />المُصدِر: {{ a.issuer?.full_name || '—' }}</span>
+                />المُصدِر: {{ isTeacher ? ISSUER_FOR_TEACHER : (a.issuer?.full_name || '—') }}</span>
                 <span><UIcon
                   name="i-lucide-calendar"
                   class="size-[13px]"

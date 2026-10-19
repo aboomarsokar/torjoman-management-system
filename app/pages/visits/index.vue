@@ -17,23 +17,22 @@ type VisitRow = Database['public']['Tables']['supervision_visits']['Row'] & {
   supervisor: { full_name: string, role: Role, gender: Gender | null } | null
 }
 type Gender = Database['public']['Enums']['gender_type']
-type VisitorRow = { id: string, full_name: string, role: Role, gender: Gender | null }
-/** أدوار الزائر: المديران والمشرف الميداني. */
-const VISITOR_ROLES: Role[] = ['admin_manager', 'technical_manager', 'field_supervisor']
 type HalqaOption = { id: string, name: string, daily_time: string | null, supervisor_id: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isManager, isFieldSupervisor } = usePermissions()
-const canSchedule = computed(() => isManager.value || isFieldSupervisor.value)
+// كل مشرف ميداني يجدول زياراته بنفسه، والمديران يطّلعون (قرار 2026-10-19 — القاعدة: visits_insert/update
+// لصاحب الزيارة مشرف الحلقة). الحذف للمدير الإداري (تنظيف خطأ) ولصاحب الزيارة.
+const { isAdmin, isFieldSupervisor } = usePermissions()
+const canSchedule = computed(() => isFieldSupervisor.value)
 /**
- * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): المديران لكل زيارة، والمشرف الميداني لزياراته هو وحده
- * (visits_update: supervisor_id = auth.uid()) — لا لزيارةٍ جدولها مديرٌ لحلقته باسم غيره.
+ * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): للمشرف الميداني صاحبها وحده
+ * (visits_update: supervisor_id = auth.uid()) — المديران يطّلعون ولا يعدّلون.
  */
 function canEditVisit(v: VisitRow) {
-  return isManager.value || (isFieldSupervisor.value && v.supervisor_id === profile.value?.id)
+  return isFieldSupervisor.value && v.supervisor_id === profile.value?.id
 }
 /** تحديثٌ لم يمسّ صفّاً = رفضته RLS بصمت — يُعرض خطأً لا نجاحاً. */
 const VISIT_NOT_UPDATED = 'لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.'
@@ -63,23 +62,10 @@ const { data: halqat } = useLazyAsyncData<HalqaOption[]>('visits-halqat', async 
     .returns<HalqaOption[]>()
   return data ?? []
 }, { server: false, default: () => [] })
-// الزائر: أحد المديرَين أو مشرف ميداني (المدير يزور بصفته أيضاً)
-const { data: visitors } = useLazyAsyncData<VisitorRow[]>('visits-visitors', async () => {
-  const { data } = await supabase.from('profiles').select('id, full_name, role, gender').in('role', VISITOR_ROLES).eq('status', 'active').order('full_name')
-  return data ?? []
-}, { server: false, default: () => [] })
 const halqaItems = computed(() => (halqat.value ?? []).map(h => ({
   label: h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name,
   value: h.id
 })))
-// الزائر: المديران، ومشرف الحلقة المختارة وحده (لا مشرف حلقةٍ أخرى ولا مشرف القسم الآخر) — والقاعدة تحرس ذلك
-const halqaSupervisorId = computed(() => (halqat.value ?? []).find(h => h.id === sched.halaqa_id)?.supervisor_id ?? null)
-const visitorItems = computed(() => (visitors.value ?? [])
-  .filter(v => v.role !== 'field_supervisor' || v.id === halqaSupervisorId.value)
-  .map(v => ({
-    label: v.role === 'field_supervisor' ? v.full_name : `${v.full_name} (${roleLabel(v.role, v.gender)})`,
-    value: v.id
-  })))
 
 const statusF = ref<VisitStatus | 'all'>('all')
 const chipOptions = [
@@ -123,17 +109,14 @@ const selectedHalqaTime = computed(() => {
   const h = (halqat.value ?? []).find(x => x.id === sched.halaqa_id)
   return h?.daily_time ? h.daily_time.slice(0, 5) : ''
 })
-// تغيير الحلقة يُسقط زائراً لم يعد مسموحاً (مشرف الحلقة السابقة) ويقترح مشرف الجديدة
-watch(() => sched.halaqa_id, () => {
-  if (sched.supervisor_id && !visitorItems.value.some(v => v.value === sched.supervisor_id)) {
-    sched.supervisor_id = halqaSupervisorId.value ?? ''
-  }
-})
+// الزائر = من يجدول (قرار 2026-10-19): لا يُختار، يُسجَّل باسمه تلقائياً. وتعديل الموعد لا يغيّر زائر الزيارة.
+// القاعدة تحرس الزائر (guard_visit_visitor): أحد المديرَين أو مشرف الحلقة نفسها.
+const visitorName = ref('')
 function openSchedule() {
   editingId.value = null
   sched.halaqa_id = ''
-  // من يجدول (المديران والمشرف الميداني) يُعيَّن زائراً افتراضيّاً (نفسه)
-  sched.supervisor_id = canSchedule.value ? (profile.value?.id ?? '') : ''
+  sched.supervisor_id = profile.value?.id ?? ''
+  visitorName.value = profile.value?.full_name ?? ''
   sched.scheduled_at = ''
   schedOpen.value = true
 }
@@ -141,22 +124,23 @@ function openEditSchedule(v: VisitRow) {
   editingId.value = v.id
   sched.halaqa_id = v.halaqa_id
   sched.supervisor_id = v.supervisor_id
+  visitorName.value = v.supervisor?.full_name ?? ''
   sched.scheduled_at = v.scheduled_at ? v.scheduled_at.slice(0, 16) : ''
   schedOpen.value = true
 }
 function validateSched(s: typeof sched) {
   const e: { name: string, message: string }[] = []
   if (!s.halaqa_id) e.push({ name: 'halaqa_id', message: 'اختر الحلقة.' })
-  if (!s.supervisor_id) e.push({ name: 'supervisor_id', message: 'اختر الزائر.' })
-  if (!s.scheduled_at) e.push({ name: 'scheduled_at', message: 'حدّد موعد الزيارة.' })
+  if (!s.scheduled_at) e.push({ name: 'scheduled_at', message: 'حدّد اليوم والوقت.' })
   return e
 }
 async function saveSchedule() {
   saving.value = true
   try {
-    const payload = { halaqa_id: sched.halaqa_id, supervisor_id: sched.supervisor_id, scheduled_at: new Date(sched.scheduled_at).toISOString() }
+    const when = { halaqa_id: sched.halaqa_id, scheduled_at: new Date(sched.scheduled_at).toISOString() }
+    const payload = { ...when, supervisor_id: sched.supervisor_id }
     if (editingId.value) {
-      const { data, error } = await supabase.from('supervision_visits').update(payload).eq('id', editingId.value).select('id')
+      const { data, error } = await supabase.from('supervision_visits').update(when).eq('id', editingId.value).select('id')
       if (error) throw error
       if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
     } else {
@@ -359,7 +343,7 @@ async function confirmDelete() {
               @click="openEditSchedule(row)"
             />
             <UButton
-              v-if="isManager"
+              v-if="isAdmin || canEditVisit(row)"
               color="neutral"
               variant="outline"
               size="sm"
@@ -397,29 +381,24 @@ async function confirmDelete() {
               size="lg"
             />
           </UFormField>
-          <UFormField
-            label="الزائر"
-            name="supervisor_id"
-            :hint="visitorItems.length ? 'المدير أو أحد المشرفين' : 'لا زائرون متاحون بعد'"
-          >
-            <UiSelect
-              v-model="sched.supervisor_id"
-              :items="visitorItems"
-              placeholder="اختر الزائر"
-              size="lg"
+          <div class="visitor-line">
+            <UIcon
+              name="i-lucide-user-check"
+              class="size-[18px]"
             />
-          </UFormField>
+            <span>الزائر: <strong>{{ visitorName || '—' }}</strong></span>
+            <span
+              v-if="!editingId"
+              class="visitor-note"
+            >يُسجَّل باسمك تلقائياً</span>
+          </div>
           <UFormField
             label="موعد الزيارة"
             name="scheduled_at"
           >
-            <UInput
+            <UiDateTimeField
               v-model="sched.scheduled_at"
-              type="datetime-local"
-              dir="ltr"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
+              :suggested-time="selectedHalqaTime || null"
             />
           </UFormField>
           <div class="form-actions">
@@ -538,6 +517,9 @@ async function confirmDelete() {
 .mb-4 { margin-bottom: 18px; }
 .strong { font-weight: 600; color: var(--ink); white-space: nowrap; }
 .visitor-cell { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.visitor-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 14px; border-radius: 13px; background: var(--surface-2); color: var(--ink-2); font-size: 14.5px; }
+.visitor-line strong { color: var(--ink); font-weight: 600; }
+.visitor-note { margin-inline-start: auto; font-size: 12.5px; color: var(--ink-3); }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .form { display: flex; flex-direction: column; gap: 14px; }

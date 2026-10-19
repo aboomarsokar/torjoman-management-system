@@ -10,6 +10,9 @@ const props = defineProps<{
   halaqaItems: { label: string, value: string }[]
   /** شهرُ اليوم بتوقيت غزة (لا شهرَ بعده). */
   max: { year: number, month: number }
+  /** عدّادُ البحث «3 من 6»: الظاهرون بعد التصفية من مجموع طلاب الحلقة. */
+  shown?: number
+  total?: number
 }>()
 const halaqaId = defineModel<string | null>('halaqa', { required: true })
 const year = defineModel<number>('year', { required: true })
@@ -76,13 +79,12 @@ const windowText = computed(() =>
       class="pf wide"
     >
       <label>الطالب</label>
-      <UInput
+      <UiSearchField
         v-model="query"
-        icon="i-lucide-search"
         placeholder="ابحث باسم الطالب…"
-        size="lg"
+        :shown="props.shown"
+        :total="props.total"
         class="w-full"
-        :ui="{ base: 'rounded-[13px] min-h-11' }"
       />
     </div>
   </div>

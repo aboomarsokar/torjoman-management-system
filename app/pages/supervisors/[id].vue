@@ -10,6 +10,7 @@ definePageMeta({ layout: 'dashboard' })
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 const supabase = useSupabaseClient<Database>()
+const today = gazaToday()
 
 type Sup = { id: string, full_name: string, employee_number: string | null, role: string }
 type Halqa = { id: string, name: string, teacher: { full_name: string } | null }
@@ -25,16 +26,15 @@ const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async
   ])
 
   const vs = visits ?? []
-  const done = vs.filter(v => v.status === 'done').length
-  const due = vs.filter(v => ['done', 'late', 'missed'].includes(v.status)).length
-  const commitment = due > 0 ? Math.round(done / due * 100) : null
+  const commitment = visitCommitment(vs, today)
 
   return { sup, halqat: halqat ?? [], visits: vs.slice(0, 8), commitment }
 }, { server: false, default: () => null })
 
 useSeoMeta({ title: () => data.value?.sup ? `${data.value.sup.full_name} — ترجمان` : 'تفاصيل المشرف — ترجمان' })
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' })
+// الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (الفائتةُ مشتقّة)
+const fmtDate = (iso: string) => formatDay(gazaDayOf(iso))
 const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'success' : c >= 70 ? 'info' : 'error'
 </script>
 
@@ -196,8 +196,8 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
                   <span class="row-sub">{{ fmtDate(v.executed_at || v.scheduled_at) }}</span>
                 </div>
                 <UBadge
-                  :label="VISIT_STATUS[v.status]?.label"
-                  :color="VISIT_STATUS[v.status]?.color"
+                  :label="VISIT_STATUS[visitDisplayStatus(v, today)]?.label"
+                  :color="VISIT_STATUS[visitDisplayStatus(v, today)]?.color"
                   variant="soft"
                   size="sm"
                 />

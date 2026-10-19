@@ -1,87 +1,85 @@
 <script setup lang="ts">
 /**
- * الزيارات الإشرافية (§4.15).
- * المديران (الإداري والفني) والمشرف الميداني يجدولون زيارة لحلقة ثم ترفع نتائجها (نقاط قوة/تحسين/توصيات/تقييم).
- * الزائر قد يكون مشرفاً ميدانياً أو أحد المديرَين (يزور بصفته).
- * RLS: المديران يديران الكل، والمشرف الميداني زياراته. الحذف للمديرَين. مشرف المشروع والمديرة الإدارية للاطّلاع.
+ * الزيارات الإشرافية (§4.9 — ROADMAP #15): كلُّ مشرفٍ ميدانيّ يجدول زياراته لحلقاته ويرفع نتائجها،
+ * والإدارةُ (المديران والمديرة ومشرف المشروع) تتابع: الشهرُ والمشرفُ فلتران، ونسبةُ الالتزام بالمواعيد،
+ * وتفاصيلُ كلّ زيارةٍ بسجلّ تغييرات موعدها وأسبابه. الحالةُ من القاعدة (في وقتها / متأخّرة)،
+ * و«فائتة» تُشتقّ عند العرض (`visitDisplayStatus`). الحذفُ لصاحب الزيارة وللمدير الإداري (تنظيف خطأ).
  */
 import type { Database } from '~/types/database.types'
-import { roleLabel, type Role } from '~/constants/roles'
+import type { VisitHalqaOption, VisitRow } from '~/types/visits'
+import type { VisitDisplayStatus } from '~/utils/visitStatus'
+import { roleLabel } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
-
-type VisitStatus = Database['public']['Enums']['visit_status']
-type VisitRow = Database['public']['Tables']['supervision_visits']['Row'] & {
-  halaqa: { name: string, teacher: { full_name: string } | null } | null
-  supervisor: { full_name: string, role: Role, gender: Gender | null } | null
-}
-type Gender = Database['public']['Enums']['gender_type']
-type HalqaOption = { id: string, name: string, daily_time: string | null, supervisor_id: string | null, teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-// كل مشرف ميداني يجدول زياراته بنفسه، والمديران يطّلعون (قرار 2026-10-19 — القاعدة: visits_insert/update
-// لصاحب الزيارة مشرف الحلقة). الحذف للمدير الإداري (تنظيف خطأ) ولصاحب الزيارة.
 const { isAdmin, isFieldSupervisor } = usePermissions()
 const canSchedule = computed(() => isFieldSupervisor.value)
-/**
- * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): للمشرف الميداني صاحبها وحده
- * (visits_update: supervisor_id = auth.uid()) — المديران يطّلعون ولا يعدّلون.
- */
-function canEditVisit(v: VisitRow) {
-  return isFieldSupervisor.value && v.supervisor_id === profile.value?.id
-}
-/** تحديثٌ لم يمسّ صفّاً = رفضته RLS بصمت — يُعرض خطأً لا نجاحاً. */
-const VISIT_NOT_UPDATED = 'لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.'
+/** موعدُ الزيارة ونتيجتُها لصاحبها المشرف الميداني وحده (visits_update) — المديران يطّلعون. */
+const canEditVisit = (v: VisitRow) => isFieldSupervisor.value && v.supervisor_id === profile.value?.id
 
-// جلب غير حاجز (useLazyAsyncData): الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي تلقائياً
-const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(
-  'visits-list',
-  async () => {
-    const { data, error } = await supabase
-      .from('supervision_visits')
-      .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
-      .order('scheduled_at', { ascending: false })
-      .returns<VisitRow[]>()
-    if (error) {
-      console.error('[visits] فشل الجلب:', error.message)
-      return []
-    }
-    return data ?? []
-  },
-  { server: false, default: () => [] }
-)
-const { data: halqat } = useLazyAsyncData<HalqaOption[]>('visits-halqat', async () => {
-  const { data } = await supabase
-    .from('halaqat')
-    .select('id, name, daily_time, supervisor_id, teacher:teacher_id(full_name)')
-    .order('name')
-    .returns<HalqaOption[]>()
+const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>('visits-list', async () => {
+  const { data, error } = await supabase
+    .from('supervision_visits')
+    .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
+    .order('scheduled_at', { ascending: false })
+    .returns<VisitRow[]>()
+  if (error) handle(error)
   return data ?? []
 }, { server: false, default: () => [] })
-const halqaItems = computed(() => (halqat.value ?? []).map(h => ({
-  label: h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name,
-  value: h.id
-})))
+const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>('visits-halqat', async () => {
+  const { data } = await supabase.from('halaqat')
+    .select('id, name, daily_time, supervisor_id, teacher:teacher_id(full_name)').order('name')
+    .returns<VisitHalqaOption[]>()
+  return data ?? []
+}, { server: false, default: () => [] })
 
-const statusF = ref<VisitStatus | 'all'>('all')
+const today = gazaToday()
+const display = (v: VisitRow) => visitDisplayStatus(v, today)
+
+// ── الفلاتر: الشهر (افتراضاً الجاري) والمشرف (للإدارة) ثم شرائح الحالة ──
+const periodOf = (v: VisitRow) => gazaDayOf(v.scheduled_at).slice(0, 7)
+const currentPeriod = today.slice(0, 7)
+const period = ref<string>(currentPeriod)
+const periodItems = computed(() => {
+  const set = new Set([currentPeriod, ...(visits.value ?? []).map(periodOf)])
+  const list = [...set].sort().reverse().map((p) => {
+    const [y, m] = p.split('-').map(Number)
+    return { label: periodLabel(y!, m!), value: p }
+  })
+  return [{ label: 'كل الشهور', value: 'all' }, ...list]
+})
+const supervisorF = ref<string>('all')
+const supervisorItems = computed(() => {
+  const map = new Map<string, string>()
+  for (const v of visits.value ?? []) if (v.supervisor) map.set(v.supervisor_id, v.supervisor.full_name)
+  return [{ label: 'كل المشرفين', value: 'all' }, ...[...map].map(([value, label]) => ({ label, value }))]
+})
+const scoped = computed(() => (visits.value ?? []).filter(v =>
+  (period.value === 'all' || periodOf(v) === period.value)
+  && (supervisorF.value === 'all' || v.supervisor_id === supervisorF.value)))
+
+const statusF = ref<VisitDisplayStatus | 'all'>('all')
 const chipOptions = [
   { value: 'all' as const, label: 'الكل' },
   { value: 'scheduled' as const, label: 'مجدولة' },
-  { value: 'done' as const, label: 'تمّت' },
+  { value: 'done' as const, label: 'في وقتها' },
   { value: 'late' as const, label: 'متأخّرة' },
   { value: 'missed' as const, label: 'فائتة' }
 ]
-const filtered = computed(() => (visits.value ?? []).filter(v => statusF.value === 'all' || v.status === statusF.value))
+const filtered = computed(() => scoped.value.filter(v => statusF.value === 'all' || display(v) === statusF.value))
 const stats = computed(() => {
-  const list = visits.value ?? []
+  const list = scoped.value.map(display)
+  const commitment = visitCommitment(scoped.value, today)
   return {
-    scheduled: list.filter(v => v.status === 'scheduled').length,
-    done: list.filter(v => v.status === 'done').length,
-    overdue: list.filter(v => v.status === 'late' || v.status === 'missed').length
+    scheduled: list.filter(s => s === 'scheduled').length,
+    done: list.filter(s => s === 'done').length,
+    overdue: list.filter(s => s === 'late' || s === 'missed').length,
+    commitment: commitment === null ? '—' : `${commitment}%`
   }
 })
 const columns = [
@@ -94,113 +92,25 @@ const columns = [
   { key: 'status', label: 'الحالة' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
-function fmtDate(s: string | null) {
-  if (!s) return '—'
-  return new Date(s).toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' })
+/** زرُّ الزيارة الرئيسيّ: صاحبُها ينفّذها ما لم تُنفَّذ، وغيرُه يطّلع على نتيجتها أو تفاصيلها. */
+function mainAction(v: VisitRow) {
+  if (canEditVisit(v) && !v.executed_at) return { label: 'تنفيذ', icon: 'i-lucide-clipboard-pen', color: 'primary' as const, variant: 'solid' as const }
+  return { label: v.executed_at ? 'النتيجة' : 'التفاصيل', icon: 'i-lucide-eye', color: 'neutral' as const, variant: 'outline' as const }
 }
+const canReschedule = (v: VisitRow) => canEditVisit(v) && !v.executed_at
 
-// ── جدولة ──
+// ── النوافذ ──
 const schedOpen = ref(false)
-const saving = ref(false)
-const editingId = ref<string | null>(null)
-const sched = reactive({ halaqa_id: '', supervisor_id: '', scheduled_at: '' })
-// وقت الحلقة المختارة (يظهر كتلميح في نافذة الجدولة)
-const selectedHalqaTime = computed(() => {
-  const h = (halqat.value ?? []).find(x => x.id === sched.halaqa_id)
-  return h?.daily_time ? h.daily_time.slice(0, 5) : ''
-})
-// الزائر = من يجدول (قرار 2026-10-19): لا يُختار، يُسجَّل باسمه تلقائياً. وتعديل الموعد لا يغيّر زائر الزيارة.
-// القاعدة تحرس الزائر (guard_visit_visitor): أحد المديرَين أو مشرف الحلقة نفسها.
-const visitorName = ref('')
-function openSchedule() {
-  editingId.value = null
-  sched.halaqa_id = ''
-  sched.supervisor_id = profile.value?.id ?? ''
-  visitorName.value = profile.value?.full_name ?? ''
-  sched.scheduled_at = ''
+const schedVisit = ref<VisitRow | null>(null)
+function openSchedule(v: VisitRow | null) {
+  schedVisit.value = v
   schedOpen.value = true
 }
-function openEditSchedule(v: VisitRow) {
-  editingId.value = v.id
-  sched.halaqa_id = v.halaqa_id
-  sched.supervisor_id = v.supervisor_id
-  visitorName.value = v.supervisor?.full_name ?? ''
-  sched.scheduled_at = v.scheduled_at ? v.scheduled_at.slice(0, 16) : ''
-  schedOpen.value = true
-}
-function validateSched(s: typeof sched) {
-  const e: { name: string, message: string }[] = []
-  if (!s.halaqa_id) e.push({ name: 'halaqa_id', message: 'اختر الحلقة.' })
-  if (!s.scheduled_at) e.push({ name: 'scheduled_at', message: 'حدّد اليوم والوقت.' })
-  return e
-}
-async function saveSchedule() {
-  saving.value = true
-  try {
-    const when = { halaqa_id: sched.halaqa_id, scheduled_at: new Date(sched.scheduled_at).toISOString() }
-    const payload = { ...when, supervisor_id: sched.supervisor_id }
-    if (editingId.value) {
-      const { data, error } = await supabase.from('supervision_visits').update(when).eq('id', editingId.value).select('id')
-      if (error) throw error
-      if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
-    } else {
-      const { error } = await supabase.from('supervision_visits').insert(payload)
-      if (error) throw error
-    }
-    toast.add({ title: editingId.value ? 'تم تحديث موعد الزيارة.' : 'تمت جدولة الزيارة.', color: 'success', icon: 'i-lucide-calendar-check' })
-    schedOpen.value = false
-    await refresh()
-  } catch (err) {
-    handle(err)
-  } finally {
-    saving.value = false
-  }
-}
-
-// ── تنفيذ ──
-const execOpen = ref(false)
-const execTarget = ref<VisitRow | null>(null)
-const execSaving = ref(false)
-const result = reactive({ flow_rating: '', strengths: '', improvements: '', recommendations: '', notes: '' })
-const ratingItems = [
-  { label: 'ممتاز', value: 'ممتاز' },
-  { label: 'جيد جداً', value: 'جيد جداً' },
-  { label: 'جيد', value: 'جيد' },
-  { label: 'يحتاج تحسين', value: 'يحتاج تحسين' }
-]
-function openExec(v: VisitRow) {
-  execTarget.value = v
-  result.flow_rating = v.flow_rating ?? 'ممتاز'
-  result.strengths = v.strengths ?? ''
-  result.improvements = v.improvements ?? ''
-  result.recommendations = v.recommendations ?? ''
-  result.notes = v.notes ?? ''
-  execOpen.value = true
-}
-async function saveResult() {
-  if (!execTarget.value) return
-  execSaving.value = true
-  try {
-    const payload = {
-      flow_rating: result.flow_rating || null,
-      strengths: result.strengths.trim() || null,
-      improvements: result.improvements.trim() || null,
-      recommendations: result.recommendations.trim() || null,
-      notes: result.notes.trim() || null,
-      executed_at: execTarget.value.executed_at ?? new Date().toISOString(),
-      status: 'done' as VisitStatus
-    }
-    const { data, error } = await supabase.from('supervision_visits').update(payload).eq('id', execTarget.value.id).select('id')
-    if (error) throw error
-    if (!data?.length) throw new Error(VISIT_NOT_UPDATED)
-    toast.add({ title: 'تم رفع نتيجة الزيارة.', color: 'success', icon: 'i-lucide-circle-check' })
-    execOpen.value = false
-    await refresh()
-  } catch (err) {
-    handle(err)
-  } finally {
-    execSaving.value = false
-  }
+const resultOpen = ref(false)
+const resultVisit = ref<VisitRow | null>(null)
+function openResult(v: VisitRow) {
+  resultVisit.value = v
+  resultOpen.value = true
 }
 
 // ── حذف ──
@@ -227,7 +137,7 @@ async function confirmDelete() {
   <div class="visits">
     <UiPageHeader
       title="الزيارات الإشرافية"
-      subtitle="جدولة الزيارات ومتابعة الالتزام بمواعيدها ورفع نتائجها."
+      subtitle="جدولة الزيارات ومتابعة الالتزام بمواعيدها ونتائجها."
     >
       <template #actions>
         <UButton
@@ -237,22 +147,40 @@ async function confirmDelete() {
           size="lg"
           icon="i-lucide-plus"
           :ui="{ base: 'rounded-[13px] font-semibold' }"
-          @click="openSchedule"
+          @click="openSchedule(null)"
         />
       </template>
     </UiPageHeader>
+
+    <div class="filters">
+      <UiSelect
+        v-model="period"
+        :items="periodItems"
+        size="md"
+        class="sel"
+        aria-label="الشهر"
+      />
+      <UiSelect
+        v-if="!isFieldSupervisor"
+        v-model="supervisorF"
+        :items="supervisorItems"
+        size="md"
+        class="sel wide"
+        aria-label="المشرف"
+      />
+    </div>
 
     <div class="stats">
       <UiStatCard
         icon="i-lucide-calendar"
         :value="stats.scheduled"
-        label="زيارة مجدولة"
+        label="مجدولة قادمة"
         tone="blue"
       />
       <UiStatCard
         icon="i-lucide-circle-check-big"
         :value="stats.done"
-        label="زيارة تمّت"
+        label="تمّت في وقتها"
         tone="green"
       />
       <UiStatCard
@@ -260,6 +188,12 @@ async function confirmDelete() {
         :value="stats.overdue"
         label="متأخّرة / فائتة"
         tone="err"
+      />
+      <UiStatCard
+        icon="i-lucide-gauge"
+        :value="stats.commitment"
+        label="الالتزام بالمواعيد"
+        tone="blue"
       />
     </div>
 
@@ -277,8 +211,8 @@ async function confirmDelete() {
       <UiEmptyState
         v-else-if="filtered.length === 0"
         icon="i-lucide-clipboard-check"
-        title="لا زيارات في هذا التصنيف"
-        :description="canSchedule ? 'جدوِل زيارة جديدة لتظهر هنا.' : 'لا زيارات في نطاقك حاليّاً.'"
+        title="لا زيارات بهذه التصفية"
+        :description="canSchedule ? 'جدوِل زيارة جديدة لتظهر هنا.' : 'غيّر الشهر أو المشرف لترى زيارات أخرى.'"
       />
       <UiDataTable
         v-else
@@ -299,48 +233,47 @@ async function confirmDelete() {
           <div class="visitor-cell">
             <span class="strong">{{ row.supervisor?.full_name || '—' }}</span>
             <UBadge
-              v-if="row.supervisor"
+              v-if="row.supervisor && row.supervisor.role !== 'field_supervisor'"
               :label="roleLabel(row.supervisor.role, row.supervisor.gender)"
-              :color="row.supervisor.role === 'field_supervisor' ? 'info' : 'primary'"
+              color="primary"
               variant="soft"
               size="sm"
             />
           </div>
         </template>
         <template #date="{ row }">
-          <span class="muted">{{ fmtDate(row.scheduled_at) }}</span>
+          <span
+            class="muted"
+            dir="ltr"
+          >{{ formatVisitMoment(row.scheduled_at) }}</span>
         </template>
         <template #rating="{ row }">
           <span class="muted">{{ row.flow_rating || '—' }}</span>
         </template>
         <template #status="{ row }">
           <UBadge
-            :label="VISIT_STATUS[row.status]?.label"
-            :color="VISIT_STATUS[row.status]?.color"
+            :label="VISIT_STATUS[display(row)]?.label"
+            :color="VISIT_STATUS[display(row)]?.color"
             variant="soft"
           />
         </template>
         <template #actions="{ row }">
           <div class="actions">
             <UButton
-              v-if="row.status === 'done' || canEditVisit(row)"
-              :label="row.status === 'done' ? 'النتيجة' : 'تنفيذ'"
-              :color="row.status === 'done' ? 'neutral' : 'primary'"
-              :variant="row.status === 'done' ? 'outline' : 'solid'"
+              v-bind="mainAction(row)"
               size="sm"
-              :icon="row.status === 'done' ? 'i-lucide-eye' : 'i-lucide-clipboard-pen'"
               :ui="{ base: 'rounded-[10px]' }"
-              @click="openExec(row)"
+              @click="openResult(row)"
             />
             <UButton
-              v-if="canEditVisit(row)"
+              v-if="canReschedule(row)"
               color="neutral"
               variant="outline"
               size="sm"
-              icon="i-lucide-pencil"
+              icon="i-lucide-calendar-clock"
               :ui="{ base: 'rounded-[10px]' }"
               aria-label="تعديل الموعد"
-              @click="openEditSchedule(row)"
+              @click="openSchedule(row)"
             />
             <UButton
               v-if="isAdmin || canEditVisit(row)"
@@ -357,7 +290,8 @@ async function confirmDelete() {
         <template #card="{ row }">
           <UiCardRow
             :title="row.halaqa?.name || '—'"
-            :subtitle="fmtDate(row.scheduled_at)"
+            :subtitle="formatVisitMoment(row.scheduled_at)"
+            subtitle-dir="ltr"
             :fields="[
               { label: 'المعلّم', value: row.halaqa?.teacher?.full_name },
               { label: 'الزائر', value: row.supervisor?.full_name },
@@ -366,32 +300,25 @@ async function confirmDelete() {
           >
             <template #badge>
               <UBadge
-                :label="VISIT_STATUS[row.status]?.label"
-                :color="VISIT_STATUS[row.status]?.color"
+                :label="VISIT_STATUS[display(row)]?.label"
+                :color="VISIT_STATUS[display(row)]?.color"
                 variant="soft"
               />
             </template>
-            <template
-              v-if="row.status === 'done' || canEditVisit(row) || isAdmin"
-              #actions
-            >
+            <template #actions>
               <UButton
-                v-if="row.status === 'done' || canEditVisit(row)"
-                :label="row.status === 'done' ? 'النتيجة' : 'تنفيذ'"
-                :color="row.status === 'done' ? 'neutral' : 'primary'"
-                :variant="row.status === 'done' ? 'outline' : 'solid'"
-                :icon="row.status === 'done' ? 'i-lucide-eye' : 'i-lucide-clipboard-pen'"
+                v-bind="mainAction(row)"
                 :ui="{ base: 'rounded-[11px]' }"
-                @click="openExec(row)"
+                @click="openResult(row)"
               />
               <UButton
-                v-if="canEditVisit(row)"
+                v-if="canReschedule(row)"
                 label="تعديل الموعد"
                 color="neutral"
                 variant="outline"
-                icon="i-lucide-pencil"
+                icon="i-lucide-calendar-clock"
                 :ui="{ base: 'rounded-[11px]' }"
-                @click="openEditSchedule(row)"
+                @click="openSchedule(row)"
               />
               <UButton
                 v-if="isAdmin || canEditVisit(row)"
@@ -409,149 +336,19 @@ async function confirmDelete() {
       </UiDataTable>
     </ClientOnly>
 
-    <!-- نافذة الجدولة -->
-    <UModal
+    <VisitsScheduleModal
       v-model:open="schedOpen"
-      :title="editingId ? 'تعديل موعد الزيارة' : 'جدولة زيارة'"
-    >
-      <template #body>
-        <UForm
-          :state="sched"
-          :validate="validateSched"
-          class="form"
-          @submit="saveSchedule"
-        >
-          <UFormField
-            label="الحلقة"
-            name="halaqa_id"
-            :hint="selectedHalqaTime ? `وقت الحلقة اليومي: ${selectedHalqaTime}` : ''"
-          >
-            <UiSelect
-              v-model="sched.halaqa_id"
-              :items="halqaItems"
-              placeholder="اختر الحلقة"
-              size="lg"
-            />
-          </UFormField>
-          <div class="visitor-line">
-            <UIcon
-              name="i-lucide-user-check"
-              class="size-[18px]"
-            />
-            <span>الزائر: <strong>{{ visitorName || '—' }}</strong></span>
-            <span
-              v-if="!editingId"
-              class="visitor-note"
-            >يُسجَّل باسمك تلقائياً</span>
-          </div>
-          <UFormField
-            label="موعد الزيارة"
-            name="scheduled_at"
-          >
-            <UiDateTimeField
-              v-model="sched.scheduled_at"
-              :suggested-time="selectedHalqaTime || null"
-            />
-          </UFormField>
-          <div class="form-actions">
-            <UButton
-              label="إلغاء"
-              color="neutral"
-              variant="ghost"
-              size="lg"
-              :ui="{ base: 'rounded-[13px]' }"
-              @click="schedOpen = false"
-            />
-            <UButton
-              type="submit"
-              :label="editingId ? 'حفظ' : 'جدولة'"
-              color="primary"
-              size="lg"
-              :loading="saving"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
-            />
-          </div>
-        </UForm>
-      </template>
-    </UModal>
+      :visit="schedVisit"
+      :halqat="halqat ?? []"
+      @saved="refresh"
+    />
+    <VisitsResultModal
+      v-model:open="resultOpen"
+      :visit="resultVisit"
+      :can-edit="!!resultVisit && canEditVisit(resultVisit)"
+      @saved="refresh"
+    />
 
-    <!-- نافذة التنفيذ -->
-    <UModal
-      v-model:open="execOpen"
-      :title="`نتيجة زيارة ${execTarget?.halaqa?.name || ''}`"
-    >
-      <template #body>
-        <div class="form">
-          <UFormField label="تقييم سير الحلقة">
-            <USelect
-              v-model="result.flow_rating"
-              :items="ratingItems"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField label="نقاط القوة">
-            <UTextarea
-              v-model="result.strengths"
-              :rows="2"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField label="جوانب التحسين">
-            <UTextarea
-              v-model="result.improvements"
-              :rows="2"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField label="التوصيات">
-            <UTextarea
-              v-model="result.recommendations"
-              :rows="2"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField label="ملاحظات إضافية">
-            <UTextarea
-              v-model="result.notes"
-              :rows="2"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <div class="form-actions">
-            <UButton
-              label="إغلاق"
-              color="neutral"
-              variant="ghost"
-              size="lg"
-              :ui="{ base: 'rounded-[13px]' }"
-              @click="execOpen = false"
-            />
-            <UButton
-              v-if="execTarget && canEditVisit(execTarget)"
-              label="حفظ النتيجة"
-              color="primary"
-              size="lg"
-              icon="i-lucide-check"
-              :loading="execSaving"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
-              @click="saveResult"
-            />
-          </div>
-        </div>
-      </template>
-    </UModal>
-
-    <!-- تأكيد الحذف -->
     <UiConfirmModal
       :open="!!deleteTarget"
       title="حذف الزيارة"
@@ -565,17 +362,16 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 22px; }
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.sel { width: 150px; }
+.sel.wide { width: 220px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 22px; }
 .mb-4 { margin-bottom: 18px; }
 .strong { font-weight: 600; color: var(--ink); white-space: nowrap; }
 .visitor-cell { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-.visitor-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 14px; border-radius: 13px; background: var(--surface-2); color: var(--ink-2); font-size: 14.5px; }
-.visitor-line strong { color: var(--ink); font-weight: 600; }
-.visitor-note { margin-inline-start: auto; font-size: 12.5px; color: var(--ink-3); }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.form { display: flex; flex-direction: column; gap: 14px; }
-.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 
-@media (max-width: 768px) { .stats { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .stats { grid-template-columns: 1fr 1fr; gap: 12px; } .sel, .sel.wide { flex: 1 1 140px; width: auto; } }
 </style>

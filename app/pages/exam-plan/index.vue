@@ -62,26 +62,38 @@ function openEdit(c: ExamCycle) {
   modalOpen.value = true
 }
 
+/** يحوّل نصَّ الخانة إلى عددٍ صحيحٍ في 1–30، وإلا null — مصدرٌ واحدٌ للتحقّق وللحفظ. */
+function toJuz(v: string): number | null {
+  const n = v.trim() === '' ? Number.NaN : Number(v)
+  return Number.isInteger(n) && n >= 1 && n <= 30 ? n : null
+}
+
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
-  const from = Number.parseInt(s.parts_from, 10)
-  const to = Number.parseInt(s.parts_to, 10)
-  if (!Number.isInteger(from) || from < 1 || from > 30) errors.push({ name: 'parts_from', message: 'رقمٌ من 1 إلى 30.' })
-  if (!Number.isInteger(to) || to < 1 || to > 30) errors.push({ name: 'parts_to', message: 'رقمٌ من 1 إلى 30.' })
-  else if (Number.isInteger(from) && from > to) errors.push({ name: 'parts_to', message: 'يجب ألّا يقلّ «إلى» عن «من».' })
+  const from = toJuz(s.parts_from)
+  const to = toJuz(s.parts_to)
+  if (from === null) errors.push({ name: 'parts_from', message: 'رقمٌ صحيحٌ من 1 إلى 30.' })
+  if (to === null) errors.push({ name: 'parts_to', message: 'رقمٌ صحيحٌ من 1 إلى 30.' })
+  else if (from !== null && from > to) errors.push({ name: 'parts_to', message: 'يجب ألّا يقلّ «إلى» عن «من».' })
   if (!s.surahs_label.trim()) errors.push({ name: 'surahs_label', message: 'وصف السور مطلوب.' })
   return errors
 }
 
 async function save() {
   if (!editing.value) return
+  const from = toJuz(form.parts_from)
+  const to = toJuz(form.parts_to)
+  if (from === null || to === null || from > to) return
   saving.value = true
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('exam_cycles')
-      .update({ parts_from: Number(form.parts_from), parts_to: Number(form.parts_to), surahs_label: form.surahs_label.trim() })
+      .update({ parts_from: from, parts_to: to, surahs_label: form.surahs_label.trim() })
       .eq('id', editing.value.id)
+      .select('id')
     if (error) throw error
+    // تحديثٌ لم يمسّ صفّاً (تصفيةُ RLS) ليس نجاحاً
+    if (!data?.length) throw new Error('لم يُحفظ التعديل — قد لا تملك هذه الخطوة.')
     toast.add({ title: 'تم تحديث الدورة.', color: 'success', icon: 'i-lucide-circle-check' })
     modalOpen.value = false
     await refresh()
@@ -205,6 +217,9 @@ const editTitle = computed(() => editing.value
               :ui="{ base: 'rounded-[13px]' }"
             />
           </UFormField>
+          <p class="hint">
+            عدّل الدورة الأوسع أوّلاً إن ضيّقت دورةً داخلها.
+          </p>
           <div class="form-actions">
             <UButton
               label="إلغاء"
@@ -231,6 +246,7 @@ const editTitle = computed(() => editing.value
 
 <style scoped>
 .tabs { margin-bottom: 18px; }
+.hint { margin: 0; font-size: 13.5px; color: var(--ink-2); }
 .note { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 .form { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }

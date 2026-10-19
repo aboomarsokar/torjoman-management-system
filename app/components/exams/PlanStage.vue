@@ -103,8 +103,7 @@ const rowClass = (r: Row) => (r.cycle.cycle_number === LAST_CYCLE ? 'cycle-all' 
       <template #card="{ row }">
         <UiCardRow
           :title="row.name"
-          :subtitle="row.detail"
-          subtitle-dir="ltr"
+          :subtitle="`الأجزاء \u2066${row.detail}\u2069`"
           :fields="[
             { label: 'عدد الأجزاء', value: row.count },
             { label: 'وصف السور', value: row.surahs },

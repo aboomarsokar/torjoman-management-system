@@ -296,11 +296,11 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## 8. `monthly_reports` — التقرير الشهري للحلقة
 
-> **⚠️ نموذجٌ مُستبدَل (2026-10-19):** الرصدُ الشهريّ صار بالسورة والآية في `quran_records` ومسارُه ومعتمِدُه في **§21**. لا أنشطةَ ولا نقاطَ ولا درجاتَ ولا أيامَ دوامٍ يدوية. ما يلي من هذا القسم من الجدولين القديمين `monthly_report_students` و`monthly_report_activities` ومن أعمدة `monthly_reports` القديمة (`actual_days` و`default_days_snapshot` و`default_points_snapshot` و`attendance_rate` و`activities_done` و`activities_total` و`general_notes` و`activities_notes`) **ما زال موجوداً في القاعدة ولا يقرؤه ولا يكتبه أحدٌ** حتى هجرة الحذف بعد النشر (Task 10 من الخطة، بإذنٍ صريح)، ثم يُحذف هذا الوصف معه. العمودان `status` و`approved_by/at` و`submitted_at` حيّةٌ ويضبطها المسارُ في §21.
+> **النموذج القديم مُلغى ومحذوف (2026-10-19، الهجرة `20261019111920_drop_old_report_model`):** الرصدُ الشهريّ صار بالسورة والآية في `quran_records` ومسارُه ومعتمِدُه في **§21**، والحضورُ يومياً في `attendance_days`. حُذفت الأنشطةُ والنقاطُ والدرجاتُ وأيامُ الدوام اليدوية: الجدولان `monthly_report_students` و`monthly_report_activities` (وسياساتُهما `rstudents_*` و`ractivities_*`)، والنوع `activity_key`، وأعمدةُ `monthly_reports` (`actual_days` و`default_days_snapshot` و`default_points_snapshot` و`attendance_rate` و`activities_done` و`activities_total` و`general_notes` و`activities_notes`)، وعمودا `app_settings` (`default_points` و`default_attendance_days`). كانت كلُّها فارغةً (0 صف) ولم يبقَ لها قارئٌ في الشيفرة ولا في الدوالّ والعروض.
 
-المعلم يسلّم تقريراً شهرياً: بيانات الحلقة + سجلّ كل طالب.
+`monthly_reports` هو رأسُ الرصد الشهريّ للحلقة (الحالةُ والأختام)، وسجلُّ كلّ طالبٍ فيه هو `quran_records` (§21).
 
-**مستوى التقرير:**
+**مستوى التقرير (الباقي بعد الحذف):**
 
 | العمود | النوع | ملاحظات |
 |---|---|---|
@@ -309,68 +309,18 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `report_month` | int | الشهر |
 | `report_year` | int | السنة |
 | `submitted_at` | date | تاريخ التسليم (للتدقيق) |
-| `actual_days` | int | أيام الدوام الفعلي (إدخال المعلم) |
-| `default_days_snapshot` | int | أيام الدوام الافتراضي (من إعدادات المدير، للقراءة) |
-| `default_points_snapshot` | int | مجموع النقاط الافتراضي (من إعدادات المدير) |
 | `target_pages_snapshot` | int | صفحات الحفظ المستهدفة شهرياً (من إعدادات المدير، للقراءة) |
-| `attendance_rate` | numeric | نسبة الانتظام (الفعلي ÷ الافتراضي، محسوبة) |
-| `activities_done` | int | الأنشطة المصاحبة المنفّذة (محسوب من `monthly_report_activities`) |
-| `activities_total` | int | إجمالي الأنشطة (15 — قائمة ثابتة) |
-| `general_notes` | text | ملاحظات عامة على الحلقة (تُصدَّر في Excel) |
-| `activities_notes` | text | ملاحظات عامة على الأنشطة المصاحبة |
 | `status` | enum | `draft` / `submitted` / `approved` |
 | `approved_by` | uuid FK → profiles | مَن اعتمد التقرير (للتدقيق) |
 | `approved_at` | timestamptz | تاريخ الاعتماد (مستقل عن شهر التقرير) |
+| `return_note` | text | ملاحظة الإعادة إلى المسوّدة (إلزامية عند الإعادة، §21) |
+| `created_at` / `updated_at` | timestamptz | |
 
 > **قيود إلزامية (§4.17):** (١) **تفرّد** — `UNIQUE (halaqa_id, report_month, report_year)`: تقرير واحد لكل حلقة لكل شهر. (٢) **منع الأشهر المستقبلية** — تحقّق (`CHECK`/خادمي) يمنع إنشاء تقرير لشهر لم يبدأ. (٣) الشهر يُقفل بعد التسليم.
 
-**`monthly_report_students` — سجلّ كل طالب في التقرير:**
-
-| العمود | النوع | ملاحظات |
-|---|---|---|
-| `id` | uuid PK | |
-| `report_id` | uuid FK → monthly_reports | |
-| `student_id` | uuid FK → students | |
-| `memorization_from` | int | الحفظ الجديد: من (رقم صفحة) |
-| `memorization_to` | int | الحفظ الجديد: إلى (رقم صفحة) — تحقّق: إلى ≥ من |
-| `memorization_pages` | int | صفحات الحفظ = (إلى − من)، محسوب |
-| `review_to` | int | المراجعة: إلى (من = «من» الحفظ تلقائياً) |
-| `review_pages` | int | صفحات المراجعة = (review_to − memorization_from)، محسوب |
-| `absence_excused` | int | غياب بعذر (يوقف عدّاد الزمن) |
-| `absence_unexcused` | int | غياب بغير عذر (يُحتسب) |
-| `monthly_points` | int | **مُلغى 2026-10-19** — لا يُعرض ولا يُكتب، ولا يدخل الدرجة (الدرجة = أكاديمي 75% + انتظام 25%). يبقى للبيانات القديمة |
-| `student_grade` | numeric | درجة الطالب = أكاديمي 60% + انتظام 20% + نقاط 20% (محسوبة) |
-| `notes` | text | ملاحظات على الطالب |
-
-**`monthly_report_activities` — الأنشطة المصاحبة (15 نشاطاً ثابتاً لكل تقرير):**
-
-| العمود | النوع | ملاحظات |
-|---|---|---|
-| `id` | uuid PK | |
-| `report_id` | uuid FK → monthly_reports | |
-| `activity_key` | enum (أو text + CHECK) | **معرّف ثابت** من قائمة مغلقة (ليس نصّاً حرّاً) — القيم الـ15 أدناه |
-| `done` | boolean | تم / لم يتم (افتراضي `false`) |
-| `note` | text | ملاحظة سطرية — تظهر/تُملأ فقط عند «لم يتم» |
-
-**كيف يُخزَّن:** صفّ واحد لكل نشاط ⇐ **15 صفّاً لكل تقرير**. يُدرَج الـ15 تلقائياً عند إنشاء التقرير (`done=false`) ثم يبدّلها المعلم (upsert). عدّاد «تمّ X من 15» = `COUNT(*) WHERE done`.
-
-**المفاتيح الـ15 الثابتة (القيمة في القاعدة ← المعنى المعروض):** اللابل العربي **لا يُخزَّن** — يُربط بالمفتاح عبر constants في الكود (`app/constants/`)، لثبات السجلّات لو تغيّرت الصياغة لاحقاً.
-
-| `activity_key` | النوع | المعروض |
-|---|---|---|
-| `reflection_1` … `reflection_4` | أسبوعي | اللقاء التدبري 1–4 |
-| `weekly_review_1` … `weekly_review_4` | أسبوعي | المراجعة الأسبوعية 1–4 |
-| `edu_curriculum_1` … `edu_curriculum_4` | أسبوعي | المقرر التربوي 1–4 |
-| `video_lecture` | شهري | المحاضرة المرئية |
-| `values_followup` | عام | متابعة القيم التربوية |
-
-> **قيود إلزامية:** `UNIQUE (report_id, activity_key)` (لا تكرار نشاط في تقرير) + حصر `activity_key` بالقائمة المغلقة (enum أو CHECK). القائمة الثابتة 15 نشاطاً (§4.17ج). الملاحظة العامة على الأنشطة تُحفظ في `monthly_reports.activities_notes` لا هنا.
-
-> **التكامل:** الغياب بعذر هنا يغذّي مؤشر التقدّم الزمني (§4.18). إنجاز الحلقة = (متوسط الطلاب × 0.8) + (نسبة الأنشطة × 0.2).
-
-**RLS** (`reports_*` و`rstudents_*` و`ractivities_*`) — **منذ `20261019094547` تكتب `reports_write` بـ`can_approve_report_in_halaqa` لا `can_approve_in_halaqa` (§21):**
-- **القراءة:** `can_view_halaqa(halaqa_id)`؛ والطالب سطره في `monthly_report_students` (`student_id = my_student_id()`) — جدولٌ قديم لا يُكتب.
-- **الكتابة:** معلّم الحلقة أو معتمِدُ الرصد في الحلقة (`can_approve_report_in_halaqa`: المشرف الميداني لها، والمدير الإداري، والمديرة لحلقات البنات — **لا المدير الفني**). أسطر الطلاب والأنشطة القديمة لا تُكتب.
+**RLS** (`reports_*`) — **منذ `20261019094547` تكتب `reports_write` بـ`can_approve_report_in_halaqa` لا `can_approve_in_halaqa` (§21):**
+- **القراءة:** `can_view_halaqa(halaqa_id)`؛ والطالب يقرأ صفحاته المعتمدة عبر `my_approved_pages()` (§21).
+- **الكتابة:** معلّم الحلقة أو معتمِدُ الرصد في الحلقة (`can_approve_report_in_halaqa`: المشرف الميداني لها، والمدير الإداري، والمديرة لحلقات البنات — **لا المدير الفني**). سجلّات الطلاب في `quran_records` (§21).
 - **الحارس `guard_report_status`** (§17، §21): المعلم ينقل `draft→submitted` ويعدّل ما دام مسودّة؛ `approved` وحقول `approved_by/at` لمعتمِد الحلقة وحده؛ وبعد الإرسال لا تعديل إلا بيد المعتمِد، ولا حذف إلا بيد المدير الإداري.
 
 ---
@@ -451,8 +401,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `id` | int PK | 1 | صف واحد |
 | `pass_mark` | int | 80 | علامة اجتياز الاختبار |
 | `target_memorization_pages` | int | 30 | صفحات الحفظ المستهدفة |
-| `default_points` | int | 100 | **مُلغى 2026-10-19** (النقاط أُلغيت من التقرير والدرجة) — لا يُعرض ولا يُضبط |
-| `default_attendance_days` | int | — | أيام الدوام الافتراضي (مقام الانتظام) |
+
+> حُذف العمودان `default_points` و`default_attendance_days` في `20261019111920_drop_old_report_model` (النقاطُ مُلغاة، والانتظام من `attendance_days`).
 
 **RLS** (`settings_*`): قراءة لكل حساب مسجَّل، كتابة `admin_manager` فقط.
 
@@ -816,7 +766,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 **المبدأ:** رأسُ الشهر لكلّ حلقة هو `monthly_reports` (الحالة والأختام)، وسجلُّ كلّ طالبٍ فيه هو `quran_records`: من (سورة:آية) إلى (سورة:آية) بترتيب الحفظ (من الناس إلى الفاتحة)، وصفحاتُ الحفظ والمراجعة. لا أنشطةَ ولا نقاطَ ولا درجات.
 
-> **القديم باقٍ بلا استعمال:** الجدولان `monthly_report_students` و`monthly_report_activities` ونوعُ `activity_key` وأعمدةُ `monthly_reports` القديمة (§8) ما زالت في القاعدة، ولا يقرؤها ولا يكتبها كودٌ بعد هذا الجزء. تُحذف **بعد نشر الكود وبإذنٍ صريح** في هجرةٍ لاحقة (Task 10)، مع `app_settings.default_points` و`default_attendance_days`.
+> **القديم حُذف:** الجدولان `monthly_report_students` و`monthly_report_activities` ونوعُ `activity_key` وأعمدةُ `monthly_reports` القديمة و`app_settings.default_points/default_attendance_days` أُسقطت في `20261019111920_drop_old_report_model` (§8)، فلا أثرَ لها في القاعدة.
 
 ### `public.quran_records`
 

@@ -19,7 +19,8 @@
 - **الجزءُ جزءُ البرنامج** (`program_juz`، على حدود السور، مرقّمٌ بترتيب الحفظ 30←1) لا جزءُ المصحف.
 - **المطلوب الشهريّ** = `app_settings.target_memorization_pages` مُقسَّطاً بالحضور: `max(1, round(المطلوب × حضر ÷ أيام الحلقة))`، ولا مطلوب لمن لم يحضر يوماً.
 - **قفلُ الشهر:** يُرسَل رصدُ الشهر ابتداءً من آخر يومٍ فيه، والخميسَ إن كان آخرُه جمعة. المسوّدةُ مفتوحةٌ قبله.
-- **الحالات:** المعلم يعدّل ما دام `draft` ويُرسل؛ المعتمِد (`can_approve_in_halaqa`) يعتمد **من `submitted` فقط** أو يُعيد إلى `draft` **بملاحظةٍ إلزامية** (`return_note`)، ويُعيد المعتمَدَ إلى `draft` بملاحظة إن لزم. لا كتابةَ في سجلّات شهرٍ معتمَد ولا في حضوره.
+- **مَن يعتمد (قرار المستخدم 2026-10-19):** المشرفُ الميدانيّ للحلقة أصلاً ويكتب ملاحظاتِ الإعادة، والمديرُ الإداري والمديرةُ الإدارية (لحلقات البنات) احتياطاً؛ **المديرُ الفنيّ يطّلع ولا يعتمد**. الدالّة: `public.can_approve_report_in_halaqa(hid uuid)` (Task 4) — **لا تُمسّ `can_approve_in_halaqa`** (يعتمد عليها الإسناد). وإشعارُ الإرسال يصل **مشرفَ الحلقة والمديرَ الفنيّ**.
+- **الحالات:** المعلم يعدّل ما دام `draft` ويُرسل؛ المعتمِد (`can_approve_report_in_halaqa`) يعتمد **من `submitted` فقط** أو يُعيد إلى `draft` **بملاحظةٍ إلزامية** (`return_note`)، ويُعيد المعتمَدَ إلى `draft` بملاحظة إن لزم. لا كتابةَ في سجلّات شهرٍ معتمَد ولا في حضوره.
 - القاعدة: دوالُّ لا يستدعيها العميل في `private`؛ كلُّ جدولٍ/دالّةٍ جديدة في `public` **تُسحب منها المنوح الافتراضية** (`revoke all … from public, anon, authenticated`) ثم يُمنح ما يلزم صراحةً؛ دوالُّ السياسات `security definer` + `search_path` + منحٌ صريح لـ`authenticated`؛ وكلُّ هجرةٍ تفحص نفسها في كتلة `do` تُلغيها إن خالف الواقع.
 - اسمُ ملف الهجرة = رقمُ نسختها الفعليّ في الإنتاج (`list_migrations` بعد التطبيق).
 - الإشعارات عبر `private.notify(...)` وحدها (المُصلَّبة: لا تُسقط العملية الأصلية)؛ الأنواع `report_submitted` / `report_approved` / `report_returned` موجودة في القيد.
@@ -339,7 +340,21 @@ export function shiftMonth(year: number, month: number, by: number) {
 - [ ] **Step 1: الهجرة:**
   1. الجدول والقيود وفهرس `(student_id)` ومُشغّل `set_updated_at` القائم (`public.set_updated_at()`).
   2. حارسُ السجلّ (before insert/update، `security definer`، `search_path=''`): الآيتان ضمن `surahs.ayah_count`؛ و«من» ≤ «إلى» بترتيب الحفظ (`from_surah > to_surah or (from_surah = to_surah and from_ayah <= to_ayah)`)؛ وعند الإدراج الطالبُ في حلقة التقرير؛ **ولا كتابةَ إن كان التقرير `approved`**.
-  3. RLS: قراءة `exists (select 1 from monthly_reports r where r.id = report_id and (public.can_view_halaqa(r.halaqa_id) or (student_id = public.my_student_id() and r.status = 'approved')))`؛ كتابة `exists (… r where r.id = report_id and ((public.is_halaqa_teacher(r.halaqa_id) and r.status = 'draft') or public.can_approve_in_halaqa(r.halaqa_id)))`. المنوح: سحبٌ ثم `select, insert, update, delete` لـ`authenticated`.
+  0. **دالّةُ معتمِد الرصد** (أوّلُ ما في الهجرة):
+```sql
+create or replace function public.can_approve_report_in_halaqa(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.halaqat h where h.id = hid and (
+         public.current_user_role() = 'admin_manager'
+      or (public.current_user_role() = 'women_admin' and h.gender = 'female')
+      or (public.current_user_role() = 'field_supervisor' and h.supervisor_id = auth.uid())));
+$$;
+revoke all on function public.can_approve_report_in_halaqa(uuid) from public, anon;
+grant execute on function public.can_approve_report_in_halaqa(uuid) to authenticated, service_role;
+```
+     ثم **تُستبدل `can_approve_in_halaqa` بها في كلّ ما يخصّ الرصد**: سياسةُ `reports_write` على `monthly_reports` (تُسقط وتُنشأ: `public.is_halaqa_teacher(halaqa_id) or public.can_approve_report_in_halaqa(halaqa_id)`)، وجسمُ `public.guard_report_status()` (`create or replace` بالمنطق القائم نفسه مع الدالّة الجديدة)، وسياساتُ `quran_records` أدناه، ومُشغّلُ المسار. ويُضاف إلى الفحص الذاتيّ: المدير الفنيّ يقرأ التقارير ولا يكتبها (`can_approve_report_in_halaqa` = false له).
+  3. RLS: قراءة `exists (select 1 from monthly_reports r where r.id = report_id and (public.can_view_halaqa(r.halaqa_id) or (student_id = public.my_student_id() and r.status = 'approved')))`؛ كتابة `exists (… r where r.id = report_id and ((public.is_halaqa_teacher(r.halaqa_id) and r.status = 'draft') or public.can_approve_report_in_halaqa(r.halaqa_id)))`. المنوح: سحبٌ ثم `select, insert, update, delete` لـ`authenticated`.
   4. `alter table monthly_reports add column return_note text check (return_note is null or char_length(return_note) <= 500)`.
   5. **لقطةُ المطلوب:** مُشغّلٌ قبل إدراج `monthly_reports` يملأ `target_pages_snapshot` من `app_settings.target_memorization_pages` إن كان فارغاً.
   6. **مسارُ الحالات وقفلُ الشهر** — مُشغّلٌ جديد `monthly_reports_flow` (before update، `security definer`، `search_path=''`؛ يمرّ إن كان `auth.uid()` فارغاً)، يعمل مع `guard_report_status` القائم ولا يحلّ محلّه:
@@ -348,12 +363,12 @@ export function shiftMonth(year: number, month: number, by: number) {
      - `submitted|approved → draft`: يشترط `btrim(coalesce(new.return_note,'')) <> ''` («الإعادةُ تحتاج ملاحظة»)، ويمسح `approved_by/approved_at`.
      - `private.report_opening_day(p_year int, p_month int) returns date`: آخرُ يومٍ في الشهر، والخميسَ إن كان جمعة (`extract(isodow …) = 5`).
   7. **مُنتِجو الإشعارات** — مُشغّلٌ بعد `update of status` على `monthly_reports` (`private.notify_report_status`):
-     - → `submitted`: لكلّ معتمِدٍ نشط — `profiles where status = 'active' and (role in ('admin_manager','technical_manager') or (role = 'women_admin' and <جنس الحلقة> = 'female'))` — `report_submitted`، العنوان «رصدُ شهرٍ بانتظار اعتمادك»، النصّ `<اسم الحلقة> · MM-YYYY`، الرابط `/reports`، المصدر `monthly_reports`/المعرّف.
+     - → `submitted`: لمشرف الحلقة الميدانيّ (`halaqat.supervisor_id`) وللمدير الفنيّ النشط (`profiles where role = 'technical_manager' and status = 'active'`) — `report_submitted`، العنوان «أُرسل رصدُ شهرٍ للاعتماد»، النصّ `<اسم الحلقة> · MM-YYYY`، الرابط `/reports`، المصدر `monthly_reports`/المعرّف.
      - → `approved`: لمعلّم الحلقة `report_approved`، «اعتُمد رصدُ الشهر»، النصّ نفسه.
      - → `draft` من `submitted|approved`: لمعلّم الحلقة `report_returned`، «أُعيد رصدُ الشهر إليك»، النصّ `<الحلقة> · MM-YYYY — <return_note>`.
   8. `my_approved_pages()` الجديدة و`my_quran_months()`؛ `revoke … from public, anon` و`grant execute … to authenticated`.
   9. الفحص الذاتيّ: الجدول والسياسات والمنوح، والمُشغّلات الثلاثة، و`report_opening_day(2026,7) = '2026-07-30'` و`(2026,10) = '2026-10-31'`.
-- [ ] **Step 2: طبّق واحفظ، وتحقّق بجلساتٍ حقيقية** (كتلة `do` تنتهي برفعٍ يُلغي): معلّمُ حلقة النور ينشئ تقرير 10-2026 ويدرج سجلّاً (من 114:1 إلى 112:4) ← ينجح وتُملأ لقطةُ المطلوب؛ سجلٌّ مقلوبُ الترتيب ← يُرفض؛ آيةٌ فوق عدد آيات سورتها ← يُرفض؛ الإرسال قبل 31-10 ← يُرفض بالرسالة (لاختبار النجاح استعمل تقرير 09-2026)؛ المعلّم يعتمد ← يُرفض؛ المدير الإداري يعتمد مسوّدة ← يُرفض؛ يعتمد المُرسَل ← ينجح ويصل المعلمَ `report_approved`، ويصل المعتمدين `report_submitted` عند الإرسال؛ الإعادةُ بلا ملاحظة ← تُرفض، وبملاحظة ← تنجح ويصل `report_returned`؛ الكتابةُ في سجلّ تقريرٍ معتمَد ← تُرفض؛ الطالب يرى سجلَّه المعتمَد وحده عبر `my_quran_months()`.
+- [ ] **Step 2: طبّق واحفظ، وتحقّق بجلساتٍ حقيقية** (كتلة `do` تنتهي برفعٍ يُلغي): معلّمُ حلقة النور ينشئ تقرير 10-2026 ويدرج سجلّاً (من 114:1 إلى 112:4) ← ينجح وتُملأ لقطةُ المطلوب؛ سجلٌّ مقلوبُ الترتيب ← يُرفض؛ آيةٌ فوق عدد آيات سورتها ← يُرفض؛ الإرسال قبل 31-10 ← يُرفض بالرسالة (لاختبار النجاح استعمل تقرير 09-2026)؛ المعلّم يعتمد ← يُرفض؛ **المدير الفنيّ يعتمد ← يُرفض**؛ المشرف الميدانيّ للحلقة يعتمد مسوّدة ← يُرفض؛ يعتمد المُرسَل ← ينجح ويصل المعلمَ `report_approved`؛ وعند الإرسال يصل `report_submitted` مشرفَ الحلقة والمديرَ الفنيّ؛ مشرفٌ ميدانيّ لحلقةٍ أخرى ← لا يعتمد؛ المدير الإداري يعتمد (احتياطاً) ← ينجح؛ الإعادةُ بلا ملاحظة ← تُرفض، وبملاحظة ← تنجح ويصل `report_returned`؛ الكتابةُ في سجلّ تقريرٍ معتمَد ← تُرفض؛ الطالب يرى سجلَّه المعتمَد وحده عبر `my_quran_months()`.
 - [ ] **Step 3: الأنواع.**
 - [ ] **Step 4: Commit** — `feat(quran): الرصدُ الشهريّ بالسورة والآية — السجلّ وحرّاسُه ومسارُ الاعتماد وإشعاراتُه`.
 
@@ -437,6 +452,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
 - `OutcomeStrip`: «اكتمل رصد <الحلقة> — N%» بشريطٍ أخضر، وعدّاداتٌ أربعة (أنجز · مقصّر · لا يُقاس · لم يُرصد) — الضغط على عدّادٍ يُرشّح البطاقات.
 - `StudentCard`: الاسم؛ «ثبّت/وصل N من 30 جزءاً» (`juzDone`) أو «خَتم» ؛ شاراتٌ: الصفحات + `monthlyJuzLabel`، «المطلوب X · <التصنيف>»، «حضر a من b»، وحالةُ التقرير؛ زرٌّ «رصد» (بلا سجلّ) / «تعديل» (مسوّدة) / «عرض» (مُرسَل لغير المعتمِد أو معتمَد).
 - `RecordModal`: «لم يحفظ جديداً هذا الشهر» (مفتاحٌ يُفرغ المواضع ويجعل الصفحات 0)؛ من سورة/آية (افتراضاً `suggestedFrom`)، إلى سورة/آية؛ الصفحاتُ تُملأ بـ`pagesMemorized` عند كلّ تغيير ويُعدّلها المعلم (0–604)؛ صفحاتُ المراجعة (اختياريّ)؛ ملاحظات. تحقّقٌ في العميل: الترتيبُ (`isInMemorizationOrder`) وحدودُ الآيات — برسائل عربية؛ والحكمُ الأخير للقاعدة (يُعرض خطؤها بـ`useErrorHandler().handle`). قراءةٌ فقط عند «عرض».
+- **مَن المعتمِد في الواجهة:** `canApproveHere = isAdmin || (isWomenAdmin && halaqa.gender === 'female') || (isFieldSupervisor && halaqa.supervisor_id === profile.id)` — دالّةٌ نقيّة مُصدَّرة مختبَرة في `useQuranMonth.ts` (`canApproveReport(role, profileId, halaqa)`). المدير الفنيّ ومشرف المشروع قراءةٌ فقط. والمشرف الميدانيّ يرى قائمةَ حلقاته وحدها.
 - **الأزرار:** المعلم «إرسال للاعتماد» (معطَّلٌ قبل يوم الفتح مع النصّ؛ تأكيدٌ بـ`UiConfirmModal` يذكر عددَ من لم يُرصد) ؛ المعتمِد على المُرسَل: «اعتماد» و«إعادة بملاحظة» (`ReturnModal` بنصٍّ إلزاميّ ≤ 500)؛ على المعتمَد: «إعادة فتح» (`ReturnModal` نفسه). شريطٌ كهرمانيّ للمعلم بنصّ `return_note` حين يعود إليه.
 - **تصدير Excel** (اختياريّ بالزرّ القائم `useExport().exportXlsx`): الاسم، من، إلى، الصفحات، المراجعة، حضر/أيام، المطلوب، التصنيف؛ والملف `الإنجاز-القرآني-MM-YYYY`.
 - [ ] التنفيذ (كلُّ ملفٍّ ≤ 300 سطر) ← `pnpm lint && pnpm test && pnpm typecheck` ← Commit `feat(quran): شاشةُ الإنجاز القرآني — الرصدُ بالسورة والآية والإرسالُ والاعتماد`.
@@ -452,7 +468,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
 - `app/pages/dashboard.vue`: تُحذف بطاقتا إعداد `default_points` و`default_attendance_days`، وتُسمّى بطاقةُ `target_memorization_pages` «المطلوب الشهريّ (صفحات)».
 - `app/pages/metrics/index.vue`: تُحذف معادلاتُ الدرجة والإنجاز والانتظام والنقاط، وتُضاف: «المطلوب المقسَّط بالحضور»، و«التصنيف (أنجز/مقصّر/لا يُقاس/لم يُرصد)»، و«الأجزاءُ بتقسيمة البرنامج».
 - `app/pages/index.vue:129`: نصُّ الصفحة الرئيسية بلا «أنشطة» ولا «غياب» يدويّ.
-- `app/composables/useNotifications.ts`: طابورُ «رصدُ شهرٍ بانتظار اعتمادك» يبقى (معرّفه معرّفُ التقرير، فتُسقطه `pendingQueue` ما دام إشعارُه غيرَ مقروء).
+- `app/composables/useNotifications.ts`: طابورُ «رصدُ شهرٍ بانتظار اعتمادك» يبقى (معرّفه معرّفُ التقرير، فتُسقطه `pendingQueue` ما دام إشعارُه غيرَ مقروء)، **لكن شرطُه يصير «من يعتمد»**: المدير الإداري، والمديرة الإدارية (حلقات البنات)، والمشرف الميدانيّ (حلقاته: `halaqa.supervisor_id = me`) — **لا المدير الفنيّ** (يصله الإشعار ولا يُطالَب بعمل). وتُحدَّث `usePermissions` إن لزم بعلَمٍ `canApproveReports`.
 - `grep -rn "useGrades\|HonorsBoard\|monthly_report_students\|monthly_report_activities\|activities_done\|default_points\|default_attendance_days\|memorization_from" app server` ← **صفر** خارج الأنواع المولّدة.
 - [ ] التنفيذ ← الفحوص ← Commit `refactor(quran): قرّاءُ التقرير القديم يقرؤون الرصدَ الجديد — صفحةُ الطالب والرابطُ العامّ واللوحة والمؤشّرات`.
 

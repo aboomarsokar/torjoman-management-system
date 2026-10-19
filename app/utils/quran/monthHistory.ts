@@ -5,6 +5,9 @@
 import type { Position } from '~/utils/quran/position'
 import { comparePositions } from '~/utils/quran/position'
 
+/** مدى تاريخ النهايات الذي يُجلب من الخادم، بالأشهر قبل الشهر المعروض. */
+export const HISTORY_MONTHS = 24
+
 export interface HistoryRow {
   student_id: string
   to_surah: number | null
@@ -32,6 +35,7 @@ export function latestEnds(
   return Object.fromEntries(Object.entries(best).map(([id, b]) => [id, b.pos]))
 }
 
+/** أولُ يومٍ في الشهر وآخرُه `YYYY-MM-DD` (يراعي الكبيس) لاستعلام أيام الحلقة وغياباتها. */
 export function monthRange(year: number, month: number): { from: string, to: string } {
   const mm = String(month).padStart(2, '0')
   const last = new Date(Date.UTC(year, month, 0)).getUTCDate()

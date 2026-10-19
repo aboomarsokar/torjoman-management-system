@@ -124,6 +124,23 @@ describe('buildStudentRows — الأجزاء المنجزة', () => {
     const approved = build({ approvedEnds: { s1: { surah: 112, ayah: 4 } } })
     expect(approved[0]!.juzDone).toBe(1)
   })
+  it('ما يحفظه الطالبُ عند التحاقه (quran_parts) يُحتسب بلا سجلٍّ معتمَد', () => {
+    expect(build({ students: [student({ quran_parts: 3 })] })[0]!.juzDone).toBe(3)
+  })
+  it('الأكبرُ من المعتمَد وquran_parts (المعتمَدُ أمامه)', () => {
+    const rows = build({ students: [student({ quran_parts: 0 })], approvedEnds: { s1: { surah: 1, ayah: 7 } } })
+    expect(rows[0]!.juzDone).toBe(2)
+    const ahead = build({ students: [student({ quran_parts: 1 })], approvedEnds: { s1: { surah: 1, ayah: 7 } } })
+    expect(ahead[0]!.juzDone).toBe(2)
+  })
+  it('quran_parts يُقصّ إلى 0–30', () => {
+    expect(build({ students: [student({ quran_parts: 45 })] })[0]!.juzDone).toBe(30)
+    expect(build({ students: [student({ quran_parts: -2 })] })[0]!.juzDone).toBe(0)
+  })
+  it('quran_parts=30 ← ختم', () => {
+    expect(build({ students: [student({ quran_parts: 30 })] })[0]!.khatm).toBe(true)
+    expect(build({ students: [student({ quran_parts: 29 })] })[0]!.khatm).toBe(false)
+  })
   it('الختم من نهاية سجلّ الشهر', () => {
     expect(build({ records: [record({ to_surah: 1, to_ayah: 7 })] })[0]!.khatm).toBe(true)
   })

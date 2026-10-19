@@ -6,7 +6,8 @@
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
-import { buildJourney, type PlanInput, type ResultInput } from '~/utils/journey'
+import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
+import { buildJourney, upcomingLabel, type CycleResultInput } from '~/utils/journey'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'لوحة التحكم — ترجمان' })
@@ -97,7 +98,7 @@ watch(showOverview, (v) => {
 
 // ── لوحة المعلّم «حلقتي» ──
 type TeacherRow = { id: string, full_name: string, quran_parts: number | null, next: string, done: boolean }
-type TeacherExamResult = { student_id: string, passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }
+type TeacherExamResult = { student_id: string, passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }
 const myHalqa = ref<{ id: string, name: string, daily_time: string | null } | null>(null)
 const teacherRows = ref<TeacherRow[]>([])
 const teacherLoaded = ref(false)
@@ -111,26 +112,27 @@ async function loadTeacherData() {
       teacherLoaded.value = true
       return
     }
-    const [{ data: studs }, { data: plan }, { data: examResults }] = await Promise.all([
+    const [{ data: studs }, { data: cycleRows, error: cyclesError }, { data: examResults }] = await Promise.all([
       supabase.from('students').select('id, full_name, quran_parts').eq('halaqa_id', h.id).eq('status', 'active').order('full_name'),
-      supabase.from('exam_plan').select('id, parts_from, parts_to, stage_type').order('parts_to'),
-      supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', h.id).returns<TeacherExamResult[]>()
+      supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order'),
+      supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', h.id).returns<TeacherExamResult[]>()
     ])
-    const planArr = (plan ?? []) as PlanInput[]
+    if (cyclesError) handle(cyclesError)
+    const cycles = (cycleRows ?? []).map(toExamCycle)
     // نتائج اختبارات طلاب الحلقة مجمّعة حسب الطالب — لتعكس «المحطة القادمة» المُجتاز فعلياً
-    const resultsByStudent = new Map<string, ResultInput[]>()
+    const resultsByStudent = new Map<string, CycleResultInput[]>()
     for (const r of examResults ?? []) {
       const arr = resultsByStudent.get(r.student_id) ?? []
-      arr.push({ exam_plan_id: r.exam_list_item?.exam_plan_id ?? null, passed: r.passed, total_score: r.total_score })
+      arr.push({ exam_cycle_id: r.exam_list_item?.exam_cycle_id ?? null, passed: r.passed, total_score: r.total_score })
       resultsByStudent.set(r.student_id, arr)
     }
     teacherRows.value = (studs ?? []).map((s) => {
-      const j = buildJourney(s.quran_parts, planArr, resultsByStudent.get(s.id) ?? [])
+      const j = buildJourney(s.quran_parts, cycles, resultsByStudent.get(s.id) ?? [])
       return {
         id: s.id,
         full_name: s.full_name,
         quran_parts: s.quran_parts,
-        next: j.upcomingStation ? `الأجزاء ${j.upcomingStation.from}–${j.upcomingStation.to}` : (j.totalStations ? 'أكمل الخطة 🎉' : '—'),
+        next: upcomingLabel(j),
         done: !j.upcomingStation && j.totalStations > 0
       }
     })

@@ -1,14 +1,24 @@
 <script setup lang="ts">
 /**
  * متصفّح نتائج الاختبارات (§4.16) — لكل الأدوار حسب النطاق (RLS يقصّ البيانات):
- * فلاتر هرمية (مشرف ميداني → حلقة) تظهر حسب الدور + ترقيم صفحات.
+ * فلاتر هرمية (مشرف ميداني → حلقة) تظهر حسب الدور + ترقيم صفحات. كلُّ نتيجةٍ بدورتها ونطاقها،
+ * ولا تُعرض نتيجةٌ بلا دورة. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
+import { toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
+import { examTargetText } from '~/utils/exams/nomination'
+import { EXAM_MAX_TOTAL } from '~/constants/exams'
 
 const supabase = useSupabaseClient<Database>()
+const { handle } = useErrorHandler()
 const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = usePermissions()
 /** فلتر المشرف لمن يرى أكثر من مشرف: الإداري والفني ومشرف المشروع والمديرة الإدارية. */
 const showSupervisorFilter = computed(() => isManager.value || isReadOnly.value || isWomenAdmin.value)
+/** عمود المشرف لمن يرى أكثر من مشرف (لا المعلّم ولا المشرف الميداني). */
+const showSupervisorColumn = computed(() => !isTeacher.value && !isFieldSupervisor.value)
+
+/** أعلى مجموعٍ ممكن: تسعةُ أسئلةٍ من 10 + التجويد حتى 9. */
+const MAX_TOTAL = EXAM_MAX_TOTAL
 
 type RawResult = {
   id: string
@@ -23,7 +33,7 @@ type RawResult = {
       supervisor: { id: string, full_name: string } | null
     } | null
   } | null
-  exam_list_item: { exam_plan: { parts_from: number, parts_to: number } | null } | null
+  exam_list_item: { exam_cycle: ExamCycleRow | null } | null
 }
 type FlatResult = {
   id: string
@@ -31,7 +41,8 @@ type FlatResult = {
   total_score: number | null
   passed: boolean | null
   student: string
-  range: string
+  title: string
+  detail: string
   halqaId: string
   halqa: string
   supId: string
@@ -42,12 +53,12 @@ type FlatResult = {
 const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results', async () => {
   const { data, error } = await supabase
     .from('exam_results')
-    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_plan:exam_plan_id(parts_from, parts_to))')
+    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order))')
     .order('exam_date', { ascending: false })
     .limit(500)
     .returns<RawResult[]>()
   if (error) {
-    console.error('[exams] results:', error.message)
+    handle(error)
     return []
   }
   return data ?? []
@@ -55,13 +66,15 @@ const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results',
 
 defineExpose({ refresh })
 
-const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).map((r) => {
+const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).filter(r => r.exam_list_item?.exam_cycle).map((r) => {
   const h = r.student?.halaqa
   const sup = h?.supervisor
+  const item = r.exam_list_item
+  const t = examTargetText(item?.exam_cycle ? toExamCycle(item.exam_cycle) : null)
   return {
     id: r.id, exam_date: r.exam_date, total_score: r.total_score, passed: r.passed,
     student: r.student?.full_name ?? '—',
-    range: r.exam_list_item?.exam_plan ? `${r.exam_list_item.exam_plan.parts_from}–${r.exam_list_item.exam_plan.parts_to}` : '—',
+    title: t.title, detail: t.detail,
     halqaId: h?.id ?? '', halqa: h?.name ?? '—',
     supId: sup?.id ?? '', sup: sup?.full_name ?? '—'
   }
@@ -93,6 +106,18 @@ function clearResFilters() {
   fSupervisor.value = 'all'
   fHalqa.value = 'all'
 }
+
+const columns = computed(() => [
+  { key: 'student', label: 'الطالب' },
+  { key: 'halqa', label: 'الحلقة' },
+  ...(showSupervisorColumn.value ? [{ key: 'sup', label: 'المشرف' }] : []),
+  { key: 'cycle', label: 'الدورة' },
+  { key: 'exam_date', label: 'التاريخ' },
+  { key: 'total_score', label: 'العلامة' },
+  { key: 'passed', label: 'النتيجة' }
+])
+const verdict = (r: FlatResult) => (r.passed ? 'مجتاز' : 'غير مجتاز')
+const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
 </script>
 
 <template>
@@ -142,80 +167,65 @@ function clearResFilters() {
       icon="i-lucide-file-text"
       title="لا نتائج مطابقة"
     />
-    <div
+    <UiDataTable
       v-else
-      class="card table-wrap"
+      :columns="columns"
+      :rows="resPaged"
+      row-key="id"
     >
-      <table>
-        <thead>
-          <tr>
-            <th class="ta-start">
-              #
-            </th>
-            <th class="ta-start">
-              الطالب
-            </th>
-            <th class="ta-start">
-              الحلقة
-            </th>
-            <th
-              v-if="!isTeacher && !isFieldSupervisor"
-              class="ta-start"
-            >
-              المشرف
-            </th>
-            <th class="ta-start">
-              النطاق
-            </th>
-            <th class="ta-start">
-              التاريخ
-            </th>
-            <th class="ta-start">
-              العلامة
-            </th>
-            <th class="ta-start">
-              النتيجة
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(r, i) in resPaged"
-            :key="r.id"
-          >
-            <td class="muted">
-              {{ i + 1 }}
-            </td>
-            <td class="strong">
-              {{ r.student }}
-            </td>
-            <td class="muted">
-              {{ r.halqa }}
-            </td>
-            <td
-              v-if="!isTeacher && !isFieldSupervisor"
-              class="muted"
-            >
-              {{ r.sup }}
-            </td>
-            <td class="muted">
-              {{ r.range }}
-            </td>
-            <td class="muted">
-              {{ r.exam_date }}
-            </td>
-            <td><strong>{{ r.total_score ?? '—' }}</strong> / 100</td>
-            <td>
-              <UBadge
-                :label="r.passed ? 'مجتاز' : 'غير مجتاز'"
-                :color="r.passed ? 'success' : 'error'"
-                variant="soft"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <template #student="{ row }">
+        <span class="strong">{{ row.student }}</span>
+      </template>
+      <template #halqa="{ row }">
+        <span class="muted">{{ row.halqa }}</span>
+      </template>
+      <template #sup="{ row }">
+        <span class="muted">{{ row.sup }}</span>
+      </template>
+      <template #cycle="{ row }">
+        <div class="cyc">
+          <span>{{ row.title }}</span>
+          <span class="muted sm">{{ row.detail }}</span>
+        </div>
+      </template>
+      <template #exam_date="{ row }">
+        <span
+          class="muted"
+          dir="ltr"
+        >{{ row.exam_date }}</span>
+      </template>
+      <template #total_score="{ row }">
+        <strong>{{ row.total_score ?? '—' }}</strong> / {{ MAX_TOTAL }}
+      </template>
+      <template #passed="{ row }">
+        <UBadge
+          :label="verdict(row)"
+          :color="row.passed ? 'success' : 'error'"
+          variant="soft"
+        />
+      </template>
+      <template #card="{ row }">
+        <UiCardRow
+          :title="row.student"
+          :subtitle="row.title"
+          :fields="[
+            { label: 'الحلقة', value: row.halqa },
+            ...(showSupervisorColumn ? [{ label: 'المشرف', value: row.sup }] : []),
+            { label: 'النطاق', value: row.detail },
+            { label: 'التاريخ', value: row.exam_date },
+            { label: 'العلامة', value: scoreText(row) }
+          ]"
+        >
+          <template #badge>
+            <UBadge
+              :label="verdict(row)"
+              :color="row.passed ? 'success' : 'error'"
+              variant="soft"
+            />
+          </template>
+        </UiCardRow>
+      </template>
+    </UiDataTable>
     <UiPaginator
       v-if="results.length"
       :page="resPage"
@@ -232,16 +242,8 @@ function clearResFilters() {
 .count { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; }
 .res-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
 .rf { width: 200px; max-width: 100%; }
-
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
-.table-wrap { overflow-x: auto; }
-.table-wrap table { width: 100%; border-collapse: collapse; font-size: 15px; }
-@media (max-width: 640px) { .table-wrap table { min-width: 600px; } }
-.table-wrap thead tr { background: var(--surface-2); }
-.table-wrap th { padding: 14px 18px; font-weight: 600; color: var(--ink-3); font-size: 13px; white-space: nowrap; }
-.ta-start { text-align: start; }
-.table-wrap tbody tr { border-top: 1px solid var(--line); }
-.table-wrap td { padding: 13px 18px; vertical-align: middle; white-space: nowrap; }
 .strong { font-weight: 600; color: var(--ink); }
 .muted { color: var(--ink-2); }
+.sm { font-size: 13px; }
+.cyc { display: flex; flex-direction: column; gap: 2px; }
 </style>

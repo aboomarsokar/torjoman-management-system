@@ -91,6 +91,17 @@ describe('buildStudentRows — الحضور والمطلوب', () => {
     expect(rows[0]!.plan).toEqual({ required: null, full: 35, basis: 'unheld' })
     expect(rows[0]!.outcome).toBe('unmeasured')
   })
+  it('شهرٌ قبل إطلاق الحضور (prorate=false) ← المطلوبُ كاملاً ولو غاب، وأيامُ الحضور تبقى للعرض', () => {
+    const [row] = build({
+      prorate: false,
+      days: dayList(1),
+      absences: [{ student_id: 's1', day: '2026-10-01' }],
+      records: [record({ pages_memorized: 16 })]
+    })
+    expect(row!.plan).toEqual({ required: 35, full: 35, basis: 'full' })
+    expect(row!.outcome).toBe('short')
+    expect([row!.daysAttended, row!.daysHeld]).toEqual([0, 1])
+  })
   it('شهرٌ بلا أيامٍ أصلاً ← المطلوبُ كاملاً كما كان', () => {
     const [row] = build({ days: [], records: [record({ pages_memorized: 10 })] })
     expect(row!.plan).toEqual({ required: 35, full: 35, basis: 'full' })

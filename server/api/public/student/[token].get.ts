@@ -1,5 +1,6 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '~/types/database.types'
+import { PUBLIC_CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { toProgramJuz } from '~/utils/quran/position'
 import { juzReached, toMonthHistory, totalPages } from '~/utils/quran/studentHistory'
 import type { ApprovedMonth } from '~/utils/quran/studentHistory'
@@ -25,19 +26,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'الرابط غير صحيح أو لم يعد متاحاً.' })
   }
 
-  // خطة الاختبارات + نتائج الطالب لرسم رحلة الطالب
-  const { data: plan } = await admin
-    .from('exam_plan')
-    .select('id, parts_from, parts_to, stage_type')
-    .order('parts_to')
+  // دوراتُ الاختبار + نتائج الطالب لرسم رحلة الطالب (دون surahs_label: الصفحة لا تعرضه)
+  const { data: cycles, error: cyclesError } = await admin
+    .from('exam_cycles')
+    .select(PUBLIC_CYCLE_COLUMNS)
+    .order('sort_order')
+  if (cyclesError) console.error('[public/student] فشل جلب دورات الاختبار:', cyclesError.message)
 
   const { data: rawResults } = await admin
     .from('exam_results')
-    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id)')
+    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id)')
     .eq('student_id', data.id)
 
-  const results = (rawResults ?? []).map((r: { passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }) => ({
-    exam_plan_id: r.exam_list_item?.exam_plan_id ?? null,
+  const results = (rawResults ?? []).map((r: { passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }) => ({
+    exam_cycle_id: r.exam_list_item?.exam_cycle_id ?? null,
     passed: r.passed,
     total_score: r.total_score
   }))
@@ -65,5 +67,5 @@ export default defineEventHandler(async (event) => {
   const target_per_month = settings?.target_memorization_pages ?? 30
 
   const { id: _id, ...safe } = data
-  return { ...safe, exam_plan: plan ?? [], results, memorization_pages, target_per_month, quran_history, juz_done }
+  return { ...safe, exam_cycles: (cycles ?? []).map(toExamCycle), results, memorization_pages, target_per_month, quran_history, juz_done }
 })

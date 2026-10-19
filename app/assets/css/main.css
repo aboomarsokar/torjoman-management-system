@@ -298,6 +298,27 @@ body {
   color: var(--ink);
 }
 
+/* يدُ الإشارة على كلّ ما يُنقر — Tailwind v4 يُرجع مؤشّرَ الأزرار إلى السهم افتراضاً */
+button,
+summary,
+select,
+label:has(> input:not(:disabled)),
+[role="button"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+[role="tab"],
+[role="option"],
+[role="menuitem"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"],
+[data-disabled] {
+  cursor: not-allowed;
+}
+
 /* ============================================================
    انتقال الصفحات — تلاشٍ + انزياح خفيف بين شاشات اللوحة (app.pageTransition)
    يمسّ منطقة المحتوى فقط (.content في layouts/dashboard.vue) — الشريط

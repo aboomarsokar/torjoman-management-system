@@ -194,6 +194,8 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
         :halaqa-name="halaqa?.name ?? ''"
         :halaqa-items="halaqaItems"
         :max="now"
+        :shown="shown.length"
+        :total="rows.length"
       />
 
       <QuranHalaqaList

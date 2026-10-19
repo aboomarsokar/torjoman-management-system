@@ -367,6 +367,22 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 **RLS** (`fintx_all`): الكتابة `admin_manager` فقط، والقراءة `admin_manager` و`project_supervisor`. المديرة الإدارية والمدير الفني لا يمسّان المالية.
 
+**`transaction_attachments` — مستنداتُ الحركة (فواتير وإيصالات — ROADMAP #17، هجرة `20261019130119`):** صفٌّ لكلّ ملفّ، وللحركة الواحدة أكثر من ملفّ.
+
+| العمود | النوع | ملاحظات |
+|---|---|---|
+| `id` | uuid PK | |
+| `transaction_id` | uuid FK → financial_transactions **ON DELETE CASCADE** | |
+| `storage_path` | text **UNIQUE** | `transactions/<transaction_id>/<uuid>.(jpg\|png\|webp\|pdf)` — قيد `transaction_attachments_path_shape` يربط المسار بحركته |
+| `file_name` | text | الاسم الأصليّ (1–200 حرف) |
+| `mime_type` | text | `image/jpeg` / `image/png` / `image/webp` / `application/pdf` |
+| `size_bytes` | integer | 1 بايت – 10 م.ب |
+| `uploaded_by` | uuid FK → profiles | افتراضاً `auth.uid()` |
+| `created_at` | timestamptz | |
+
+**RLS** (`txdocs_*`): القراءة `admin_manager` و`project_supervisor`، والإدراج والحذف `admin_manager`، ولا تعديل. `anon` بلا منح.
+**المستودع `finance-docs` (خاصّ، 10 م.ب، صورٌ وPDF):** القراءة للاثنين، والرفع للمدير الإداري بالمسار النمطيّ الكامل وحده (لا جذر ولا مسارَ آخر)، والحذف له. ولا يُستعمل `media` لأنه عامّ. الحذفُ بالتتالي يمسح الصفوف، والواجهةُ تمسح الملفّاتِ بعده (`Transactions.vue`).
+
 ---
 
 ## 11. `admin_alerts` — التنبيهات الإدارية للمعلمين

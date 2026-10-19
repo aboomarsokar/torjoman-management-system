@@ -51,7 +51,8 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
   const saving = ref(false)
   const submitting = ref(false)
   const showErrors = ref(false)
-  const statement = ref<{ id: string, status: StatementStatus } | null>(null)
+  /** `returnNote`: ملاحظةُ المراجِع إن أعاد الكشف (تبقى بعد إعادة الإرسال سجلّاً). */
+  const statement = ref<{ id: string, status: StatementStatus, returnNote: string | null } | null>(null)
   const allocated = ref(0)
   const rows = ref<StatementItemDraft[]>([])
   let savedIds: string[] = []
@@ -72,11 +73,11 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
       const hid = halaqaId.value
       const [{ data: alloc, error: e1 }, { data: st, error: e2 }] = await Promise.all([
         supabase.from('halaqa_incentives').select('allocated_amount').eq('halaqa_id', hid).eq('incentive_month', month.value).eq('incentive_year', year.value).maybeSingle(),
-        supabase.from('incentive_statements').select('id, status').eq('halaqa_id', hid).eq('statement_month', month.value).eq('statement_year', year.value).maybeSingle()
+        supabase.from('incentive_statements').select('id, status, return_note').eq('halaqa_id', hid).eq('statement_month', month.value).eq('statement_year', year.value).maybeSingle()
       ])
       if (e1 || e2) throw e1 ?? e2
       allocated.value = alloc?.allocated_amount ?? 0
-      statement.value = st ? { id: st.id, status: st.status } : null
+      statement.value = st ? { id: st.id, status: st.status, returnNote: st.return_note } : null
       let items: { id: string, description: string | null, category: string | null, amount: number, item_date: string | null }[] = []
       if (st) {
         const { data, error } = await supabase.from('incentive_statement_items').select('id, description, category, amount, item_date').eq('statement_id', st.id).order('item_date')
@@ -120,7 +121,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
           .insert({ halaqa_id: halaqaId.value, statement_month: month.value, statement_year: year.value, received_amount: allocated.value, status: 'draft', created_by: profile.value?.id ?? null })
           .select('id, status').single()
         if (error || !data) throw error
-        statement.value = { id: data.id, status: data.status }
+        statement.value = { id: data.id, status: data.status, returnNote: null }
         sid = data.id
       } else {
         const { error } = await supabase.from('incentive_statements').update({ received_amount: allocated.value }).eq('id', sid)

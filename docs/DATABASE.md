@@ -1,6 +1,6 @@
 # مخطط قاعدة البيانات — ترجمان القرآني
 
-> **الحالة (2026-10-18):** يطابق الهجرات حتى `20261018083507_student_journey_rpcs` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية. قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات.
+> **الحالة (2026-10-19):** يطابق الهجرات حتى `20261019081750_notify_alerts_visits` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات.
 > هذا الملف **مصدر الحقيقة** لبنية القاعدة، ويطابق آخر migration دائماً.
 > أي تغيير = migration جديد + تحديث هذا الملف + إعادة توليد الأنواع.
 
@@ -34,6 +34,7 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     │       └─< exam_results (exam_list_id, student_id)
     │
     ├─< admin_alerts (issuer_id, teacher_id)   التنبيهات الإدارية
+    ├─< notifications (recipient_id)           إشعارات الأحداث — تكتبها مُشغّلات، ويقرؤها صاحبها وحده (§18)
     ├─< meeting_minutes (created_by)           محاضر الاجتماعات
     ├─< monthly_salaries (profile_id)          الرواتب الشهرية المرجعية (المدير الإداري)
     └─< financial_transactions (created_by)    الحركات المالية
@@ -418,7 +419,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 المُصدِر: المدير الإداري أو الفني أو المشرف الميداني. المُستقبِل: المعلم.
 
-> **تمييز عن الإشعارات التشغيلية (جرس §4.2):** هذا الجدول لـ«التنبيهات الإدارية» التي يُصدرها العاملون للمعلمين عند المخالفة (كيان مخزَّن). أمّا **جرس الإشعارات التشغيلية** (زيارة متأخرة، تقرير بانتظار الاعتماد، قائمة اختبار وردت) فيُشتقّ **محسوباً** من حالات `supervision_visits` / `monthly_reports` / `exam_lists` — **لا جدول `notifications` في المرحلة 1/2**. مركز الإشعارات الموحّد الدائم (بحالة مقروء/غير مقروء) مؤجّل للمرحلة 3 (§8).
+> **تمييز عن الإشعارات (جرس الشريط العلوي):** هذا الجدول لـ«التنبيهات الإدارية» التي يُصدرها العاملون للمعلمين عند المخالفة (كيان مخزَّن). أمّا الجرس فقسمان: **«بانتظارك»** يُشتقّ **محسوباً** من حالات `supervision_visits` / `monthly_reports` / `exam_lists` / التنبيهات، و**«الإشعارات»** أخبارٌ مخزّنة في `notifications` (§18) يكتبها مُشغِّل `admin_alerts_notify` عند كل تنبيهٍ جديد (منذ 2026-10-19). مركز الإشعارات الموحّد الدائم داخل المنصّة صار جزءاً من الإصدار الثاني (`ROADMAP` البند 34).
 
 | العمود | النوع | ملاحظات |
 |---|---|---|
@@ -627,6 +628,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
 | `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر أحد المديرَين (الإداري/الفني) أو المشرف الميداني المُسنَد للحلقة نفسها؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`) |
 
+> المُشغِّلان `admin_alerts_notify` و`supervision_visits_notify` ليسا حرّاساً: هما مُنتِجا الإشعارات (§18).
+
 > **ترتيب مُشغِّلات BEFORE على `profiles`:** `profiles_guard_privileged` ← `profiles_photo_clear_on_female` ← `trg_profiles_updated_at` (أبجدياً)، فالحارس يرفض تغيير الجنس غير المأذون قبل أن يُفرَغ شيء.
 
 ### المستودعات (Storage)
@@ -651,3 +654,63 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 > **دخول الموظف** لم يعد مساراً خادمياً (`/api/auth/staff-login` حُذف 2026-10-18): المتصفّح يشتقّ البريد من الرقم ويدخل مباشرةً كالطالب، ثم يفحص `profiles.status`. **حالة الدخول** (`profiles.status`) يغيّرها المدير الإداري مباشرةً (حارس `guard_profile_privileged`) — من إدارة المستخدمين للموظف ومن ملف الطالب للطالب؛ وهي مستقلّة عن `students.status` الدراسية.
 
 > **حالة البيانات:** بيانات الاختبار حُذفت 2026-10-18 (بقي `exam_plan` و`app_settings`)، والحساب الأول `1001` للمدير الإداري — كلمة مروره لا تُكتب في أي ملف. الاستيراد من Excel مؤجَّل: سيُدخل المستخدم الطلاب بمساعدة Claude.
+
+---
+
+## 18. `notifications` — إشعارات الأحداث (الدفعة الثانية، الجزء ١)
+
+> الهجرات: `20261019081356_notifications` (المخطّط والجدول والسياسة والتعليم والنشر في Realtime) ← `20261019081750_notify_alerts_visits` (تقليمُ النصّ داخل `private.notify` بدل رفضه، والمُنتِجان) ← `20261019084801_notify_hardening` (تصليبُ `private.notify`: تحقّقٌ مسبق وتحذيرٌ لا استثناء وتقليمٌ يتخطّى المقفل). المواصفة: `docs/superpowers/specs/2026-10-19-v2-batch2-design.md` (الجزء ١). كلُّ هجرةٍ تفحص نفسها في كتلة `do` آخرها.
+
+**المبدأ:** الإشعارُ خبرٌ عن أمرٍ وقع. أمّا طوابيرُ العمل (بنودٌ بانتظار الرصد، تقاريرُ بانتظار الاعتماد) فتُحسب عند العرض ولا تُخزَّن هنا — وهي «بانتظارك» في الجرس.
+
+### المخطّط `private`
+
+- غير مكشوف لـPostgREST: ما فيه لا يُستدعى من العميل.
+- `revoke all on schema private from public, anon`، و`grant usage … to authenticated, service_role`.
+
+### الجدول `public.notifications`
+
+| العمود | النوع | ملاحظات |
+|---|---|---|
+| `id` | uuid PK | `gen_random_uuid()` |
+| `recipient_id` | uuid FK → auth.users | `not null`، `on delete cascade` |
+| `kind` | text | قيدُ `check` على الأنواع العشرة أدناه |
+| `title` | text | `not null`؛ `char_length(btrim(title))` بين 1 و120 |
+| `body` | text | اختياري؛ ≤ 400 حرفاً |
+| `link` | text | اختياري؛ **مسارٌ داخليّ فقط**: `^/[A-Za-z0-9/_?=&-]*$` — إشعارٌ يقود خارج المنصّة بابُ تصيّد |
+| `source_table` / `source_id` | text / uuid | الصفّ الذي وقع عليه الحدث |
+| `read_at` | timestamptz | `null` = غير مقروء |
+| `created_at` | timestamptz | `default now()` |
+
+**أنواع `kind` (العشرة):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان الآن**) · `exam_nominated` · `exam_graded` (الجزء ٣) · `transport_paid` (الجزء ٤) · `impersonation_started` · `impersonation_write` (الجزء ٥). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
+
+**الفهارس:**
+
+| الفهرس | على | لماذا |
+|---|---|---|
+| `notifications_inbox_idx` | `(recipient_id, created_at desc)` | قائمة الصندوق (آخر 30) |
+| `notifications_unread_idx` | `(recipient_id) where read_at is null` | عدّاد غير المقروء |
+| `notifications_expiry_idx` | `(created_at)` | تقليم ما مضى عليه ثلاثة أشهر |
+
+**RLS:** مُفعَّل. سياسةٌ **واحدةٌ** `notifications_read` — `for select to authenticated using (recipient_id = (select auth.uid()))`. **لا سياسةَ إدراجٍ ولا تعديلٍ ولا حذف**؛ الكتابة كلّها عبر `private.notify`.
+
+**المنح:** `revoke all … from anon, authenticated` **ثم** `grant select … to authenticated`. السبب: Supabase تمنح `anon` و`authenticated` كلَّ الحقوق افتراضياً على كل جدولٍ جديد في `public`، فالسحبُ أولاً.
+
+**Realtime:** الجدول في منشور `supabase_realtime`، فيحترم الاشتراكُ سياسةَ RLS. العميل يشترك بمرشّح `recipient_id=eq.<uid>`، ومع الاستطلاع الاحتياطيّ كلّ دقيقة حين يكون التبويب ظاهراً.
+
+### الدوالّ والمُشغِّلات
+
+| الاسم | النوع | ما تفعله |
+|---|---|---|
+| `private.notify(p_recipient, p_kind, p_title, p_body, p_link, p_source_table, p_source_id)` | `security definer`، `search_path=''`، void | **البابُ الوحيد للكتابة.** (١) لا شيء إن كان المستلم فارغاً، أو كان هو المستدعي (`auth.uid()`) — فلا يُشعَر أحدٌ بفعله هو؛ والخدمةُ والهجرات (`auth.uid()` فارغ) لا تُستثنى من هذا الشرط الثاني. (٢) يقصّ العنوان إلى 120 حرفاً والنصّ إلى 400 **ولا يرفض**: الرفض كان سيُسقط العمليةَ الأصلية. (٣) **تحقّقٌ مسبق بتحذيرٍ لا استثناء:** نوعٌ خارج العشرة، أو رابطٌ لا يطابق `^/[A-Za-z0-9/_?=&-]*$`، أو عنوانٌ فارغٌ بعد القصّ ← `raise warning 'notify: …'` ثم `return` بلا إدراج (القيدُ نفسه كان سيرمي ويُسقط العمليةَ الأصلية). (٤) يُدرج، ثم يقلّم ما مضى عليه ثلاثة أشهر بدفعةٍ أقصاها 200 صفّ **بـ`for update skip locked`** (ما أقفله غيرُنا يُترك لدورةٍ لاحقة)؛ والإدراجُ والتقليمُ معاً داخل كتلة `begin … exception when others then raise warning 'notify failed: %', sqlerrm; end` — **فشلٌ داخل notify لا يُسقط عمليةَ المستخدم أبداً** (منتِجو الأجزاء القادمة سيُشعِرون عدّة مستلمين في معاملةٍ واحدة). قائمةُ الأنواع داخل الدالّة نسخةٌ ثانية من القيد: إضافةُ نوعٍ تعدّل القيدَ والدالّة معاً. مسحوبةٌ من `public` و`anon` و`authenticated` — تُستدعى من المُشغِّلات وحدها. |
+| `private.notify_alert_issued()` | trigger، `security definer` | ينادي `notify`: المستلم `teacher_id`، والنوع `alert_issued`، والعنوان «تنبيهٌ إداريّ جديد»، والنصّ `violation_type`، والرابط `/alerts`، والمصدر `admin_alerts`. |
+| `private.notify_visit_scheduled()` | trigger، `security definer` | ينادي `notify`: المستلم `supervisor_id` (المشرف الميداني)، والنوع `visit_scheduled`، والعنوان «جُدولت لك زيارةٌ إشرافية»، والنصّ «اسم الحلقة · DD-MM-YYYY HH24:MI» بتوقيت غزة (إن غاب اسم الحلقة يصير «حلقة»)، والرابط `/visits`، والمصدر `supervision_visits`. **لا إشعار إن جدولها المشرف لنفسه** (يمنعه `notify`). |
+| `public.mark_notifications_read(p_ids uuid[] default null)` | `security definer`، يُرجع integer | يعلّم **إشعارات المنادي** غير المقروءة وحدها (`auth.uid()`) — المحدَّد بالمعرّفات، أو الكلّ إن كانت `null` — ويُرجع عددها. **لا سياسة `update`**: صاحب الإشعار لا يعيد كتابة نصّه. `grant execute … to authenticated`، و`revoke` من `public` و`anon`. |
+| `admin_alerts_notify` | مُشغِّل `AFTER INSERT ON admin_alerts FOR EACH ROW` | ← `private.notify_alert_issued()` |
+| `supervision_visits_notify` | مُشغِّل `AFTER INSERT ON supervision_visits FOR EACH ROW` | ← `private.notify_visit_scheduled()` |
+
+> المُشغِّلان بعد الإدراج (`AFTER`) فلا يغيّران الصفّ الأصليّ، ويعيدان `null`. دوالّهما `security definer` وبلا منحٍ للعميل.
+
+### الفحص الذاتي للهجرة الأولى
+
+تُلغي الهجرة نفسها إن خالف الواقعُ المقصود: RLS غير مفعّل، أو سياسةُ كتابةٍ غير مقصودة، أو منحُ القراءة ناقص، أو منحُ كتابةٍ زائد، أو `private.notify` مكشوفةٌ للعميل، أو `mark_notifications_read` غير قابلة للتنفيذ، أو الجدول خارج `supabase_realtime`. والثالثة (`notify_hardening`) تتحقّق أن `private.notify` موجودة وأنها `security definer` وغير قابلة للتنفيذ من `authenticated` و`anon`. والثانية تتحقّق من وجود المُشغِّلين ومن أن دوالّ الإشعار غير قابلة للتنفيذ من `authenticated`.

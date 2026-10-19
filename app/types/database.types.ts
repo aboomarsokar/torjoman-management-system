@@ -966,6 +966,45 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          link: string | null
+          read_at: string | null
+          recipient_id: string
+          source_id: string | null
+          source_table: string | null
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          link?: string | null
+          read_at?: string | null
+          recipient_id: string
+          source_id?: string | null
+          source_table?: string | null
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          link?: string | null
+          read_at?: string | null
+          recipient_id?: string
+          source_id?: string | null
+          source_table?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       profile_financials: {
         Row: {
           account_holder: string | null
@@ -1319,6 +1358,7 @@ export type Database = {
       is_halaqa_teacher: { Args: { hid: string }; Returns: boolean }
       is_project_supervisor: { Args: never; Returns: boolean }
       is_women_admin: { Args: never; Returns: boolean }
+      mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       my_approved_pages: { Args: never; Returns: number }
       my_exam_results: {
         Args: never

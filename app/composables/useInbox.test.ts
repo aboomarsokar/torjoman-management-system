@@ -2,10 +2,10 @@
  * دوالّ الصندوق النقيّة: دمجُ الوارد الفوريّ بلا تكرار، والتعليمُ المحلّيّ، والوقتُ النسبيّ.
  */
 import { describe, expect, it } from 'vitest'
-import { markRowsRead, mergeIncoming, relativeTimeAr, type InboxRow } from './useInbox'
+import { markRowsRead, mergeIncoming, pendingQueue, relativeTimeAr, type InboxRow } from './useInbox'
 
-function row(id: string, created_at: string, read_at: string | null = null): InboxRow {
-  return { id, kind: 'alert_issued', title: 't', body: null, link: '/alerts', read_at, created_at }
+function row(id: string, created_at: string, read_at: string | null = null, source_id: string | null = null): InboxRow {
+  return { id, kind: 'alert_issued', title: 't', body: null, link: '/alerts', source_id, read_at, created_at }
 }
 
 describe('mergeIncoming', () => {
@@ -42,6 +42,30 @@ describe('markRowsRead', () => {
 
   it('null = الكلّ', () => {
     expect(markRowsRead(rows, null, 'X').every(r => r.read_at)).toBe(true)
+  })
+})
+
+describe('pendingQueue', () => {
+  const queue = [{ id: 'al-1' }, { id: 'graded' }]
+
+  it('يخفي بندَ الطابور الذي يمثّله خبرٌ غيرُ مقروء', () => {
+    const rows = [row('n1', '2026-10-19T08:00:00Z', null, 'al-1')]
+    expect(pendingQueue(queue, rows).map(q => q.id)).toEqual(['graded'])
+  })
+
+  it('يُبقيه إذا قُرئ الخبر (العملُ ما زال منتظراً)', () => {
+    const rows = [row('n1', '2026-10-19T08:00:00Z', '2026-10-19T09:00:00Z', 'al-1')]
+    expect(pendingQueue(queue, rows).map(q => q.id)).toEqual(['al-1', 'graded'])
+  })
+
+  it('يُبقي البنودَ غيرَ المتصلة بأيّ خبر', () => {
+    const rows = [row('n1', '2026-10-19T08:00:00Z', null, 'other')]
+    expect(pendingQueue(queue, rows).map(q => q.id)).toEqual(['al-1', 'graded'])
+  })
+
+  it('خبرٌ بلا source_id لا يخفي شيئاً', () => {
+    const rows = [row('n1', '2026-10-19T08:00:00Z', null, null)]
+    expect(pendingQueue(queue, rows)).toEqual(queue)
   })
 })
 

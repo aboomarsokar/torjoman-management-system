@@ -12,6 +12,7 @@ export interface InboxRow {
   title: string
   body: string | null
   link: string | null
+  source_id: string | null
   read_at: string | null
   created_at: string
 }
@@ -26,6 +27,19 @@ export function mergeIncoming(rows: InboxRow[], row: InboxRow, limit = INBOX_LIM
 /** يعلّم المحدَّد (أو الكلّ إن كانت `null`) مقروءاً محلّياً، ولا يغيّر وقتَ ما قُرئ قبلُ. */
 export function markRowsRead(rows: InboxRow[], ids: string[] | null, at: string): InboxRow[] {
   return rows.map(r => (r.read_at || (ids && !ids.includes(r.id))) ? r : { ...r, read_at: at })
+}
+
+/**
+ * يُسقط من طابور «بانتظارك» ما يمثّله خبرٌ غيرُ مقروء، كي لا يُعدّ العملُ الواحد مرّتين
+ * (تنبيهٌ إداريّ أو زيارةٌ مجدولة تُنتج بنداً في الطابور وخبراً مخزّناً معاً، ومعرّفاهما واحد = source_id).
+ * ما دام الخبر غيرَ مقروء فهو الذي يمثّل البند؛ وإذا قُرئ والبندُ ما زال منتظراً عاد البندُ إلى الطابور ويُعدّ.
+ */
+export function pendingQueue<T extends { id: string }>(queue: T[], rows: InboxRow[]): T[] {
+  const represented = new Set<string>()
+  for (const r of rows) {
+    if (r.read_at === null && r.source_id) represented.add(r.source_id)
+  }
+  return queue.filter(q => !represented.has(q.id))
 }
 
 const MINUTE = 60_000
@@ -70,7 +84,7 @@ export function useInbox() {
     }
     const [list, count] = await Promise.all([
       supabase.from('notifications')
-        .select('id, kind, title, body, link, read_at, created_at')
+        .select('id, kind, title, body, link, source_id, read_at, created_at')
         .order('created_at', { ascending: false })
         .limit(INBOX_LIMIT),
       supabase.from('notifications')

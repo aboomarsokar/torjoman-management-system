@@ -1,22 +1,24 @@
 <script setup lang="ts">
 /**
  * جرسُ الشريط العلوي بقسمين: «بانتظارك» (طوابيرُ محسوبة من useNotifications)
- * و«الإشعارات» (أخبارٌ مخزّنة من useInbox). العدّاد = غيرُ المقروء + ما ينتظر.
+ * و«الإشعارات» (أخبارٌ مخزّنة من useInbox). العدّاد = غيرُ المقروء + ما ينتظر بعد إسقاط ما يمثّله خبرٌ غيرُ مقروء.
  * الضغط على خبرٍ يعلّمه مقروءاً وينتقل إلى رابطه.
  * عند وصول إشعارٍ جديد يهتزّ الجرس ويرنّ (صوتٌ مولَّد بلا ملفّ)؛ ولا حركة مع prefers-reduced-motion.
  */
 import { notificationIcon } from '~/constants/notifications'
-import { relativeTimeAr, type InboxRow } from '~/composables/useInbox'
+import { pendingQueue, relativeTimeAr, type InboxRow } from '~/composables/useInbox'
 import { ringDecision } from '~/composables/useNotificationChime'
 
 /** مدّةُ بقاء صنف الاهتزاز: ثلاثُ دوراتٍ بثانيةٍ لكلٍّ منها */
 const RING_MS = 3100
 
-const { count: queueCount, items: queueItems } = useNotifications()
+const { items: queueItems } = useNotifications()
 const { rows, unread, loaded, markRead } = useInbox()
 const { play: chime } = useNotificationChime()
 
-const badge = computed(() => queueCount.value + unread.value)
+// الخبرُ غيرُ المقروء يمثّل بندَه في الطابور: يُخفى البندُ ولا يُعدّ حتى يُقرأ الخبر
+const queue = computed(() => pendingQueue(queueItems.value, rows.value))
+const badge = computed(() => queue.value.length + unread.value)
 const bellLabel = computed(() =>
   badge.value > 0 ? `الإشعارات — ${badge.value} غير مقروءة` : 'الإشعارات'
 )
@@ -82,12 +84,12 @@ async function openRow(row: InboxRow) {
     </div>
     <template #content>
       <div class="notif">
-        <template v-if="queueItems.length">
+        <template v-if="queue.length">
           <div class="notif-head">
             بانتظارك
           </div>
           <NuxtLink
-            v-for="n in queueItems"
+            v-for="n in queue"
             :key="n.id"
             :to="n.to"
             class="notif-item"

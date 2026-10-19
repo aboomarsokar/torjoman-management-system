@@ -7,6 +7,7 @@
 import type { Database } from '~/types/database.types'
 import { toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
 import { examTargetText, type OldPlanRef } from '~/utils/exams/nomination'
+import { EXAM_MAX_TOTAL } from '~/constants/exams'
 
 const supabase = useSupabaseClient<Database>()
 const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = usePermissions()
@@ -16,7 +17,7 @@ const showSupervisorFilter = computed(() => isManager.value || isReadOnly.value 
 const showSupervisorColumn = computed(() => !isTeacher.value && !isFieldSupervisor.value)
 
 /** أعلى مجموعٍ ممكن: تسعةُ أسئلةٍ من 10 + التجويد حتى 9. */
-const MAX_TOTAL = 99
+const MAX_TOTAL = EXAM_MAX_TOTAL
 
 type RawResult = {
   id: string

@@ -6,6 +6,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { gradeErrorMessage } from '~/utils/exams/nomination'
+import { EXAM_MAX_TOTAL } from '~/constants/exams'
 
 /** البندُ المرصود: معرّفُه وطالبُه، ونصُّ هدفه (الدورة أو نطاقُ الخطة القديمة) وحدودُه. */
 type GradeTarget = {
@@ -17,7 +18,7 @@ type GradeTarget = {
 }
 
 /** أعلى مجموعٍ ممكن: تسعةُ أسئلةٍ من 10 + التجويد حتى 9. */
-const MAX_TOTAL = 99
+const MAX_TOTAL = EXAM_MAX_TOTAL
 
 const props = defineProps<{ target: GradeTarget | null }>()
 const emit = defineEmits<{ saved: [] }>()
@@ -185,7 +186,7 @@ async function saveGrade() {
                   :aria-invalid="k === 'tajweed_score' && scores[k] !== '' && tajweedInvalid"
                   @input="clampScore(k)"
                 >
-                <span class="qfield-of">/10</span>
+                <span class="qfield-of">/{{ maxFor(k) }}</span>
               </div>
             </div>
           </div>

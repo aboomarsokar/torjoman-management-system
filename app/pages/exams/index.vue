@@ -6,6 +6,8 @@
  *   الاجتيازُ يرفع الأجزاء بمُشغِّلٍ في القاعدة، وإشعارا الترشيح والرصد يصدران منها تلقائياً.
  * - الجميع: متابعة النتائج حسب النطاق (ExamsResultsBrowser بفلاتر هرمية).
  */
+import { EXAM_MAX_TOTAL } from '~/constants/exams'
+
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الاختبارات — ترجمان' })
 
@@ -15,7 +17,7 @@ const canGrade = computed(() => isManager.value || isExaminer.value)
 
 const subtitle = computed(() => {
   if (isTeacher.value) return 'لكلّ طالبٍ دورتُه المستحقّة بالترتيب — حدّد من تراه جاهزاً وأرسل القائمة للمختبِر.'
-  if (canGrade.value) return 'الاختبارات الواردة من المعلّمين — افتح كلّ اختبار وارصد نتيجته من 99، وتابع النتائج في نطاقك.'
+  if (canGrade.value) return `الاختبارات الواردة من المعلّمين — افتح كلّ اختبار وارصد نتيجته من ${EXAM_MAX_TOTAL}، وتابع النتائج في نطاقك.`
   return 'تابع نتائج اختبارات الطلاب في نطاقك.'
 })
 

@@ -109,44 +109,24 @@ const fmt = (n: number) => n.toLocaleString('ar')
         />
 
         <template v-else>
-          <!-- ملخّص مالي -->
-          <div class="summary">
-            <div class="sm-card">
-              <div class="sm-val">
-                {{ fmt(allocated) }}
-              </div>
-              <div class="sm-lbl">
-                المبلغ المخصّص
-              </div>
+          <!-- ملخّص مالي: شريطٌ واحد بثلاثة أقسام (كانت ثلاثَ بطاقاتٍ متساوية وشارةً معلّقة بجانبها) -->
+          <dl class="summary">
+            <div class="sm-seg">
+              <dt>المبلغ المخصّص</dt>
+              <dd>{{ fmt(allocated) }} <small>₪</small></dd>
             </div>
-            <div class="sm-card">
-              <div class="sm-val">
-                {{ fmt(spent) }}
-              </div>
-              <div class="sm-lbl">
-                إجمالي المصروف
-              </div>
+            <div class="sm-seg">
+              <dt>إجمالي المصروف</dt>
+              <dd>{{ fmt(spent) }} <small>₪</small></dd>
             </div>
             <div
-              class="sm-card"
+              class="sm-seg"
               :class="remaining < 0 ? 'neg' : 'pos'"
             >
-              <div class="sm-val">
-                {{ fmt(remaining) }}
-              </div>
-              <div class="sm-lbl">
-                المتبقّي
-              </div>
+              <dt>المتبقّي</dt>
+              <dd>{{ fmt(remaining) }} <small>₪</small></dd>
             </div>
-            <div class="sm-status">
-              <UBadge
-                :label="statement ? STATEMENT_STATUS[statement.status]?.label : 'جديد (لم يُحفظ)'"
-                :color="statement ? STATEMENT_STATUS[statement.status]?.color : 'neutral'"
-                variant="soft"
-                size="lg"
-              />
-            </div>
-          </div>
+          </dl>
 
           <div
             v-if="remaining < 0"
@@ -170,148 +150,91 @@ const fmt = (n: number) => n.toLocaleString('ar')
             {{ statement.status === 'reviewed' ? 'تمّت مراجعة الكشف — للقراءة فقط.' : 'أُرسل — بانتظار الاعتماد. لا يُعدَّل بعد الإرسال.' }}
           </div>
 
+          <!-- أعاده المراجِع: الملاحظةُ ظاهرةٌ ما دام مسوّدةً عند المعلّم -->
+          <div
+            v-if="statement?.status === 'draft' && statement.returnNote"
+            class="returned"
+            role="status"
+          >
+            <UIcon
+              name="i-lucide-undo-2"
+              class="size-5 flex-none"
+            />
+            <div>
+              <strong>أُعيد إليك الكشف للتعديل</strong>
+              <p>{{ statement.returnNote }}</p>
+              <small>صحّح البنود ثم اضغط «حفظ وإرسال للمراجعة».</small>
+            </div>
+          </div>
+
           <!-- بنود المصروفات -->
           <div class="card items">
             <div class="items-head">
-              <h3>بنود المصروفات</h3>
-              <UButton
-                v-if="canEdit"
-                label="إضافة بند"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-plus"
-                :ui="{ base: 'rounded-[11px]' }"
-                @click="addRow"
+              <h3>
+                بنود المصروفات <span
+                  v-if="rows.length"
+                  class="count"
+                >{{ rows.length }}</span>
+              </h3>
+              <UBadge
+                :label="statement ? STATEMENT_STATUS[statement.status]?.label : 'جديد — لم يُحفظ'"
+                :color="statement ? STATEMENT_STATUS[statement.status]?.color : 'neutral'"
+                variant="soft"
               />
             </div>
 
             <UiEmptyState
-              v-if="!rows.length"
+              v-if="!rows.length && !canEdit"
               icon="i-lucide-receipt"
-              title="لا بنود بعد"
-              description="أضِف أول بند مصروف."
+              title="لا بنود في هذا الكشف"
             />
             <div
-              v-else
-              class="table-wrap stack-wrap"
+              v-else-if="!rows.length"
+              class="first-item"
             >
-              <table>
-                <thead>
-                  <tr>
-                    <th class="ta-start">
-                      #
-                    </th>
-                    <th class="ta-start">
-                      البيان
-                    </th>
-                    <th>التصنيف</th>
-                    <th>المبلغ</th>
-                    <th>التاريخ</th>
-                    <th v-if="canEdit" />
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(r, i) in rows"
-                    :key="i"
-                  >
-                    <td class="ta-start muted stack-hide">
-                      {{ i + 1 }}
-                    </td>
-                    <td
-                      class="ta-start"
-                      data-label="البيان"
-                    >
-                      <div class="fld">
-                        <input
-                          v-model="r.description"
-                          :disabled="!canEdit"
-                          class="cell wide"
-                          :class="{ bad: errorOf(i, 'description') }"
-                          :aria-invalid="!!errorOf(i, 'description')"
-                          placeholder="مثال: جوائز المتفوّقين في حفظ جزء عمّ"
-                        >
-                        <small v-if="errorOf(i, 'description')">{{ errorOf(i, 'description') }}</small>
-                      </div>
-                    </td>
-                    <td data-label="التصنيف">
-                      <UiSelect
-                        v-model="r.category"
-                        :items="categoryItems"
-                        :disabled="!canEdit"
-                        size="sm"
-                      />
-                    </td>
-                    <td data-label="المبلغ">
-                      <div class="fld">
-                        <input
-                          v-model="r.amount"
-                          :disabled="!canEdit"
-                          type="number"
-                          min="0"
-                          step="any"
-                          inputmode="decimal"
-                          class="cell"
-                          :class="{ bad: errorOf(i, 'amount') }"
-                          :aria-invalid="!!errorOf(i, 'amount')"
-                          dir="ltr"
-                        >
-                        <small v-if="errorOf(i, 'amount')">{{ errorOf(i, 'amount') }}</small>
-                      </div>
-                    </td>
-                    <td data-label="التاريخ">
-                      <div class="fld">
-                        <input
-                          v-model="r.item_date"
-                          :disabled="!canEdit"
-                          type="date"
-                          :min="bounds.min"
-                          :max="bounds.max"
-                          class="cell"
-                          :class="{ bad: errorOf(i, 'item_date') }"
-                          :aria-invalid="!!errorOf(i, 'item_date')"
-                          dir="ltr"
-                        >
-                        <small v-if="errorOf(i, 'item_date')">{{ errorOf(i, 'item_date') }}</small>
-                      </div>
-                    </td>
-                    <td v-if="canEdit">
-                      <UButton
-                        color="error"
-                        variant="ghost"
-                        size="xs"
-                        icon="i-lucide-x"
-                        aria-label="حذف البند"
-                        class="stack-keep"
-                        @click="removeRow(i)"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <p>لم تُضِف مصروفاً لهذا الشهر بعد. سجّل كلّ مصروفٍ بتاريخه وبيانه ومبلغه.</p>
+              <UButton
+                label="إضافة أوّل بند"
+                icon="i-lucide-plus"
+                color="primary"
+                variant="soft"
+                size="lg"
+                :ui="{ base: 'rounded-[13px] font-semibold' }"
+                @click="addRow"
+              />
             </div>
-
+            <IncentivesItemsEditor
+              v-else
+              v-model:rows="rows"
+              :can-edit="canEdit"
+              :bounds="bounds"
+              :category-items="categoryItems"
+              :error-of="errorOf"
+              @add="addRow"
+              @remove="removeRow"
+            />
             <div
               v-if="canEdit"
               class="actions"
             >
+              <!-- الإرسالُ هو الفعلُ الأساسيّ، والمسوّدةُ ثانويّة (كانا زرّين صلبين يتنافسان) -->
               <UButton
-                label="حفظ"
-                color="primary"
+                label="حفظ مسوّدة"
+                color="neutral"
+                variant="outline"
                 size="lg"
                 icon="i-lucide-save"
                 :loading="saving"
-                :ui="{ base: 'rounded-[13px] font-semibold' }"
+                :ui="{ base: 'rounded-[13px] font-semibold min-h-12 justify-center' }"
                 @click="saveDraft"
               />
               <UButton
                 label="حفظ وإرسال للمراجعة"
-                color="success"
+                color="primary"
                 size="lg"
                 icon="i-lucide-send"
                 :loading="submitting"
-                :ui="{ base: 'rounded-[13px] font-semibold' }"
+                :ui="{ base: 'rounded-[13px] font-semibold min-h-12 justify-center' }"
                 @click="submit"
               />
             </div>
@@ -325,42 +248,45 @@ const fmt = (n: number) => n.toLocaleString('ar')
 <style scoped>
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
 
-.pick-fields { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
-.pf { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
-.pf.sm { flex: 0 0 140px; min-width: 120px; }
+/* المحدِّدات: الحلقةُ سطرٌ، والشهرُ والسنةُ معاً — على الجوال نصفان بدل سطرين كاملين */
+.pick-fields { display: grid; grid-template-columns: minmax(0, 1fr) 140px 140px; gap: 14px; align-items: end; }
+.pf { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .pf label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.halqa-auto { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 16px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); font-size: 15.5px; font-weight: 600; color: var(--ink); }
+.halqa-auto { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 16px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); font-size: 15.5px; font-weight: 600; color: var(--ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-.summary { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
-.sm-card { flex: 1; min-width: 130px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px 18px; }
-.sm-val { font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1; }
-.sm-card.pos .sm-val { color: var(--green-ink); }
-.sm-card.neg .sm-val { color: var(--err); }
-.sm-lbl { font-size: 13px; color: var(--ink-3); margin-top: 7px; }
-.sm-status { flex: none; }
+/* الملخّص: لوحٌ واحد بثلاثة أقسامٍ يفصلها خطّ */
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.sm-seg { padding: 16px 20px; display: flex; flex-direction: column-reverse; gap: 6px; }
+.sm-seg + .sm-seg { border-inline-start: 1px solid var(--line); }
+.sm-seg dt { font-size: 13px; color: var(--ink-3); }
+.sm-seg dd { margin: 0; font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.sm-seg dd small { font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.sm-seg.pos dd { color: var(--green-ink); }
+.sm-seg.neg dd { color: var(--err); }
 .locked { display: flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
+.returned { display: flex; align-items: flex-start; gap: 10px; background: var(--blue-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; margin-bottom: 16px; }
+.returned strong { display: block; font-size: 14.5px; font-weight: 700; }
+.returned p { margin: 4px 0; font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+.returned small { font-size: 12.5px; color: var(--ink-3); }
 .warn { display: flex; align-items: center; gap: 8px; background: var(--err-soft); color: var(--err); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
-.items-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.items-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
-.table-wrap { overflow-x: auto; }
-.table-wrap table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
-.table-wrap thead tr { background: var(--surface-2); }
-.table-wrap th { padding: 11px 10px; font-weight: 600; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; text-align: center; }
-.table-wrap th.ta-start { text-align: start; }
-.table-wrap td { padding: 7px 10px; vertical-align: middle; text-align: center; border-top: 1px solid var(--line); }
-.ta-start { text-align: start; }
-.muted { color: var(--ink-2); }
-.cell { width: 110px; height: 38px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink); font-size: 14px; outline: none; }
-.cell.wide { width: 100%; min-width: 160px; text-align: start; }
-.cell:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
-.cell:disabled { opacity: .6; cursor: not-allowed; }
-.cell.bad { border-color: var(--err); }
-.fld { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-.fld small { color: var(--err); font-size: 12px; text-align: start; line-height: 1.4; }
+.items-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.items-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.items-head .count { min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.first-item { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 26px 12px 10px; text-align: center; }
+.first-item p { margin: 0; max-width: 42ch; color: var(--ink-2); font-size: 14.5px; line-height: 1.7; }
 
-.actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 
-@media (max-width: 620px) { .pf, .pf.sm { flex: 1 1 100%; } }
+@media (max-width: 620px) {
+  .card { padding: 16px; }
+  .pick-fields { grid-template-columns: 1fr 1fr; }
+  .pick-fields .pf:first-child { grid-column: 1 / -1; }
+  .sm-seg { padding: 12px 12px; }
+  .sm-seg dd { font-size: 20px; }
+  .sm-seg dt { font-size: 12px; }
+  .actions { flex-direction: column-reverse; }
+  .actions > * { width: 100%; }
+}
 </style>

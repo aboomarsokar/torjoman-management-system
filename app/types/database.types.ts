@@ -689,6 +689,9 @@ export type Database = {
           halaqa_id: string
           id: string
           received_amount: number
+          return_note: string | null
+          returned_at: string | null
+          returned_by: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           statement_month: number
@@ -703,6 +706,9 @@ export type Database = {
           halaqa_id: string
           id?: string
           received_amount?: number
+          return_note?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           statement_month: number
@@ -717,6 +723,9 @@ export type Database = {
           halaqa_id?: string
           id?: string
           received_amount?: number
+          return_note?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           statement_month?: number
@@ -738,6 +747,13 @@ export type Database = {
             columns: ["halaqa_id"]
             isOneToOne: false
             referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incentive_statements_returned_by_fkey"
+            columns: ["returned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1617,6 +1633,10 @@ export type Database = {
       }
       reschedule_visit: {
         Args: { p_new_time: string; p_reason: string; p_visit: string }
+        Returns: undefined
+      }
+      return_statement: {
+        Args: { p_note: string; p_statement: string }
         Returns: undefined
       }
     }

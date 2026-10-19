@@ -23,52 +23,57 @@ function clear() {
 </script>
 
 <template>
-  <UInput
-    ref="input"
-    v-model="model"
-    type="search"
-    :placeholder="placeholder"
-    size="xl"
-    :ui="{
-      root: 'search-field',
-      base: 'rounded-full min-h-12 ps-14 pe-3 bg-(--surface) ring-(--line-2) [&::-webkit-search-cancel-button]:hidden',
-      leading: 'ps-1.5',
-      trailing: 'pe-1.5 gap-1'
-    }"
-  >
-    <template #leading>
-      <span class="sf-ico">
-        <UIcon
-          name="i-lucide-search"
-          class="size-[18px]"
-        />
-      </span>
-    </template>
-    <template
-      v-if="hasQuery"
-      #trailing
+  <!-- جذرٌ عاديّ يستقبل صنفَ الأب وعرضَه (أنماطُ الأب المحصورة لا تبلغ جذرَ مكوّنٍ داخل مكوّن) -->
+  <div class="sf">
+    <UInput
+      ref="input"
+      v-model="model"
+      type="search"
+      :placeholder="placeholder"
+      size="xl"
+      class="w-full"
+      :ui="{
+        root: 'search-field',
+        base: 'rounded-full min-h-12 ps-14 pe-3 bg-(--surface) ring-(--line-2) [&::-webkit-search-cancel-button]:hidden',
+        leading: 'ps-1.5',
+        trailing: 'pe-1.5 gap-1'
+      }"
     >
-      <span
-        v-if="countText"
-        class="sf-count"
-        aria-live="polite"
-      >{{ countText }}</span>
-      <button
-        type="button"
-        class="sf-clear"
-        aria-label="مسح البحث"
-        @click="clear"
+      <template #leading>
+        <span class="sf-ico">
+          <UIcon
+            name="i-lucide-search"
+            class="size-[18px]"
+          />
+        </span>
+      </template>
+      <template
+        v-if="hasQuery"
+        #trailing
       >
-        <UIcon
-          name="i-lucide-x"
-          class="size-4"
-        />
-      </button>
-    </template>
-  </UInput>
+        <span
+          v-if="countText"
+          class="sf-count"
+          aria-live="polite"
+        >{{ countText }}</span>
+        <button
+          type="button"
+          class="sf-clear"
+          aria-label="مسح البحث"
+          @click="clear"
+        >
+          <UIcon
+            name="i-lucide-x"
+            class="size-4"
+          />
+        </button>
+      </template>
+    </UInput>
+  </div>
 </template>
 
 <style scoped>
+.sf { display: flex; min-width: 0; }
 .sf-ico { width: 36px; height: 36px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; }
 .sf-count { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; padding-inline: 4px; }
 .sf-clear { width: 44px; height: 44px; margin-block: -4px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--ink-3); cursor: pointer; transition: background .15s, color .15s; }

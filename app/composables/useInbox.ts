@@ -2,7 +2,9 @@
  * صندوقُ الإشعارات المخزّنة — قراءةُ آخر 30 وعدُّ غير المقروء والاشتراكُ الفوريّ والتعليم.
  * الدوالّ النقيّة أدناه مُصدَّرةٌ ومختبَرة في useInbox.test.ts.
  */
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { INBOX_LIMIT } from '~/constants/notifications'
+import type { Database } from '~/types/database.types'
 
 export interface InboxRow {
   id: string
@@ -42,4 +44,89 @@ export function relativeTimeAr(iso: string, now: Date): string {
   const day = parts.find(p => p.type === 'day')!.value
   const month = parts.find(p => p.type === 'month')!.value
   return `${day}-${month}`
+}
+
+/**
+ * يقرأ الصندوق ويعدّ غير المقروء ويشترك في الوارد الفوريّ لصاحب الجلسة،
+ * مع استطلاعٍ احتياطيّ كلّ دقيقة (يتوقّف والتبويب مخفيّ).
+ */
+export function useInbox() {
+  const supabase = useSupabaseClient<Database>()
+  const user = useSupabaseUser()
+  const rows = ref<InboxRow[]>([])
+  const unread = ref(0)
+  const { handle } = useErrorHandler()
+
+  async function load() {
+    const uid = user.value?.sub
+    if (!uid) {
+      rows.value = []
+      unread.value = 0
+      return
+    }
+    const [list, count] = await Promise.all([
+      supabase.from('notifications')
+        .select('id, kind, title, body, link, read_at, created_at')
+        .order('created_at', { ascending: false })
+        .limit(INBOX_LIMIT),
+      supabase.from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .is('read_at', null)
+    ])
+    if (list.error) {
+      handle(list.error)
+      return
+    }
+    rows.value = list.data ?? []
+    unread.value = count.count ?? 0
+  }
+
+  async function markRead(ids: string[] | null) {
+    const { data, error } = await supabase.rpc('mark_notifications_read', ids ? { p_ids: ids } : {})
+    if (error) {
+      handle(error)
+      return
+    }
+    rows.value = markRowsRead(rows.value, ids, new Date().toISOString())
+    unread.value = Math.max(0, unread.value - (data ?? 0))
+  }
+
+  let channel: RealtimeChannel | null = null
+  let timer: ReturnType<typeof setInterval> | null = null
+
+  function subscribe(uid: string) {
+    channel?.unsubscribe()
+    channel = supabase.channel(`inbox:${uid}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${uid}` },
+        (payload) => {
+          const row = payload.new as InboxRow
+          // قد يكون الصفّ وصل قبلُ بالاستطلاع — فلا يُعدّ مرّتين
+          const known = rows.value.some(r => r.id === row.id)
+          rows.value = mergeIncoming(rows.value, row)
+          if (!known && !row.read_at) unread.value += 1
+        })
+      .subscribe()
+  }
+
+  function onVisible() {
+    if (!document.hidden) load()
+  }
+
+  onMounted(() => {
+    load()
+    const uid = user.value?.sub
+    if (uid) subscribe(uid)
+    // احتياطٌ إن انقطع الاتصال الفوريّ — ويتوقّف والتبويب مخفيّ
+    timer = setInterval(() => {
+      if (!document.hidden) load()
+    }, 60000)
+    document.addEventListener('visibilitychange', onVisible)
+  })
+  onUnmounted(() => {
+    channel?.unsubscribe()
+    if (timer) clearInterval(timer)
+    document.removeEventListener('visibilitychange', onVisible)
+  })
+
+  return { rows, unread, load, markRead }
 }

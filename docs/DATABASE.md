@@ -173,8 +173,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `halaqa_id` | uuid FK → halaqat | الحلقة المُزارة |
 | `supervisor_id` | uuid FK → profiles | المشرف المنفِّذ |
 | `scheduled_at` | timestamptz | الموعد المجدول |
-| `executed_at` | timestamptz | تاريخ التنفيذ الفعلي (يُقارن آلياً) |
-| `status` | enum | `scheduled` / `done` / `late` / `missed` |
+| `executed_at` | timestamptz | يومُ التنفيذ الفعلي يختاره المشرف (يُخزَّن ظهرَ اليوم بغرينتش فلا ينقلب يومُه في غزة) — لا يتجاوز اليوم |
+| `status` | enum | **تشتقّه القاعدة** (المشغِّل `supervision_visits_derive_status`، هجرة `20261019125332`): بلا تنفيذ `scheduled`، ونُفّذت في يوم موعدها أو قبله بتوقيت غزة `done`، وبعده `late`. و`missed` **لا يُخزَّن**: يُشتقّ عند العرض لمجدولةٍ فات يومُها (`app/utils/visitStatus.ts`) |
 | `notes` | text | ملاحظات الزيارة |
 | `flow_rating` | text | تقييم سير الحلقة |
 | `strengths` | text | نقاط القوة |
@@ -192,7 +192,9 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `reason` | text | **سبب التغيير (إلزامي)** |
 | `changed_at` | timestamptz | |
 
-> **مؤشر الالتزام:** `executed_at` مقابل `scheduled_at` → في وقتها / متأخرة. الالتزام = (في وقتها) ÷ (المستحقّة) × 100.
+> **مؤشر الالتزام:** الالتزام = (في وقتها) ÷ (المستحقّة: تمّت + متأخّرة + فائتة) × 100 — دالّةٌ واحدة `visitCommitment` تستعملها شاشات الزيارات والمشرفين.
+
+> **تعديلُ الموعد بسببٍ إلزاميّ** (قرار 2026-10-19، هجرة `20261019125332`): الدالّة `reschedule_visit(p_visit, p_new_time, p_reason)` (`security invoker`، فتسري RLS) ترفض السبب الأقصر من 3 أحرف والزيارةَ المنفَّذة والموعدَ نفسه، وتكتب سطر `visit_reschedule_log` ثم الموعد في معاملةٍ واحدة. والحارس `supervision_visits_guard_reschedule` ← `guard_visit_reschedule` يرفض أيَّ تغييرٍ لـ`scheduled_at` بلا سطر سجلٍّ في المعاملة نفسها (`changed_at = now()`). السجلُّ يقرؤه كلُّ من يقرأ الحلقة، وتعرضه نافذة نتيجة الزيارة.
 
 **RLS** (`visits_*` و`reschedule_*`):
 - **القراءة:** `can_view_halaqa(halaqa_id)` (فالمديرة تقرأ زيارات البنات بلا كتابة).

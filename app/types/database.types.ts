@@ -1567,6 +1567,10 @@ export type Database = {
         Args: { p_ayah: number; p_surah: number }
         Returns: number
       }
+      reschedule_visit: {
+        Args: { p_new_time: string; p_reason: string; p_visit: string }
+        Returns: undefined
+      }
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"

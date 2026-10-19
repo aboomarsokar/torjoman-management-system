@@ -15,6 +15,9 @@ import { pendingLists, type PendingItemRow } from '~/utils/exams/nomination'
  */
 export type NotifItem = { id: string, label: string, sub?: string, to: string, icon: string }
 
+/** سقفُ بنود الاختبار المعلّقة التي يُجمَّع منها طابورُ المختبِر. */
+const PENDING_ITEMS_LIMIT = 500
+
 export function useNotifications() {
   const supabase = useSupabaseClient<Database>()
   const { role, profile } = useProfile()
@@ -47,10 +50,14 @@ export function useNotifications() {
     }
 
     if (r === 'examiner') {
-      // بندٌ لكلّ قائمة ترشيح فيها بنودٌ بلا نتيجة؛ معرّفُه معرّفُ القائمة (مصدرُ exam_nominated)
+      // بندٌ لكلّ قائمة ترشيح فيها بنودٌ بلا نتيجة؛ معرّفُه معرّفُ القائمة (مصدرُ exam_nominated).
+      // المعلّقُ وحده يُصفّى في الخادم (ضمٌّ عكسيّ) والأحدثُ أولاً بسقفٍ دون سقف PostgREST
       const { data: examItems } = await supabase
         .from('exam_list_items')
         .select('exam_list_id, exam_results(id), exam_list:exam_list_id(halaqa:halaqa_id(name))')
+        .is('exam_results', null)
+        .order('created_at', { ascending: false })
+        .limit(PENDING_ITEMS_LIMIT)
         .returns<PendingItemRow[]>()
       for (const l of pendingLists(examItems ?? [])) {
         out.push({ id: l.listId, label: 'قائمة ترشيح بانتظار رصدك', sub: `${l.halaqa} · ${l.count}`, to: '/exams', icon: 'i-lucide-clipboard-check' })

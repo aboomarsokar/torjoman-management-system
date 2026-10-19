@@ -14,17 +14,30 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 const busy = ref(false)
 
+/** القائمةُ التي سُحب آخرُ بنودها تُحذف (lists_delete للمعلّم صاحبها وللمديرَين) — لا تبقى قوائمُ فارغة. */
+async function dropEmptyList(listId: string) {
+  const { count, error } = await supabase.from('exam_list_items')
+    .select('id', { count: 'exact', head: true }).eq('exam_list_id', listId)
+  if (error) throw error
+  // صفرٌ صريح وحده (حذفُ القائمة يسحب بنودَها معها)
+  if (count !== 0) return
+  const { error: e2 } = await supabase.from('exam_lists').delete().eq('id', listId)
+  if (e2) throw e2
+}
+
 async function confirm() {
   if (!target.value) return
   busy.value = true
   try {
-    const { data, error } = await supabase.from('exam_list_items').delete().eq('id', target.value.itemId).select('id')
+    const { data, error } = await supabase.from('exam_list_items').delete().eq('id', target.value.itemId).select('id, exam_list_id')
     if (error) throw error
     // RLS يُسقط الصفّ بصمتٍ لمن لا يملكه: لا حذفَ بلا خطأ
-    if (!data?.length) throw new Error('تعذّر سحب الترشيح — ليس لك أن تسحبه أو سُحب من قبل.')
+    const listId = data?.[0]?.exam_list_id
+    if (!listId) throw new Error('تعذّر سحب الترشيح — ليس لك أن تسحبه أو سُحب من قبل.')
     toast.add({ title: 'سُحب الترشيح.', color: 'neutral', icon: 'i-lucide-undo-2' })
     target.value = null
     emit('withdrawn')
+    await dropEmptyList(listId)
   } catch (err) {
     handle(err)
   } finally {

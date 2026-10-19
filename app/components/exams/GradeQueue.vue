@@ -26,12 +26,18 @@ type QueueRaw = {
 /** صفُّ الطابور المعروض. */
 type QueueRow = { id: string, student: { id: string, full_name: string } | null, name: string, halaqa: string, teacher: string, title: string, detail: string, span: string }
 
+/** سقفُ الطابور المعروض (الأحدثُ أولاً) — دون سقف PostgREST (1000) كي لا يُقصّ بصمت. */
+const QUEUE_LIMIT = 500
+
 const { data: raw, refresh, pending } = useLazyAsyncData<QueueRaw[]>('exams-queue', async () => {
   void quran.load()
+  // المعلّقُ وحده يُصفّى في الخادم: ضمٌّ عكسيّ (البنودُ التي لا نتيجةَ لها)
   const { data, error } = await supabase
     .from('exam_list_items')
     .select('id, student:student_id(id, full_name), exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), exam_plan:exam_plan_id(parts_from, parts_to), exam_list:exam_list_id(halaqa:halaqa_id(name), teacher:teacher_id(full_name)), exam_results(id)')
-    .order('created_at', { ascending: true })
+    .is('exam_results', null)
+    .order('created_at', { ascending: false })
+    .limit(QUEUE_LIMIT)
     .returns<QueueRaw[]>()
   if (error) {
     console.error('[exams] queue:', error.message)
@@ -40,7 +46,7 @@ const { data: raw, refresh, pending } = useLazyAsyncData<QueueRaw[]>('exams-queu
   return data ?? []
 }, { server: false, default: () => [], watch: [role] })
 
-const rows = computed<QueueRow[]>(() => (raw.value ?? []).filter(i => !i.exam_results?.length).map((i) => {
+const rows = computed<QueueRow[]>(() => (raw.value ?? []).map((i) => {
   const cycle = i.exam_cycle ? toExamCycle(i.exam_cycle) : null
   const t = examTargetText(cycle, i.exam_plan)
   return {

@@ -11,7 +11,8 @@ import {
   approvedJuzReached, buildNomineeRows, toExamCycle,
   type CycleItemRow, type NomineeRow, type WithdrawTarget
 } from '~/utils/exams/nomination'
-import type { HistoryRow } from '~/utils/quran/monthHistory'
+import { HISTORY_MONTHS, type HistoryRow } from '~/utils/quran/monthHistory'
+import { shiftMonth } from '~/utils/reportWindow'
 
 const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
@@ -31,13 +32,19 @@ async function load(): Promise<NomineeRow[]> {
   if (failure) throw failure
   const ids = (students.data ?? []).map(s => s.id)
   if (!ids.length) return []
+  const now = new Date()
+  const lowerYear = shiftMonth(now.getFullYear(), now.getMonth() + 1, -HISTORY_MONTHS).year
   const [items, history] = await Promise.all([
     supabase.from('exam_list_items').select('id, student_id, exam_cycle_id, exam_results(passed)')
       .in('student_id', ids).not('exam_cycle_id', 'is', null).returns<CycleItemRow[]>(),
-    // آخرُ نهايةٍ معتمَدة لكلّ طالب: استعلامٌ واحد على سجلّات الأشهر المعتمدة
+    // آخرُ نهايةٍ معتمَدة لكلّ طالب: استعلامٌ واحد على سجلّات الأشهر المعتمدة، محدودٌ بآخر HISTORY_MONTHS
+    // شهراً على مستوى السنة ومرتّبٌ بالأحدث — كـuseQuranMonth (`latestEnds` يحسم الأدقّ)
     supabase.from('quran_records')
       .select('student_id, to_surah, to_ayah, report:monthly_reports!inner(report_year, report_month, status)')
       .in('student_id', ids).not('to_surah', 'is', null).eq('report.status', 'approved')
+      .gte('report.report_year', lowerYear)
+      .order('report(report_year)', { ascending: false })
+      .order('report(report_month)', { ascending: false })
       .returns<HistoryRow[]>()
   ])
   const failure2 = items.error ?? history.error
@@ -80,11 +87,13 @@ async function send() {
     const byHalaqa = new Map<string, NomineeRow[]>()
     for (const r of picked) if (r.halaqa_id) byHalaqa.set(r.halaqa_id, [...(byHalaqa.get(r.halaqa_id) ?? []), r])
     const today = new Date().toISOString().slice(0, 10)
+    let sent = 0
     for (const [halaqaId, studs] of byHalaqa) {
       const { data: list, error: e1 } = await supabase.from('exam_lists')
         .insert({ halaqa_id: halaqaId, teacher_id: profile.value.id, week_date: today, status: 'sent' })
         .select('id').single()
-      if (e1 || !list) throw e1
+      if (e1) throw e1
+      if (!list) throw new Error('تعذّر إنشاء قائمة الترشيح. حاول مجدداً.')
       const items = studs.map(s => ({ exam_list_id: list.id, student_id: s.id, exam_cycle_id: s.cycle!.id }))
       const { error: e2 } = await supabase.from('exam_list_items').insert(items)
       if (e2) {
@@ -92,8 +101,9 @@ async function send() {
         await supabase.from('exam_lists').delete().eq('id', list.id)
         throw e2
       }
+      sent += studs.length
     }
-    toast.add({ title: `أُرسل للمختبِر عددُ المرشّحين: ${picked.length}.`, color: 'success', icon: 'i-lucide-send' })
+    toast.add({ title: `أُرسل للمختبِر عددُ المرشّحين: ${sent}.`, color: 'success', icon: 'i-lucide-send' })
     for (const k of Object.keys(checked)) checked[k] = false
     await refresh()
   } catch (err) {

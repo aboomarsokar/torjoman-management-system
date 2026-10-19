@@ -1,15 +1,23 @@
 <script setup lang="ts">
 /**
  * نافذة رصد نتيجة الاختبار (§4.10) — كل سؤال بتفريعاته (حفظ/فهم/تدبّر) + التجويد،
- * كل خانة من 10 والمجموع من 100. تحفظ في exam_results وتُصدر saved للتحديث.
+ * كل خانة من 10 والتجويد من 7 إلى 9، والمجموع من 99. تُعرض دورةُ البند ونطاقُها وحدودُها.
+ * تحفظ في exam_results وتُصدر saved للتحديث؛ والرصدُ المكرَّر (23505) يُعرض برسالةٍ عربيّة.
  */
 import type { Database } from '~/types/database.types'
+import { gradeErrorMessage } from '~/utils/exams/nomination'
 
+/** البندُ المرصود: معرّفُه وطالبُه، ونصُّ هدفه (الدورة أو نطاقُ الخطة القديمة) وحدودُه. */
 type GradeTarget = {
   id: string
   student: { id: string, full_name: string } | null
-  exam_plan: { parts_to: number } | null
+  title?: string
+  detail?: string
+  span?: string
 }
+
+/** أعلى مجموعٍ ممكن: تسعةُ أسئلةٍ من 10 + التجويد حتى 9. */
+const MAX_TOTAL = 99
 
 const props = defineProps<{ target: GradeTarget | null }>()
 const emit = defineEmits<{ saved: [] }>()
@@ -122,7 +130,8 @@ async function saveGrade() {
     open.value = false
     emit('saved')
   } catch (err) {
-    handle(err)
+    const known = gradeErrorMessage(err)
+    handle(known ? new Error(known) : err)
   } finally {
     grading.value = false
   }
@@ -136,8 +145,16 @@ async function saveGrade() {
   >
     <template #body>
       <div class="grade">
+        <div
+          v-if="target?.title"
+          class="grade-target"
+        >
+          <strong>{{ target.title }}</strong>
+          <span v-if="target.detail">{{ target.detail }}</span>
+          <span v-if="target.span">{{ target.span }}</span>
+        </div>
         <p class="grade-hint">
-          كل خانة من 10، والتجويد بين 7 و9 (المجموع من 100). علامة الاجتياز: <strong>{{ passMark }}</strong>.
+          كل خانة من 10، والتجويد بين 7 و9 (المجموع من {{ MAX_TOTAL }}). علامة الاجتياز: <strong>{{ passMark }}</strong>.
         </p>
         <div class="groups">
           <div
@@ -177,7 +194,7 @@ async function saveGrade() {
           class="total"
           :class="{ ok: liveTotal >= (passMark || 80) }"
         >
-          المجموع: <strong>{{ liveTotal }}</strong> / 100
+          المجموع: <strong>{{ liveTotal }}</strong> / {{ MAX_TOTAL }}
           <span class="pill">{{ liveTotal >= (passMark || 80) ? 'مجتاز' : 'غير مجتاز' }}</span>
         </div>
         <UFormField label="ملاحظات (اختياري)">
@@ -216,6 +233,8 @@ async function saveGrade() {
 <style scoped>
 .grade { display: flex; flex-direction: column; gap: 16px; }
 .grade-hint { margin: 0; font-size: 14px; color: var(--ink-2); }
+.grade-target { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-radius: 13px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; }
+.grade-target strong { font-size: 15px; }
 .groups { display: flex; flex-direction: column; gap: 14px; }
 .qgroup { background: var(--surface-2); border: 1px solid var(--line); border-radius: 15px; padding: 14px 16px; }
 .qgroup-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }

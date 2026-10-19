@@ -26,6 +26,7 @@ async function openRow(row: InboxRow) {
   >
     <div class="bell-wrap">
       <button
+        type="button"
         class="top-icon"
         aria-label="الإشعارات"
       >
@@ -128,6 +129,8 @@ async function openRow(row: InboxRow) {
 </template>
 
 <style scoped>
+.top-icon { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; }
+.top-icon:hover { color: var(--ink); border-color: var(--blue); }
 .bell-wrap { position: relative; display: inline-flex; }
 .bell-badge { position: absolute; top: -7px; inset-inline-end: -7px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: #fff; font-size: 13px; font-weight: 800; line-height: 22px; text-align: center; box-shadow: 0 0 0 2px var(--surface); font-variant-numeric: tabular-nums; pointer-events: none; }
 .notif { padding: 6px; }

@@ -321,8 +321,6 @@ const isActive = matches
 .hamburger { display: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .top-title { font-size: 22px; font-weight: 700; margin: 0; color: var(--ink); white-space: nowrap; }
 .top-end { display: flex; align-items: center; gap: 16px; }
-.top-icon { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; }
-.top-icon:hover { color: var(--ink); border-color: var(--blue); }
 
 .top-user { display: flex; align-items: center; gap: 11px; }
 .top-usertext { text-align: start; }

@@ -23,14 +23,16 @@ const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isManager, isFieldSupervisor } = usePermissions()
-const canSchedule = computed(() => isManager.value || isFieldSupervisor.value)
+// كل مشرف ميداني يجدول زياراته بنفسه، والمديران يطّلعون (قرار 2026-10-19 — القاعدة: visits_insert/update
+// لصاحب الزيارة مشرف الحلقة). الحذف للمدير الإداري (تنظيف خطأ) ولصاحب الزيارة.
+const { isAdmin, isFieldSupervisor } = usePermissions()
+const canSchedule = computed(() => isFieldSupervisor.value)
 /**
- * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): المديران لكل زيارة، والمشرف الميداني لزياراته هو وحده
- * (visits_update: supervisor_id = auth.uid()) — لا لزيارةٍ جدولها مديرٌ لحلقته باسم غيره.
+ * تعديل زيارةٍ قائمة (موعدها أو نتيجتها): للمشرف الميداني صاحبها وحده
+ * (visits_update: supervisor_id = auth.uid()) — المديران يطّلعون ولا يعدّلون.
  */
 function canEditVisit(v: VisitRow) {
-  return isManager.value || (isFieldSupervisor.value && v.supervisor_id === profile.value?.id)
+  return isFieldSupervisor.value && v.supervisor_id === profile.value?.id
 }
 /** تحديثٌ لم يمسّ صفّاً = رفضته RLS بصمت — يُعرض خطأً لا نجاحاً. */
 const VISIT_NOT_UPDATED = 'لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.'
@@ -341,7 +343,7 @@ async function confirmDelete() {
               @click="openEditSchedule(row)"
             />
             <UButton
-              v-if="isManager"
+              v-if="isAdmin || canEditVisit(row)"
               color="neutral"
               variant="outline"
               size="sm"

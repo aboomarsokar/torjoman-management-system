@@ -180,9 +180,46 @@ export type Database = {
           },
         ]
       }
+      exam_cycles: {
+        Row: {
+          created_at: string
+          cycle_number: number
+          id: number
+          parts_from: number
+          parts_to: number
+          sort_order: number | null
+          stage_number: number
+          surahs_label: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_number: number
+          id: number
+          parts_from: number
+          parts_to: number
+          sort_order?: number | null
+          stage_number: number
+          surahs_label: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cycle_number?: number
+          id?: number
+          parts_from?: number
+          parts_to?: number
+          sort_order?: number | null
+          stage_number?: number
+          surahs_label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exam_list_items: {
         Row: {
           created_at: string
+          exam_cycle_id: number | null
           exam_list_id: string
           exam_plan_id: number | null
           id: string
@@ -192,6 +229,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          exam_cycle_id?: number | null
           exam_list_id: string
           exam_plan_id?: number | null
           id?: string
@@ -201,6 +239,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          exam_cycle_id?: number | null
           exam_list_id?: string
           exam_plan_id?: number | null
           id?: string
@@ -209,6 +248,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exam_list_items_exam_cycle_id_fkey"
+            columns: ["exam_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "exam_cycles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exam_list_items_exam_list_id_fkey"
             columns: ["exam_list_id"]
@@ -1484,6 +1530,15 @@ export type Database = {
       is_women_admin: { Args: never; Returns: boolean }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       my_approved_pages: { Args: never; Returns: number }
+      my_exam_cycle_results: {
+        Args: never
+        Returns: {
+          exam_cycle_id: number
+          exam_date: string
+          passed: boolean
+          total_score: number
+        }[]
+      }
       my_exam_results: {
         Args: never
         Returns: {

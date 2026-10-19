@@ -173,8 +173,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `halaqa_id` | uuid FK → halaqat | الحلقة المُزارة |
 | `supervisor_id` | uuid FK → profiles | المشرف المنفِّذ |
 | `scheduled_at` | timestamptz | الموعد المجدول |
-| `executed_at` | timestamptz | تاريخ التنفيذ الفعلي (يُقارن آلياً) |
-| `status` | enum | `scheduled` / `done` / `late` / `missed` |
+| `executed_at` | timestamptz | يومُ التنفيذ الفعلي يختاره المشرف (يُخزَّن ظهرَ اليوم بغرينتش فلا ينقلب يومُه في غزة) — لا يتجاوز اليوم |
+| `status` | enum | **تشتقّه القاعدة** (المشغِّل `supervision_visits_derive_status`، هجرة `20261019125332`): بلا تنفيذ `scheduled`، ونُفّذت في يوم موعدها أو قبله بتوقيت غزة `done`، وبعده `late`. و`missed` **لا يُخزَّن**: يُشتقّ عند العرض لمجدولةٍ فات يومُها (`app/utils/visitStatus.ts`) |
 | `notes` | text | ملاحظات الزيارة |
 | `flow_rating` | text | تقييم سير الحلقة |
 | `strengths` | text | نقاط القوة |
@@ -192,7 +192,9 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `reason` | text | **سبب التغيير (إلزامي)** |
 | `changed_at` | timestamptz | |
 
-> **مؤشر الالتزام:** `executed_at` مقابل `scheduled_at` → في وقتها / متأخرة. الالتزام = (في وقتها) ÷ (المستحقّة) × 100.
+> **مؤشر الالتزام:** الالتزام = (في وقتها) ÷ (المستحقّة: تمّت + متأخّرة + فائتة) × 100 — دالّةٌ واحدة `visitCommitment` تستعملها شاشات الزيارات والمشرفين.
+
+> **تعديلُ الموعد بسببٍ إلزاميّ** (قرار 2026-10-19، هجرة `20261019125332`): الدالّة `reschedule_visit(p_visit, p_new_time, p_reason)` (`security invoker`، فتسري RLS) ترفض السبب الأقصر من 3 أحرف والزيارةَ المنفَّذة والموعدَ نفسه، وتكتب سطر `visit_reschedule_log` ثم الموعد في معاملةٍ واحدة. والحارس `supervision_visits_guard_reschedule` ← `guard_visit_reschedule` يرفض أيَّ تغييرٍ لـ`scheduled_at` بلا سطر سجلٍّ في المعاملة نفسها (`changed_at = now()`). السجلُّ يقرؤه كلُّ من يقرأ الحلقة، وتعرضه نافذة نتيجة الزيارة.
 
 **RLS** (`visits_*` و`reschedule_*`):
 - **القراءة:** `can_view_halaqa(halaqa_id)` (فالمديرة تقرأ زيارات البنات بلا كتابة).
@@ -365,6 +367,22 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 **RLS** (`fintx_all`): الكتابة `admin_manager` فقط، والقراءة `admin_manager` و`project_supervisor`. المديرة الإدارية والمدير الفني لا يمسّان المالية.
 
+**`transaction_attachments` — مستنداتُ الحركة (فواتير وإيصالات — ROADMAP #17، هجرة `20261019130119`):** صفٌّ لكلّ ملفّ، وللحركة الواحدة أكثر من ملفّ.
+
+| العمود | النوع | ملاحظات |
+|---|---|---|
+| `id` | uuid PK | |
+| `transaction_id` | uuid FK → financial_transactions **ON DELETE CASCADE** | |
+| `storage_path` | text **UNIQUE** | `transactions/<transaction_id>/<uuid>.(jpg\|png\|webp\|pdf)` — قيد `transaction_attachments_path_shape` يربط المسار بحركته |
+| `file_name` | text | الاسم الأصليّ (1–200 حرف) |
+| `mime_type` | text | `image/jpeg` / `image/png` / `image/webp` / `application/pdf` |
+| `size_bytes` | integer | 1 بايت – 10 م.ب |
+| `uploaded_by` | uuid FK → profiles | افتراضاً `auth.uid()` |
+| `created_at` | timestamptz | |
+
+**RLS** (`txdocs_*`): القراءة `admin_manager` و`project_supervisor`، والإدراج والحذف `admin_manager`، ولا تعديل. `anon` بلا منح.
+**المستودع `finance-docs` (خاصّ، 10 م.ب، صورٌ وPDF):** القراءة للاثنين، والرفع للمدير الإداري بالمسار النمطيّ الكامل وحده (لا جذر ولا مسارَ آخر)، والحذف له. ولا يُستعمل `media` لأنه عامّ. الحذفُ بالتتالي يمسح الصفوف، والواجهةُ تمسح الملفّاتِ بعده (`Transactions.vue`).
+
 ---
 
 ## 11. `admin_alerts` — التنبيهات الإدارية للمعلمين
@@ -492,10 +510,12 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 |---|---|---|
 | `id` | uuid PK | |
 | `statement_id` | uuid FK → incentive_statements | |
-| `description` | text | الوصف/البيان |
+| `description` | text NOT NULL | الوصف/البيان — 3 أحرف فأكثر بعد حذف المسافات (`incentive_statement_items_description_len`) |
 | `category` | text | جوائز / أنشطة / ضيافة / أخرى |
-| `amount` | numeric | المبلغ (₪) |
-| `item_date` | date | التاريخ |
+| `amount` | numeric | المبلغ (₪) — أكبر من صفر (`incentive_statement_items_amount_positive`) |
+| `item_date` | date NOT NULL | التاريخ — داخل شهر الكشف ولا يتجاوز اليوم بتوقيت غزة (المشغِّل `incentive_statement_items_guard_date` ← `guard_statement_item_date`) |
+
+> **التوثيق (هجرة `20261019124522`، ROADMAP #13):** القيدان `NOT VALID` — يُفرضان على كلّ إدراجٍ وتعديلٍ جديد ولا يُعاد فحص القديم (بيانات التجريب فيها بندٌ بمبلغ 0). والواجهة تتحقّق أولاً برسائل عربية (`useIncentiveStatement`)، والمراجِع يرى البنود في نافذة (`FinanceStatementReviewModal`) قبل «تمّ الاطّلاع».
 
 > **المصروف** = مجموع البنود (محسوب)، و**المتبقّي = المستلَم − المصروف** (محسوب، تحذير عند التجاوز). تفرّد: كشف واحد لكل حلقة لكل (شهر/سنة). يُقفل بعد التسليم. مصدر حقيقة واحد مع جدول المدير (§4.20د).
 

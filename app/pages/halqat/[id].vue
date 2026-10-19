@@ -75,7 +75,9 @@ const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, asy
 
 useSeoMeta({ title: () => data.value?.halqa ? `${data.value.halqa.name} — ترجمان` : 'تفاصيل الحلقة — ترجمان' })
 
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: 'numeric', month: 'short', year: 'numeric' })
+// الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (الفائتةُ مشتقّة)
+const fmtDate = (iso: string) => formatDay(gazaDayOf(iso))
+const today = gazaToday()
 </script>
 
 <template>
@@ -322,8 +324,8 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 >
                   <span class="row-sub">{{ fmtDate(v.executed_at || v.scheduled_at) }}</span>
                   <UBadge
-                    :label="VISIT_STATUS[v.status]?.label"
-                    :color="VISIT_STATUS[v.status]?.color"
+                    :label="VISIT_STATUS[visitDisplayStatus(v, today)]?.label"
+                    :color="VISIT_STATUS[visitDisplayStatus(v, today)]?.color"
                     variant="soft"
                     size="sm"
                   />

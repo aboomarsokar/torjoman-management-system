@@ -646,9 +646,9 @@ export type Database = {
           amount: number
           category: string | null
           created_at: string
-          description: string | null
+          description: string
           id: string
-          item_date: string | null
+          item_date: string
           statement_id: string
           updated_at: string
         }
@@ -656,9 +656,9 @@ export type Database = {
           amount?: number
           category?: string | null
           created_at?: string
-          description?: string | null
+          description: string
           id?: string
-          item_date?: string | null
+          item_date: string
           statement_id: string
           updated_at?: string
         }
@@ -666,9 +666,9 @@ export type Database = {
           amount?: number
           category?: string | null
           created_at?: string
-          description?: string | null
+          description?: string
           id?: string
-          item_date?: string | null
+          item_date?: string
           statement_id?: string
           updated_at?: string
         }
@@ -1461,6 +1461,54 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          transaction_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type: string
+          size_bytes: number
+          storage_path: string
+          transaction_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string
+          size_bytes?: number
+          storage_path?: string
+          transaction_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_attachments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit_reschedule_log: {
         Row: {
           changed_at: string
@@ -1566,6 +1614,10 @@ export type Database = {
       quran_page_of: {
         Args: { p_ayah: number; p_surah: number }
         Returns: number
+      }
+      reschedule_visit: {
+        Args: { p_new_time: string; p_reason: string; p_visit: string }
+        Returns: undefined
       }
     }
     Enums: {

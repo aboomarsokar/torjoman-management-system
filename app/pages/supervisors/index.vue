@@ -25,28 +25,19 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
 
   const [{ data: halqat }, { data: visits }] = await Promise.all([
     supabase.from('halaqat').select('supervisor_id').in('supervisor_id', ids),
-    supabase.from('supervision_visits').select('supervisor_id, status').in('supervisor_id', ids)
+    supabase.from('supervision_visits').select('supervisor_id, status, scheduled_at').in('supervisor_id', ids)
   ])
   const halqaCount: Record<string, number> = {}
   for (const h of halqat ?? []) if (h.supervisor_id) halqaCount[h.supervisor_id] = (halqaCount[h.supervisor_id] ?? 0) + 1
-  const vAgg: Record<string, { done: number, due: number }> = {}
-  for (const v of visits ?? []) {
-    const a = (vAgg[v.supervisor_id] ??= { done: 0, due: 0 })
-    if (v.status === 'done') {
-      a.done++
-      a.due++
-    } else if (v.status === 'late' || v.status === 'missed') {
-      a.due++
-    }
-  }
-  return (sups ?? []).map((s) => {
-    const a = vAgg[s.id]
-    return {
-      id: s.id, name: s.full_name, employeeNumber: s.employee_number,
-      halqat: halqaCount[s.id] ?? 0,
-      commitment: a && a.due > 0 ? Math.round(a.done / a.due * 100) : null
-    }
-  })
+  // الالتزام بحَكَمٍ واحد مع شاشة الزيارات (الفائتةُ مشتقّةٌ من موعدٍ فات يومُه — لا تُخزَّن)
+  const bySup: Record<string, { status: string, scheduled_at: string }[]> = {}
+  for (const v of visits ?? []) (bySup[v.supervisor_id] ??= []).push(v)
+  const today = gazaToday()
+  return (sups ?? []).map(s => ({
+    id: s.id, name: s.full_name, employeeNumber: s.employee_number,
+    halqat: halqaCount[s.id] ?? 0,
+    commitment: visitCommitment(bySup[s.id] ?? [], today)
+  }))
   // يُعاد الجلب حين يصل الدور: عند التحميل الكامل يُستدعى قبل الملف فيردّ [] (كانت الصفحة تقول «لا مشرفين»)
 }, { server: false, default: () => [], watch: [canView] })
 
@@ -110,7 +101,7 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
               <span class="ml">حلقة</span>
             </div>
             <UBadge
-              :label="s.commitment != null ? `الالتزام ${s.commitment}%` : 'لا زيارات'"
+              :label="s.commitment != null ? `الالتزام ${s.commitment}%` : 'لا زيارات مستحقّة'"
               :color="commitColor(s.commitment)"
               variant="soft"
             />

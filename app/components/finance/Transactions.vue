@@ -1,6 +1,11 @@
 <script setup lang="ts">
-/** سجلّ الحركات المالية (§4.20ب) — جدول بالرصيد المحسوب + إضافة/تعديل/حذف + فلاتر. */
+/**
+ * سجلّ الحركات المالية (§4.20ب) — جدول بالرصيد المحسوب + إضافة/تعديل/حذف + فلاتر،
+ * ومستنداتُ كلّ حركة (فواتير وإيصالات — ROADMAP #17) بفلتر «مصروفاتٌ بلا مستند» للتدقيق.
+ */
 import type { Database } from '~/types/database.types'
+import type { DocsTransaction } from '~/components/finance/TransactionDocsModal.vue'
+import { FINANCE_DOCS_BUCKET } from '~/constants/financeDocs'
 
 const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
@@ -12,12 +17,21 @@ const toast = useToast()
 const CATEGORIES = ['رواتب', 'حوافز', 'تشغيل', 'تبرعات', 'أخرى']
 const categoryItems = CATEGORIES.map(c => ({ label: c, value: c }))
 
-type Tx = { id: string, transaction_date: string, description: string | null, category: string | null, type: 'income' | 'expense', amount: number }
+type Tx = {
+  id: string
+  transaction_date: string
+  description: string | null
+  category: string | null
+  type: 'income' | 'expense'
+  amount: number
+  source_key: string | null
+  docs: { count: number }[]
+}
 
 const { data: txs, refresh, pending } = await useAsyncData<Tx[]>('fin-txs', async () => {
   const { data } = await supabase
     .from('financial_transactions')
-    .select('id, transaction_date, description, category, type, amount')
+    .select('id, transaction_date, description, category, type, amount, source_key, docs:transaction_attachments(count)')
     .order('transaction_date', { ascending: true }).order('created_at', { ascending: true })
     .returns<Tx[]>()
   return data ?? []
@@ -34,8 +48,20 @@ const rowsWithBalance = computed(() => {
   })
   return list.reverse()
 })
+const docCount = (t: Tx) => t.docs?.[0]?.count ?? 0
+/** مصروفٌ يدويّ بلا مستند — المُرحَّل آلياً (رواتب/حوافز بمفتاح مصدر) لا فاتورة له. */
+const missingDoc = (t: Tx) => t.type === 'expense' && !t.source_key && docCount(t) === 0
+const docF = ref<'all' | 'missing'>('all')
 const filtered = computed(() => rowsWithBalance.value.filter(t =>
-  (typeF.value === 'all' || t.type === typeF.value) && (catF.value === 'all' || t.category === catF.value)))
+  (typeF.value === 'all' || t.type === typeF.value) && (catF.value === 'all' || t.category === catF.value)
+  && (docF.value === 'all' || missingDoc(t))))
+
+const docsOpen = ref(false)
+const docsTx = ref<DocsTransaction | null>(null)
+function openDocs(t: Tx) {
+  docsTx.value = t
+  docsOpen.value = true
+}
 
 const totalIncome = computed(() => (txs.value ?? []).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0))
 const totalExpense = computed(() => (txs.value ?? []).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0))
@@ -91,8 +117,12 @@ async function confirmDelete() {
   if (!deleteTarget.value) return
   deleting.value = true
   try {
+    // صفوفُ المستندات تُحذف بالتتالي في القاعدة، وملفّاتُها تُمسح من المستودع بعدها فلا تبقى يتيمة
+    const { data: docs } = await supabase.from('transaction_attachments').select('storage_path').eq('transaction_id', deleteTarget.value.id)
     const { error } = await supabase.from('financial_transactions').delete().eq('id', deleteTarget.value.id)
     if (error) throw error
+    const paths = (docs ?? []).map(d => d.storage_path)
+    if (paths.length) await supabase.storage.from(FINANCE_DOCS_BUCKET).remove(paths)
     toast.add({ title: 'حُذفت الحركة.', color: 'success', icon: 'i-lucide-trash-2' })
     deleteTarget.value = null
     await refresh()
@@ -139,6 +169,12 @@ async function doExport() {
         <USelect
           v-model="catF"
           :items="[{ label: 'كل التصنيفات', value: 'all' }, ...categoryItems]"
+          size="md"
+          :ui="{ base: 'rounded-[11px]' }"
+        />
+        <USelect
+          v-model="docF"
+          :items="[{ label: 'كل المستندات', value: 'all' }, { label: 'مصروفات بلا مستند', value: 'missing' }]"
           size="md"
           :ui="{ base: 'rounded-[11px]' }"
         />
@@ -247,26 +283,35 @@ async function doExport() {
                 {{ fmt(t.balance) }}
               </td>
               <td>
-                <div
-                  v-if="!isReadOnly"
-                  class="rowact stack-keep"
-                >
+                <div class="rowact stack-keep">
                   <UButton
-                    color="neutral"
+                    :color="missingDoc(t) ? 'warning' : 'neutral'"
                     variant="ghost"
                     size="xs"
-                    icon="i-lucide-pencil"
-                    aria-label="تعديل"
-                    @click="openEdit(t)"
+                    icon="i-lucide-paperclip"
+                    :label="docCount(t) ? String(docCount(t)) : undefined"
+                    :aria-label="missingDoc(t) ? 'مصروفٌ بلا مستند — المستندات' : `المستندات (${docCount(t)})`"
+                    :title="missingDoc(t) ? 'بلا مستند' : 'المستندات'"
+                    @click="openDocs(t)"
                   />
-                  <UButton
-                    color="error"
-                    variant="ghost"
-                    size="xs"
-                    icon="i-lucide-trash-2"
-                    aria-label="حذف"
-                    @click="deleteTarget = t"
-                  />
+                  <template v-if="!isReadOnly">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-lucide-pencil"
+                      aria-label="تعديل"
+                      @click="openEdit(t)"
+                    />
+                    <UButton
+                      color="error"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-lucide-trash-2"
+                      aria-label="حذف"
+                      @click="deleteTarget = t"
+                    />
+                  </template>
                 </div>
               </td>
             </tr>
@@ -385,6 +430,13 @@ async function doExport() {
       :loading="deleting"
       @confirm="confirmDelete"
       @update:open="(v) => { if (!v) deleteTarget = null }"
+    />
+
+    <FinanceTransactionDocsModal
+      v-model:open="docsOpen"
+      :transaction="docsTx"
+      :can-edit="!isReadOnly"
+      @changed="refresh"
     />
   </div>
 </template>

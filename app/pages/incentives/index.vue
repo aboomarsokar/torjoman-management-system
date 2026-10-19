@@ -295,7 +295,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
             />
             <div
               v-else
-              class="table-wrap"
+              class="table-wrap stack-wrap"
             >
               <table>
                 <thead>
@@ -317,10 +317,13 @@ const fmt = (n: number) => n.toLocaleString('ar')
                     v-for="(r, i) in rows"
                     :key="i"
                   >
-                    <td class="ta-start muted">
+                    <td class="ta-start muted stack-hide">
                       {{ i + 1 }}
                     </td>
-                    <td class="ta-start">
+                    <td
+                      class="ta-start"
+                      data-label="البيان"
+                    >
                       <input
                         v-model="r.description"
                         :disabled="!canEdit"
@@ -328,7 +331,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
                         placeholder="وصف البند"
                       >
                     </td>
-                    <td>
+                    <td data-label="التصنيف">
                       <UiSelect
                         v-model="r.category"
                         :items="categoryItems"
@@ -336,7 +339,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
                         size="sm"
                       />
                     </td>
-                    <td>
+                    <td data-label="المبلغ">
                       <input
                         v-model="r.amount"
                         :disabled="!canEdit"
@@ -345,7 +348,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
                         dir="ltr"
                       >
                     </td>
-                    <td>
+                    <td data-label="التاريخ">
                       <input
                         v-model="r.item_date"
                         :disabled="!canEdit"
@@ -360,7 +363,8 @@ const fmt = (n: number) => n.toLocaleString('ar')
                         variant="ghost"
                         size="xs"
                         icon="i-lucide-x"
-                        aria-label="حذف"
+                        aria-label="حذف البند"
+                        class="stack-keep"
                         @click="removeRow(i)"
                       />
                     </td>

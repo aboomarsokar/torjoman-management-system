@@ -354,6 +354,58 @@ async function confirmDelete() {
             />
           </div>
         </template>
+        <template #card="{ row }">
+          <UiCardRow
+            :title="row.halaqa?.name || '—'"
+            :subtitle="fmtDate(row.scheduled_at)"
+            :fields="[
+              { label: 'المعلّم', value: row.halaqa?.teacher?.full_name },
+              { label: 'الزائر', value: row.supervisor?.full_name },
+              { label: 'التقييم', value: row.flow_rating, muted: !row.flow_rating }
+            ]"
+          >
+            <template #badge>
+              <UBadge
+                :label="VISIT_STATUS[row.status]?.label"
+                :color="VISIT_STATUS[row.status]?.color"
+                variant="soft"
+              />
+            </template>
+            <template
+              v-if="row.status === 'done' || canEditVisit(row) || isAdmin"
+              #actions
+            >
+              <UButton
+                v-if="row.status === 'done' || canEditVisit(row)"
+                :label="row.status === 'done' ? 'النتيجة' : 'تنفيذ'"
+                :color="row.status === 'done' ? 'neutral' : 'primary'"
+                :variant="row.status === 'done' ? 'outline' : 'solid'"
+                :icon="row.status === 'done' ? 'i-lucide-eye' : 'i-lucide-clipboard-pen'"
+                :ui="{ base: 'rounded-[11px]' }"
+                @click="openExec(row)"
+              />
+              <UButton
+                v-if="canEditVisit(row)"
+                label="تعديل الموعد"
+                color="neutral"
+                variant="outline"
+                icon="i-lucide-pencil"
+                :ui="{ base: 'rounded-[11px]' }"
+                @click="openEditSchedule(row)"
+              />
+              <UButton
+                v-if="isAdmin || canEditVisit(row)"
+                class="icon-only"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-trash-2"
+                aria-label="حذف"
+                :ui="{ base: 'rounded-[11px]' }"
+                @click="deleteTarget = row"
+              />
+            </template>
+          </UiCardRow>
+        </template>
       </UiDataTable>
     </ClientOnly>
 

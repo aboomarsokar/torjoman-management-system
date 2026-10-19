@@ -96,8 +96,8 @@ const columns = computed(() => {
   const base = [
     { key: 'num', label: '#' },
     { key: 'student', label: 'الطالب' },
-    { key: 'halqa', label: 'الحلقة' },
-    { key: 'teacher', label: 'المعلّم' },
+    // المعلم له حلقة واحدة: عمودا الحلقة والمعلّم يكرّران نفسيهما عنده فيُحذفان (أقلّ عرضاً، بلا تمرير)
+    ...(isTeacher.value ? [] : [{ key: 'halqa', label: 'الحلقة' }, { key: 'teacher', label: 'المعلّم' }]),
     { key: 'parts', label: 'الأجزاء المحفوظة' },
     { key: 'status', label: 'الحالة' }
   ]
@@ -426,6 +426,82 @@ async function confirmDelete() {
           </div>
         </template>
       </UiDataTable>
+      <!-- الحاوية الضيّقة (الجوال): بطاقةٌ لكل طالب بكل بياناته بلا تمرير أفقيّ — الجدول يُخفى هناك -->
+      <ul
+        v-if="!pending && filtered.length"
+        class="scards"
+      >
+        <li
+          v-for="row in paged"
+          :key="row.id"
+          class="scard"
+        >
+          <NuxtLink
+            :to="`/students/${row.id}`"
+            class="scard-head"
+          >
+            <span class="av">
+              <ProfileAvatar
+                :name="row.full_name"
+                :photo-url="photoUrlFor(studentPhotoPath(row))"
+              />
+            </span>
+            <span class="scard-id">
+              <span class="u-name">{{ row.full_name }}</span>
+              <span
+                v-if="row.national_id"
+                class="u-sub"
+                dir="ltr"
+              >{{ row.national_id }}</span>
+            </span>
+            <UBadge
+              :label="STUDENT_STATUS[row.status]?.label"
+              :color="STUDENT_STATUS[row.status]?.color"
+              variant="soft"
+              class="scard-status"
+            />
+          </NuxtLink>
+          <dl class="scard-meta">
+            <template v-if="!isTeacher">
+              <dt>الحلقة</dt>
+              <dd>{{ row.halaqa?.name || '—' }}</dd>
+            </template>
+            <dt>المحفوظ</dt>
+            <dd>{{ row.quran_parts != null ? `${row.quran_parts} جزء` : '—' }}</dd>
+          </dl>
+          <div class="scard-actions">
+            <UButton
+              label="الملف"
+              color="neutral"
+              variant="outline"
+              size="md"
+              icon="i-lucide-eye"
+              :ui="{ base: 'rounded-[11px]' }"
+              @click="navigateTo(`/students/${row.id}`)"
+            />
+            <UButton
+              v-if="canManage"
+              label="تعديل"
+              color="neutral"
+              variant="outline"
+              size="md"
+              icon="i-lucide-pencil"
+              :ui="{ base: 'rounded-[11px]' }"
+              @click="openEdit(row)"
+            />
+            <UButton
+              v-if="canDelete"
+              color="neutral"
+              variant="ghost"
+              size="md"
+              icon="i-lucide-trash-2"
+              aria-label="حذف"
+              :ui="{ base: 'rounded-[11px]' }"
+              @click="deleteTarget = row"
+            />
+          </div>
+        </li>
+      </ul>
       <UiPaginator
         v-if="filtered.length"
         :page="page"
@@ -714,6 +790,23 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
+/* الحاوية دون 720: بطاقات بدل الجدول (الجوال) — بلا تمرير أفقيّ */
+.students { container: students / inline-size; }
+.scards { display: none; list-style: none; margin: 0; padding: 0; }
+@container students (max-width: 719px) {
+  .students :deep(.table-wrap) { display: none; }
+  .scards { display: grid; gap: 12px; }
+}
+.scard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
+.scard-head { display: flex; align-items: center; gap: 12px; color: inherit; }
+.scard-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.scard .u-sub { display: block; } /* الهوية تظهر في البطاقة (يُخفيها الجدول تحت 640) */
+.scard-status { flex: none; }
+.scard-meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; }
+.scard-meta dt { color: var(--ink-3); font-size: 12.5px; }
+.scard-meta dd { margin: 0; color: var(--ink); }
+.scard-actions { display: flex; gap: 8px; margin-top: 14px; }
+.scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
 .filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
 .search { width: 260px; max-width: 100%; }
 .halqa-sel { min-width: 180px; margin-inline-start: auto; }

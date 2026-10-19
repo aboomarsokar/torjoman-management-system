@@ -1,6 +1,6 @@
 # مخطط قاعدة البيانات — ترجمان القرآني
 
-> **الحالة (2026-10-19):** يطابق الهجرات حتى `20261019110259_quran_records_final_fixes` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18)، ومراجعُ المصحف (§19)، والحضورُ اليوميّ بالاستثناء (§20)، والرصدُ القرآنيّ الشهريّ ومسارُ اعتماد المشرف (§21). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات ← §19 مراجع المصحف ← §20 الحضور اليوميّ ← §21 الرصد القرآنيّ الشهريّ.
+> **الحالة (2026-10-19):** يطابق الهجرات حتى `20261019110259_quran_records_final_fixes` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18)، ومراجعُ المصحف (§19)، والحضورُ اليوميّ بالاستثناء (§20)، والرصدُ القرآنيّ الشهريّ ومسارُ اعتماد المشرف (§21)، والاختبارات المرحلية `exam_cycles` (§22 — الهجرتان `20261019121528` و`20261019122626`؛ الخطةُ القديمة `exam_plan` باقيةٌ حتى تُحذف بعد النشر). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات ← §19 مراجع المصحف ← §20 الحضور اليوميّ ← §21 الرصد القرآنيّ الشهريّ ← §22 الاختبارات المرحلية.
 > هذا الملف **مصدر الحقيقة** لبنية القاعدة، ويطابق آخر migration دائماً.
 > أي تغيير = migration جديد + تحديث هذا الملف + إعادة توليد الأنواع.
 
@@ -31,7 +31,8 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     │       └─< incentive_statements (halaqa_id) كشف حوافز الحلقة (المعلم)
     │
     ├─< exam_lists (teacher_id)                قوائم الاختبار الأسبوعي
-    │       └─< exam_results (exam_list_id, student_id)
+    │       └─< exam_list_items (exam_list_id, student_id, exam_cycle_id → exam_cycles)   بندُ الترشيح
+    │               └── exam_results (exam_list_item_id، نتيجةٌ واحدة لكلّ بند)
     │
     ├─< admin_alerts (issuer_id, teacher_id)   التنبيهات الإدارية
     ├─< notifications (recipient_id)           إشعارات الأحداث — تكتبها مُشغّلات، ويقرؤها صاحبها وحده (§18)
@@ -39,7 +40,8 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     ├─< monthly_salaries (profile_id)          الرواتب الشهرية المرجعية (المدير الإداري)
     └─< financial_transactions (created_by)    الحركات المالية
 
-exam_plan (بيانات مرجعية — يعدّلها المدير الإداري والمدير الفني)
+exam_cycles (بيانات مرجعية: 15 دورةً — يعدّلها المدير الإداري والمدير الفني، §22)
+exam_plan (قديم — يُحذف بعد النشر؛ حلّ محلّه exam_cycles)
 app_settings (إعدادات المدير الإداري القابلة للضبط)
 news (الأخبار — المدير الإداري ينشرها، عامّة على Landing)
 ```
@@ -203,7 +205,9 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ---
 
-## 5. `exam_plan` — خطة الاختبارات (بيانات مرجعية ثابتة)
+## 5. `exam_plan` — خطة الاختبارات (بيانات مرجعية ثابتة) — **قديم — يُحذف بعد النشر**
+
+> ⚠️ **قديم — يُحذف بعد النشر.** حلّ محلّه جدول `exam_cycles` (15 دورةً بثلاث مراحل — §22) منذ 2026-10-19؛ لا شاشةَ تقرؤه ولا تكتب فيه، ويبقى مع `exam_list_items.exam_plan_id` و`guard_station_sequence` و`my_exam_results()` والنوع `exam_stage_type` وفرعِ `exam_plan` في `bump_parts_on_pass` حتى يُحذف الجميع بهجرةٍ واحدة بعد النشر (التنظيف هو المهمة 8 من خطة الجزء ٣). بياناتُ الاختبار في القاعدة فارغةٌ بعد حذف بيانات التجربة (2026-10-19) فلا بنودَ قديمةً تُفقد.
 
 6 مجموعات، لكل مجموعة مستويان (مرحلي 3 أجزاء + تجميعي 5 أجزاء). يعدّلها المدير من شاشة الخطة (§4.11).
 
@@ -249,7 +253,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `id` | uuid PK | |
 | `exam_list_id` | uuid FK → exam_lists | |
 | `student_id` | uuid FK → students | |
-| `exam_plan_id` | int FK → exam_plan | النطاق المُحدَّد من المعلم |
+| `exam_cycle_id` | smallint FK → exam_cycles (`on delete restrict`) | **الدورة المرشَّح لها** (منذ `20261019121528`) — فارغٌ للبنود القديمة وحدها؛ فهرس `idx_exam_list_items_cycle`، وفهرس `idx_exam_list_items_student` على الطالب |
+| `exam_plan_id` | int FK → exam_plan | **قديم — يُحذف بعد النشر**؛ النطاق المُحدَّد من المعلم في الخطة السابقة (`on delete set null`)، فارغٌ في كلّ بندٍ جديد |
 | `teacher_note` | text | ملاحظة اختيارية |
 
 **RLS** (`lists_*` و`items_*`):
@@ -257,17 +262,18 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **إنشاء القائمة:** المعلم لحلقته فقط (`teacher_id = auth.uid()` و`is_halaqa_teacher`).
 - **تحديث القائمة (الحالة):** المديران أو مختبِر الحلقة. **حذفها:** المديران أو المعلم صاحبها.
 - **البنود:** يكتبها معلّم الحلقة أو المديران (`can_manage_halaqa`).
+- **حرّاس البنود (لكل كاتب، §22):** `guard_cycle_sequence` يفرض الدورةَ المستحقّة ويمنع ترشيحاً ثانياً قبل رصد الأول، و`guard_graded_item` يمنع حذفَ ترشيحٍ رُصدت نتيجته أو نقلَه. فسحبُ الترشيح (حذفُ البند) متاحٌ للمعلّم والمديرَين **قبل الرصد وحده**، وحذفُ حلقةٍ لها ترشيحاتٌ مرصودة مرفوض.
 
 ---
 
 ## 7. `exam_results` — نتائج اختبار الطالب
 
-المختبِر يُدخل النتيجة (منذ 2026-10-15؛ قبلها المشرف). المجموع = 100. عند الاجتياز يرفع مُشغِّل `bump_parts_on_pass` قيمة `students.quran_parts` إلى نهاية نطاق المحطة (لا يُنقِصها). الاجتياز عند علامة قابلة للضبط (افتراضي 80%).
+المختبِر يُدخل النتيجة (منذ 2026-10-15؛ قبلها المشرف). المجموع الأعلى **99** (تسعُ خاناتٍ من 10 + التجويد حتى 9 — `EXAM_MAX_TOTAL` في `app/constants/exams.ts`). عند الاجتياز يرفع مُشغِّل `bump_parts_on_pass` قيمة `students.quran_parts` إلى عدد أجزاء الدورة المحقَّق من الناس = `31 − exam_cycles.parts_from` (لا يُنقِصها أبداً؛ والبنود القديمة بـ`exam_plan.parts_to` كما كانت) — التفصيل في §22. الاجتياز عند علامة قابلة للضبط (افتراضي 80%).
 
 | العمود | النوع | ملاحظات |
 |---|---|---|
 | `id` | uuid PK | |
-| `exam_list_item_id` | uuid FK → exam_list_items | |
+| `exam_list_item_id` | uuid FK → exam_list_items | **فريد** (`uq_exam_results_item` منذ `20261019122626`): نتيجةٌ واحدة لكلّ ترشيح، ومحاولةٌ جديدة بعد الرسوب ترشيحٌ جديد. ولا تُنقل النتيجة إلى ترشيحٍ أو طالبٍ آخر (`guard_result_link`) |
 | `student_id` | uuid FK → students | |
 | `examiner_id` | uuid FK → profiles | الراصد (المختبِر؛ النتائج القديمة باسم المشرف) |
 | `exam_date` | date | تاريخ الاختبار |
@@ -281,18 +287,19 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `q3_understanding` | int | س3 فهم (0–10) |
 | `q3_reflection` | int | س3 تدبر (0–10) |
 | `tajweed_score` | int | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
-| `total_score` | int | يُحسب آلياً (المجموع = 100) |
+| `total_score` | int | يُحسب آلياً (المجموع من 99) |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها) |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |
 | `notes` | text | ملاحظات |
 
-> الأوزان (10×9 + 10) قابلة للضبط مستقبلاً كقيم ثابتة. **علامة الاجتياز تُخزّن snapshot** لكل نتيجة — تغييرها يسري على اللاحق فقط.
+> الأوزان (10×9 + التجويد حتى 9) قابلة للضبط مستقبلاً كقيم ثابتة. **علامة الاجتياز تُخزّن snapshot** لكل نتيجة — تغييرها يسري على اللاحق فقط.
 
 **RLS** (`results_*`):
 - **القراءة:** الطالب نتائجه (`student_id = my_student_id()`)، ومن يرى حلقة الطالب (`can_view_halaqa`) — المشرف الميداني والمعلم قارئان.
 - **الإدراج:** المديران، أو المختبِر لطلاب حلقاته باسمه (`examiner_id = auth.uid()` و`is_halaqa_examiner`).
 - **التعديل:** الراصد نفسه أو المديران؛ و`with check` يعيد فحص النطاق على الطالب الجديد فلا تُحوَّل نتيجةٌ إلى طالبٍ خارج حلقات المختبِر. **الحذف:** `admin_manager` وحده.
-- ⚠️ سياستا `exam_list_items`/`monthly_reports` لا يجتازهما الطالب (`can_view_halaqa`)، فتضمينُهما يصله `null` — لذلك تقرأ رحلته بالدالّتين `my_exam_results()` و`my_approved_pages()` (§17).
+- ⚠️ سياستا `exam_list_items`/`monthly_reports` لا يجتازهما الطالب (`can_view_halaqa`)، فتضمينُهما يصله `null` — لذلك تقرأ رحلته بالدوالّ `my_exam_cycle_results()` و`my_approved_pages()` و`my_quran_months()` (§17، §22) — و`my_exam_results()` القديمة لا يقرؤها كودٌ بعد الآن وتُحذف بعد النشر.
+- **إشعار الرصد:** كلُّ نتيجةٍ جديدة تُصدر `exam_graded` لمعلّم الحلقة وللطالب (§22).
 
 ---
 
@@ -579,13 +586,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `can_assign_in_halaqa(hid)` | **إسناد الطلاب وإخراجهم:** نطاق الاعتماد + المشرف الميداني لحلقاته |
 | `is_halaqa_teacher(hid)` / `is_halaqa_examiner(hid)` / `is_halaqa_supervisor(hid)` | الإسناد المباشر (المعلم والمختبِر وهذا الأخير للمشرف الميداني فقط)؛ المعلم والمختبِر يشترطان حساباً نشطاً |
 | `my_student_id()` / `my_halaqa_id()` | سجلّ الطالب وحلقته من `students.user_id = auth.uid()` |
-| `my_exam_results()` | **رحلة الطالب:** `(exam_plan_id, passed, total_score, exam_date)` لنتائج الطالب نفسه (مقصورة على `my_student_id()`، بلا `teacher_note`) |
+| `my_exam_cycle_results()` | **رحلة الطالب (منذ `20261019121528`):** `(exam_cycle_id, passed, total_score, exam_date)` لكلّ محاولات الطالب نفسه على الدورات (مقصورة على `students.user_id = auth.uid()`، بلا `teacher_note`)، مرتَّبةً بالدورة ثم التاريخ. `security definer`، `search_path=''`، `revoke … from public, anon`، `grant execute … to authenticated` (§22) |
+| `my_exam_results()` | **قديم — يُحذف بعد النشر.** `(exam_plan_id, passed, total_score, exam_date)` على الخطة القديمة؛ لا يستدعيها كودٌ بعد انتقال الرحلة إلى الدورات |
 | `my_approved_pages()` | مجموع `pages_memorized` من `quran_records` الطالب نفسه في الشهور **المعتمدة** وحدها (حُوِّلت من الجدول القديم في `20261019094547`) |
 | `my_quran_months()` | **سجلُّ الطالب:** `(report_year, report_month, from_surah, from_ayah, to_surah, to_ayah, pages_memorized, pages_reviewed)` لشهوره المعتمدة وحدها مرتَّبةً بالأقدم، مقصورةً على `my_student_id()` (§21) |
 | `can_view_profile_photo(folder)` / `can_manage_profile_photo(folder)` | سياسات مستودع الصور (§ المستودعات) |
 | `claim_employee_number()` | `nextval` من `employee_number_seq` (يبدأ 1001، حدّه 9999) — **للخدمة وحدها** (`grant … to service_role` فقط، مسحوب من `authenticated`) |
 
-> سبب `my_exam_results()` و`my_approved_pages()` و`my_quran_months()`: الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) ولا يقرأ `quran_records` مباشرةً (أُسقط فرعُ الطالب منها في `20261019095659`) فتصله التضمينات `null` — محطّاتٌ مجتازة تظهر «مستحقّة» وصفحاتُ الحفظ المعتمدة صفر. الدوال تفتح له سطوره المعتمدة وحدها دون فتح الجداول (`20261018083507`، و`20261019094547` للأخيرتين).
+> سبب `my_exam_cycle_results()` (وقبلها `my_exam_results()`) و`my_approved_pages()` و`my_quran_months()`: الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) ولا يقرأ `quran_records` مباشرةً (أُسقط فرعُ الطالب منها في `20261019095659`) فتصله التضمينات `null` — محطّاتٌ مجتازة تظهر «مستحقّة» وصفحاتُ الحفظ المعتمدة صفر. الدوال تفتح له سطوره المعتمدة وحدها دون فتح الجداول (`20261018083507`، و`20261019094547` للأخيرتين).
 
 ### الحرّاس (مُشغِّلات `SECURITY DEFINER`؛ الخدمة والهجرات `auth.uid() is null` تمرّ دائماً)
 
@@ -600,10 +608,15 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |
 | `halaqat_guard_staff` ← `guard_halaqa_staff` | **لكل كاتبٍ حتى الخدمة:** جنس الحلقة مطلوب؛ المعلم (`teacher`) والمشرف (`field_supervisor`) والمختبِر من جنسها؛ المعلم على حلقةٍ نشطة واحدة (يُفحص عند تغيّر المعلم أو تفعيل الحلقة فقط)؛ لا يتغيّر جنس حلقةٍ فيها طلاب من الجنس الآخر؛ ويختم `assigned_by` بالمستدعي عند الإنشاء وتغيير المعلم/المشرف (`23514`) |
 | `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
-| `exam_list_items_guard_sequence` ← `guard_station_sequence` | **لكل كاتب:** لا يُرشَّح طالبٌ لمحطة قبل اجتياز كل محطةٍ قبلها — الترتيب بـ`exam_plan.parts_to` تصاعدياً (لا بالمعرّف)؛ يُفحص عند الإدراج وتغيير المحطة أو الطالب (`23514`). ⚠️ يتغيّر مفتاح الترتيب إن قُلبت الخطة لتبدأ من الناس |
+| `exam_list_items_guard_sequence` ← `guard_station_sequence` | **قديم — يُحذف بعد النشر.** ما زال قائماً للبنود القديمة وحدها (`exam_plan_id`): لا يُرشَّح طالبٌ لمحطةٍ قبل اجتياز كل محطةٍ قبلها بترتيب `exam_plan.parts_to` تصاعدياً (`23514`). **يمرّ بلا فحصٍ على كل بندٍ بلا `exam_plan_id`** (`v_to is null`) — أي كلُّ بندٍ جديد بدورة؛ وحارسُ الدورات `guard_cycle_sequence` أدناه هو المرجع. (كان هنا تحذيرٌ من انقلاب مفتاح الترتيب إن قُلبت الخطة؛ زال بزوال الاعتماد على `exam_plan`.) |
+| `exam_list_items_guard_cycle` ← `guard_cycle_sequence` | **لكل كاتب، للبنود بدورةٍ وحدها** (`exam_cycle_id` ليس فارغاً؛ وتتابعُ مُشغِّلٍ آخر `pg_trigger_depth() > 1` يمرّ): عند الإدراج أو تغيير الدورة/الطالب يأخذ قفلاً استشارياً لكل طالب (`pg_advisory_xact_lock`) كي لا يمرّ ترشيحان متزامنان، ثم يرفض (`23514`): (١) ترشيحاً ثانياً لطالبٍ له ترشيحٌ بدورةٍ بلا نتيجة، (٢) أيَّ دورةٍ غير **المستحقّة** = أولُ دورةٍ بـ`sort_order` لم يجتزها الطالب (نتيجةٌ `passed`)، (٣) الترشيحَ بعد إتمام الدورات الخمس عشرة. الرسائل: «للطالب ترشيحٌ بانتظار الرصد…»، «الدورةُ المستحقّة للطالب: المرحلة % · الدورة %.»، «أتمّ الطالب الخطة…» |
+| `exam_list_items_guard_graded` ← `guard_graded_item` | **لكل كاتب** (`before update or delete`): بندٌ له نتيجةٌ لا يُحذف («لا يُحذف ترشيحٌ رُصدت نتيجته.») ولا تُغيَّر دورتُه أو طالبُه («لا تُغيَّر دورةُ ترشيحٍ مرصود.») وإلا تراجعت «الدورة المستحقّة» بصمت. **يُستثنى** الحذفُ المتتالي من حذف الطالب نفسه (التاريخُ يزول بزوال صاحبه). وهو ما يمنع حذفَ حلقةٍ لها ترشيحاتٌ مرصودة (تُعطَّل بدل أن تُحذف) |
+| `exam_results_guard_link` ← `guard_result_link` | `before update`: لا يُنقل `student_id` النتيجة، ولا `exam_list_item_id` إلى بندٍ آخر؛ **يُستثنى** تصفيرُه بـ`on delete set null` حين يزول البند نفسه |
+| `exam_cycles_guard_edit` ← `guard_exam_cycle_edit` | `before update`: لا يُغيَّر `id` ولا `stage_number` ولا `cycle_number` (`23514`) — تعديلُ الأجزاء والتسمية وحدها، حزامٌ فوق منح الأعمدة |
+| `exam_cycles_consistency` ← `check_exam_cycles_consistency` | **قيدٌ مؤجَّل** (`constraint trigger … deferrable initially deferred`، `after update for each row`): بعد كلّ تعديل يُفحص داخل كل مرحلة أنّ الدورة 2 تحوي الأولى، و4 تحوي 3، و5 تحوي 1–4 (`parts_from` أصغر أو يساوي و`parts_to` أكبر أو يساوي)؛ المؤجَّل يتيح تعديلَ عدّة دوراتٍ معاً في معاملةٍ واحدة. الرسالة «المرحلة %: نطاقُ الدورة % يجب أن يشمل نطاقَ الدورة %.» |
 | `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر المشرف الميداني المُسنَد للحلقة نفسها (منذ `20261019091015`؛ كان يقبل المديرَين)؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`). والسياسات: الإدراج والتعديل وسجلّ إعادة الجدولة لصاحب الزيارة، والحذف له وللمدير الإداري، والقراءة `can_view_halaqa` |
 
-> المُشغِّلان `admin_alerts_notify` و`supervision_visits_notify` ليسا حرّاساً: هما مُنتِجا الإشعارات (§18).
+> المُشغِّلات `admin_alerts_notify` و`supervision_visits_notify` و`exam_list_items_notify_nominated` و`exam_results_notify_graded` ليست حرّاساً: هي مُنتِجات الإشعارات (§18، §22). وبقية مُشغِّلات الاختبار: `exam_results_bump_parts` (إدراج) و`exam_results_bump_parts_on_update` (انتقالٌ إلى «ناجح») ← `bump_parts_on_pass` (§22).
 
 > **ترتيب مُشغِّلات BEFORE على `profiles`:** `profiles_guard_privileged` ← `profiles_photo_clear_on_female` ← `trg_profiles_updated_at` (أبجدياً)، فالحارس يرفض تغيير الجنس غير المأذون قبل أن يُفرَغ شيء.
 
@@ -657,7 +670,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `read_at` | timestamptz | `null` = غير مقروء |
 | `created_at` | timestamptz | `default now()` |
 
-**أنواع `kind` (العشرة):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان الآن**) · `exam_nominated` · `exam_graded` (الجزء ٣) · `transport_paid` (الجزء ٤) · `impersonation_started` · `impersonation_write` (الجزء ٥). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
+**أنواع `kind` (العشرة):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان**) · `exam_nominated` · `exam_graded` (الجزء ٣ — **مُنتَجان منذ `20261019121528`**، §22) · `transport_paid` (الجزء ٤) · `impersonation_started` · `impersonation_write` (الجزء ٥). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
 
 **الفهارس:**
 
@@ -681,8 +694,12 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `private.notify_alert_issued()` | trigger، `security definer` | ينادي `notify`: المستلم `teacher_id`، والنوع `alert_issued`، والعنوان «تنبيهٌ إداريّ جديد»، والنصّ `violation_type`، والرابط `/alerts`، والمصدر `admin_alerts`. |
 | `private.notify_visit_scheduled()` | trigger، `security definer` | ينادي `notify`: المستلم `supervisor_id` (المشرف الميداني)، والنوع `visit_scheduled`، والعنوان «جُدولت لك زيارةٌ إشرافية»، والنصّ «اسم الحلقة · DD-MM-YYYY HH24:MI» بتوقيت غزة (إن غاب اسم الحلقة يصير «حلقة»)، والرابط `/visits`، والمصدر `supervision_visits`. **لا إشعار إن جدولها المشرف لنفسه** (يمنعه `notify`). |
 | `public.mark_notifications_read(p_ids uuid[] default null)` | `security definer`، يُرجع integer | يعلّم **إشعارات المنادي** غير المقروءة وحدها (`auth.uid()`) — المحدَّد بالمعرّفات، أو الكلّ إن كانت `null` — ويُرجع عددها. **لا سياسة `update`**: صاحب الإشعار لا يعيد كتابة نصّه. `grant execute … to authenticated`، و`revoke` من `public` و`anon`. |
+| `private.notify_exam_nominated()` | trigger على الجملة، `security definer` | ينادي `notify` **مرّةً لكلّ قائمةٍ** (لا لكلّ طالب) من جدول الانتقال `new_items`: المستلم مختبِرُ الحلقة (`halaqat.examiner_id`)، والنوع `exam_nominated`، والعنوان «ترشيحٌ جديد للاختبار»، والنصّ «اسم الحلقة · عدد المرشّحين: N»، والرابط `/exams`، والمصدر `exam_lists`. (§22) |
+| `private.notify_exam_graded()` | trigger، `security definer` | ينادي `notify` مرّتين: لمعلّم حلقة الطالب «اسم الطالب · ناجح/ناجحة/راسب/راسبة · المجموع N» ورابطُه `/exams`، وللطالب نفسه «نتيجتُك: … · المجموع N» ورابطُه `/me`؛ النوع `exam_graded`، والعنوان «رُصدت نتيجةُ اختبار»، والمصدر `exam_results`. الصياغة بجنس الطالب. (§22) |
 | `admin_alerts_notify` | مُشغِّل `AFTER INSERT ON admin_alerts FOR EACH ROW` | ← `private.notify_alert_issued()` |
 | `supervision_visits_notify` | مُشغِّل `AFTER INSERT ON supervision_visits FOR EACH ROW` | ← `private.notify_visit_scheduled()` |
+| `exam_list_items_notify_nominated` | مُشغِّل `AFTER INSERT ON exam_list_items` (`referencing new table as new_items`، `FOR EACH STATEMENT`) | ← `private.notify_exam_nominated()` |
+| `exam_results_notify_graded` | مُشغِّل `AFTER INSERT ON exam_results FOR EACH ROW` | ← `private.notify_exam_graded()` |
 
 > المُشغِّلان بعد الإدراج (`AFTER`) فلا يغيّران الصفّ الأصليّ، ويعيدان `null`. دوالّهما `security definer` وبلا منحٍ للعميل.
 
@@ -877,3 +894,68 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 ### الفحص الذاتي
 
 الهجرتان تُلغيان نفسيهما عند أيّ خلل: RLS غير مفعّل على `quran_records`، أو السياساتُ ليست 4 (قراءةٌ واحدة)، أو منحٌ ناقص لـ`authenticated` أو زائدٌ لـ`anon`/`PUBLIC`، أو مُشغِّلاتُ `quran_records` (2) و`monthly_reports` (4: flow وnotify_status وtarget_snapshot وguard_status) ناقصة، أو `reports_write` لا تستعمل المعتمِد الجديد، أو `guard_report_status` ما زال يستعمل `can_approve_in_halaqa`، أو `my_approved_pages` ما زالت على الجدول القديم، أو منحُ الدوالّ خطأ، أو `report_opening_day` يخالف 2026-07-30/2026-10-31، أو المديرُ الفنيّ «يعتمد»/لا يقرأ والإداريُّ لا يعتمد (بجلساتٍ حقيقية داخل الكتلة). وتضيف الثانية: المسارُ قبل الإدراج والتحديث وفيه القواعد الثلاث، وحذفُ غير المسوّدة للإداري وحده، وسياسةُ القراءة بلا فرع الطالب، وإشعارُ الاحتياط، واختصارُ `recorded_by` قبل فحص الشهر المعتمَد في حارسَي الحضور.
+
+---
+
+## 22. الاختبارات المرحلية: `exam_cycles` (الدفعة الثانية، الجزء ٣)
+
+> الهجرتان: `20261019121528_exam_cycles` (الجدول والبذرة والحارس والمُنتِجان والدالّة) ← `20261019122626_exam_cycles_hardening` (تحصين التاريخ: لا يُمحى ترشيحٌ مرصود، ونتيجةٌ واحدة لكل ترشيح، واتّساق الدورات، وصياغة الإشعارات بالجنس). **إضافيّتان**: لا تمسّان `exam_plan` ولا `guard_station_sequence` ولا `my_exam_results()` (باقيةٌ للبنود القديمة حتى تُحذف بعد النشر). كلُّ هجرةٍ تفحص نفسها في كتلة `do` آخرها. الخطة: `docs/superpowers/plans/2026-10-19-staged-exams.md`.
+
+**الفكرة:** رحلة الاختبار 15 دورةً ثابتة العدد في **ثلاث مراحل × خمس دورات**، تُجتاز **بالترتيب** من الناس صعوداً (لا قفز فوق دورة). كلُّ دورةٍ نطاقُها أجزاءُ برنامجٍ `parts_from`–`parts_to` مرقّمةً بترتيب الحفظ (الجزء 30 = الناس). والدورة الثانية تحوي الأولى، والرابعة تحوي الثالثة، والخامسة تحوي الأربع قبلها (شاملة المرحلة). **حدودُ كلّ دورةٍ بالسورة والآية تُحسب عند العرض من `program_juz` (§19)** ولا تُخزَّن: البداية = بدايةُ الجزء `parts_to` والنهاية = نهايةُ الجزء `parts_from` (فالجزء 13 ينتهي عند يوسف 111).
+
+### الجدول `public.exam_cycles`
+
+| العمود | النوع | ملاحظات |
+|---|---|---|
+| `id` | smallint PK | 1–15 (ثابت) |
+| `stage_number` | smallint | 1–3 (`check`) |
+| `cycle_number` | smallint | 1–5 (`check`) |
+| `parts_from` | smallint | أول جزءٍ في الدورة (برقم البرنامج)؛ `check (1 <= parts_from <= parts_to <= 30)` |
+| `parts_to` | smallint | آخر جزء |
+| `surahs_label` | text | وصف السور بالعربية («المجادلة – الناس»)؛ غيرُ فارغ (`btrim(...) <> ''`) |
+| `sort_order` | smallint **مولَّد ومخزَّن** | `(stage_number − 1) × 5 + cycle_number` — مفتاح الترتيب الوحيد (1–15)، فريد |
+| `created_at` / `updated_at` | timestamptz | `set_updated_at` على التعديل |
+
+قيودٌ فريدة: `(stage_number, cycle_number)` و`sort_order`.
+
+**البذرة (15 صفاً؛ الدورة 3/3 «البقرة – النساء» بقرار المواصفة):**
+
+| المرحلة | الدورة 1 | الدورة 2 | الدورة 3 | الدورة 4 | الدورة 5 |
+|---|---|---|---|---|---|
+| 1 | 28–30 (المجادلة – الناس) | 26–30 (الأحقاف – الناس) | 23–25 (يس – الجاثية) | 21–25 (العنكبوت – الجاثية) | 21–30 (العنكبوت – الناس) |
+| 2 | 18–20 (المؤمنون – القصص) | 16–20 (مريم – القصص) | 13–15 (يوسف – الكهف) | 11–15 (يونس – الكهف) | 11–20 (يونس – القصص) |
+| 3 | 8–10 (الأعراف – التوبة) | 6–10 (المائدة – التوبة) | 3–5 (البقرة – النساء) | 1–5 (البقرة – النساء) | 1–10 (البقرة – التوبة) |
+
+**الدلالة:** اجتيازُ دورةٍ يحقّق للطالب `31 − parts_from` جزءاً من الناس (الدورة 1/1 ← 3 أجزاء، 1/2 ← 5، 3/5 ← 30).
+
+**RLS:** مُفعَّل. `revoke all … from public, anon, authenticated` **ثم** `grant select` لـ`authenticated`، و`grant update (parts_from, parts_to, surahs_label)` **على هذه الأعمدة الثلاثة وحدها**. سياستان: `exam_cycles_select` (`using (true)` — يقرؤها كلُّ مسجَّل، ومنهم الطالب لرحلته) و`exam_cycles_update` (`admin_manager` و`technical_manager` فقط عبر `current_user_role()`). **لا إدراج ولا حذف من العميل** (العددُ ثابت)؛ و`anon` بلا منح، فالصفحة العامة تقرؤها بالخدمة.
+
+### الحرّاس
+
+حرّاسُ هذا الجزء مفصَّلون في جدول §17: `guard_exam_cycle_edit` (الأجزاء والتسمية وحدها)، و`check_exam_cycles_consistency` (الاحتواء، مؤجَّل)، و`guard_cycle_sequence` (الدورة المستحقّة وترشيحٌ معلّق واحد، بقفلٍ استشاريّ لكل طالب)، و`guard_graded_item` (لا حذف ولا نقل لمرصود)، و`guard_result_link` (لا نقل لنتيجة). وكلُّها `security definer` و`set search_path = ''` و`revoke all … from public, anon, authenticated` (لا تُنفَّذ من العميل). ويحكم على **كلّ كاتبٍ حتى الخدمة**.
+
+### رفعُ الأجزاء `public.bump_parts_on_pass()`
+
+`security definer`، `search_path = public`. بعد إدراج نتيجةٍ ناجحة (أو انتقالِ نتيجةٍ إلى «ناجح» — مُشغِّل التحديث الجديد `exam_results_bump_parts_on_update … when (new.passed and not old.passed)` لتصحيح رصدٍ لاحقاً): **لبندٍ بدورة** `students.quran_parts = 31 − exam_cycles.parts_from`، **ولبندٍ قديم** `exam_plan.parts_to` كما كان (عند الإدراج وحده). **لا يُنقِص أبداً** (`coalesce(quran_parts, 0) < v_parts`)، فمن اجتاز دورةً أقلّ بعد ما اجتاز أكبر يبقى ما بلغه (اجتيازُ 1/1 لطالبٍ له 8 أجزاء لا يغيّره).
+
+### المُنتِجان (عبر `private.notify` وحدها — §18)
+
+| الاسم | الحدث ← المستلم |
+|---|---|
+| `exam_list_items_notify_nominated` ← `private.notify_exam_nominated()` | `AFTER INSERT` **على مستوى الجملة** بجدول انتقال `new_items`: إشعارٌ **واحد لكلّ قائمة** (لا لكلّ طالب) لمختبِر الحلقة، `exam_nominated`، رابط `/exams` |
+| `exam_results_notify_graded` ← `private.notify_exam_graded()` | `AFTER INSERT` لكل نتيجة: `exam_graded` لمعلّم الحلقة (رابط `/exams`) وللطالب نفسه (رابط `/me`)، بصياغةٍ مؤنّثة للطالبة |
+
+يطلقان **ولو كتب الكودُ القديم** (لا يتوقّفان على العميل). و`private.notify` لا تُشعِر المنادي بفعله هو فمن رشّح أو رصد لا يصله شيء.
+
+### قراءةُ الطالب لنتائجه `public.my_exam_cycle_results()`
+
+`(exam_cycle_id smallint, passed boolean, total_score int, exam_date date)` لكلّ محاولات الطالب نفسه على بنودٍ بدورة (`exam_cycle_id is not null`)، مرتَّبةً بالدورة ثم التاريخ ثم الإنشاء؛ مقصورةٌ على `students.user_id = auth.uid()` فلا يرى غير سجلّه ولا `teacher_note`. `language sql stable security definer`، `search_path = ''`، `revoke … from public, anon`، `grant execute … to authenticated`. تغذّي رحلته في `/me` (يُجمع **النجاحُ يغلب**: لا يُلغى اجتيازٌ برسوب لاحق). أمّا العاملون فيقرؤون `exam_results` ببنودها مباشرةً (RLS).
+
+### حالة البيانات والإزالة اللاحقة
+
+- بياناتُ الاختبار التجريبية (قوائم وبنود ونتائج وإشعاراتها) حُذفت بإذن المستخدم 2026-10-19 بعد التحقّق في المتصفح؛ جداولُ الاختبار فارغة، فلا بنودَ قديمة بلا دورة.
+- **بعد النشر وبإذن صريح:** هجرةٌ واحدة تحذف `exam_plan` والعمود `exam_list_items.exam_plan_id` والنوع `exam_stage_type` و`guard_station_sequence` و`my_exam_results()` وفرع `exam_plan` في `bump_parts_on_pass`، وتجعل `exam_cycle_id` غيرَ فارغ (المهمة 8 في الخطة). حتى ذلك تبقى الواجهةُ تعرض البنود القديمة (إن وُجدت) بنطاق «الخطة السابقة».
+
+### الفحص الذاتي
+
+كلتا الهجرتين تُلغيان نفسيهما عند أيّ خلل: عدد الدورات ليس 15، أو `sort_order` غير متّصل 1–15، أو المدى لا يغطّي 1–30، أو تغطيةُ المراحل ليست (21–30، 11–20، 1–10)، أو المنحُ خاطئة (`anon` يقرأ، أو `authenticated` يُدرج/يحذف أو يعدّل `stage_number`)، أو RLS غير مفعّل أو السياستان ناقصتان، أو دوالّ `private` مكشوفةٌ للعميل، أو `my_exam_cycle_results` منحُها خاطئ، أو أيّ من المُشغِّلات الأحد عشر ناقصٌ أو على جدولٍ خاطئ أو معطَّل، أو `uq_exam_results_item` ليس فريداً (أو بقي `idx_exam_results_item`)، أو `bump_parts_on_pass` لا تجمع المسارين، أو صياغةُ الإشعارات لم تُحدَّث، أو البذرة تخالف قاعدة الاتّساق.

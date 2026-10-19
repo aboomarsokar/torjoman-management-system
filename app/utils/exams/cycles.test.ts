@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { toProgramJuz } from '~/utils/quran/position'
 import {
-  CYCLE_LABELS, STAGE_LABELS, cycleLabel, cycleRange, cycleShort, cycleSpan, cycleSpanLabel,
-  dueCycle, partsAfterPass, partsCount, reachedHint, type ExamCycle
+  CYCLE_COLUMNS, CYCLE_LABELS, PUBLIC_CYCLE_COLUMNS, STAGE_LABELS, cycleLabel, cycleRange, cycleShort, cycleSpan, cycleSpanLabel,
+  dueCycle, partsAfterPass, partsCount, reachedHint, toExamCycle, type ExamCycle
 } from './cycles'
 
 // الدوراتُ الخمس عشرة كما في هجرة exam_cycles
@@ -26,6 +26,20 @@ const sql = readFileSync(resolve(__dirname, '../../../supabase/migrations/202610
 const juzBlock = sql.slice(sql.indexOf('insert into public.program_juz'))
 const JUZ = toProgramJuz([...juzBlock.slice(0, juzBlock.indexOf(';')).matchAll(/\((\d+),(\d+),(\d+),(\d+),(\d+)\)/g)]
   .map(m => ({ number: +m[1]!, start_surah: +m[2]!, start_ayah: +m[3]!, end_surah: +m[4]!, end_ayah: +m[5]! })))
+
+describe('toExamCycle وأعمدتُها', () => {
+  it('الترتيبُ الفارغ صفر ويبقى المملوء', () => {
+    expect(toExamCycle({ ...c(1), sort_order: null }).sort_order).toBe(0)
+    expect(toExamCycle({ ...c(4), sort_order: 4 }).sort_order).toBe(4)
+  })
+  it('يقبل الصفَّ المقصورَ بلا surahs_label ولا يضيفه', () => {
+    const { surahs_label: _s, ...narrow } = c(2)
+    expect(toExamCycle({ ...narrow, sort_order: null })).not.toHaveProperty('surahs_label')
+  })
+  it('أعمدةُ الصفحة العامّة هي الكاملة بلا surahs_label', () => {
+    expect(CYCLE_COLUMNS.split(', ').filter(x => x !== 'surahs_label').join(', ')).toBe(PUBLIC_CYCLE_COLUMNS)
+  })
+})
 
 describe('التسميات', () => {
   it('المراحلُ والدوراتُ بالعربية', () => {

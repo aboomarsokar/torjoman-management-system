@@ -5,8 +5,8 @@
  * يفتح نافذةَ الرصد (ExamsGradeModal)، وللمديرَين سحبُ الترشيح المعلّق. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
-import { cycleSpanLabel } from '~/utils/exams/cycles'
-import { examTargetText, toExamCycle, type ExamCycleRow, type OldPlanRef, type WithdrawTarget } from '~/utils/exams/nomination'
+import { cycleSpanLabel, toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
+import { examTargetText, type OldPlanRef, type WithdrawTarget } from '~/utils/exams/nomination'
 
 const emit = defineEmits<{ graded: [] }>()
 

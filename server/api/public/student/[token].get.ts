@@ -1,5 +1,6 @@
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '~/types/database.types'
+import { PUBLIC_CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { toProgramJuz } from '~/utils/quran/position'
 import { juzReached, toMonthHistory, totalPages } from '~/utils/quran/studentHistory'
 import type { ApprovedMonth } from '~/utils/quran/studentHistory'
@@ -26,10 +27,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // دوراتُ الاختبار + نتائج الطالب لرسم رحلة الطالب (دون surahs_label: الصفحة لا تعرضه)
-  const { data: cycles } = await admin
+  const { data: cycles, error: cyclesError } = await admin
     .from('exam_cycles')
-    .select('id, stage_number, cycle_number, parts_from, parts_to, sort_order')
+    .select(PUBLIC_CYCLE_COLUMNS)
     .order('sort_order')
+  if (cyclesError) console.error('[public/student] فشل جلب دورات الاختبار:', cyclesError.message)
 
   const { data: rawResults } = await admin
     .from('exam_results')
@@ -65,5 +67,5 @@ export default defineEventHandler(async (event) => {
   const target_per_month = settings?.target_memorization_pages ?? 30
 
   const { id: _id, ...safe } = data
-  return { ...safe, exam_cycles: (cycles ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 })), results, memorization_pages, target_per_month, quran_history, juz_done }
+  return { ...safe, exam_cycles: (cycles ?? []).map(toExamCycle), results, memorization_pages, target_per_month, quran_history, juz_done }
 })

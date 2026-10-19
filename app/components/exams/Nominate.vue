@@ -6,9 +6,9 @@
  * والحكمُ لحارس القاعدة (الترتيب والمعلّق) ورسائلِه العربيّة. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
-import { cycleLabel, cycleRange, cycleSpanLabel } from '~/utils/exams/cycles'
+import { CYCLE_COLUMNS, cycleLabel, cycleRange, cycleSpanLabel, toExamCycle } from '~/utils/exams/cycles'
 import {
-  approvedJuzReached, buildNomineeRows, toExamCycle,
+  approvedJuzReached, buildNomineeRows,
   type CycleItemRow, type NomineeRow, type WithdrawTarget
 } from '~/utils/exams/nomination'
 import { HISTORY_MONTHS, type HistoryRow } from '~/utils/quran/monthHistory'
@@ -19,8 +19,6 @@ const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 const quran = useQuranReference()
-
-const CYCLE_COLUMNS = 'id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order'
 
 async function load(): Promise<NomineeRow[]> {
   await quran.load()

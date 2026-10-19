@@ -6,7 +6,7 @@
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
-import type { ExamCycle } from '~/utils/exams/cycles'
+import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { buildJourney, upcomingLabel, type CycleResultInput } from '~/utils/journey'
 
 definePageMeta({ layout: 'dashboard' })
@@ -112,12 +112,13 @@ async function loadTeacherData() {
       teacherLoaded.value = true
       return
     }
-    const [{ data: studs }, { data: cycleRows }, { data: examResults }] = await Promise.all([
+    const [{ data: studs }, { data: cycleRows, error: cyclesError }, { data: examResults }] = await Promise.all([
       supabase.from('students').select('id, full_name, quran_parts').eq('halaqa_id', h.id).eq('status', 'active').order('full_name'),
-      supabase.from('exam_cycles').select('id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order').order('sort_order'),
+      supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order'),
       supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', h.id).returns<TeacherExamResult[]>()
     ])
-    const cycles: ExamCycle[] = (cycleRows ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 }))
+    if (cyclesError) handle(cyclesError)
+    const cycles = (cycleRows ?? []).map(toExamCycle)
     // نتائج اختبارات طلاب الحلقة مجمّعة حسب الطالب — لتعكس «المحطة القادمة» المُجتاز فعلياً
     const resultsByStudent = new Map<string, CycleResultInput[]>()
     for (const r of examResults ?? []) {

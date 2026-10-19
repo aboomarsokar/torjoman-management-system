@@ -5,7 +5,7 @@ import type { HistoryRow } from '~/utils/quran/monthHistory'
 import type { ProgramJuz } from '~/utils/quran/position'
 import {
   DUPLICATE_GRADE_MESSAGE, HALAQA_GRADED_MESSAGE, approvedJuzReached, buildNomineeRows, cycleStateByStudent,
-  examTargetText, gradeErrorMessage, halaqaDeleteErrorMessage, pendingLists, toExamCycle, type CycleItemRow
+  examTargetText, gradeErrorMessage, halaqaDeleteErrorMessage, pendingLists, type CycleItemRow
 } from './nomination'
 
 const cyc = (id: number, from: number, to: number): ExamCycle =>
@@ -20,12 +20,6 @@ const JUZ: ProgramJuz[] = [
 ]
 const hist = (student_id: string, surah: number, ayah: number, y: number, m: number, status: string): HistoryRow =>
   ({ student_id, to_surah: surah, to_ayah: ayah, report: { report_year: y, report_month: m, status } })
-
-describe('toExamCycle', () => {
-  it('الترتيبُ الفارغ صفر', () => {
-    expect(toExamCycle({ ...cyc(1, 28, 30), sort_order: null }).sort_order).toBe(0)
-  })
-})
 
 describe('approvedJuzReached', () => {
   it('آخرُ نهايةٍ معتمَدة لا المسوّدة ولا المرسَلة', () => {

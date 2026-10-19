@@ -5,7 +5,8 @@
  * والنتائجُ القديمة (على الخطة السابقة) بنطاق خطتها كما هي. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
-import { examTargetText, toExamCycle, type ExamCycleRow, type OldPlanRef } from '~/utils/exams/nomination'
+import { toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
+import { examTargetText, type OldPlanRef } from '~/utils/exams/nomination'
 
 const supabase = useSupabaseClient<Database>()
 const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = usePermissions()

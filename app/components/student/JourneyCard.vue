@@ -10,7 +10,7 @@
  * العاملون يقرؤون `quran_records` المعتمَدة (RLS). تحت الرحلة «سجلّ الشهور» و«وصل N من 30 جزءاً».
  */
 import type { Database } from '~/types/database.types'
-import type { ExamCycle } from '~/utils/exams/cycles'
+import { CYCLE_COLUMNS, toExamCycle, type ExamCycle } from '~/utils/exams/cycles'
 import { toApprovedPages, toCycleResults } from '~/utils/journeyInputs'
 import type { ApprovedMonth } from '~/utils/quran/studentHistory'
 import { juzReached, toMonthHistory, totalPages } from '~/utils/quran/studentHistory'
@@ -34,10 +34,9 @@ const { data: targetPerMonth } = useLazyAsyncData<number>('journey-target-pages'
 
 // جلب غير حاجز: الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي
 const { data: cycles } = useLazyAsyncData<ExamCycle[]>('journey-exam-cycles', async () => {
-  const { data } = await supabase.from('exam_cycles')
-    .select('id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order')
-    .order('sort_order')
-  return (data ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 }))
+  const { data, error } = await supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order')
+  if (error) console.error('[journey] فشل جلب دورات الاختبار:', error.message)
+  return (data ?? []).map(toExamCycle)
 }, { server: false, default: () => [] })
 
 type ResultRow = { passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }

@@ -5,7 +5,7 @@
  * متاح للمدير والمشرف/الجودة ضمن نطاقهم (RLS).
  */
 import type { Database } from '~/types/database.types'
-import type { ExamCycle } from '~/utils/exams/cycles'
+import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { buildJourney, upcomingLabel, type CycleResultInput } from '~/utils/journey'
 
 definePageMeta({ layout: 'dashboard' })
@@ -13,6 +13,7 @@ definePageMeta({ layout: 'dashboard' })
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 const supabase = useSupabaseClient<Database>()
+const { handle } = useErrorHandler()
 
 const GENDER_LABEL: Record<string, string> = { male: 'بنين', female: 'بنات' }
 const CLASS_LABEL: Record<string, string> = { excellent: 'متميّزة', good: 'جيّدة', normal: 'عادية', weak: 'ضعيفة' }
@@ -41,15 +42,16 @@ const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, asy
     .maybeSingle<Halqa>()
   if (!halqa) return null
 
-  const [{ data: studs }, { data: cycleRows }, { data: examResults }, { data: rep }, { data: visits }] = await Promise.all([
+  const [{ data: studs }, { data: cycleRows, error: cyclesError }, { data: examResults }, { data: rep }, { data: visits }] = await Promise.all([
     supabase.from('students').select('id, full_name, quran_parts').eq('halaqa_id', id.value).eq('status', 'active').order('full_name'),
-    supabase.from('exam_cycles').select('id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order').order('sort_order'),
+    supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order'),
     supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', id.value).returns<ExamResultRow[]>(),
     supabase.from('monthly_reports').select('id, report_month, report_year, status').eq('halaqa_id', id.value).order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('supervision_visits').select('id, scheduled_at, executed_at, status').eq('halaqa_id', id.value).order('scheduled_at', { ascending: false }).limit(5).returns<VisitRow[]>()
   ])
 
-  const cycles: ExamCycle[] = (cycleRows ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 }))
+  if (cyclesError) handle(cyclesError)
+  const cycles = (cycleRows ?? []).map(toExamCycle)
   // نتائج اختبارات طلاب الحلقة مجمّعة حسب الطالب — لتُغذّي رحلة كل طالب (المحطة القادمة تعكس المُجتاز)
   const resultsByStudent = new Map<string, CycleResultInput[]>()
   for (const r of examResults ?? []) {

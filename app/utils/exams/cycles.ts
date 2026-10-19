@@ -14,6 +14,19 @@ export interface ExamCycle {
   sort_order: number
 }
 
+/** أعمدةُ `exam_cycles` كاملةً لكلّ قارئٍ داخليّ. */
+export const CYCLE_COLUMNS = 'id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order'
+/** أعمدةُ الصفحة العامّة: بلا `surahs_label` (لا تُعرض هناك فلا تُرسَل). */
+export const PUBLIC_CYCLE_COLUMNS = 'id, stage_number, cycle_number, parts_from, parts_to, sort_order'
+
+/** صفُّ `exam_cycles` كما يعود من القاعدة (`sort_order` قابلٌ للفراغ في الأنواع). */
+export type ExamCycleRow = Omit<ExamCycle, 'sort_order'> & { sort_order: number | null }
+
+/** صفُّ القاعدة ← دورة (الترتيبُ الفارغ صفر)؛ يقبل الصفَّ الكامل أو المقصورَ على أعمدة الصفحة العامّة. */
+export function toExamCycle<T extends { sort_order: number | null }>(r: T): Omit<T, 'sort_order'> & { sort_order: number } {
+  return { ...r, sort_order: r.sort_order ?? 0 }
+}
+
 export const STAGE_LABELS: Record<number, string> = {
   1: 'المرحلة الأولى',
   2: 'المرحلة الثانية',

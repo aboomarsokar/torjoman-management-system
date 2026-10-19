@@ -9,14 +9,6 @@ import { cycleLabel, cycleRange, dueCycle, reachedHint, type ExamCycle } from '~
 import { latestEnds, type HistoryRow } from '~/utils/quran/monthHistory'
 import { completedJuz, type ProgramJuz } from '~/utils/quran/position'
 
-/** صفُّ `exam_cycles` كما يعود من القاعدة (`sort_order` قابلٌ للفراغ في الأنواع). */
-export type ExamCycleRow = Omit<ExamCycle, 'sort_order'> & { sort_order: number | null }
-
-/** صفُّ القاعدة ← دورة (الترتيبُ الفارغ صفر). */
-export function toExamCycle(r: ExamCycleRow): ExamCycle {
-  return { ...r, sort_order: r.sort_order ?? 0 }
-}
-
 /** حدٌّ بعد كلّ شهرٍ ممكن: «آخرُ نهايةٍ معتمَدة» بلا قيد تاريخ. */
 const AFTER_ALL = { year: 10000, month: 1 }
 

@@ -6,7 +6,7 @@
  * البيانات: قيدُ الاحتواء (دورة 2 ⊇ 1، 4 ⊇ 3، 5 ⊇ 1–4 داخل المرحلة) تردّ رسالتَه العربيّة فتُعرض كما هي.
  */
 import type { Database } from '~/types/database.types'
-import { CYCLE_LABELS, STAGE_LABELS } from '~/utils/exams/cycles'
+import { CYCLE_COLUMNS, CYCLE_LABELS, STAGE_LABELS, toExamCycle } from '~/utils/exams/cycles'
 import type { ExamCycle } from '~/utils/exams/cycles'
 
 definePageMeta({ layout: 'dashboard' })
@@ -32,14 +32,14 @@ const { data: cycles, refresh, pending } = useLazyAsyncData<ExamCycle[]>(
   async () => {
     const { data, error } = await supabase
       .from('exam_cycles')
-      .select('id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order')
+      .select(CYCLE_COLUMNS)
       .order('stage_number')
       .order('cycle_number')
     if (error) {
       handle(error)
       return []
     }
-    return (data ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 }))
+    return (data ?? []).map(toExamCycle)
   },
   { server: false, default: () => [] }
 )

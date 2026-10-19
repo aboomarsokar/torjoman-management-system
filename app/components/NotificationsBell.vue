@@ -6,8 +6,7 @@
  * عند وصول إشعارٍ جديد يهتزّ الجرس ويرنّ (صوتٌ مولَّد بلا ملفّ)؛ ولا حركة مع prefers-reduced-motion.
  */
 import { notificationIcon } from '~/constants/notifications'
-import { pendingQueue, relativeTimeAr, type InboxRow } from '~/composables/useInbox'
-import { ringDecision } from '~/composables/useNotificationChime'
+import { newUnreadIds, pendingQueue, relativeTimeAr, type InboxRow } from '~/composables/useInbox'
 
 /** مدّةُ بقاء صنف الاهتزاز: ثلاثُ دوراتٍ بثانيةٍ لكلٍّ منها */
 const RING_MS = 3100
@@ -24,28 +23,36 @@ const bellLabel = computed(() =>
 )
 
 const isRinging = ref(false)
-let knownUnread: number | null = null
+const bellButton = ref<HTMLButtonElement | null>(null)
+/** معرّفاتُ ما رُئي من الإشعارات؛ null قبل أوّل قراءةٍ ناجحة وبعد تبدّل المستخدم */
+let seenIds: Set<string> | null = null
 let ringTimer: ReturnType<typeof setTimeout> | null = null
 
-function ring() {
-  if (ringTimer) clearTimeout(ringTimer)
-  // يُزال الصنف ثم يُعاد بعد nextTick كي تتكرّر الحركة لخبرٍ ثانٍ
-  isRinging.value = false
+async function ring() {
   chime()
-  void nextTick(() => {
-    isRinging.value = true
-    ringTimer = setTimeout(() => {
-      isRinging.value = false
-      ringTimer = null
-    }, RING_MS)
-  })
+  // يُزال الصنفُ ويُرسم، ثم تُقرأ مقاييسُ العنصر لإجبار إعادة الحساب، ثم يُعاد الصنف:
+  // بلا ذلك قد يدمج المتصفّحُ التغييرين فلا تُعاد الحركةُ لخبرٍ ثانٍ
+  isRinging.value = false
+  await nextTick()
+  void bellButton.value?.offsetWidth
+  isRinging.value = true
+  if (ringTimer) clearTimeout(ringTimer)
+  ringTimer = setTimeout(() => {
+    isRinging.value = false
+    ringTimer = null
+  }, RING_MS)
 }
 
-// يرنّ عند ازدياد غير المقروء فقط، وبعد أوّل قراءةٍ ناجحة (الصفرُ الابتدائيّ لا يُحتسب)
-watch([unread, loaded], ([count, isLoaded]) => {
-  const decision = ringDecision(knownUnread, count, isLoaded)
-  knownUnread = decision.known
-  if (decision.ring) ring()
+// يرنّ عند ظهور إشعارٍ غير مقروء لم يُرَ من قبل (بالمعرّف لا بفرق العدّ)، ومرّةً عند أوّل قراءةٍ فيها غير مقروء.
+// قبل أوّل قراءةٍ ناجحة (أو بعد تبدّل المستخدم) لا يُحتسب شيء ويعود الأساسُ null.
+watch([rows, loaded], ([list, isLoaded]) => {
+  if (!isLoaded) {
+    seenIds = null
+    return
+  }
+  const decision = newUnreadIds(seenIds, list)
+  seenIds = decision.seen
+  if (decision.fresh.length) void ring()
 })
 
 onUnmounted(() => {
@@ -66,6 +73,7 @@ async function openRow(row: InboxRow) {
   >
     <div class="bell-wrap">
       <button
+        ref="bellButton"
         type="button"
         class="top-icon"
         :aria-label="bellLabel"

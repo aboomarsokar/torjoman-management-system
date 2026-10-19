@@ -20,20 +20,6 @@ export const CHIME_TONES = Array.from({ length: RINGS }, (_, round) =>
   PATTERN.map(tone => ({ ...tone, startsAt: tone.startsAt + round * RING_GAP }))
 ).flat()
 
-/** يرنّ عند ازدياد غير المقروء، ومرّةً عند أوّل قراءةٍ إن وُجد شيء؛ ولا يرنّ عند النقصان. */
-export function shouldRing(before: number | null, next: number): boolean {
-  return before === null ? next > 0 : next > before
-}
-
-/**
- * قرارُ الرنين لكلّ تغيّرٍ في العدّ: قبل أوّل قراءةٍ ناجحة (`loaded=false`) لا يرنّ ولا يُحتسب
- * الصفرُ الابتدائيّ «أوّلَ قراءة» (الأساس يعود `null`)؛ وبعدها يُحدَّث الأساس ويُسأل `shouldRing`.
- */
-export function ringDecision(known: number | null, next: number, loaded: boolean): { known: number | null, ring: boolean } {
-  if (!loaded) return { known: null, ring: false }
-  return { known: next, ring: shouldRing(known, next) }
-}
-
 type AudioContextCtor = typeof AudioContext
 
 function contextCtor(): AudioContextCtor | null {
@@ -112,15 +98,9 @@ export function useNotificationChime() {
         emit(live)
         return
       }
+      // السياقُ موقوف (منعُ التشغيل التلقائيّ): يُسجَّل الوقتُ فقط، وأوّلُ تفاعلٍ (wake)
+      // يستأنف ويعيد الرنّةَ إن كانت ضمن النافذة — فلا رنّةَ مزدوجة ولا متأخّرة
       blockedAt = Date.now()
-      void live.resume().then(() => {
-        if (live.state === 'running') {
-          blockedAt = 0
-          emit(live)
-        }
-      }).catch(() => {
-        // منعُ التشغيل التلقائيّ ليس خطأً يُعرض — يُستدرَك عند أوّل تفاعل (wake)
-      })
     } catch {
       // متصفّحٌ بلا صوتٍ يبقى صامتاً، والاهتزازُ يقع في كلّ حال
     }

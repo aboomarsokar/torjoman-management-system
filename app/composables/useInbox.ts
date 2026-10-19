@@ -24,6 +24,37 @@ export function mergeIncoming(rows: InboxRow[], row: InboxRow, limit = INBOX_LIM
     .slice(0, limit)
 }
 
+/**
+ * يدمج قراءةً كاملة في الصفوف الحاليّة بلا تكرار: قراءةٌ بدأت قبل وصولِ صفٍّ فوريّ لا تُسقطه.
+ * القراءةُ لا تتراجع — صفٌّ مقروءٌ في أيٍّ من الجهتين يبقى مقروءاً.
+ */
+export function mergeRows(current: InboxRow[], fetched: InboxRow[], limit = INBOX_LIMIT): InboxRow[] {
+  const byId = new Map<string, InboxRow>()
+  for (const r of [...current, ...fetched]) {
+    const prev = byId.get(r.id)
+    byId.set(r.id, prev ? { ...r, read_at: prev.read_at ?? r.read_at } : r)
+  }
+  return [...byId.values()]
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+    .slice(0, limit)
+}
+
+/**
+ * قرارُ الرنين بالهويّة لا بفرق العدّ: الجديدُ كلُّ إشعارٍ غيرِ مقروء لم يُرَ من قبل.
+ * `seen = null` أوّلُ قراءةٍ ناجحة: تُعتمد كلُّ معرّفاتها أساساً، وغيرُ المقروء فيها جديد (يرنّ مرّةً).
+ * بعدها: الجديدُ ما لم يكن في `seen`؛ ومن صار مقروءاً أو خرج من النافذة لا يُعدّ جديداً.
+ * لا تعدّل المجموعةَ المُمرَّرة بل تُرجع واحدةً جديدة.
+ */
+export function newUnreadIds(seen: Set<string> | null, rows: InboxRow[]): { seen: Set<string>, fresh: string[] } {
+  const next = new Set(seen ?? [])
+  const fresh: string[] = []
+  for (const r of rows) {
+    if (!r.read_at && !(seen?.has(r.id))) fresh.push(r.id)
+    next.add(r.id)
+  }
+  return { seen: next, fresh }
+}
+
 /** يعلّم المحدَّد (أو الكلّ إن كانت `null`) مقروءاً محلّياً، ولا يغيّر وقتَ ما قُرئ قبلُ. */
 export function markRowsRead(rows: InboxRow[], ids: string[] | null, at: string): InboxRow[] {
   return rows.map(r => (r.read_at || (ids && !ids.includes(r.id))) ? r : { ...r, read_at: at })
@@ -93,11 +124,14 @@ export function useInbox() {
     ])
     // تبدّل المستخدم أثناء الانتظار: ردٌّ قديم لا يُكتب فوق حالة الجديد
     if (user.value?.sub !== uid) return
-    if (list.error) {
-      handle(list.error)
+    // فشلُ إحدى القراءتين لا يُصفِّر العدّاد ولا يمسّ ما في اليد
+    const failure = list.error ?? count.error
+    if (failure) {
+      handle(failure)
       return
     }
-    rows.value = list.data ?? []
+    // دمجٌ لا استبدال: قراءةٌ بدأت قبل وصول صفٍّ فوريّ لا تُسقطه (العدّ من الاستعلام)
+    rows.value = mergeRows(rows.value, list.data ?? [])
     unread.value = count.count ?? 0
     loaded.value = true
   }
@@ -122,7 +156,8 @@ export function useInbox() {
 
   function subscribe(uid: string) {
     dropChannel()
-    channel = supabase.channel(`inbox:${uid}`)
+    // اسمٌ فريد لكلّ نسخة: نسختان بالاسم نفسه تشتركان في قناةٍ واحدة فتسقط إحداهما
+    channel = supabase.channel(`inbox:${uid}:${crypto.randomUUID()}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${uid}` },
         (payload) => {
           const row = payload.new as InboxRow

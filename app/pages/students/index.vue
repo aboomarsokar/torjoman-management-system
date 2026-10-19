@@ -76,13 +76,14 @@ function countFor(key: StudentStatus | 'all') {
   const list = students.value ?? []
   return key === 'all' ? list.length : list.filter(s => s.status === key).length
 }
-const chipOptions = computed(() => ([
-  { value: 'all' as const, label: 'الكل' },
+// قائمةٌ منسدلة بالعدد بجانب كلّ حالة (كانت خمسةَ أزرارٍ تأخذ سطرين على الجوال — طلب المستخدم 2026-10-19)
+const statusFilterItems = computed(() => ([
+  { value: 'all' as const, label: 'كل الحالات' },
   { value: 'active' as const, label: 'نشط' },
   { value: 'withdrawn' as const, label: 'منقطع' },
   { value: 'graduated' as const, label: 'متخرّج' },
   { value: 'transferred' as const, label: 'منقول' }
-]).map(c => ({ ...c, count: countFor(c.value) })))
+]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
 // البحث بالاسم أو رقم الهوية (يقبل الأرقام العربية) — فوق تصفية الحالة والحلقة
 const query = ref('')
 const filtered = computed(() => (students.value ?? []).filter(s =>
@@ -313,24 +314,28 @@ async function confirmDelete() {
     </UiPageHeader>
 
     <div class="filters">
-      <UInput
+      <UiSearchField
         v-model="query"
-        icon="i-lucide-search"
         placeholder="ابحث بالاسم أو رقم الهوية"
-        size="md"
+        :shown="filtered.length"
+        :total="(students ?? []).length"
         class="search"
-        :ui="{ base: 'rounded-[11px]' }"
       />
-      <UiFilterChips
+      <UiSelect
         v-model="statusF"
-        :options="chipOptions"
+        :items="statusFilterItems"
+        size="xl"
+        class="filter-sel"
+        aria-label="الحالة"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
-      <USelect
+      <UiSelect
         v-model="halqaF"
         :items="halqaFilterItems"
-        size="md"
-        class="halqa-sel"
-        :ui="{ base: 'rounded-[11px]' }"
+        size="xl"
+        class="filter-sel"
+        aria-label="الحلقة"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
     </div>
 
@@ -808,8 +813,13 @@ async function confirmDelete() {
 .scard-actions { display: flex; gap: 8px; margin-top: 14px; }
 .scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
 .filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.search { width: 260px; max-width: 100%; }
-.halqa-sel { min-width: 180px; margin-inline-start: auto; }
+.search { width: 300px; max-width: 100%; }
+.filter-sel { width: 180px; }
+/* على الجوال: البحثُ سطرٌ كامل، والقائمتان تتقاسمان السطر الثاني */
+@media (max-width: 600px) {
+  .search { width: 100%; }
+  .filter-sel { flex: 1 1 0; width: auto; min-width: 0; }
+}
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }

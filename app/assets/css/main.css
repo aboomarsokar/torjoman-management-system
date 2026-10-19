@@ -157,6 +157,10 @@
   --ink-3: #859AAC;
   --line: #E2EAF1;
   --line-2: #CFDBE6;
+  /* نصوصُ مكوّنات Nuxt UI بألوان الهوية: كان تلميحُ الحقول (placeholder) وأيقونتُها رماديّاً عامّاً باهتاً
+     (oklch 70.8%) — طلب المستخدم 2026-10-19. التلميحُ بين ink-2 و ink-3: مقروءٌ ويبقى أخفَّ من النص المكتوب */
+  --ui-text-dimmed: color-mix(in oklab, var(--ink-2) 55%, var(--ink-3));
+  --ui-text-highlighted: var(--ink);
 
   /* ألوان الهوية + نسخها النصّية (-ink) والخفيفة (-soft) */
   --navy: #094064;
@@ -231,6 +235,8 @@
   --ink-3: #6B8699;
   --line: #163E59;
   --line-2: #214F70;
+  --ui-text-dimmed: color-mix(in oklab, var(--ink-2) 55%, var(--ink-3));
+  --ui-text-highlighted: var(--ink);
 
   --navy: #0E4E78;
   --blue: #6BA6DD;

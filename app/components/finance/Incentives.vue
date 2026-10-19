@@ -206,7 +206,7 @@ async function markReviewed(s: StmtRow) {
           <h3 class="sec-t">
             تخصيص الحوافز
           </h3>
-          <div class="table-wrap">
+          <div class="table-wrap stack-wrap">
             <table>
               <thead>
                 <tr>
@@ -224,16 +224,19 @@ async function markReviewed(s: StmtRow) {
                   v-for="(r, i) in rows"
                   :key="r.halaqa_id"
                 >
-                  <td class="ta-start muted">
+                  <td class="ta-start muted stack-hide">
                     {{ i + 1 }}
                   </td>
                   <td class="ta-start strong">
                     {{ r.name }}
                   </td>
-                  <td class="ta-start muted">
+                  <td
+                    class="ta-start muted"
+                    data-label="المعلّم"
+                  >
                     {{ r.teacher }}
                   </td>
-                  <td>
+                  <td data-label="المخصّص (₪)">
                     <input
                       v-model="r.amount"
                       :disabled="!canEdit"
@@ -315,7 +318,7 @@ async function markReviewed(s: StmtRow) {
         />
         <div
           v-else
-          class="table-wrap"
+          class="table-wrap stack-wrap"
         >
           <table>
             <thead>
@@ -332,30 +335,38 @@ async function markReviewed(s: StmtRow) {
                 v-for="(s, i) in statements"
                 :key="s.id"
               >
-                <td class="ta-start muted">
+                <td class="ta-start muted stack-hide">
                   {{ i + 1 }}
                 </td>
                 <td class="ta-start strong">
                   {{ s.halaqa }}
                 </td>
-                <td class="num">
+                <td
+                  class="num"
+                  data-label="المستلَم"
+                >
                   {{ fmt(s.received) }}
                 </td>
-                <td class="num">
+                <td
+                  class="num"
+                  data-label="المصروف"
+                >
                   {{ fmt(s.spent) }}
                 </td>
                 <td
                   class="num"
                   :class="(s.received - s.spent) < 0 ? 'out' : ''"
+                  data-label="المتبقّي"
                 >
                   {{ fmt(s.received - s.spent) }}
                 </td>
-                <td>
+                <td data-label="الحالة">
                   <UBadge
                     :label="STATEMENT_STATUS[s.status]?.label"
                     :color="STATEMENT_STATUS[s.status]?.color"
                     variant="soft"
                     size="sm"
+                    class="stack-keep"
                   />
                 </td>
                 <td>

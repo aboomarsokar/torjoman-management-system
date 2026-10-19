@@ -302,6 +302,59 @@ async function confirmReset() {
               />
             </div>
           </template>
+          <template #card="{ row }">
+            <UiCardRow
+              :title="row.full_name"
+              :subtitle="row.employee_number"
+              subtitle-dir="ltr"
+              :to="`/profile/${row.id}`"
+              :fields="[{ label: 'عيّنه', value: row.assigner?.full_name, muted: true }]"
+            >
+              <template #lead>
+                <span class="av">
+                  <ProfileAvatar
+                    :name="row.full_name"
+                    :photo-url="photoUrlFor(displayPhotoPath(row))"
+                  />
+                </span>
+              </template>
+              <template #badge>
+                <UBadge
+                  :label="roleLabel(row.role, row.gender)"
+                  :color="ROLE_COLOR[row.role]"
+                  variant="soft"
+                />
+                <UBadge
+                  v-if="row.status !== 'active'"
+                  :label="WORKER_STATUS[row.status]?.label"
+                  :color="WORKER_STATUS[row.status]?.color"
+                  variant="soft"
+                />
+              </template>
+              <template
+                v-if="isAdmin"
+                #actions
+              >
+                <UButton
+                  label="إعادة تعيين الكلمة"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-key-round"
+                  :ui="{ base: 'rounded-[11px]' }"
+                  @click="resetTarget = row"
+                />
+                <UButton
+                  :label="row.status === 'disabled' ? 'تفعيل' : 'تعطيل'"
+                  :color="row.status === 'disabled' ? 'success' : 'neutral'"
+                  variant="outline"
+                  :icon="row.status === 'disabled' ? 'i-lucide-power' : 'i-lucide-ban'"
+                  :loading="togglingId === row.id"
+                  :ui="{ base: 'rounded-[11px]' }"
+                  @click="toggleStatus(row)"
+                />
+              </template>
+            </UiCardRow>
+          </template>
         </UiDataTable>
         <UiPaginator
           v-if="filteredUsers.length"

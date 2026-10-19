@@ -179,7 +179,7 @@ onMounted(load)
         title="اختر الشهر ثم «تحميل»"
       />
       <template v-else>
-        <div class="table-wrap">
+        <div class="table-wrap stack-wrap">
           <table>
             <thead>
               <tr>
@@ -198,21 +198,22 @@ onMounted(load)
                 v-for="(r, i) in rows"
                 :key="r.profile_id"
               >
-                <td class="ta-start muted">
+                <td class="ta-start muted stack-hide">
                   {{ i + 1 }}
                 </td>
                 <td class="ta-start strong">
                   {{ r.name }}
                 </td>
-                <td>
+                <td data-label="الدور">
                   <UBadge
                     :label="roleLabel(r.role, r.gender)"
                     color="neutral"
                     variant="soft"
                     size="sm"
+                    class="stack-keep"
                   />
                 </td>
-                <td>
+                <td data-label="الراتب (₪)">
                   <input
                     v-model="r.amount"
                     :disabled="!canEdit"

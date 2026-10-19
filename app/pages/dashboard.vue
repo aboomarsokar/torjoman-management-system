@@ -440,6 +440,25 @@ const settingCards = [
                 </tbody>
               </table>
             </div>
+            <!-- الجوال: بطاقات بدل الجدول المتمرّر (الضغط على البطاقة يفتح ملف الطالب) -->
+            <ul
+              v-if="teacherRows.length"
+              class="t-cards"
+            >
+              <li
+                v-for="r in teacherRows"
+                :key="r.id"
+              >
+                <UiCardRow
+                  :title="r.full_name"
+                  :to="`/students/${r.id}`"
+                  :fields="[
+                    { label: 'الأجزاء المثبتة', value: r.quran_parts != null ? `${r.quran_parts} / 30` : null },
+                    { label: 'المحطة القادمة', value: r.next }
+                  ]"
+                />
+              </li>
+            </ul>
           </template>
         </ClientOnly>
       </template>
@@ -734,6 +753,13 @@ const settingCards = [
 .thead-info p { margin: 5px 0 0; font-size: 14px; color: var(--ink-2); }
 .thead-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+/* لوحة المعلم دون 720px (الجوال): طلاب الحلقة بطاقاتٌ بدل الجدول المتمرّر */
+.dash { container: dash / inline-size; }
+.t-cards { display: none; list-style: none; margin: 0; padding: 0; }
+@container dash (max-width: 719px) {
+  .dash .table-wrap { display: none; }
+  .t-cards { display: grid; gap: 10px; }
+}
 .table-wrap { overflow-x: auto; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 560px; }
 .table-wrap thead tr { background: var(--surface-2); }

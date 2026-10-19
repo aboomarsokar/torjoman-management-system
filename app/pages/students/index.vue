@@ -314,13 +314,12 @@ async function confirmDelete() {
     </UiPageHeader>
 
     <div class="filters">
-      <UInput
+      <UiSearchField
         v-model="query"
-        icon="i-lucide-search"
         placeholder="ابحث بالاسم أو رقم الهوية"
-        size="xl"
+        :shown="filtered.length"
+        :total="(students ?? []).length"
         class="search"
-        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect
         v-model="statusF"
@@ -814,7 +813,7 @@ async function confirmDelete() {
 .scard-actions { display: flex; gap: 8px; margin-top: 14px; }
 .scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
 .filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.search { width: 260px; max-width: 100%; }
+.search { width: 300px; max-width: 100%; }
 .filter-sel { width: 180px; }
 /* على الجوال: البحثُ سطرٌ كامل، والقائمتان تتقاسمان السطر الثاني */
 @media (max-width: 600px) {

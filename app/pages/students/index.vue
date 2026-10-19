@@ -812,11 +812,12 @@ async function confirmDelete() {
 .scard-meta dd { margin: 0; color: var(--ink); }
 .scard-actions { display: flex; gap: 8px; margin-top: 14px; }
 .scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
-.filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; container: filters / inline-size; }
 .search { width: 300px; max-width: 100%; }
 .filter-sel { width: 180px; }
-/* على الجوال: البحثُ سطرٌ كامل، والقائمتان تتقاسمان السطر الثاني */
-@media (max-width: 600px) {
+/* متى ضاق الشريطُ عن الثلاثة في سطر (300+180+180+فراغان): البحثُ سطرٌ كامل والقائمتان تتقاسمان الثاني.
+   بعرض الشريط لا الشاشة — في عرضٍ متوسّط مع القائمة الجانبية كانت الحلقاتُ تنزل وحدها، وفي الجوال تنضغط القائمتان */
+@container filters (max-width: 699px) {
   .search { width: 100%; }
   .filter-sel { flex: 1 1 0; width: auto; min-width: 0; }
 }

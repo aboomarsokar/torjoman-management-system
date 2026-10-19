@@ -43,13 +43,22 @@ const scoreKeys: ScoreKey[] = [
 
 // مجموعات العرض: كل سؤال بتفريعاته منفصلاً (حفظ/فهم/تدبّر) + التجويد
 const BRANCH: Record<string, string> = { memorization: 'الحفظ', understanding: 'الفهم', reflection: 'التدبّر' }
-const branchLabel = (key: ScoreKey) => key === 'tajweed_score' ? 'الدرجة' : (BRANCH[key.split('_')[1] ?? ''] ?? key)
+const branchLabel = (key: ScoreKey) => key === 'tajweed_score' ? 'الدرجة (من 7 إلى 10)' : (BRANCH[key.split('_')[1] ?? ''] ?? key)
 const scoreGroups: { title: string, keys: ScoreKey[] }[] = [
   { title: 'السؤال الأول', keys: ['q1_memorization', 'q1_understanding', 'q1_reflection'] },
   { title: 'السؤال الثاني', keys: ['q2_memorization', 'q2_understanding', 'q2_reflection'] },
   { title: 'السؤال الثالث', keys: ['q3_memorization', 'q3_understanding', 'q3_reflection'] },
   { title: 'التجويد', keys: ['tajweed_score'] }
 ]
+
+// التجويد من 7 إلى 10 (قرار 2026-10-19؛ القاعدة تحرسه أيضاً). لا يُرفع إلى 7 أثناء الكتابة
+// (كتابة «10» تمرّ بـ«1» أولاً) — يُفحص عند الحفظ وتُعلَّم الخانة ما دامت خارج الحدّ.
+const TAJWEED_MIN = 7
+const minFor = (key: ScoreKey) => key === 'tajweed_score' ? TAJWEED_MIN : 0
+const tajweedInvalid = computed(() => {
+  const n = Number(scores.tajweed_score)
+  return scores.tajweed_score === '' || Number.isNaN(n) || n < TAJWEED_MIN || n > 10
+})
 
 // حدّ كل فرع 10 (لا يقبل النظام أكثر)
 function clampScore(key: ScoreKey) {
@@ -77,6 +86,10 @@ watch(open, (v) => {
 const grading = ref(false)
 async function saveGrade() {
   if (!props.target?.student) return
+  if (tajweedInvalid.value) {
+    toast.add({ title: `درجة التجويد من ${TAJWEED_MIN} إلى 10.`, color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
   grading.value = true
   try {
     const sc = (k: ScoreKey) => Math.min(10, Math.max(0, Number(scores[k]) || 0))
@@ -122,7 +135,7 @@ async function saveGrade() {
     <template #body>
       <div class="grade">
         <p class="grade-hint">
-          كل خانة من 10 (المجموع من 100). علامة الاجتياز: <strong>{{ passMark }}</strong>.
+          كل خانة من 10، والتجويد من 7 إلى 10 (المجموع من 100). علامة الاجتياز: <strong>{{ passMark }}</strong>.
         </p>
         <div class="groups">
           <div
@@ -144,11 +157,13 @@ async function saveGrade() {
                 <input
                   v-model="scores[k]"
                   type="number"
-                  min="0"
+                  :min="minFor(k)"
                   max="10"
                   inputmode="numeric"
                   dir="ltr"
                   class="qfield-input"
+                  :class="{ invalid: k === 'tajweed_score' && scores[k] !== '' && tajweedInvalid }"
+                  :aria-invalid="k === 'tajweed_score' && scores[k] !== '' && tajweedInvalid"
                   @input="clampScore(k)"
                 >
                 <span class="qfield-of">/10</span>
@@ -208,6 +223,7 @@ async function saveGrade() {
 .qfield-label { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 .qfield-input { width: 100%; height: 52px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--line-2); background: var(--surface); color: var(--ink); font-size: 20px; font-weight: 700; text-align: center; outline: none; font-variant-numeric: tabular-nums; }
 .qfield-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
+.qfield-input.invalid { border-color: var(--err); }
 .qfield-of { position: absolute; inset-inline-end: 12px; bottom: 15px; font-size: 12px; color: var(--ink-3); pointer-events: none; }
 .total { display: flex; align-items: center; gap: 10px; font-size: 16px; color: var(--ink-2); padding: 12px 16px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); }
 .total strong { font-size: 22px; color: var(--ink); }

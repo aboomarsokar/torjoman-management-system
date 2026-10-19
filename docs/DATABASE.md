@@ -277,7 +277,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `q3_memorization` | int | س3 حفظ (0–10) |
 | `q3_understanding` | int | س3 فهم (0–10) |
 | `q3_reflection` | int | س3 تدبر (0–10) |
-| `tajweed_score` | int | الأحكام (0–10) — مرة واحدة |
+| `tajweed_score` | int | الأحكام (**7–10**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019083305`) — مرة واحدة |
 | `total_score` | int | يُحسب آلياً (المجموع = 100) |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها) |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |

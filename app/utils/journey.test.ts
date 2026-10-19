@@ -1,6 +1,6 @@
 /** رحلة الطالب على دورات الاختبار. */
 import { describe, expect, it } from 'vitest'
-import { buildJourney } from './journey'
+import { buildJourney, upcomingLabel } from './journey'
 import type { ExamCycle } from './exams/cycles'
 
 const mk = (id: number, from: number, to: number, sort = id): ExamCycle =>
@@ -51,5 +51,23 @@ describe('buildJourney (الدورات)', () => {
   it('نتائجُ بلا دورة (قديمة) تُهمل', () => {
     const j = buildJourney(3, CYCLES, [{ exam_cycle_id: null, passed: true, total_score: 90 }])
     expect(j.passedCount).toBe(0)
+  })
+})
+
+describe('upcomingLabel', () => {
+  it('القادمةُ بنصّها (قبل بلوغها أيضاً)', () => {
+    expect(upcomingLabel(buildJourney(0, CYCLES, []))).toBe('المرحلة الأولى · الدورة الأولى — الأجزاء 28–30')
+  })
+  it('بعد الاجتياز تنتقل إلى التالية', () => {
+    const j = buildJourney(10, CYCLES, [{ exam_cycle_id: 1, passed: true, total_score: 90 }])
+    expect(upcomingLabel(j)).toBe('المرحلة الأولى · الدورة الثانية — الأجزاء 26–30')
+  })
+  it('اجتاز الكلَّ ← أتمّ الخطة', () => {
+    const j = buildJourney(30, CYCLES, CYCLES.map(c => ({ exam_cycle_id: c.id, passed: true, total_score: 90 })))
+    expect(j.upcomingStation).toBeNull()
+    expect(upcomingLabel(j)).toBe('أتمّ الخطة')
+  })
+  it('بلا دورات ← —', () => {
+    expect(upcomingLabel(buildJourney(5, [], []))).toBe('—')
   })
 })

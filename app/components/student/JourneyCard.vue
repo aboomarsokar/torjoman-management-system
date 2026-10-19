@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
- * بطاقة رحلة الطالب على خطة الاختبارات (للقراءة فقط) — مشتركة بين ملف الطالب الداخلي
- * وصفحة «صفحتي». تجلب خطة الاختبارات ونتائج الطالب وصفحات الحفظ المعتمدة وتمرّرها
+ * بطاقة رحلة الطالب على دورات الاختبار (للقراءة فقط) — مشتركة بين ملف الطالب الداخلي
+ * وصفحة «صفحتي». تجلب دوراتِ الاختبار ونتائج الطالب وصفحات الحفظ المعتمدة وتمرّرها
  * إلى `StudentJourney`. كلّ ما يُجلب خاضعٌ لـRLS: الطالب لا يرى إلا ما يخصّه.
  *
  * `ownRecords` (صفحة الطالب /me): الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports`،
- * فتصله تضمينات المحطّة والاعتماد `null` (محطّاتٌ مجتازةٌ تظهر «مستحقّة» وصفحاتٌ معتمدةٌ تُجمَع صفراً).
- * فيقرأ عبر `my_exam_results()` و`my_approved_pages()` و`my_quran_months()` المقصورة على سجلّه.
+ * فتصله تضمينات الدورة والاعتماد `null` (محطّاتٌ مجتازةٌ تظهر «مستحقّة» وصفحاتٌ معتمدةٌ تُجمَع صفراً).
+ * فيقرأ عبر `my_exam_cycle_results()` و`my_approved_pages()` و`my_quran_months()` المقصورة على سجلّه.
  * العاملون يقرؤون `quran_records` المعتمَدة (RLS). تحت الرحلة «سجلّ الشهور» و«وصل N من 30 جزءاً».
  */
 import type { Database } from '~/types/database.types'
-import { toApprovedPages, toJourneyResults } from '~/utils/journeyInputs'
+import type { ExamCycle } from '~/utils/exams/cycles'
+import { toApprovedPages, toCycleResults } from '~/utils/journeyInputs'
 import type { ApprovedMonth } from '~/utils/quran/studentHistory'
 import { juzReached, toMonthHistory, totalPages } from '~/utils/quran/studentHistory'
 
@@ -32,24 +33,26 @@ const { data: targetPerMonth } = useLazyAsyncData<number>('journey-target-pages'
 }, { server: false, default: () => 30 })
 
 // جلب غير حاجز: الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي
-const { data: plan } = useLazyAsyncData('journey-exam-plan', async () => {
-  const { data } = await supabase.from('exam_plan').select('id, parts_from, parts_to, stage_type').order('parts_to')
-  return data ?? []
+const { data: cycles } = useLazyAsyncData<ExamCycle[]>('journey-exam-cycles', async () => {
+  const { data } = await supabase.from('exam_cycles')
+    .select('id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order')
+    .order('sort_order')
+  return (data ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 }))
 }, { server: false, default: () => [] })
 
-type ResultRow = { passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }
+type ResultRow = { passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }
 const { data: examResults } = useLazyAsyncData(() => `journey-results-${props.studentId}-${props.ownRecords}`, async () => {
   if (props.ownRecords) {
-    const { data, error } = await supabase.rpc('my_exam_results')
+    const { data, error } = await supabase.rpc('my_exam_cycle_results')
     if (error) console.error('[journey] فشل جلب نتائجي:', error.message)
-    return toJourneyResults(data)
+    return toCycleResults(data)
   }
   const { data } = await supabase
     .from('exam_results')
-    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id)')
+    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id)')
     .eq('student_id', props.studentId)
     .returns<ResultRow[]>()
-  return (data ?? []).map(r => ({ exam_plan_id: r.exam_list_item?.exam_plan_id ?? null, passed: r.passed, total_score: r.total_score }))
+  return (data ?? []).map(r => ({ exam_cycle_id: r.exam_list_item?.exam_cycle_id ?? null, passed: r.passed, total_score: r.total_score }))
 }, { server: false, default: () => [] })
 
 // الشهورُ المعتمَدة: الطالب من `my_quran_months()` (مواضعها قد تكون null)، والعاملون من `quran_records` المعتمَدة
@@ -92,11 +95,11 @@ const juzDone = computed(() => ready.value ? juzReached(months.value, props.qura
         name="i-lucide-route"
         class="size-5"
       /></span>
-      رحلة الطالب على خطة الاختبارات
+      رحلة الطالب على دورات الاختبار
     </h3>
     <StudentJourney
       :quran-parts="quranParts"
-      :plan="plan"
+      :cycles="cycles"
       :results="examResults"
       :memorization-pages="memorizationPages"
       :target-per-month="targetPerMonth"

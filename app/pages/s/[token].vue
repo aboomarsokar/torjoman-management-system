@@ -3,6 +3,7 @@
  * صفحة اطّلاع الطالب العامّة (§4.23) — للقراءة فقط، بلا حساب دخول.
  * تُفتح برابط يحوي view_token. تعرض حقولاً آمنة فقط (دون بيانات حسّاسة).
  */
+import type { ExamCycle } from '~/utils/exams/cycles'
 import type { MonthHistoryItem } from '~/utils/quran/studentHistory'
 
 definePageMeta({ layout: false })
@@ -17,8 +18,8 @@ type PublicStudent = {
   tajweed_level: string | null
   enrollment_date: string | null
   halaqa: { name: string, daily_time: string | null, teacher: { full_name: string } | null } | null
-  exam_plan: { id: number, parts_from: number, parts_to: number, stage_type: 'partial' | 'cumulative' }[]
-  results: { exam_plan_id: number | null, passed: boolean | null, total_score: number | null }[]
+  exam_cycles: Omit<ExamCycle, 'surahs_label'>[]
+  results: { exam_cycle_id: number | null, passed: boolean | null, total_score: number | null }[]
   memorization_pages: number
   target_per_month: number
   quran_history: MonthHistoryItem[]
@@ -26,6 +27,8 @@ type PublicStudent = {
 }
 
 const { data: student, error } = await useFetch<PublicStudent>(`/api/public/student/${token.value}`)
+// الخادمُ لا يُرسل أسماء السور (لا تُعرض هنا)؛ المكوّن يتوقّع الدورةَ كاملةً
+const journeyCycles = computed<ExamCycle[]>(() => (student.value?.exam_cycles ?? []).map(c => ({ ...c, surahs_label: '' })))
 
 useSeoMeta({
   title: () => student.value ? `${student.value.full_name} — ترجمان` : 'رابط الطالب — ترجمان',
@@ -133,11 +136,11 @@ const fields = computed(() => {
             name="i-lucide-route"
             class="size-5"
           />
-          رحلة الطالب على خطة الاختبارات
+          رحلة الطالب على دورات الاختبار
         </h2>
         <StudentJourney
           :quran-parts="student.quran_parts"
-          :plan="student.exam_plan"
+          :cycles="journeyCycles"
           :results="student.results"
           :memorization-pages="student.memorization_pages"
           :target-per-month="student.target_per_month"

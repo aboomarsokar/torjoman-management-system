@@ -38,6 +38,11 @@ export function cycleRange(c: ExamCycle): string {
   return `الأجزاء ${c.parts_from}–${c.parts_to} (${c.surahs_label})`
 }
 
+/** «المرحلة الأولى · الدورة الثانية — الأجزاء 26–30»: سطرُ المحطة القادمة بلا أسماء السور. */
+export function cycleShort(c: ExamCycle): string {
+  return `${cycleLabel(c)} — الأجزاء ${c.parts_from}–${c.parts_to}`
+}
+
 /** عددُ أجزاء الدورة نفسها. */
 export function partsCount(c: ExamCycle): number {
   return c.parts_to - c.parts_from + 1

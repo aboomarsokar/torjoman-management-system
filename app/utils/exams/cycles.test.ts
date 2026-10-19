@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { toProgramJuz } from '~/utils/quran/position'
 import {
-  CYCLE_LABELS, STAGE_LABELS, cycleLabel, cycleRange, cycleSpan, cycleSpanLabel,
+  CYCLE_LABELS, STAGE_LABELS, cycleLabel, cycleRange, cycleShort, cycleSpan, cycleSpanLabel,
   dueCycle, partsAfterPass, partsCount, reachedHint, type ExamCycle
 } from './cycles'
 
@@ -33,6 +33,9 @@ describe('التسميات', () => {
     expect(STAGE_LABELS[3]).toBe('المرحلة الثالثة')
     expect(CYCLE_LABELS[1]).toBe('الدورة الأولى')
     expect(CYCLE_LABELS[5]).toBe('الدورة الخامسة')
+  })
+  it('cycleShort: سطرُ المحطة بلا أسماء السور', () => {
+    expect(cycleShort(c(2))).toBe('المرحلة الأولى · الدورة الثانية — الأجزاء 26–30')
   })
   it('cycleLabel', () => {
     expect(cycleLabel(c(1))).toBe('المرحلة الأولى · الدورة الأولى')

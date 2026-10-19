@@ -25,19 +25,19 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'الرابط غير صحيح أو لم يعد متاحاً.' })
   }
 
-  // خطة الاختبارات + نتائج الطالب لرسم رحلة الطالب
-  const { data: plan } = await admin
-    .from('exam_plan')
-    .select('id, parts_from, parts_to, stage_type')
-    .order('parts_to')
+  // دوراتُ الاختبار + نتائج الطالب لرسم رحلة الطالب (دون surahs_label: الصفحة لا تعرضه)
+  const { data: cycles } = await admin
+    .from('exam_cycles')
+    .select('id, stage_number, cycle_number, parts_from, parts_to, sort_order')
+    .order('sort_order')
 
   const { data: rawResults } = await admin
     .from('exam_results')
-    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id)')
+    .select('passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id)')
     .eq('student_id', data.id)
 
-  const results = (rawResults ?? []).map((r: { passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }) => ({
-    exam_plan_id: r.exam_list_item?.exam_plan_id ?? null,
+  const results = (rawResults ?? []).map((r: { passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }) => ({
+    exam_cycle_id: r.exam_list_item?.exam_cycle_id ?? null,
     passed: r.passed,
     total_score: r.total_score
   }))
@@ -65,5 +65,5 @@ export default defineEventHandler(async (event) => {
   const target_per_month = settings?.target_memorization_pages ?? 30
 
   const { id: _id, ...safe } = data
-  return { ...safe, exam_plan: plan ?? [], results, memorization_pages, target_per_month, quran_history, juz_done }
+  return { ...safe, exam_cycles: (cycles ?? []).map(c => ({ ...c, sort_order: c.sort_order ?? 0 })), results, memorization_pages, target_per_month, quran_history, juz_done }
 })

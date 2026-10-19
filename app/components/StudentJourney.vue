@@ -1,22 +1,23 @@
 <script setup lang="ts">
 /**
- * رحلة الطالب على خطة الاختبارات (حسب الحفظ) — مكوّن مشترك:
+ * رحلة الطالب على دورات الاختبار (حسب الحفظ) — مكوّن مشترك:
  * يُستخدم في ملف الطالب الداخلي والرابط العام.
  * يجمع: الأجزاء المثبتة + نتائج الاختبارات (نجح/يعيد بالدرجة) + إجمالي صفحات
  * الحفظ من التقارير المعتمدة + الزمن منذ الالتحاق.
  */
-import { buildJourneyFromPlan, stageLabel, sinceLabel, type PlanInput, type ResultInput } from '~/utils/journey'
+import { cycleLabel, cycleShort, type ExamCycle } from '~/utils/exams/cycles'
+import { buildJourney, sinceLabel, type CycleResultInput } from '~/utils/journey'
 
 const props = defineProps<{
   quranParts: number | null
-  plan: PlanInput[]
-  results?: ResultInput[]
+  cycles: ExamCycle[]
+  results?: CycleResultInput[]
   memorizationPages?: number | null
   targetPerMonth?: number | null
   enrollmentDate?: string | null
 }>()
 
-const j = computed(() => buildJourneyFromPlan(props.quranParts, props.plan, props.results ?? []))
+const j = computed(() => buildJourney(props.quranParts, props.cycles, props.results ?? []))
 const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100)))
 </script>
 
@@ -37,7 +38,7 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
           {{ j.passedCount }}<span class="unit">/{{ j.totalStations }}</span>
         </div>
         <div class="lbl">
-          محطة اجتازها
+          دورة اجتازها
         </div>
       </div>
       <div
@@ -68,8 +69,7 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
         name="i-lucide-target"
         class="size-4"
       />
-      {{ j.upcomingStation.reached ? 'المحطة المستحقّة القادمة' : 'المحطة القادمة' }}: <strong>الأجزاء {{ j.upcomingStation.from }}–{{ j.upcomingStation.to }}</strong>
-      <span class="muted">({{ stageLabel(j.upcomingStation.stage) }})</span>
+      {{ j.upcomingStation.reached ? 'المحطة المستحقّة القادمة' : 'المحطة القادمة' }}: <strong>{{ cycleShort(j.upcomingStation.cycle) }}</strong>
     </div>
     <div
       v-else-if="j.totalStations"
@@ -79,7 +79,7 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
         name="i-lucide-party-popper"
         class="size-4"
       />
-      اجتاز كل محطات الخطة 🎉
+      أتمّ الخطة 🎉
     </div>
 
     <StudentTimeProgress
@@ -94,8 +94,8 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
       class="stations"
     >
       <li
-        v-for="(s, i) in j.stations"
-        :key="i"
+        v-for="s in j.stations"
+        :key="s.id"
         class="station"
         :class="{ passed: s.result === 'passed', failed: s.result === 'failed', reached: s.reached && !s.result, next: s.isNext }"
       >
@@ -111,8 +111,8 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
             class="size-[13px]"
           />
         </span>
-        <span class="range">الأجزاء {{ s.from }}–{{ s.to }}</span>
-        <span class="stage">{{ stageLabel(s.stage) }}</span>
+        <span class="range">الأجزاء {{ s.cycle.parts_from }}–{{ s.cycle.parts_to }}</span>
+        <span class="stage">{{ cycleLabel(s.cycle) }}</span>
         <span class="status">
           <span
             v-if="s.result === 'passed'"
@@ -141,7 +141,7 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
       v-else
       class="empty"
     >
-      لا توجد خطة اختبارات بعد.
+      لا توجد دورات اختبار بعد.
     </p>
 
     <p class="hint">
@@ -169,7 +169,6 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
 .next { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 14.5px; color: var(--ink-2); }
 .next strong { color: var(--ink); }
 .next.done { color: var(--green-ink); font-weight: 600; }
-.muted { color: var(--ink-3); }
 
 .stations { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .station { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); position: relative; }

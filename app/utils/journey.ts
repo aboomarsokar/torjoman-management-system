@@ -2,15 +2,10 @@
  * رحلة الطالب على دورات الاختبار — حسب الحفظ (الأجزاء المثبتة)، لا الزمن.
  * المحطّةُ = دورة؛ تُستحقّ حين يبلغ الطالبُ ما تحقّقه بالاجتياز (`partsAfterPass`)، وتُظهر نتيجتها إن وُجدت.
  */
-import { partsAfterPass, type ExamCycle } from '~/utils/exams/cycles'
-import type { StationResult } from './journeyPlan'
-
-// المحوِّلُ القديم على exam_plan باقٍ مؤقتاً لمستهلكيه حتى المهمة 5
-export { buildJourneyFromPlan, stageLabel } from './journeyPlan'
-export type { PlanStage, PlanInput, ResultInput, PlanStation } from './journeyPlan'
+import { cycleShort, partsAfterPass, type ExamCycle } from '~/utils/exams/cycles'
 
 export type CycleResultInput = { exam_cycle_id: number | null, passed: boolean | null, total_score: number | null }
-export type { StationResult }
+export type StationResult = 'passed' | 'failed' | null
 export type JourneyStation = {
   id: number
   cycle: ExamCycle
@@ -61,6 +56,15 @@ export function buildJourney(
     nextStation: nextIdx >= 0 ? stations[nextIdx]! : null,
     upcomingStation: upcomingIdx >= 0 ? stations[upcomingIdx]! : null
   }
+}
+
+/**
+ * قيمةُ «المحطة القادمة» في بطاقات الحلقة/اللوحة:
+ * القادمةُ بنصّها، أو «أتمّ الخطة» إن اجتاز كلَّ الدورات، أو «—» إن لا دورات.
+ */
+export function upcomingLabel(j: Pick<ReturnType<typeof buildJourney>, 'upcomingStation' | 'totalStations'>): string {
+  if (j.upcomingStation) return cycleShort(j.upcomingStation.cycle)
+  return j.totalStations > 0 ? 'أتمّ الخطة' : '—'
 }
 
 /** «منذ الالتحاق» نصّاً عربيّاً مبسّطاً. */

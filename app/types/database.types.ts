@@ -1141,6 +1141,71 @@ export type Database = {
           },
         ]
       }
+      program_juz: {
+        Row: {
+          end_ayah: number
+          end_surah: number
+          number: number
+          start_ayah: number
+          start_surah: number
+        }
+        Insert: {
+          end_ayah: number
+          end_surah: number
+          number: number
+          start_ayah: number
+          start_surah: number
+        }
+        Update: {
+          end_ayah?: number
+          end_surah?: number
+          number?: number
+          start_ayah?: number
+          start_surah?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_juz_end_surah_fkey"
+            columns: ["end_surah"]
+            isOneToOne: false
+            referencedRelation: "surahs"
+            referencedColumns: ["number"]
+          },
+          {
+            foreignKeyName: "program_juz_start_surah_fkey"
+            columns: ["start_surah"]
+            isOneToOne: false
+            referencedRelation: "surahs"
+            referencedColumns: ["number"]
+          },
+        ]
+      }
+      quran_pages: {
+        Row: {
+          ayah: number
+          page: number
+          surah: number
+        }
+        Insert: {
+          ayah: number
+          page: number
+          surah: number
+        }
+        Update: {
+          ayah?: number
+          page?: number
+          surah?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quran_pages_surah_fkey"
+            columns: ["surah"]
+            isOneToOne: false
+            referencedRelation: "surahs"
+            referencedColumns: ["number"]
+          },
+        ]
+      }
       students: {
         Row: {
           avatar_url: string | null
@@ -1297,6 +1362,24 @@ export type Database = {
           },
         ]
       }
+      surahs: {
+        Row: {
+          ayah_count: number
+          name: string
+          number: number
+        }
+        Insert: {
+          ayah_count: number
+          name: string
+          number: number
+        }
+        Update: {
+          ayah_count?: number
+          name?: string
+          number?: number
+        }
+        Relationships: []
+      }
       visit_reschedule_log: {
         Row: {
           changed_at: string
@@ -1341,8 +1424,13 @@ export type Database = {
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_manage_halaqa: { Args: { hid: string }; Returns: boolean }
       can_manage_profile_photo: { Args: { p_folder: string }; Returns: boolean }
+      can_review_statement_in_halaqa: {
+        Args: { hid: string }
+        Returns: boolean
+      }
       can_view_halaqa: { Args: { hid: string }; Returns: boolean }
       can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
+      can_view_statements_in_halaqa: { Args: { hid: string }; Returns: boolean }
       claim_employee_number: { Args: never; Returns: string }
       current_user_role: {
         Args: never
@@ -1371,6 +1459,10 @@ export type Database = {
       }
       my_halaqa_id: { Args: never; Returns: string }
       my_student_id: { Args: never; Returns: string }
+      quran_page_of: {
+        Args: { p_ayah: number; p_surah: number }
+        Returns: number
+      }
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"

@@ -35,6 +35,8 @@ const { data: halqat, refresh, pending } = useLazyAsyncData<HalaqaRow[]>(
     const { data, error } = await supabase
       .from('halaqat')
       .select('*, teacher:teacher_id(full_name), supervisor:supervisor_id(full_name), examiner:examiner_id(full_name), student_count:students(count)')
+      // العدد للطلاب النشطين وحدهم (المنقطع يبقى مربوطاً بحلقته لكنه ليس من طلابها الحاليين)
+      .eq('students.status', 'active')
       .order('created_at', { ascending: false })
       .returns<HalaqaRow[]>()
     if (error) {
@@ -94,6 +96,12 @@ const genderItems = [{ label: 'بنين', value: 'male' }, { label: 'بنات', 
 
 // الطاقم من جنس الحلقة وحدَه، ولا قائمة قبل اختياره (والمختبِر يُقترح حين يكون واحداً)
 const { teacherItems, supervisorItems, examinerItems } = useHalaqaStaffOptions(form, halqat, editingId)
+// القائمة الفارغة تقول سببها (كانت لا تُفتح بلا كلمة فيظنّ المدير النموذج معطّلاً)
+const teacherPlaceholder = computed(() => {
+  if (!form.gender) return 'اختر الجنس أولاً'
+  if (!teacherItems.value.length) return form.gender === 'female' ? 'لا معلّمات متاحات — كلّهنّ على حلقات نشطة' : 'لا معلّمون متاحون — كلّهم على حلقات نشطة'
+  return 'اختر من القائمة'
+})
 const classItems = [{ label: 'الفئة أ', value: 'a' }, { label: 'الفئة ب', value: 'b' }]
 const statusItems = [{ label: 'نشطة', value: 'active' }, { label: 'متوقفة', value: 'stopped' }]
 function openCreate() {
@@ -247,6 +255,7 @@ async function confirmDelete() {
             :teacher="row.teacher?.full_name ?? null"
             :supervisor="row.supervisor?.full_name ?? null"
             :examiner="row.examiner?.full_name ?? null"
+            :gender="row.gender"
           />
         </template>
         <template #students="{ row }">
@@ -326,6 +335,7 @@ async function confirmDelete() {
             :teacher="row.teacher?.full_name ?? null"
             :supervisor="row.supervisor?.full_name ?? null"
             :examiner="row.examiner?.full_name ?? null"
+            :gender="row.gender"
             :students="studentsOf(row)"
           />
           <div
@@ -413,7 +423,7 @@ async function confirmDelete() {
               <UiSelect
                 v-model="form.teacher_id"
                 :items="teacherItems"
-                :placeholder="form.gender ? 'اختر من القائمة' : 'اختر الجنس أولاً'"
+                :placeholder="teacherPlaceholder"
                 :disabled="!form.gender"
                 size="lg"
               />

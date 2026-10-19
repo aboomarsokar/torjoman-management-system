@@ -330,6 +330,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          source_key: string | null
           transaction_date: string
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -341,6 +342,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          source_key?: string | null
           transaction_date?: string
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -352,6 +354,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          source_key?: string | null
           transaction_date?: string
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string

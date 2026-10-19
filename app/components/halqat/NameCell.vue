@@ -44,10 +44,8 @@ const time = computed(() => (props.dailyTime ? props.dailyTime.slice(0, 5) : nul
           :class="gender"
         >{{ GENDER_LABEL[gender] }}</span>
         <span v-if="classification">{{ CLASS_LABEL[classification] }}</span>
-        <span
-          v-if="time"
-          class="num"
-        >{{ time }}</span>
+        <!-- الفاصل على الغلاف (يمين النص)، والوقت معزولٌ داخله — كان الفاصل يقع يساره لاتجاه الأرقام -->
+        <span v-if="time"><bdi class="num">{{ time }}</bdi></span>
       </span>
     </span>
   </NuxtLink>
@@ -66,5 +64,5 @@ const time = computed(() => (props.dailyTime ? props.dailyTime.slice(0, 5) : nul
 .h-sub > * + *::before { content: '·'; margin-inline-end: 10px; color: var(--line-2); }
 .g-tag.male { color: var(--blue); }
 .g-tag.female { color: color-mix(in oklab, var(--green) 70%, var(--ink)); }
-.num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+.num { font-variant-numeric: tabular-nums; }
 </style>

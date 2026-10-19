@@ -406,6 +406,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `type` | enum | `income` (وارد) / `expense` (صادر) |
 | `amount` | numeric | المبلغ |
 | `created_by` | uuid FK → profiles | |
+| `source_key` | text **UNIQUE** (nullable) | مصدر الحركة المرحَّلة آلياً: `salaries:YYYY-MM` / `incentives:YYYY-MM` — إعادة الترحيل `upsert` على المفتاح فتُحدّث حركة الشهر لا تكرّرها. فارغ للحركات اليدوية (هجرة `20261019073029`) |
 
 > **الرصيد المتبقّي محسوب** (السابق + الوارد − الصادر) — لا يُخزّن، يُحسب عند العرض أو عبر view.
 
@@ -624,6 +625,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |
 | `halaqat_guard_staff` ← `guard_halaqa_staff` | **لكل كاتبٍ حتى الخدمة:** جنس الحلقة مطلوب؛ المعلم (`teacher`) والمشرف (`field_supervisor`) والمختبِر من جنسها؛ المعلم على حلقةٍ نشطة واحدة (يُفحص عند تغيّر المعلم أو تفعيل الحلقة فقط)؛ لا يتغيّر جنس حلقةٍ فيها طلاب من الجنس الآخر؛ ويختم `assigned_by` بالمستدعي عند الإنشاء وتغيير المعلم/المشرف (`23514`) |
 | `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
+| `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر أحد المديرَين (الإداري/الفني) أو المشرف الميداني المُسنَد للحلقة نفسها؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`) |
 
 > **ترتيب مُشغِّلات BEFORE على `profiles`:** `profiles_guard_privileged` ← `profiles_photo_clear_on_female` ← `trg_profiles_updated_at` (أبجدياً)، فالحارس يرفض تغيير الجنس غير المأذون قبل أن يُفرَغ شيء.
 

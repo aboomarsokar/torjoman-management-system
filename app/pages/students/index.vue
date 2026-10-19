@@ -83,12 +83,15 @@ const chipOptions = computed(() => ([
   { value: 'graduated' as const, label: 'متخرّج' },
   { value: 'transferred' as const, label: 'منقول' }
 ]).map(c => ({ ...c, count: countFor(c.value) })))
+// البحث بالاسم أو رقم الهوية (يقبل الأرقام العربية) — فوق تصفية الحالة والحلقة
+const query = ref('')
 const filtered = computed(() => (students.value ?? []).filter(s =>
   (statusF.value === 'all' || s.status === statusF.value)
   && (halqaF.value === 'all' || s.halaqa_id === halqaF.value)
+  && matchesSearch(query.value, s.full_name, s.national_id)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
-watch([statusF, halqaF], resetPage)
+watch([statusF, halqaF, query], resetPage)
 const columns = computed(() => {
   const base = [
     { key: 'num', label: '#' },
@@ -121,8 +124,11 @@ const modalOpen = ref(false)
 const saving = ref(false)
 const editingId = ref<string | null>(null)
 const TAJWEED_NONE = 'none'
+// الجنس بلا قيمة افتراضية (يحدّد حلقات الإسناد — فلا يُنسى فتصير الطالبة «ذكراً»)، والالتحاق اليومَ افتراضاً:
+// الحضور يُحسب على الطالب من تاريخ التحاقه، فلا يبقى فارغاً
+const todayLocal = () => new Date().toLocaleDateString('en-CA')
 const form = reactive({
-  full_name: '', national_id: '', gender: 'male' as Gender, birth_date: '', family_count: '',
+  full_name: '', national_id: '', gender: '' as Gender | '', birth_date: '', family_count: '',
   halaqa_id: HALQA_NONE, quran_parts: '', tajweed_level: TAJWEED_NONE,
   residence: '', nearest_mosque: '',
   guardian_name: '', guardian_phone: '', phone: '', guardian_email: '', enrollment_date: '',
@@ -150,10 +156,10 @@ const statusItems = [
 function openCreate() {
   editingId.value = null
   Object.assign(form, {
-    full_name: '', national_id: '', gender: 'male', birth_date: '', family_count: '',
+    full_name: '', national_id: '', gender: '', birth_date: '', family_count: '',
     halaqa_id: HALQA_NONE, quran_parts: '', tajweed_level: TAJWEED_NONE,
     residence: '', nearest_mosque: '',
-    guardian_name: '', guardian_phone: '', phone: '', guardian_email: '', enrollment_date: '',
+    guardian_name: '', guardian_phone: '', phone: '', guardian_email: '', enrollment_date: todayLocal(),
     status: 'active'
   })
   modalOpen.value = true
@@ -163,7 +169,7 @@ function openEdit(s: StudentRow) {
   Object.assign(form, {
     full_name: s.full_name,
     national_id: s.national_id ?? '',
-    gender: s.gender ?? 'male',
+    gender: s.gender ?? '',
     birth_date: s.birth_date ?? '',
     family_count: s.family_count != null ? String(s.family_count) : '',
     halaqa_id: s.halaqa_id ?? HALQA_NONE,
@@ -183,6 +189,8 @@ function openEdit(s: StudentRow) {
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
   if (!s.full_name.trim()) errors.push({ name: 'full_name', message: 'اسم الطالب مطلوب.' })
+  if (!s.gender) errors.push({ name: 'gender', message: 'اختر الجنس.' })
+  if (!s.enrollment_date) errors.push({ name: 'enrollment_date', message: 'تاريخ الالتحاق مطلوب — منه يُحسب الحضور.' })
   // الهوية إلزامية عند الإضافة (معرّف دخول الطالب)، وتُفحص صيغتها متى عدّلها المدير الإداري
   if ((!editingId.value || isAdmin.value) && !isValidIdentity(s.national_id)) errors.push({ name: 'national_id', message: IDENTITY_ERROR })
   if (s.quran_parts && (Number(s.quran_parts) < 0 || Number(s.quran_parts) > 30)) errors.push({ name: 'quran_parts', message: 'الأجزاء بين 0 و30.' })
@@ -198,7 +206,7 @@ async function createStudent(details: Database['public']['Tables']['students']['
   const nationalId = normalizeDigits(form.national_id.trim())
   const created = await createStudentAccount({
     full_name: form.full_name.trim(),
-    gender: form.gender,
+    gender: form.gender as Gender, // validate يشترطه
     national_id: nationalId,
     halaqa_id: form.halaqa_id === HALQA_NONE ? undefined : form.halaqa_id,
     birth_date: form.birth_date || undefined,
@@ -305,6 +313,14 @@ async function confirmDelete() {
     </UiPageHeader>
 
     <div class="filters">
+      <UInput
+        v-model="query"
+        icon="i-lucide-search"
+        placeholder="ابحث بالاسم أو رقم الهوية"
+        size="md"
+        class="search"
+        :ui="{ base: 'rounded-[11px]' }"
+      />
       <UiFilterChips
         v-model="statusF"
         :options="chipOptions"
@@ -453,6 +469,7 @@ async function confirmDelete() {
                 v-model="form.gender"
                 :items="genderItems"
                 :disabled="!!editingId && !isAdmin"
+                placeholder="ذكر أم أنثى؟"
                 size="lg"
               />
             </UFormField>
@@ -630,6 +647,7 @@ async function confirmDelete() {
               label="تاريخ الالتحاق"
               name="enrollment_date"
               class="f"
+              required
             >
               <UInput
                 v-model="form.enrollment_date"
@@ -696,8 +714,9 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.filters { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
-.halqa-sel { min-width: 180px; }
+.filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.search { width: 260px; max-width: 100%; }
+.halqa-sel { min-width: 180px; margin-inline-start: auto; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }

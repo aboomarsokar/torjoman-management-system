@@ -117,19 +117,24 @@ async function postAsTransaction() {
   }
   working.value = true
   try {
-    const { error } = await supabase.from('financial_transactions').insert({
+    // حركةٌ واحدة لكل شهر (source_key فريد): إعادة الترحيل تُحدّث مبلغها لا تُضيف حركةً ثانية
+    const { error } = await supabase.from('financial_transactions').upsert({
       transaction_date: new Date().toISOString().slice(0, 10),
       description: `رواتب ${monthName(month.value)} ${year.value}`,
-      category: 'رواتب', type: 'expense', amount: total.value, created_by: profile.value?.id ?? null
-    })
+      category: 'رواتب', type: 'expense', amount: total.value, created_by: profile.value?.id ?? null,
+      source_key: monthSourceKey('salaries', month.value, year.value)
+    }, { onConflict: 'source_key' })
     if (error) throw error
-    toast.add({ title: 'رُحّلت كحركة «صادر/رواتب».', color: 'success', icon: 'i-lucide-arrow-left-right' })
+    toast.add({ title: 'رُحّلت كحركة «صادر/رواتب» (تُحدَّث إن أُعيد الترحيل).', color: 'success', icon: 'i-lucide-arrow-left-right' })
   } catch (err) {
     handle(err)
   } finally {
     working.value = false
   }
 }
+
+// الشهر الجاري يُحمَّل عند الفتح
+onMounted(load)
 </script>
 
 <template>
@@ -267,7 +272,7 @@ async function postAsTransaction() {
             @click="reopen"
           />
           <UButton
-            v-if="!isReadOnly"
+            v-if="!isReadOnly && approved"
             label="ترحيل كحركة"
             color="neutral"
             variant="outline"

@@ -619,7 +619,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `profiles_guard_privileged` ← `guard_profile_privileged` | `role`/`status`/`employee_number`/**`gender`** للمدير الإداري وحده؛ و`must_change_password`: صاحبه يطفئه فقط (`true→false`) ولا يرفعه إلا المدير الإداري أو الخدمة |
 | `students_guard_assignment` ← `guard_student_assignment` | `user_id`/`gender`/`national_id`/`view_token` للمدير الإداري وحده؛ الإخراج من حلقةٍ يحتاج `can_assign_in_halaqa` فيها؛ الإدخال إلى حلقةٍ يحتاجه وتطابقَ جنس الطالب وجنس الحلقة (`23514`) |
 | `monthly_reports_guard_status` ← `guard_report_status` | المعلم: `draft→submitted` وتعديل المسودّة فقط؛ `approved` وحقلا `approved_by/at` ولا حذف/تعديل بعد الإرسال إلا لنطاق الاعتماد |
-| `incentive_statements_guard_status` ← `guard_statement_status` | مثله لـ`reviewed` وحقلَي `reviewed_by/at` |
+| `incentive_statements_guard_status` ← `guard_statement_status` | مثله لـ`reviewed` وحقلَي `reviewed_by/at` — لكن بنطاق `can_review_statement_in_halaqa` (المدير الإداري، والمديرة الإدارية للبنات؛ **بلا المدير الفني** منذ هجرة `20261019082403`)، والقراءة `can_view_statements_in_halaqa` (معلم الحلقة، مشرف المشروع، المراجِع) |
 | `admin_alerts_guard_update` ← `guard_alert_update` | المعلم المعنيّ لا يغيّر إلا الحالة ووقت الإقرار؛ المُصدِر والمدير الإداري يغيّران المحتوى |
 | `profiles_photo_clear_on_female` ← `clear_photo_on_female` | حين يصير الحسابُ أنثى يُفرغ `photo_path` آلياً (بدل خطأ `23514` على المدير) |
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |

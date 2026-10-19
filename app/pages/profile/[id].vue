@@ -11,6 +11,7 @@
 import type { Database } from '~/types/database.types'
 import { roleLabel } from '~/constants/roles'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
+import { maritalItems, maritalLabel } from '~/constants/maritalStatus'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -98,13 +99,14 @@ const sections = computed(() => {
         { label: 'الجنس', value: p.gender ? GENDER_LABEL[p.gender] : '—' },
         { label: 'تاريخ الميلاد', value: p.birth_date ? `${p.birth_date}${age.value != null ? ` (${age.value} سنة)` : ''}` : '—' },
         { label: 'رقم الهوية', value: maskedId.value },
-        { label: 'الحالة الاجتماعية', value: dash(p.marital_status) },
+        { label: 'الحالة الاجتماعية', value: dash(maritalLabel(p.marital_status, p.gender)) },
         { label: 'عدد الأفراد', value: dash(p.family_count) }
       ]
     },
     {
       title: 'بيانات وظيفية', icon: 'i-lucide-briefcase', fields: [
-        { label: 'المسمى الوظيفي', value: dash(p.job_title) },
+        // المسمّى = الدور + الجنس تلقائياً (لا يُكتب يدوياً فيخالف الدور)
+        { label: 'المسمى الوظيفي', value: roleLabel(p.role, p.gender) },
         { label: 'تاريخ التعيين', value: dash(p.hire_date) },
         { label: 'سنوات الخبرة', value: dash(p.years_experience) }
       ]
@@ -133,18 +135,21 @@ const modalOpen = ref(false)
 const saving = ref(false)
 const form = reactive({
   full_name: '', gender: '' as '' | 'male' | 'female', birth_date: '', national_id: '', marital_status: '', family_count: '',
-  job_title: '', hire_date: '', years_experience: '',
+  hire_date: '', years_experience: '',
   residence_area: '', nearest_mosque: '', address_detail: '', phone: '',
   education_level: '', academic_major: '', quran_parts: '', tajweed_level: ''
 })
 const numStr = (v: number | null) => v != null ? String(v) : ''
+// المسمّى من الدور وجنس النموذج (يتبع تغيير الجنس قبل الحفظ)، والحالة الاجتماعية قائمةٌ بجنسه
+const jobTitle = computed(() => data.value?.p ? roleLabel(data.value.p.role, form.gender || null) : '')
+const maritalOptions = computed(() => maritalItems(form.gender || null, data.value?.p?.marital_status))
 
 function openEdit() {
   const p = data.value?.p
   if (!p) return
   Object.assign(form, {
     full_name: p.full_name, gender: p.gender ?? '', birth_date: p.birth_date ?? '', national_id: p.national_id ?? '', marital_status: p.marital_status ?? '', family_count: numStr(p.family_count),
-    job_title: p.job_title ?? '', hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience),
+    hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience),
     residence_area: p.residence_area ?? '', nearest_mosque: p.nearest_mosque ?? '', address_detail: p.address_detail ?? '', phone: p.phone ?? '',
     education_level: p.education_level ?? '', academic_major: p.academic_major ?? '', quran_parts: numStr(p.quran_parts), tajweed_level: p.tajweed_level ?? ''
   })
@@ -169,7 +174,6 @@ async function save() {
       national_id: strOrNull(form.national_id),
       marital_status: strOrNull(form.marital_status),
       family_count: numOrNull(form.family_count),
-      job_title: strOrNull(form.job_title),
       hire_date: strOrNull(form.hire_date),
       years_experience: numOrNull(form.years_experience),
       residence_area: strOrNull(form.residence_area),
@@ -405,8 +409,10 @@ const pwOpen = ref(false)
               label="الحالة الاجتماعية"
               class="f1"
             >
-              <UInput
+              <USelect
                 v-model="form.marital_status"
+                :items="maritalOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
@@ -433,9 +439,11 @@ const pwOpen = ref(false)
             <UFormField
               label="المسمى الوظيفي"
               class="f2"
+              hint="يُحدَّد تلقائياً من الدور"
             >
               <UInput
-                v-model="form.job_title"
+                :model-value="jobTitle"
+                disabled
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

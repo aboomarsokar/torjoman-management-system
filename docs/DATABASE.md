@@ -502,6 +502,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `status` | enum | `draft` / `submitted` / `reviewed` (قيد الإعداد/مُسلّم/مُطّلع عليه) |
 | `reviewed_by` | uuid FK → profiles | من أقرّ «تمّ الاطّلاع» (من نطاق الاعتماد) |
 | `reviewed_at` | timestamptz | تاريخ الاطّلاع |
+| `return_note` | text | ملاحظةُ المراجِع حين يعيد الكشف للمعلّم (3–500 حرف إن أُعيد — قيد `incentive_statements_return_note_len`)؛ تبقى سجلّاً بعد إعادة الإرسال |
+| `returned_by` / `returned_at` | uuid FK → profiles / timestamptz | من أعاده ومتى |
 | `created_by` | uuid FK → profiles | المعلم |
 
 **`incentive_statement_items` — بنود المصروفات (صف لكل بند):**
@@ -514,6 +516,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `category` | text | جوائز / أنشطة / ضيافة / أخرى |
 | `amount` | numeric | المبلغ (₪) — أكبر من صفر (`incentive_statement_items_amount_positive`) |
 | `item_date` | date NOT NULL | التاريخ — داخل شهر الكشف ولا يتجاوز اليوم بتوقيت غزة (المشغِّل `incentive_statement_items_guard_date` ← `guard_statement_item_date`) |
+
+> **الإعادة إلى المعلّم (هجرة `20261019141105`، طلب المستخدم 2026-10-19):** `return_statement(p_statement, p_note)` (`security invoker`) للمراجِع وحده (`can_review_statement_in_halaqa`)، على كشفٍ مُرسَل أو مُطّلَع عليه، بملاحظةٍ ≥ 3 أحرف: يعيده `draft` ويمسح `reviewed_by/at` ويكتب حقول الإعادة. والحارس `guard_statement_status` صار يرفض أن يكتب المعلّمُ حقولَ الإعادة أو يمسحها. مُختبَرٌ في معاملةٍ ملغاة (المعلّم والفني لا يعيدان، والملاحظةُ القصيرة مرفوضة، والمسوّدةُ لا تُعاد، والمعلّمُ يعيد الإرسال وتبقى الملاحظة).
 
 > **التوثيق (هجرة `20261019124522`، ROADMAP #13):** القيدان `NOT VALID` — يُفرضان على كلّ إدراجٍ وتعديلٍ جديد ولا يُعاد فحص القديم (بيانات التجريب فيها بندٌ بمبلغ 0). والواجهة تتحقّق أولاً برسائل عربية (`useIncentiveStatement`)، والمراجِع يرى البنود في نافذة (`FinanceStatementReviewModal`) قبل «تمّ الاطّلاع».
 

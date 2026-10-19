@@ -170,6 +170,23 @@ const fmt = (n: number) => n.toLocaleString('ar')
             {{ statement.status === 'reviewed' ? 'تمّت مراجعة الكشف — للقراءة فقط.' : 'أُرسل — بانتظار الاعتماد. لا يُعدَّل بعد الإرسال.' }}
           </div>
 
+          <!-- أعاده المراجِع: الملاحظةُ ظاهرةٌ ما دام مسوّدةً عند المعلّم -->
+          <div
+            v-if="statement?.status === 'draft' && statement.returnNote"
+            class="returned"
+            role="status"
+          >
+            <UIcon
+              name="i-lucide-undo-2"
+              class="size-5 flex-none"
+            />
+            <div>
+              <strong>أُعيد إليك الكشف للتعديل</strong>
+              <p>{{ statement.returnNote }}</p>
+              <small>صحّح البنود ثم اضغط «حفظ وإرسال للمراجعة».</small>
+            </div>
+          </div>
+
           <!-- بنود المصروفات -->
           <div class="card items">
             <div class="items-head">
@@ -340,6 +357,10 @@ const fmt = (n: number) => n.toLocaleString('ar')
 .sm-status { flex: none; }
 .locked { display: flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
+.returned { display: flex; align-items: flex-start; gap: 10px; background: var(--blue-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; margin-bottom: 16px; }
+.returned strong { display: block; font-size: 14.5px; font-weight: 700; }
+.returned p { margin: 4px 0; font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+.returned small { font-size: 12.5px; color: var(--ink-3); }
 .warn { display: flex; align-items: center; gap: 8px; background: var(--err-soft); color: var(--err); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
 .items-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }

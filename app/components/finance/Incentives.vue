@@ -25,7 +25,7 @@ const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
 type AllocRow = { halaqa_id: string, name: string, teacher: string, amount: string }
-type StmtRow = { id: string, halaqa: string, received: number, spent: number, status: string }
+type StmtRow = { id: string, halaqa: string, received: number, spent: number, status: string, returnNote: string | null }
 const rows = ref<AllocRow[]>([])
 const statements = ref<StmtRow[]>([])
 const approved = ref(false)
@@ -43,8 +43,8 @@ async function load() {
     const [{ data: halqat }, { data: alloc }, { data: stmts }] = await Promise.all([
       supabase.from('halaqat').select('id, name, teacher:teacher_id(full_name)').order('name').returns<{ id: string, name: string, teacher: { full_name: string } | null }[]>(),
       supabase.from('halaqa_incentives').select('halaqa_id, allocated_amount, approved').eq('incentive_month', month.value).eq('incentive_year', year.value),
-      supabase.from('incentive_statements').select('id, halaqa_id, received_amount, status, items:incentive_statement_items(amount), halaqa:halaqa_id(name)').eq('statement_month', month.value).eq('statement_year', year.value)
-        .returns<{ id: string, halaqa_id: string, received_amount: number, status: string, items: { amount: number }[], halaqa: { name: string } | null }[]>()
+      supabase.from('incentive_statements').select('id, halaqa_id, received_amount, status, return_note, items:incentive_statement_items(amount), halaqa:halaqa_id(name)').eq('statement_month', month.value).eq('statement_year', year.value)
+        .returns<{ id: string, halaqa_id: string, received_amount: number, status: string, return_note: string | null, items: { amount: number }[], halaqa: { name: string } | null }[]>()
     ])
     const map: Record<string, number> = {}
     for (const a of alloc ?? []) map[a.halaqa_id] = a.allocated_amount
@@ -52,7 +52,7 @@ async function load() {
     rows.value = (halqat ?? []).map(h => ({ halaqa_id: h.id, name: h.name, teacher: h.teacher?.full_name ?? '—', amount: map[h.id] != null ? String(map[h.id]) : '' }))
     statements.value = (stmts ?? []).map(s => ({
       id: s.id, halaqa: s.halaqa?.name ?? '—', received: s.received_amount,
-      spent: (s.items ?? []).reduce((t, i) => t + i.amount, 0), status: s.status
+      spent: (s.items ?? []).reduce((t, i) => t + i.amount, 0), status: s.status, returnNote: s.return_note
     }))
     loaded.value = true
   } catch (err) {
@@ -158,6 +158,14 @@ function onReviewed(id: string) {
   const s = statements.value.find(x => x.id === id)
   if (s) s.status = 'reviewed'
 }
+function onReturned(id: string, note: string) {
+  const s = statements.value.find(x => x.id === id)
+  if (s) Object.assign(s, { status: 'draft', returnNote: note })
+}
+/** المسوّدةُ التي أعادها المراجِع تُميَّز عن مسوّدةٍ لم تُرسل قطّ. */
+const statementBadge = (s: StmtRow) => (s.status === 'draft' && s.returnNote)
+  ? { label: 'أُعيد للمعلّم', color: 'warning' as const }
+  : STATEMENT_STATUS[s.status]
 </script>
 
 <template>
@@ -363,8 +371,8 @@ function onReviewed(id: string) {
                 </td>
                 <td data-label="الحالة">
                   <UBadge
-                    :label="STATEMENT_STATUS[s.status]?.label"
-                    :color="STATEMENT_STATUS[s.status]?.color"
+                    :label="statementBadge(s)?.label"
+                    :color="statementBadge(s)?.color"
                     variant="soft"
                     size="sm"
                     class="stack-keep"
@@ -394,6 +402,7 @@ function onReviewed(id: string) {
       :statement="reviewing"
       :can-review="canReview"
       @reviewed="onReviewed"
+      @returned="onReturned"
     />
   </div>
 </template>

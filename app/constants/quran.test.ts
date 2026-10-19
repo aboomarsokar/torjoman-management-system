@@ -1,6 +1,19 @@
 /** ثوابتُ القرآن وتسميةُ إنجاز الشهر بالأجزاء والصفحات. */
 import { describe, expect, it } from 'vitest'
-import { KHATM_POSITION, MUSHAF_PAGES, PAGES_PER_JUZ, PROGRAM_JUZ_COUNT, monthlyJuzLabel } from './quran'
+import { KHATM_POSITION, MUSHAF_PAGES, PAGES_PER_JUZ, PROGRAM_JUZ_COUNT, monthlyJuzLabel, prorationApplies } from './quran'
+
+describe('prorationApplies — التقسيطُ بالحضور من الشهر 11/2026', () => {
+  it('الشهر 10/2026 وما قبله كاملٌ بلا تقسيط', () => {
+    expect(prorationApplies(2026, 10)).toBe(false)
+    expect(prorationApplies(2026, 9)).toBe(false)
+    expect(prorationApplies(2025, 12)).toBe(false)
+  })
+  it('الشهر 11/2026 وما بعده يُقسَّط', () => {
+    expect(prorationApplies(2026, 11)).toBe(true)
+    expect(prorationApplies(2026, 12)).toBe(true)
+    expect(prorationApplies(2027, 1)).toBe(true)
+  })
+})
 
 describe('ثوابتُ المصحف', () => {
   it('604 صفحات و30 جزءاً و20 صفحةً للجزء وختمٌ عند الفاتحة 1:7', () => {

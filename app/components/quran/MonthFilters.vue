@@ -10,6 +10,9 @@ const props = defineProps<{
   halaqaItems: { label: string, value: string }[]
   /** شهرُ اليوم بتوقيت غزة (لا شهرَ بعده). */
   max: { year: number, month: number }
+  /** عدّادُ البحث «3 من 6»: الظاهرون بعد التصفية من مجموع طلاب الحلقة. */
+  shown?: number
+  total?: number
 }>()
 const halaqaId = defineModel<string | null>('halaqa', { required: true })
 const year = defineModel<number>('year', { required: true })
@@ -60,7 +63,7 @@ const windowText = computed(() =>
         />
       </div>
     </div>
-    <div class="pf fit">
+    <div class="pf">
       <label>الشهر</label>
       <QuranMonthPicker
         v-model:year="year"
@@ -76,13 +79,12 @@ const windowText = computed(() =>
       class="pf wide"
     >
       <label>الطالب</label>
-      <UInput
+      <UiSearchField
         v-model="query"
-        icon="i-lucide-search"
         placeholder="ابحث باسم الطالب…"
-        size="lg"
+        :shown="props.shown"
+        :total="props.total"
         class="w-full"
-        :ui="{ base: 'rounded-[13px] min-h-11' }"
       />
     </div>
   </div>
@@ -92,7 +94,6 @@ const windowText = computed(() =>
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
 .pick { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .pf { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; }
-.pf.fit { flex: 0 0 auto; }
 .pf.wide { flex-basis: 100%; }
 .pf label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .row-pick { display: flex; gap: 8px; }

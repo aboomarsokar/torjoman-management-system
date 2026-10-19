@@ -6,6 +6,7 @@
  * والمختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنسها. الحكم الأخير لحارس القاعدة.
  */
 import type { Database } from '~/types/database.types'
+import { halaqaDeleteErrorMessage } from '~/utils/exams/nomination'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الحلقات — ترجمان' })
@@ -170,7 +171,9 @@ async function confirmDelete() {
     deleteTarget.value = null
     await refresh()
   } catch (err) {
-    handle(err, 'تعذّر الحذف — قد تكون الحلقة مرتبطة بطلاب.')
+    // حارسُ تاريخ الاختبارات: حلقةٌ لها ترشيحاتٌ مرصودة لا تُحذف بل تُعطَّل
+    const graded = halaqaDeleteErrorMessage(err)
+    handle(graded ? new Error(graded) : err, 'تعذّر الحذف — قد تكون الحلقة مرتبطة بطلاب.')
   } finally {
     deleting.value = false
   }

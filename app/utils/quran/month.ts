@@ -54,6 +54,8 @@ export interface BuildRowsInput {
   approvedEnds: Record<string, Position | null>
   /** أيامُ الحلقة في الشهر. */
   days: string[]
+  /** يُقسَّط المطلوبُ بالحضور (الافتراض)؛ false ← كاملاً للجميع مع بقاء أيام الحضور للعرض (`prorationApplies`). */
+  prorate?: boolean
   absences: { student_id: string, day: string }[]
   target: number | null
   juz: ProgramJuz[]
@@ -90,7 +92,9 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
     const record = recordByStudent.get(s.id) ?? null
     const previous = input.previousEnds[s.id] ?? null
     const heldParts = Math.max(0, Math.min(PROGRAM_JUZ_COUNT, s.quran_parts ?? 0))
-    const plan = proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length })
+    const plan = input.prorate === false
+      ? proratePlan({ required: input.target, daysHeld: null, daysAttended: null })
+      : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length })
 
     return {
       studentId: s.id,

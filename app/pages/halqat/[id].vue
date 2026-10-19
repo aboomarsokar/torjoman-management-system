@@ -5,13 +5,15 @@
  * متاح للمدير والمشرف/الجودة ضمن نطاقهم (RLS).
  */
 import type { Database } from '~/types/database.types'
-import { buildJourney, type PlanInput, type ResultInput } from '~/utils/journey'
+import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
+import { buildJourney, upcomingLabel, type CycleResultInput } from '~/utils/journey'
 
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 const supabase = useSupabaseClient<Database>()
+const { handle } = useErrorHandler()
 
 const GENDER_LABEL: Record<string, string> = { male: 'بنين', female: 'بنات' }
 const CLASS_LABEL: Record<string, string> = { excellent: 'متميّزة', good: 'جيّدة', normal: 'عادية', weak: 'ضعيفة' }
@@ -30,7 +32,7 @@ type Halqa = {
 type StudentRow = { id: string, full_name: string, quran_parts: number | null, next: string, done: boolean }
 type ReportRow = { id: string, report_month: number, report_year: number, status: string } | null
 type VisitRow = { id: string, scheduled_at: string, executed_at: string | null, status: string }
-type ExamResultRow = { student_id: string, passed: boolean | null, total_score: number | null, exam_list_item: { exam_plan_id: number | null } | null }
+type ExamResultRow = { student_id: string, passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }
 
 const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, async () => {
   const { data: halqa } = await supabase
@@ -40,29 +42,30 @@ const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, asy
     .maybeSingle<Halqa>()
   if (!halqa) return null
 
-  const [{ data: studs }, { data: plan }, { data: examResults }, { data: rep }, { data: visits }] = await Promise.all([
+  const [{ data: studs }, { data: cycleRows, error: cyclesError }, { data: examResults }, { data: rep }, { data: visits }] = await Promise.all([
     supabase.from('students').select('id, full_name, quran_parts').eq('halaqa_id', id.value).eq('status', 'active').order('full_name'),
-    supabase.from('exam_plan').select('id, parts_from, parts_to, stage_type').order('parts_to'),
-    supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_plan_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', id.value).returns<ExamResultRow[]>(),
+    supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order'),
+    supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', id.value).returns<ExamResultRow[]>(),
     supabase.from('monthly_reports').select('id, report_month, report_year, status').eq('halaqa_id', id.value).order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('supervision_visits').select('id, scheduled_at, executed_at, status').eq('halaqa_id', id.value).order('scheduled_at', { ascending: false }).limit(5).returns<VisitRow[]>()
   ])
 
-  const planArr = (plan ?? []) as PlanInput[]
+  if (cyclesError) handle(cyclesError)
+  const cycles = (cycleRows ?? []).map(toExamCycle)
   // نتائج اختبارات طلاب الحلقة مجمّعة حسب الطالب — لتُغذّي رحلة كل طالب (المحطة القادمة تعكس المُجتاز)
-  const resultsByStudent = new Map<string, ResultInput[]>()
+  const resultsByStudent = new Map<string, CycleResultInput[]>()
   for (const r of examResults ?? []) {
     const arr = resultsByStudent.get(r.student_id) ?? []
-    arr.push({ exam_plan_id: r.exam_list_item?.exam_plan_id ?? null, passed: r.passed, total_score: r.total_score })
+    arr.push({ exam_cycle_id: r.exam_list_item?.exam_cycle_id ?? null, passed: r.passed, total_score: r.total_score })
     resultsByStudent.set(r.student_id, arr)
   }
   const students: StudentRow[] = (studs ?? []).map((s) => {
-    const j = buildJourney(s.quran_parts, planArr, resultsByStudent.get(s.id) ?? [])
+    const j = buildJourney(s.quran_parts, cycles, resultsByStudent.get(s.id) ?? [])
     return {
       id: s.id,
       full_name: s.full_name,
       quran_parts: s.quran_parts,
-      next: j.upcomingStation ? `الأجزاء ${j.upcomingStation.from}–${j.upcomingStation.to}` : (j.totalStations ? 'أكمل الخطة 🎉' : '—'),
+      next: upcomingLabel(j),
       done: !j.upcomingStation && j.totalStations > 0
     }
   })

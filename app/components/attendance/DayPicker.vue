@@ -79,7 +79,8 @@ function step(by: number) {
 </template>
 
 <style scoped>
-.dp { display: flex; align-items: center; gap: 8px; }
-.dp-step { min-width: 48px; min-height: 48px; }
-.dp-date { min-height: 48px; min-width: 170px; font-variant-numeric: tabular-nums; }
+/* يملأ عرضَ حاويته: السهمان ثابتان وحقلُ التاريخ يأخذ الباقي */
+.dp { display: flex; align-items: center; gap: 8px; width: 100%; }
+.dp-step { flex: none; min-width: 48px; min-height: 48px; }
+.dp-date { flex: 1 1 0; min-width: 0; min-height: 48px; justify-content: center; font-variant-numeric: tabular-nums; }
 </style>

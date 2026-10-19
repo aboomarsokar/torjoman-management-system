@@ -40,21 +40,23 @@ function draft(over: Partial<RecordDraft> = {}): RecordDraft {
 }
 
 describe('defaultPeriod', () => {
-  it('قبل يوم فتح الشهر الجاري ← الشهرُ السابق ما لم يُعتمد', () => {
-    expect(defaultPeriod('2026-10-19', { previousStatus: 'submitted' })).toEqual({ year: 2026, month: 9 })
-    expect(defaultPeriod('2026-10-19', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 9 })
-    expect(defaultPeriod('2026-10-19', { previousStatus: 'none' })).toEqual({ year: 2026, month: 9 })
-    expect(defaultPeriod('2026-10-19', { previousStatus: 'approved' })).toEqual({ year: 2026, month: 10 })
+  it('المعلم: السابقُ إن كان مسوّدةً معلّقة، وإلا الجاري', () => {
+    expect(defaultPeriod('2026-11-05', { previousStatus: 'none' })).toEqual({ year: 2026, month: 11 })
+    expect(defaultPeriod('2026-11-05', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-11-05', { previousStatus: 'submitted' })).toEqual({ year: 2026, month: 11 })
+    expect(defaultPeriod('2026-11-05', { previousStatus: 'approved' })).toEqual({ year: 2026, month: 11 })
   })
-  it('بلا حلقةٍ مختارة (null) ← السابقُ قبل يوم الفتح', () => {
+  it('المعلم: يومُ الفتح لا يغيّر القاعدة', () => {
+    expect(defaultPeriod('2026-10-31', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 9 })
+    expect(defaultPeriod('2026-10-31', { previousStatus: 'none' })).toEqual({ year: 2026, month: 10 })
+  })
+  it('المعتمِد بلا حلقة (null): السابقُ قبل يوم فتح الجاري، والجاري منه', () => {
     expect(defaultPeriod('2026-10-30', { previousStatus: null })).toEqual({ year: 2026, month: 9 })
-  })
-  it('من يوم الفتح ← الشهرُ الجاري أيّاً كان السابق', () => {
-    expect(defaultPeriod('2026-10-31', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 10 })
     expect(defaultPeriod('2026-10-31', { previousStatus: null })).toEqual({ year: 2026, month: 10 })
   })
-  it('يعبر حدَّ السنة', () => {
+  it('يعبر حدَّ السنة: يناير ← ديسمبر السابق', () => {
     expect(defaultPeriod('2027-01-10', { previousStatus: null })).toEqual({ year: 2026, month: 12 })
+    expect(defaultPeriod('2027-01-10', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 12 })
   })
 })
 

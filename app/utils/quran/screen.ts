@@ -20,14 +20,17 @@ export interface Period { year: number, month: number }
 export const PERIOD_YEARS_BACK = 1
 
 /**
- * الشهرُ الذي تفتح عليه الشاشة: الإرسالُ يُفتح في آخر يومٍ من الشهر فيقع الاعتمادُ في الذي يليه،
- * فقبل يوم فتح الشهر الجاري يُعرض السابقُ — إلا أن يكون معتمَداً (حالةُ حلقة المعلم). `previousStatus`
- * null = لا حلقةَ مختارة (قائمةُ المعتمِد/المدير) فيُعرض السابقُ ليظهر ما أُرسل فيه.
+ * الشهرُ الذي تفتح عليه الشاشة.
+ * · المعلم (`previousStatus` حالُ رصد الشهر السابق لحلقته): السابقُ إن كان مسوّدةً معلّقة (لم تُرسَل أو
+ *   أُعيدت إليه بملاحظة) — هي عملُه المنتظَر؛ وإلا الجاري (لا رصدَ سابق، أو مُرسَل، أو معتمَد) أيّاً كان اليوم.
+ * · `previousStatus = null` — لا حلقةَ مختارة (قائمةُ المعتمِد/المدير): الإرسالُ يُفتح آخرَ الشهر فيقع
+ *   الاعتمادُ في الذي يليه، فقبل يوم فتح الجاري يُعرض السابقُ ليظهر ما أُرسل فيه.
  */
 export function defaultPeriod(today: string, opts: { previousStatus: ReportStatus | 'none' | null }): Period {
   const current = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }
-  if (today >= openingDay(current.year, current.month) || opts.previousStatus === 'approved') return current
-  return shiftMonth(current.year, current.month, -1)
+  const previous = shiftMonth(current.year, current.month, -1)
+  if (opts.previousStatus !== null) return opts.previousStatus === 'draft' ? previous : current
+  return today < openingDay(current.year, current.month) ? previous : current
 }
 
 /** شهرُ الرابط `?y=YYYY&m=MM` إن صحّ ووقع في مدى المنتقي (لا مستقبل ولا قبل سنته الأولى)، وإلا null. */

@@ -27,7 +27,7 @@ const reference = useQuranReference()
 
 const today = gazaToday()
 const now = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }
-// `?y=YYYY&m=MM` يفتح شهراً بعينه، وإلا فالشهرُ المنتظَر (السابقُ قبل يوم فتح الجاري)
+// `?y=YYYY&m=MM` يفتح شهراً بعينه ويغلب كلَّ شيء، وإلا فالشهرُ المنتظَر (`defaultPeriod`)
 const route = useRoute()
 const linked = periodFromQuery(route.query.y, route.query.m, today)
 const initial = linked ?? defaultPeriod(today, { previousStatus: null })
@@ -47,13 +47,13 @@ const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<HalaqaRow[]>
   return data ?? []
 }, { server: false, default: () => [], watch: [role] })
 
-/** المعلم: السابقُ المعتمَد لا ينتظر شيئاً فيُفتح الجاري (مرّةً، وما لم يغيّر الشهرَ بيده). */
+/** المعلم: السابقُ إن كان مسوّدةً معلّقة وإلا الجاري (مرّةً، وما لم يغيّر الشهرَ بيده). */
 async function settleTeacherPeriod(hid: string) {
   periodSettled = true
   const prev = shiftMonth(now.year, now.month, -1)
-  if (initial.year !== prev.year || initial.month !== prev.month) return
-  const { data } = await supabase.from('monthly_reports').select('status')
+  const { data, error } = await supabase.from('monthly_reports').select('status')
     .eq('halaqa_id', hid).eq('report_year', prev.year).eq('report_month', prev.month).maybeSingle()
+  if (error) handle(error)
   const p = defaultPeriod(today, { previousStatus: data?.status ?? 'none' })
   if (year.value === initial.year && month.value === initial.month) {
     year.value = p.year

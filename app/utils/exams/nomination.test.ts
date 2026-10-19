@@ -106,13 +106,10 @@ describe('buildNomineeRows', () => {
 
 describe('examTargetText', () => {
   it('الدورة', () => {
-    expect(examTargetText(CYCLES[0]!, null)).toEqual({ title: 'المرحلة الأولى · الدورة الأولى', detail: 'الأجزاء 28–30 (س)' })
-  })
-  it('البندُ القديم بنطاق خطته', () => {
-    expect(examTargetText(null, { parts_from: 1, parts_to: 3 })).toEqual({ title: 'الخطة السابقة', detail: 'الأجزاء 1–3' })
+    expect(examTargetText(CYCLES[0]!)).toEqual({ title: 'المرحلة الأولى · الدورة الأولى', detail: 'الأجزاء 28–30 (س)' })
   })
   it('لا شيء', () => {
-    expect(examTargetText(null, null).title).toBe('—')
+    expect(examTargetText(null).title).toBe('—')
   })
 })
 

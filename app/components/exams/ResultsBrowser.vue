@@ -2,14 +2,15 @@
 /**
  * متصفّح نتائج الاختبارات (§4.16) — لكل الأدوار حسب النطاق (RLS يقصّ البيانات):
  * فلاتر هرمية (مشرف ميداني → حلقة) تظهر حسب الدور + ترقيم صفحات. كلُّ نتيجةٍ بدورتها ونطاقها،
- * والنتائجُ القديمة (على الخطة السابقة) بنطاق خطتها كما هي. على الجوال بطاقات.
+ * ولا تُعرض نتيجةٌ بلا دورة. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
 import { toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
-import { examTargetText, type OldPlanRef } from '~/utils/exams/nomination'
+import { examTargetText } from '~/utils/exams/nomination'
 import { EXAM_MAX_TOTAL } from '~/constants/exams'
 
 const supabase = useSupabaseClient<Database>()
+const { handle } = useErrorHandler()
 const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = usePermissions()
 /** فلتر المشرف لمن يرى أكثر من مشرف: الإداري والفني ومشرف المشروع والمديرة الإدارية. */
 const showSupervisorFilter = computed(() => isManager.value || isReadOnly.value || isWomenAdmin.value)
@@ -32,7 +33,7 @@ type RawResult = {
       supervisor: { id: string, full_name: string } | null
     } | null
   } | null
-  exam_list_item: { exam_cycle: ExamCycleRow | null, exam_plan: OldPlanRef | null } | null
+  exam_list_item: { exam_cycle: ExamCycleRow | null } | null
 }
 type FlatResult = {
   id: string
@@ -52,12 +53,12 @@ type FlatResult = {
 const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results', async () => {
   const { data, error } = await supabase
     .from('exam_results')
-    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), exam_plan:exam_plan_id(parts_from, parts_to))')
+    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order)))')
     .order('exam_date', { ascending: false })
     .limit(500)
     .returns<RawResult[]>()
   if (error) {
-    console.error('[exams] results:', error.message)
+    handle(error)
     return []
   }
   return data ?? []
@@ -65,11 +66,11 @@ const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results',
 
 defineExpose({ refresh })
 
-const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).map((r) => {
+const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).filter(r => r.exam_list_item?.exam_cycle).map((r) => {
   const h = r.student?.halaqa
   const sup = h?.supervisor
   const item = r.exam_list_item
-  const t = examTargetText(item?.exam_cycle ? toExamCycle(item.exam_cycle) : null, item?.exam_plan ?? null)
+  const t = examTargetText(item?.exam_cycle ? toExamCycle(item.exam_cycle) : null)
   return {
     id: r.id, exam_date: r.exam_date, total_score: r.total_score, passed: r.passed,
     student: r.student?.full_name ?? '—',

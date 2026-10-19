@@ -109,13 +109,9 @@ export function buildNomineeRows(
 /** بندٌ يُسحب ترشيحُه (معرّفُه واسمُ الطالب ودورتُه للعرض). */
 export interface WithdrawTarget { itemId: string, studentName: string, cycleTitle: string }
 
-/** نطاقُ الخطة القديمة (`exam_plan`) لبنودها الباقية. */
-export interface OldPlanRef { parts_from: number, parts_to: number }
-
-/** نصُّ هدف البند: الدورةُ ونطاقُها، أو نطاقُ الخطة القديمة كما هو حتى تُحذف. */
-export function examTargetText(cycle: ExamCycle | null, plan: OldPlanRef | null): { title: string, detail: string } {
+/** نصُّ هدف البند: الدورةُ ونطاقُها. */
+export function examTargetText(cycle: ExamCycle | null): { title: string, detail: string } {
   if (cycle) return { title: cycleLabel(cycle), detail: cycleRange(cycle) }
-  if (plan) return { title: 'الخطة السابقة', detail: `الأجزاء ${plan.parts_from}–${plan.parts_to}` }
   return { title: '—', detail: '' }
 }
 

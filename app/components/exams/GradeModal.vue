@@ -6,6 +6,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { gradeErrorMessage } from '~/utils/exams/nomination'
+import { gazaToday } from '~/utils/reportWindow'
 import { EXAM_MAX_TOTAL } from '~/constants/exams'
 
 /** البندُ المرصود: معرّفُه وطالبُه، ونصُّ هدفه (الدورة أو نطاقُ الخطة القديمة) وحدودُه. */
@@ -108,8 +109,9 @@ async function saveGrade() {
       student_id: props.target.student.id,
       exam_list_item_id: props.target.id,
       examiner_id: profile.value?.id ?? null,
+      // تُهمله القاعدة وتضع قيمةَ الإعدادات (مُشغّل exam_results_guard_pass_mark)؛ الحقلُ مطلوبٌ في نوع Insert المولَّد
       pass_mark_snapshot: passMark.value ?? 80,
-      exam_date: new Date().toISOString().slice(0, 10),
+      exam_date: gazaToday(),
       q1_memorization: sc('q1_memorization'),
       q1_understanding: sc('q1_understanding'),
       q1_reflection: sc('q1_reflection'),

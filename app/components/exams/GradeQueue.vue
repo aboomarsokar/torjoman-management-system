@@ -1,25 +1,25 @@
 <script setup lang="ts">
 /**
  * طابورُ الرصد (المختبِر لحلقاته، والمديران احتياطاً — كما يسمح RLS): البنودُ بلا نتيجة بدورتها ونطاقها
- * وحدودها من التقسيمة؛ والبنودُ القديمة (`exam_plan_id` بلا دورة) تُعرض بنطاق خطتها كما هي حتى تُحذف.
+ * وحدودها من التقسيمة؛ ولا يُعرض بندٌ بلا دورة.
  * يفتح نافذةَ الرصد (ExamsGradeModal)، وللمديرَين سحبُ الترشيح المعلّق. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
 import { cycleSpanLabel, toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
-import { examTargetText, type OldPlanRef, type WithdrawTarget } from '~/utils/exams/nomination'
+import { examTargetText, type WithdrawTarget } from '~/utils/exams/nomination'
 
 const emit = defineEmits<{ graded: [] }>()
 
 const supabase = useSupabaseClient<Database>()
 const { role } = useProfile()
 const { isManager } = usePermissions()
+const { handle } = useErrorHandler()
 const quran = useQuranReference()
 
 type QueueRaw = {
   id: string
   student: { id: string, full_name: string } | null
   exam_cycle: ExamCycleRow | null
-  exam_plan: OldPlanRef | null
   exam_list: { halaqa: { name: string } | null, teacher: { full_name: string } | null } | null
   exam_results: { id: string }[] | null
 }
@@ -34,13 +34,14 @@ const { data: raw, refresh, pending } = useLazyAsyncData<QueueRaw[]>('exams-queu
   // المعلّقُ وحده يُصفّى في الخادم: ضمٌّ عكسيّ (البنودُ التي لا نتيجةَ لها)
   const { data, error } = await supabase
     .from('exam_list_items')
-    .select('id, student:student_id(id, full_name), exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), exam_plan:exam_plan_id(parts_from, parts_to), exam_list:exam_list_id(halaqa:halaqa_id(name), teacher:teacher_id(full_name)), exam_results(id)')
+    .select('id, student:student_id(id, full_name), exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), exam_list:exam_list_id(halaqa:halaqa_id(name), teacher:teacher_id(full_name)), exam_results(id)')
+    .not('exam_cycle_id', 'is', null)
     .is('exam_results', null)
     .order('created_at', { ascending: false })
     .limit(QUEUE_LIMIT)
     .returns<QueueRaw[]>()
   if (error) {
-    console.error('[exams] queue:', error.message)
+    handle(error)
     return []
   }
   return data ?? []
@@ -48,7 +49,7 @@ const { data: raw, refresh, pending } = useLazyAsyncData<QueueRaw[]>('exams-queu
 
 const rows = computed<QueueRow[]>(() => (raw.value ?? []).map((i) => {
   const cycle = i.exam_cycle ? toExamCycle(i.exam_cycle) : null
-  const t = examTargetText(cycle, i.exam_plan)
+  const t = examTargetText(cycle)
   return {
     id: i.id,
     student: i.student,

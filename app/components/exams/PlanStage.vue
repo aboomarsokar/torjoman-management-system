@@ -148,7 +148,7 @@ const rowClass = (r: Row) => (r.cycle.cycle_number === LAST_CYCLE ? 'cycle-all' 
 .plan-table :deep(tr.cycle-all) { background: var(--navy); color: var(--on-primary); }
 .plan-table :deep(tr.cycle-all td) { color: var(--on-primary); }
 .plan-table :deep(tr.cycle-all .strong) { color: var(--on-primary); }
-.plan-table :deep(tr.cycle-all .edit-btn) { background: transparent; color: var(--on-primary); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5); }
+.plan-table :deep(tr.cycle-all .edit-btn) { background: transparent; color: var(--on-primary); box-shadow: inset 0 0 0 1px var(--side-ink); }
 .all-tag { padding: 3px 10px; border-radius: 999px; background: var(--navy); color: var(--on-primary); font-size: 12px; font-weight: 600; }
 .card-all { border-inline-start: 4px solid var(--navy); }
 </style>

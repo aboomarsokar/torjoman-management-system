@@ -43,12 +43,16 @@ const { data: cycles, refresh, pending } = useLazyAsyncData<ExamCycle[]>(
   },
   { server: false, default: () => [] }
 )
-onMounted(() => {
-  void quran.load()
+// فشلُ مراجع القرآن (يُعرض خطؤه من useQuranReference) لا يُدوِّر الهيكلَ للأبد:
+// الخطةُ تظهر بلا حدود السور، وتبويبُ التقسيمة يعرض حالةً فارغة
+const quranTried = ref(false)
+onMounted(async () => {
+  await quran.load()
+  quranTried.value = true
 })
 
 const byStage = (n: number) => (cycles.value ?? []).filter(c => c.stage_number === n)
-const loading = computed(() => pending.value || !quran.ready.value)
+const loading = computed(() => pending.value || (!quran.ready.value && !quranTried.value))
 
 // ── تعديل دورة ──
 const modalOpen = ref(false)
@@ -153,6 +157,12 @@ const editTitle = computed(() => editing.value
           </p>
         </template>
       </template>
+      <UiEmptyState
+        v-else-if="!quran.ready.value"
+        icon="i-lucide-triangle-alert"
+        title="تعذّر تحميل تقسيمة الأجزاء"
+        description="أعد تحميل الصفحة للمحاولة مجدداً."
+      />
       <ExamsJuzTable
         v-else
         :juz="quran.juz.value"

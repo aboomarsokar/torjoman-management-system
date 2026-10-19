@@ -12,7 +12,7 @@ import {
   type CycleItemRow, type NomineeRow, type WithdrawTarget
 } from '~/utils/exams/nomination'
 import { HISTORY_MONTHS, type HistoryRow } from '~/utils/quran/monthHistory'
-import { shiftMonth } from '~/utils/reportWindow'
+import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 
 const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
@@ -84,7 +84,7 @@ async function send() {
   try {
     const byHalaqa = new Map<string, NomineeRow[]>()
     for (const r of picked) if (r.halaqa_id) byHalaqa.set(r.halaqa_id, [...(byHalaqa.get(r.halaqa_id) ?? []), r])
-    const today = new Date().toISOString().slice(0, 10)
+    const today = gazaToday()
     let sent = 0
     for (const [halaqaId, studs] of byHalaqa) {
       const { data: list, error: e1 } = await supabase.from('exam_lists')

@@ -1,5 +1,6 @@
 import type { Database } from '~/types/database.types'
 import { pendingLists, type PendingItemRow } from '~/utils/exams/nomination'
+import { formatDay, gazaToday } from '~/utils/reportWindow'
 
 /**
  * طوابير «بانتظارك» في جرس الإشعارات — محسوبةٌ عند العرض من البيانات الموجودة، لا مخزّنة.
@@ -60,12 +61,12 @@ export function useNotifications() {
         .limit(PENDING_ITEMS_LIMIT)
         .returns<PendingItemRow[]>()
       for (const l of pendingLists(examItems ?? [])) {
-        out.push({ id: l.listId, label: 'قائمة ترشيح بانتظار رصدك', sub: `${l.halaqa} · ${l.count}`, to: '/exams', icon: 'i-lucide-clipboard-check' })
+        out.push({ id: l.listId, label: 'قائمة ترشيح بانتظار رصدك', sub: `${l.halaqa} · عدد المرشّحين: ${l.count}`, to: '/exams', icon: 'i-lucide-clipboard-check' })
       }
     }
 
     if (r === 'field_supervisor') {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = gazaToday()
       const { data: visits } = await supabase
         .from('supervision_visits')
         .select('id, scheduled_at, halaqa:halaqa_id(name)')
@@ -73,7 +74,7 @@ export function useNotifications() {
         .order('scheduled_at', { ascending: true }).limit(5)
         .returns<{ id: string, scheduled_at: string, halaqa: { name: string } | null }[]>()
       for (const v of visits ?? []) {
-        out.push({ id: v.id, label: `زيارة قادمة: ${v.halaqa?.name ?? '—'}`, sub: new Date(v.scheduled_at).toLocaleDateString('ar', { day: 'numeric', month: 'short' }), to: '/visits', icon: 'i-lucide-calendar-clock' })
+        out.push({ id: v.id, label: `زيارة قادمة: ${v.halaqa?.name ?? '—'}`, sub: formatDay(gazaToday(new Date(v.scheduled_at))), to: '/visits', icon: 'i-lucide-calendar-clock' })
       }
     }
 

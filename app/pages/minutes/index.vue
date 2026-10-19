@@ -18,7 +18,8 @@ const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isReadOnly } = usePermissions()
+// role: ما دام فارغاً لا قفل ولا محتوى (كان القفل يومض للمدير عند التحميل الكامل)
+const { role, isAdmin, isReadOnly } = usePermissions()
 const canView = computed(() => isAdmin.value || isReadOnly.value)
 
 type MinuteRow = {
@@ -159,12 +160,12 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
     </UiPageHeader>
 
     <UiEmptyState
-      v-if="!canView"
+      v-if="role && !canView"
       icon="i-lucide-lock"
       title="هذه الصفحة للمدير الإداري فقط."
     />
 
-    <ClientOnly v-else>
+    <ClientOnly v-else-if="canView">
       <div
         v-if="pending"
         class="list"

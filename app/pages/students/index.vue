@@ -318,25 +318,25 @@ async function confirmDelete() {
         v-model="query"
         icon="i-lucide-search"
         placeholder="ابحث بالاسم أو رقم الهوية"
-        size="md"
+        size="xl"
         class="search"
-        :ui="{ base: 'rounded-[11px]' }"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect
         v-model="statusF"
         :items="statusFilterItems"
-        size="md"
+        size="xl"
         class="filter-sel"
         aria-label="الحالة"
-        :ui="{ base: 'rounded-[11px]' }"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect
         v-model="halqaF"
         :items="halqaFilterItems"
-        size="md"
+        size="xl"
         class="filter-sel"
         aria-label="الحلقة"
-        :ui="{ base: 'rounded-[11px]' }"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
     </div>
 

@@ -27,8 +27,6 @@ function toggleTheme() {
   colorMode.preference = isDark.value ? 'light' : 'dark'
 }
 
-const { count: notifCount, items: notifItems } = useNotifications()
-
 const drawerOpen = ref(false)
 function comingSoon() {
   drawerOpen.value = false
@@ -258,62 +256,7 @@ const isActive = matches
           </h1>
         </div>
         <div class="top-end">
-          <UPopover :ui="{ content: 'w-80 max-w-[92vw]' }">
-            <div class="bell-wrap">
-              <button
-                class="top-icon"
-                aria-label="التنبيهات"
-              >
-                <UIcon
-                  name="i-lucide-bell"
-                  class="size-5"
-                />
-              </button>
-              <span
-                v-if="notifCount > 0"
-                class="bell-badge"
-              >{{ notifCount > 99 ? '99+' : notifCount }}</span>
-            </div>
-            <template #content>
-              <div class="notif">
-                <div class="notif-head">
-                  الإشعارات
-                </div>
-                <div
-                  v-if="!notifItems.length"
-                  class="notif-empty"
-                >
-                  <UIcon
-                    name="i-lucide-bell-off"
-                    class="size-6"
-                  />
-                  لا إشعارات الآن
-                </div>
-                <NuxtLink
-                  v-for="n in notifItems"
-                  :key="n.id"
-                  :to="n.to"
-                  class="notif-item"
-                >
-                  <UIcon
-                    :name="n.icon"
-                    class="size-[18px]"
-                  />
-                  <div class="notif-text">
-                    <div class="notif-label">
-                      {{ n.label }}
-                    </div>
-                    <div
-                      v-if="n.sub"
-                      class="notif-sub"
-                    >
-                      {{ n.sub }}
-                    </div>
-                  </div>
-                </NuxtLink>
-              </div>
-            </template>
-          </UPopover>
+          <NotificationsBell />
           <div class="top-user">
             <div class="top-usertext">
               <div class="tu-name">
@@ -378,19 +321,7 @@ const isActive = matches
 .hamburger { display: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .top-title { font-size: 22px; font-weight: 700; margin: 0; color: var(--ink); white-space: nowrap; }
 .top-end { display: flex; align-items: center; gap: 16px; }
-.top-icon { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; }
-.top-icon:hover { color: var(--ink); border-color: var(--blue); }
-.bell-wrap { position: relative; display: inline-flex; }
-.bell-badge { position: absolute; top: -7px; inset-inline-end: -7px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: #fff; font-size: 13px; font-weight: 800; line-height: 22px; text-align: center; box-shadow: 0 0 0 2px var(--surface); font-variant-numeric: tabular-nums; pointer-events: none; }
 
-.notif { padding: 6px; }
-.notif-head { font-size: 14px; font-weight: 700; color: var(--ink); padding: 8px 10px 10px; border-bottom: 1px solid var(--line); }
-.notif-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; color: var(--ink-3); font-size: 14px; }
-.notif-item { display: flex; align-items: flex-start; gap: 10px; padding: 11px 10px; border-radius: 11px; color: var(--ink-2); transition: background .15s; }
-.notif-item:hover { background: var(--surface-2); }
-.notif-text { min-width: 0; }
-.notif-label { font-size: 14px; font-weight: 600; color: var(--ink); }
-.notif-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
 .top-user { display: flex; align-items: center; gap: 11px; }
 .top-usertext { text-align: start; }
 .tu-name { font-size: 14.5px; font-weight: 600; color: var(--ink); line-height: 1.2; }

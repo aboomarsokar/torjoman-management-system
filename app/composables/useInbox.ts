@@ -49,12 +49,15 @@ export function relativeTimeAr(iso: string, now: Date): string {
 /**
  * يقرأ الصندوق ويعدّ غير المقروء ويشترك في الوارد الفوريّ لصاحب الجلسة،
  * مع استطلاعٍ احتياطيّ كلّ دقيقة (يتوقّف والتبويب مخفيّ).
+ * الاشتراكُ يتبع المستخدم: يتبدّل بتبدّله ويزول بخروجه، و`loaded` يصير true بعد أوّل قراءةٍ ناجحة
+ * (قبلها يكون العدّ صفراً ابتدائيّاً لا قيمةً حقيقيّة).
  */
 export function useInbox() {
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
   const rows = ref<InboxRow[]>([])
   const unread = ref(0)
+  const loaded = ref(false)
   const { handle } = useErrorHandler()
 
   async function load() {
@@ -62,6 +65,7 @@ export function useInbox() {
     if (!uid) {
       rows.value = []
       unread.value = 0
+      loaded.value = false
       return
     }
     const [list, count] = await Promise.all([
@@ -73,12 +77,15 @@ export function useInbox() {
         .select('id', { count: 'exact', head: true })
         .is('read_at', null)
     ])
+    // تبدّل المستخدم أثناء الانتظار: ردٌّ قديم لا يُكتب فوق حالة الجديد
+    if (user.value?.sub !== uid) return
     if (list.error) {
       handle(list.error)
       return
     }
     rows.value = list.data ?? []
     unread.value = count.count ?? 0
+    loaded.value = true
   }
 
   async function markRead(ids: string[] | null) {
@@ -94,8 +101,13 @@ export function useInbox() {
   let channel: RealtimeChannel | null = null
   let timer: ReturnType<typeof setInterval> | null = null
 
+  function dropChannel() {
+    if (channel) void supabase.removeChannel(channel)
+    channel = null
+  }
+
   function subscribe(uid: string) {
-    channel?.unsubscribe()
+    dropChannel()
     channel = supabase.channel(`inbox:${uid}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${uid}` },
         (payload) => {
@@ -112,10 +124,18 @@ export function useInbox() {
     if (!document.hidden) load()
   }
 
-  onMounted(() => {
-    load()
-    const uid = user.value?.sub
+  // يتبع المستخدم: قناةٌ جديدة وقراءةٌ جديدة عند تبدّله، وتفريغٌ عند خروجه
+  watch(() => user.value?.sub, (uid) => {
+    if (!import.meta.client) return
+    rows.value = []
+    unread.value = 0
+    loaded.value = false
     if (uid) subscribe(uid)
+    else dropChannel()
+    load()
+  }, { immediate: true })
+
+  onMounted(() => {
     // احتياطٌ إن انقطع الاتصال الفوريّ — ويتوقّف والتبويب مخفيّ
     timer = setInterval(() => {
       if (!document.hidden) load()
@@ -123,10 +143,10 @@ export function useInbox() {
     document.addEventListener('visibilitychange', onVisible)
   })
   onUnmounted(() => {
-    channel?.unsubscribe()
+    dropChannel()
     if (timer) clearInterval(timer)
     document.removeEventListener('visibilitychange', onVisible)
   })
 
-  return { rows, unread, load, markRead }
+  return { rows, unread, loaded, load, markRead }
 }

@@ -3,14 +3,52 @@
  * جرسُ الشريط العلوي بقسمين: «بانتظارك» (طوابيرُ محسوبة من useNotifications)
  * و«الإشعارات» (أخبارٌ مخزّنة من useInbox). العدّاد = غيرُ المقروء + ما ينتظر.
  * الضغط على خبرٍ يعلّمه مقروءاً وينتقل إلى رابطه.
+ * عند وصول إشعارٍ جديد يهتزّ الجرس ويرنّ (صوتٌ مولَّد بلا ملفّ)؛ ولا حركة مع prefers-reduced-motion.
  */
 import { notificationIcon } from '~/constants/notifications'
 import { relativeTimeAr, type InboxRow } from '~/composables/useInbox'
+import { ringDecision } from '~/composables/useNotificationChime'
+
+/** مدّةُ بقاء صنف الاهتزاز: ثلاثُ دوراتٍ بثانيةٍ لكلٍّ منها */
+const RING_MS = 3100
 
 const { count: queueCount, items: queueItems } = useNotifications()
-const { rows, unread, markRead } = useInbox()
+const { rows, unread, loaded, markRead } = useInbox()
+const { play: chime } = useNotificationChime()
 
 const badge = computed(() => queueCount.value + unread.value)
+const bellLabel = computed(() =>
+  badge.value > 0 ? `الإشعارات — ${badge.value} غير مقروءة` : 'الإشعارات'
+)
+
+const isRinging = ref(false)
+let knownUnread: number | null = null
+let ringTimer: ReturnType<typeof setTimeout> | null = null
+
+function ring() {
+  if (ringTimer) clearTimeout(ringTimer)
+  // يُزال الصنف ثم يُعاد بعد nextTick كي تتكرّر الحركة لخبرٍ ثانٍ
+  isRinging.value = false
+  chime()
+  void nextTick(() => {
+    isRinging.value = true
+    ringTimer = setTimeout(() => {
+      isRinging.value = false
+      ringTimer = null
+    }, RING_MS)
+  })
+}
+
+// يرنّ عند ازدياد غير المقروء فقط، وبعد أوّل قراءةٍ ناجحة (الصفرُ الابتدائيّ لا يُحتسب)
+watch([unread, loaded], ([count, isLoaded]) => {
+  const decision = ringDecision(knownUnread, count, isLoaded)
+  knownUnread = decision.known
+  if (decision.ring) ring()
+})
+
+onUnmounted(() => {
+  if (ringTimer) clearTimeout(ringTimer)
+})
 const now = ref(new Date())
 
 async function openRow(row: InboxRow) {
@@ -28,16 +66,18 @@ async function openRow(row: InboxRow) {
       <button
         type="button"
         class="top-icon"
-        aria-label="الإشعارات"
+        :aria-label="bellLabel"
       >
         <UIcon
           name="i-lucide-bell"
           class="size-5"
+          :class="{ 'bell-ring': isRinging }"
         />
       </button>
       <span
         v-if="badge > 0"
         class="bell-badge"
+        :class="{ 'bell-count-pop': isRinging }"
       >{{ badge > 99 ? '99+' : badge }}</span>
     </div>
     <template #content>
@@ -74,6 +114,7 @@ async function openRow(row: InboxRow) {
           <span>الإشعارات</span>
           <button
             v-if="unread > 0"
+            type="button"
             class="notif-markall"
             @click="markRead(null)"
           >
@@ -94,6 +135,7 @@ async function openRow(row: InboxRow) {
           <button
             v-for="r in rows"
             :key="r.id"
+            type="button"
             class="notif-item"
             :class="{ 'is-unread': !r.read_at }"
             @click="openRow(r)"
@@ -119,6 +161,7 @@ async function openRow(row: InboxRow) {
             <span
               v-if="!r.read_at"
               class="notif-dot"
+              role="img"
               aria-label="غير مقروء"
             />
           </button>
@@ -142,9 +185,33 @@ async function openRow(row: InboxRow) {
 .notif-item { display: flex; width: 100%; text-align: start; align-items: flex-start; gap: 10px; padding: 11px 10px; border-radius: 11px; color: var(--ink-2); transition: background .15s; }
 .notif-item:hover { background: var(--surface-2); }
 .notif-item.is-unread { background: var(--surface-2); }
+.notif-item.is-unread:hover { background: var(--line); }
 .notif-text { min-width: 0; flex: 1; }
 .notif-label { font-size: 14px; font-weight: 600; color: var(--ink); }
 .notif-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
 .notif-time { font-size: 12px; color: var(--ink-3); margin-top: 4px; font-variant-numeric: tabular-nums; }
 .notif-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--err); margin-top: 6px; flex: none; }
+.bell-ring { transform-origin: top center; animation: bell-ring 1s ease-in-out 3; }
+.bell-count-pop { animation: bell-count-pop 1s ease-in-out 3; }
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0) scale(1); }
+  6% { transform: rotate(-22deg) scale(1.14); }
+  16% { transform: rotate(20deg) scale(1.12); }
+  27% { transform: rotate(-16deg) scale(1.09); }
+  38% { transform: rotate(13deg) scale(1.06); }
+  49% { transform: rotate(-10deg) scale(1.04); }
+  60% { transform: rotate(7deg) scale(1.02); }
+  71% { transform: rotate(-4deg) scale(1.01); }
+  82% { transform: rotate(2deg) scale(1); }
+  91% { transform: rotate(-1deg) scale(1); }
+}
+@keyframes bell-count-pop {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(1.45); }
+  45% { transform: scale(.95); }
+  70% { transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bell-ring, .bell-count-pop { animation: none; }
+}
 </style>

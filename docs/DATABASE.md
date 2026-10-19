@@ -277,7 +277,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `q3_memorization` | int | س3 حفظ (0–10) |
 | `q3_understanding` | int | س3 فهم (0–10) |
 | `q3_reflection` | int | س3 تدبر (0–10) |
-| `tajweed_score` | int | الأحكام (**7–10**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019083305`) — مرة واحدة |
+| `tajweed_score` | int | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` بـ`NOT VALID` منذ هجرة `20261019084101` — يسري على الجديد والمعدَّل؛ نتيجةٌ تجريبية قديمة بدرجة 10 بقيت) — مرة واحدة |
 | `total_score` | int | يُحسب آلياً (المجموع = 100) |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها) |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |
@@ -625,6 +625,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |
 | `halaqat_guard_staff` ← `guard_halaqa_staff` | **لكل كاتبٍ حتى الخدمة:** جنس الحلقة مطلوب؛ المعلم (`teacher`) والمشرف (`field_supervisor`) والمختبِر من جنسها؛ المعلم على حلقةٍ نشطة واحدة (يُفحص عند تغيّر المعلم أو تفعيل الحلقة فقط)؛ لا يتغيّر جنس حلقةٍ فيها طلاب من الجنس الآخر؛ ويختم `assigned_by` بالمستدعي عند الإنشاء وتغيير المعلم/المشرف (`23514`) |
 | `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
+| `exam_list_items_guard_sequence` ← `guard_station_sequence` | **لكل كاتب:** لا يُرشَّح طالبٌ لمحطة قبل اجتياز كل محطةٍ قبلها — الترتيب بـ`exam_plan.parts_to` تصاعدياً (لا بالمعرّف)؛ يُفحص عند الإدراج وتغيير المحطة أو الطالب (`23514`). ⚠️ يتغيّر مفتاح الترتيب إن قُلبت الخطة لتبدأ من الناس |
 | `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر أحد المديرَين (الإداري/الفني) أو المشرف الميداني المُسنَد للحلقة نفسها؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`) |
 
 > **ترتيب مُشغِّلات BEFORE على `profiles`:** `profiles_guard_privileged` ← `profiles_photo_clear_on_female` ← `trg_profiles_updated_at` (أبجدياً)، فالحارس يرفض تغيير الجنس غير المأذون قبل أن يُفرَغ شيء.

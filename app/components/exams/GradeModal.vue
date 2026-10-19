@@ -43,7 +43,7 @@ const scoreKeys: ScoreKey[] = [
 
 // مجموعات العرض: كل سؤال بتفريعاته منفصلاً (حفظ/فهم/تدبّر) + التجويد
 const BRANCH: Record<string, string> = { memorization: 'الحفظ', understanding: 'الفهم', reflection: 'التدبّر' }
-const branchLabel = (key: ScoreKey) => key === 'tajweed_score' ? 'الدرجة (من 7 إلى 10)' : (BRANCH[key.split('_')[1] ?? ''] ?? key)
+const branchLabel = (key: ScoreKey) => key === 'tajweed_score' ? 'الدرجة (من 7 إلى 9)' : (BRANCH[key.split('_')[1] ?? ''] ?? key)
 const scoreGroups: { title: string, keys: ScoreKey[] }[] = [
   { title: 'السؤال الأول', keys: ['q1_memorization', 'q1_understanding', 'q1_reflection'] },
   { title: 'السؤال الثاني', keys: ['q2_memorization', 'q2_understanding', 'q2_reflection'] },
@@ -51,13 +51,15 @@ const scoreGroups: { title: string, keys: ScoreKey[] }[] = [
   { title: 'التجويد', keys: ['tajweed_score'] }
 ]
 
-// التجويد من 7 إلى 10 (قرار 2026-10-19؛ القاعدة تحرسه أيضاً). لا يُرفع إلى 7 أثناء الكتابة
-// (كتابة «10» تمرّ بـ«1» أولاً) — يُفحص عند الحفظ وتُعلَّم الخانة ما دامت خارج الحدّ.
+// التجويد من 7 إلى 9 (قرار 2026-10-19؛ القاعدة تحرسه أيضاً). لا يُرفع إلى 7 أثناء الكتابة —
+// يُفحص عند الحفظ وتُعلَّم الخانة ما دامت خارج الحدّ.
 const TAJWEED_MIN = 7
+const TAJWEED_MAX = 9
 const minFor = (key: ScoreKey) => key === 'tajweed_score' ? TAJWEED_MIN : 0
+const maxFor = (key: ScoreKey) => key === 'tajweed_score' ? TAJWEED_MAX : 10
 const tajweedInvalid = computed(() => {
   const n = Number(scores.tajweed_score)
-  return scores.tajweed_score === '' || Number.isNaN(n) || n < TAJWEED_MIN || n > 10
+  return scores.tajweed_score === '' || Number.isNaN(n) || n < TAJWEED_MIN || n > TAJWEED_MAX
 })
 
 // حدّ كل فرع 10 (لا يقبل النظام أكثر)
@@ -69,7 +71,7 @@ function clampScore(key: ScoreKey) {
     scores[key] = ''
     return
   }
-  if (n > 10) n = 10
+  if (n > maxFor(key)) n = maxFor(key)
   if (n < 0) n = 0
   scores[key] = String(n)
 }
@@ -87,7 +89,7 @@ const grading = ref(false)
 async function saveGrade() {
   if (!props.target?.student) return
   if (tajweedInvalid.value) {
-    toast.add({ title: `درجة التجويد من ${TAJWEED_MIN} إلى 10.`, color: 'error', icon: 'i-lucide-circle-alert' })
+    toast.add({ title: `درجة التجويد من ${TAJWEED_MIN} إلى ${TAJWEED_MAX}.`, color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
   grading.value = true
@@ -135,7 +137,7 @@ async function saveGrade() {
     <template #body>
       <div class="grade">
         <p class="grade-hint">
-          كل خانة من 10، والتجويد من 7 إلى 10 (المجموع من 100). علامة الاجتياز: <strong>{{ passMark }}</strong>.
+          كل خانة من 10، والتجويد بين 7 و9 (المجموع من 100). علامة الاجتياز: <strong>{{ passMark }}</strong>.
         </p>
         <div class="groups">
           <div
@@ -158,7 +160,7 @@ async function saveGrade() {
                   v-model="scores[k]"
                   type="number"
                   :min="minFor(k)"
-                  max="10"
+                  :max="maxFor(k)"
                   inputmode="numeric"
                   dir="ltr"
                   class="qfield-input"

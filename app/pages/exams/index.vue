@@ -63,14 +63,12 @@ const { data: examState, refresh: refreshState } = useLazyAsyncData<{ passed: Re
 
 const passedOf = (id: string) => new Set(examState.value?.passed[id] ?? [])
 const pendingOf = (id: string) => new Set(examState.value?.pending[id] ?? [])
-// المحطات المتاحة للترشيح: كل محطات الخطة، ناقص المُجتازة والمعلّقة (بانتظار الرصد)
-// للطالب — بلا شرط على الأجزاء المثبتة؛ المعلّم يختار حسب معرفته الفعلية
-// بمستوى الطالب. القائمة مرتّبة أصلاً (parts_to تصاعدياً)، فأول خيار متبقٍّ
-// يكون تلقائياً المحطة التالية بعد آخر ما اجتازه.
+// المحطة المتاحة للترشيح: التالية وحدها — أوّل محطةٍ لم يجتزها الطالب بترتيب الخطة (parts_to تصاعدياً).
+// لا تخطّي (قرار 2026-10-19؛ القاعدة تحرسه: guard_station_sequence). وإن كانت معلّقة بانتظار الرصد فلا شيء.
 function availableStations(s: RosterStudent) {
   const passed = passedOf(s.id)
-  const pending = pendingOf(s.id)
-  return (plan.value ?? []).filter(p => !passed.has(p.id) && !pending.has(p.id))
+  const next = (plan.value ?? []).find(p => !passed.has(p.id))
+  return next && !pendingOf(s.id).has(next.id) ? [next] : []
 }
 
 const nominees = reactive<Record<string, { checked: boolean, planId: string }>>({})

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * صفحة الطالب «صفحتي» — ملفّه ورحلته للقراءة فقط (لا أزرار تعديل)، وتُوسَّع لاحقاً بالحضور والإنجاز.
+ * صفحة الطالب «صفحتي» — ملفّه وحضوره هذا الشهر ورحلته وسجلّ شهوره المعتمَدة، للقراءة فقط (لا أزرار تعديل).
  * - البيانات من `students` حيث user_id = حساب الطالب (RLS يقصرها عليه)، وبطاقاتها ورحلتها
  *   هي نفسها مكوّنات ملف الطالب الداخلي (StudentDetailCards / StudentJourneyCard).
  * - الصورة الشخصية: يرفعها الطالب (الذكر) ويُزيلها بنفسه؛ والطالبة بلا حقلٍ ولا صورة — الحرف الأول دائماً.
@@ -45,6 +45,9 @@ const { data: me, pending } = useLazyAsyncData<StudentRow | null>(
   },
   { server: false, default: () => null, watch: [() => profile.value?.id] }
 )
+
+// حضوري هذا الشهر: أيام حلقته وغياباتي (مسموحٌ لي بالسياسات)
+const { attendance } = useMyAttendance(() => me.value ? { studentId: me.value.id, halaqaId: me.value.halaqa_id, enrollmentDate: me.value.enrollment_date } : null)
 
 const loading = computed(() => profilePending.value || pending.value)
 const sections = computed(() => me.value ? buildStudentSections(me.value) : [])
@@ -141,6 +144,27 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
         <!-- بطاقات البيانات (للقراءة فقط) -->
         <StudentDetailCards :sections="sections" />
 
+        <!-- حضوري هذا الشهر -->
+        <section
+          v-if="attendance"
+          class="att-card"
+          aria-label="حضوري هذا الشهر"
+        >
+          <span class="att-ico"><UIcon
+            name="i-lucide-calendar-check"
+            class="size-5"
+          /></span>
+          <div>
+            <h3>حضوري هذا الشهر</h3>
+            <p v-if="attendance.held">
+              حضر {{ attendance.attended }} من {{ attendance.held }} <span class="att-month">({{ attendance.label }})</span>
+            </p>
+            <p v-else>
+              لم تنعقد حلقتك بعدُ هذا الشهر <span class="att-month">({{ attendance.label }})</span>
+            </p>
+          </div>
+        </section>
+
         <!-- الرحلة -->
         <StudentJourneyCard
           :student-id="me.id"
@@ -168,6 +192,12 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
 .band-top h1 { margin: 0; font-size: 25px; font-weight: 700; color: #fff; }
 .band-sub { font-size: 15px; color: var(--band-sub); margin-top: 6px; }
 .band-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+
+.att-card { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 22px; margin-bottom: 22px; }
+.att-ico { width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--green-soft); color: var(--green-ink); }
+.att-card h3 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--ink); }
+.att-card p { margin: 0; font-size: 15px; color: var(--ink-2); }
+.att-month { color: var(--ink-3); font-size: 13px; }
 
 .photo-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 22px; margin-bottom: 22px; }
 

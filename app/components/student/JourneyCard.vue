@@ -6,10 +6,13 @@
  *
  * `ownRecords` (صفحة الطالب /me): الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports`،
  * فتصله تضمينات المحطّة والاعتماد `null` (محطّاتٌ مجتازةٌ تظهر «مستحقّة» وصفحاتٌ معتمدةٌ تُجمَع صفراً).
- * فيقرأ عبر `my_exam_results()` و`my_approved_pages()` المقصورتين على سجلّه. مسار العاملين كما هو.
+ * فيقرأ عبر `my_exam_results()` و`my_approved_pages()` و`my_quran_months()` المقصورة على سجلّه.
+ * العاملون يقرؤون `quran_records` المعتمَدة (RLS). تحت الرحلة «سجلّ الشهور» و«وصل N من 30 جزءاً».
  */
 import type { Database } from '~/types/database.types'
 import { toApprovedPages, toJourneyResults } from '~/utils/journeyInputs'
+import type { ApprovedMonth } from '~/utils/quran/studentHistory'
+import { juzReached, toMonthHistory, totalPages } from '~/utils/quran/studentHistory'
 
 interface Props {
   studentId: string
@@ -22,8 +25,11 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { ownRecords: false })
 
 const supabase = useSupabaseClient<Database>()
-const { settings: gradeCfg, loadSettings } = useGrades()
-onMounted(loadSettings)
+// المطلوبُ الشهريّ من الإعدادات مباشرةً
+const { data: targetPerMonth } = useLazyAsyncData<number>('journey-target-pages', async () => {
+  const { data } = await supabase.from('app_settings').select('target_memorization_pages').eq('id', 1).maybeSingle()
+  return data?.target_memorization_pages ?? 30
+}, { server: false, default: () => 30 })
 
 // جلب غير حاجز: الاستعلامات الثلاثة مستقلّة وتعمل بالتوازي
 const { data: plan } = useLazyAsyncData('journey-exam-plan', async () => {
@@ -46,21 +52,37 @@ const { data: examResults } = useLazyAsyncData(() => `journey-results-${props.st
   return (data ?? []).map(r => ({ exam_plan_id: r.exam_list_item?.exam_plan_id ?? null, passed: r.passed, total_score: r.total_score }))
 }, { server: false, default: () => [] })
 
-// إجمالي صفحات الحفظ من التقارير الشهرية المعتمدة
-type PagesRow = { memorization_pages: number | null, report: { status: string } | null }
-const { data: memorizationPages } = useLazyAsyncData(() => `journey-pages-${props.studentId}-${props.ownRecords}`, async () => {
+// الشهورُ المعتمَدة: الطالب من `my_quran_months()` (مواضعها قد تكون null)، والعاملون من `quran_records` المعتمَدة
+type StaffRecord = Omit<ApprovedMonth, 'report_year' | 'report_month'> & { report: { status: string, report_year: number, report_month: number } | null }
+const { data: months } = useLazyAsyncData<ApprovedMonth[]>(() => `journey-months-${props.studentId}-${props.ownRecords}`, async () => {
   if (props.ownRecords) {
-    const { data, error } = await supabase.rpc('my_approved_pages')
-    if (error) console.error('[journey] فشل جلب صفحاتي المعتمدة:', error.message)
-    return toApprovedPages(data)
+    const { data, error } = await supabase.rpc('my_quran_months')
+    if (error) console.error('[journey] فشل جلب شهوري المعتمدة:', error.message)
+    return data ?? []
   }
-  const { data } = await supabase
-    .from('monthly_report_students')
-    .select('memorization_pages, report:report_id(status)')
+  const { data, error } = await supabase
+    .from('quran_records')
+    .select('from_surah, from_ayah, to_surah, to_ayah, pages_memorized, report:report_id(status, report_year, report_month)')
     .eq('student_id', props.studentId)
-    .returns<PagesRow[]>()
-  return (data ?? []).filter(r => r.report?.status === 'approved').reduce((sum, r) => sum + (r.memorization_pages ?? 0), 0)
+    .returns<StaffRecord[]>()
+  if (error) console.error('[journey] فشل جلب سجلّات القرآن:', error.message)
+  return (data ?? []).flatMap(({ report, ...r }) =>
+    report?.status === 'approved' ? [{ ...r, report_year: report.report_year, report_month: report.report_month }] : [])
+}, { server: false, default: () => [] })
+
+// إجمالي صفحات الحفظ المعتمدة: الطالب بدالّته، والعاملون من الشهور نفسها (طلبٌ واحد)
+const { data: ownPages } = useLazyAsyncData(() => `journey-pages-${props.studentId}-${props.ownRecords}`, async () => {
+  if (!props.ownRecords) return 0
+  const { data, error } = await supabase.rpc('my_approved_pages')
+  if (error) console.error('[journey] فشل جلب صفحاتي المعتمدة:', error.message)
+  return toApprovedPages(data)
 }, { server: false, default: () => 0 })
+const memorizationPages = computed(() => props.ownRecords ? ownPages.value : totalPages(months.value))
+
+const { surahName, juz, ready, load: loadQuranRef } = useQuranReference()
+onMounted(() => void loadQuranRef())
+const history = computed(() => toMonthHistory(months.value, surahName))
+const juzDone = computed(() => ready.value ? juzReached(months.value, props.quranParts, juz.value) : null)
 </script>
 
 <template>
@@ -77,8 +99,12 @@ const { data: memorizationPages } = useLazyAsyncData(() => `journey-pages-${prop
       :plan="plan"
       :results="examResults"
       :memorization-pages="memorizationPages"
-      :target-per-month="gradeCfg.target"
+      :target-per-month="targetPerMonth"
       :enrollment-date="enrollmentDate"
+    />
+    <StudentQuranHistory
+      :items="history"
+      :juz-done="juzDone"
     />
   </section>
 </template>

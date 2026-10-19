@@ -257,7 +257,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 v-if="data.report"
                 class="report-row"
               >
-                <span class="report-month">{{ monthName(data.report.report_month) }} {{ data.report.report_year }}</span>
+                <span class="report-month">{{ periodLabel(data.report.report_year, data.report.report_month) }}</span>
                 <UBadge
                   :label="REPORT_STATUS[data.report.status]?.label"
                   :color="REPORT_STATUS[data.report.status]?.color"

@@ -793,7 +793,226 @@ git commit -m "feat(notifications): الجرس بقسمين — بانتظارك
 
 ---
 
-### Task 5: التحقّق في المتصفّح والتوثيق
+### Task 5: اهتزازُ الجرس ورنّتُه عند وصول إشعار (طلب المستخدم 2026-10-19: «كما في نظام الصحابة»)
+
+**Files:**
+- Create: `app/composables/useNotificationChime.ts` (+ `useNotificationChime.test.ts`)
+- Modify: `app/components/NotificationsBell.vue`
+- Modify: `app/composables/useInbox.ts` (متانةُ الاشتراك — من مراجعة Task 4)
+
+**Interfaces:**
+- Consumes: `useInbox()` ← `{ rows, unread, load, markRead }` (Task 4).
+- Produces:
+  - `CHIME_TONES: readonly { hz: number, startsAt: number, seconds: number }[]` — النغمتان مكرّرتين.
+  - `shouldRing(before: number | null, next: number): boolean`.
+  - `useNotificationChime(): { play: () => void }`.
+
+**السلوك (منقولٌ من الصحابة `app/composables/useNotificationChime.ts` و`app/components/ui/NotificationsBell.vue:60-160` و`app/assets/css/main.css:1010-1053`):**
+- **متى يرنّ:** حين **يزداد** عددُ الإشعارات غير المقروءة (`unread`)، **ومرّةً عند أوّل قراءة إن وُجد غيرُ مقروء** (الأساس `null`). لا رنينَ عند النقصان (التعليم بالقراءة)، ولا لطوابير «بانتظارك».
+- **الصوت:** «دِنْ دُنْ» — نغمتان مثلّثيّتان (`880Hz` من 0 لمدّة 0.26ث، و`660Hz` من 0.17 لمدّة 0.42ث) **مكرّرتان مرّتين** بفاصل `0.62`ث، بقمّة `0.3`، ومغلّفٌ يصعد في 0.02ث ويهبط أُسّياً. تُولَّد بـ`AudioContext` (أو `webkitAudioContext`) **بلا ملفّ صوت**، **وسياقٌ واحدٌ يُعاد استعماله**.
+- **منعُ التشغيل التلقائيّ:** إن كان السياقُ غيرَ `running` يُسجَّل وقتُ المنع ويُحاوَل `resume()`؛ ويُوقَظ السياقُ عند أوّل `pointerdown`/`keydown`/`touchstart` (يُزال المستمع بعد أوّل نداء)، **فتُستدرَك الرنّةُ الممنوعة إن مضى عليها أقلّ من 20 ثانية**. لا رسالةَ خطأ على الصوت أبداً.
+- **الاهتزاز:** صنفُ `bell-ring` على أيقونة الجرس: `rotate` من −22° إلى 0 بتناقص مع `scale` خفيف، `transform-origin: top center`، **`1s ease-in-out` ثلاثَ مرّات** (`RING_MS = 3100` ثم يُزال الصنف). ومع العدد نبضةُ `bell-count-pop` (`scale` 1 → 1.45 → 0.95 → 1.12 → 1) بالمدّة نفسها. يُزال الصنف ثم يُعاد بعد `nextTick` كي تتكرّر الحركة لخبرٍ ثانٍ، ويُلغى المؤقّت السابق قبل ضبط جديد.
+- `@media (prefers-reduced-motion: reduce)`: لا حركة (يبقى الصوت).
+
+**ومن مراجعة Task 4 (في `useInbox.ts` و`NotificationsBell.vue`):**
+- الاشتراكُ بـ`watch(() => user.value?.sub, …, { immediate: true })` بدل `onMounted` وحده: عند تغيّر المستخدم يُزال القناةُ القديمة ويُشترك للجديد ويُعاد `load()`، وعند الخروج تُزال القناة وتُفرَّغ الحالة.
+- الإزالةُ بـ`supabase.removeChannel(channel)` لا `channel.unsubscribe()`.
+- النقطةُ غيرُ المقروءة `role="img"` مع `aria-label`، واسمُ زرّ الجرس يحمل العدد (`الإشعارات — 3 غير مقروءة` حين يكون أكبر من صفر)، و`.notif-item.is-unread:hover` لونٌ مختلف عن غير المقروء (استعمل `--line` إن لم يوجد متغيّرٌ أنسب في `main.css`)، و`type="button"` على أزرار الصفوف.
+
+- [ ] **Step 1: الاختبارات الفاشلة** `app/composables/useNotificationChime.test.ts`:
+
+```ts
+/**
+ * رنّةُ الجرس: النغماتُ المجدولة (دِنْ دُنْ مرّتين) ومتى يرنّ.
+ */
+import { describe, expect, it } from 'vitest'
+import { CHIME_TONES, shouldRing } from './useNotificationChime'
+
+describe('CHIME_TONES', () => {
+  it('نغمتان مكرّرتان مرّتين بفاصل 0.62', () => {
+    expect(CHIME_TONES.map(t => [t.hz, Number(t.startsAt.toFixed(2)), t.seconds])).toEqual([
+      [880, 0, 0.26], [660, 0.17, 0.42],
+      [880, 0.62, 0.26], [660, 0.79, 0.42]
+    ])
+  })
+})
+
+describe('shouldRing', () => {
+  it.each([
+    [null, 0, false],
+    [null, 2, true],
+    [1, 2, true],
+    [2, 2, false],
+    [3, 1, false],
+    [0, 0, false]
+  ] as const)('قبل %s ← بعد %s = %s', (before, next, expected) => {
+    expect(shouldRing(before, next)).toBe(expected)
+  })
+})
+```
+
+- [ ] **Step 2: شغّلها لتفشل**: `pnpm vitest run app/composables/useNotificationChime.test.ts`.
+
+- [ ] **Step 3: اكتب `useNotificationChime.ts`** (JSDoc في أعلاه يشرح: لا ملفّ صوت، سياقٌ واحد، الاستدراك خلال 20 ثانية):
+
+```ts
+/**
+ * رنّةُ الجرس — نغمتان تُولَّدان في المتصفّح بلا ملفّ صوت (لا تحميلَ من الشبكة)،
+ * مكرّرتان مرّتين. سياقُ صوتٍ واحدٌ يُعاد استعماله. والمتصفّحُ يمنع الصوتَ قبل أوّل
+ * لمسة، فتُستدرَك الرنّةُ الممنوعة عند أوّل تفاعلٍ إن مضى عليها أقلّ من 20 ثانية.
+ * منقولٌ من الصحابة.
+ */
+const PATTERN = [
+  { hz: 880, startsAt: 0, seconds: 0.26 },
+  { hz: 660, startsAt: 0.17, seconds: 0.42 }
+] as const
+const RINGS = 2
+const RING_GAP = 0.62
+const PEAK_GAIN = 0.3
+const REPLAY_WINDOW_MS = 20_000
+const WAKE_EVENTS = ['pointerdown', 'keydown', 'touchstart'] as const
+
+export const CHIME_TONES = Array.from({ length: RINGS }, (_, round) =>
+  PATTERN.map(tone => ({ ...tone, startsAt: tone.startsAt + round * RING_GAP }))
+).flat()
+
+/** يرنّ عند ازدياد غير المقروء، ومرّةً عند أوّل قراءةٍ إن وُجد شيء؛ ولا يرنّ عند النقصان. */
+export function shouldRing(before: number | null, next: number): boolean {
+  return before === null ? next > 0 : next > before
+}
+
+type AudioContextCtor = typeof AudioContext
+
+function contextCtor(): AudioContextCtor | null {
+  if (typeof window === 'undefined') return null
+  const scope = window as unknown as { AudioContext?: AudioContextCtor, webkitAudioContext?: AudioContextCtor }
+  return scope.AudioContext ?? scope.webkitAudioContext ?? null
+}
+
+export function useNotificationChime() {
+  let context: AudioContext | null = null
+  let blockedAt = 0
+
+  function ensure(): AudioContext | null {
+    const Ctor = contextCtor()
+    if (!Ctor) return null
+    context ??= new Ctor()
+    return context
+  }
+
+  function emit(live: AudioContext): void {
+    const now = live.currentTime
+    for (const tone of CHIME_TONES) {
+      const oscillator = live.createOscillator()
+      const gain = live.createGain()
+      oscillator.type = 'triangle'
+      oscillator.frequency.value = tone.hz
+      const startsAt = now + tone.startsAt
+      const endsAt = startsAt + tone.seconds
+      gain.gain.setValueAtTime(0.0001, startsAt)
+      gain.gain.exponentialRampToValueAtTime(PEAK_GAIN, startsAt + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, endsAt)
+      oscillator.connect(gain)
+      gain.connect(live.destination)
+      oscillator.start(startsAt)
+      oscillator.stop(endsAt + 0.02)
+    }
+  }
+
+  function wake(): void {
+    for (const type of WAKE_EVENTS) window.removeEventListener(type, wake)
+    const live = ensure()
+    if (!live) return
+    void live.resume().then(() => {
+      const missed = blockedAt > 0 && Date.now() - blockedAt < REPLAY_WINDOW_MS
+      blockedAt = 0
+      if (missed && live.state === 'running') emit(live)
+    }).catch(() => {})
+  }
+
+  if (typeof window !== 'undefined') {
+    for (const type of WAKE_EVENTS) window.addEventListener(type, wake, { passive: true })
+  }
+
+  function play(): void {
+    try {
+      const live = ensure()
+      if (!live) return
+      if (live.state === 'running') {
+        emit(live)
+        return
+      }
+      blockedAt = Date.now()
+      void live.resume().then(() => {
+        if (live.state === 'running') {
+          blockedAt = 0
+          emit(live)
+        }
+      }).catch(() => {})
+    } catch {
+      // متصفّحٌ بلا صوتٍ يبقى صامتاً، والاهتزازُ يقع في كلّ حال
+    }
+  }
+
+  return { play }
+}
+```
+
+  (`.catch(() => {})` الفارغة مقصودة: منعُ التشغيل التلقائيّ ليس خطأً يُعرض — اكتب تعليقاً بجانبها يقول ذلك، كي لا تُقرأ ابتلاعاً لخطأ.)
+
+- [ ] **Step 4: شغّل الاختبارات لتنجح.**
+
+- [ ] **Step 5: اربط الرنين في `NotificationsBell.vue`:**
+
+```ts
+const { play: chime } = useNotificationChime()
+const RING_MS = 3100
+const isRinging = ref(false)
+let knownUnread: number | null = null
+let ringTimer: ReturnType<typeof setTimeout> | null = null
+
+function ring() {
+  if (ringTimer) clearTimeout(ringTimer)
+  isRinging.value = false
+  chime()
+  void nextTick(() => {
+    isRinging.value = true
+    ringTimer = setTimeout(() => {
+      isRinging.value = false
+      ringTimer = null
+    }, RING_MS)
+  })
+}
+
+watch(unread, (next) => {
+  const before = knownUnread
+  knownUnread = next
+  if (shouldRing(before, next)) ring()
+})
+
+onUnmounted(() => {
+  if (ringTimer) clearTimeout(ringTimer)
+})
+```
+
+  ⚠️ `unread` يبدأ صفراً قبل أوّل `load()`؛ فالمراقبةُ يجب ألّا تستهلك «أوّلَ قراءة» على هذا الصفر الابتدائيّ. اجعل `useInbox` يُصدِّر `loaded: Ref<boolean>` (يصير `true` بعد أوّل `load()` ناجح)، ولا تُحدِّث `knownUnread` ولا ترنّ قبل `loaded`. وأضف إلى `useInbox.test.ts` ما يلزم إن استخرجتَ منطقاً نقيّاً.
+  وفي القالب: `:class="{ 'bell-ring': isRinging }"` على `<UIcon name="i-lucide-bell">`، و`:class="{ 'bell-count-pop': isRinging }"` على `.bell-badge`؛ والإطارات في `<style scoped>` للمكوّن (`@keyframes bell-ring` بالقيم: 0%/100% `rotate(0) scale(1)` · 6% `-22deg 1.14` · 16% `20deg 1.12` · 27% `-16deg 1.09` · 38% `13deg 1.06` · 49% `-10deg 1.04` · 60% `7deg 1.02` · 71% `-4deg 1.01` · 82% `2deg 1` · 91% `-1deg 1`؛ و`@keyframes bell-count-pop`: 0%/100% `1` · 18% `1.45` · 45% `0.95` · 70% `1.12`) مع `prefers-reduced-motion`.
+  ⚠️ `UIcon` مكوّن؛ والصنفُ المحصور (scoped) يصل إلى عنصره الجذر — تحقّق في المتصفّح (Task 6) أنّ الحركة تقع فعلاً، وإلا فاستعمل `:deep()` أو غلافاً `<span>` حول الأيقونة يحمل الصنف.
+
+- [ ] **Step 6: متانةُ الاشتراك والوصول** (البنود الأربعة أعلاه تحت «ومن مراجعة Task 4»).
+
+- [ ] **Step 7: الفحوص**: `pnpm lint && pnpm test` خضراء، و`pnpm typecheck` بلا خطأٍ جديد (الخطأ القائم سلفاً `app/pages/students/index.vue:234` ليس من هذه المهمّة).
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add app/composables/useNotificationChime.ts app/composables/useNotificationChime.test.ts app/composables/useInbox.ts app/components/NotificationsBell.vue
+git commit -m "feat(notifications): الجرس يهتزّ ويرنّ عند وصول إشعار — كما في الصحابة"
+```
+
+---
+
+### Task 6: التحقّق في المتصفّح والتوثيق
 
 **Files:**
 - Modify: `docs/DATABASE.md`, `docs/FEATURES.md`, `docs/PAGES.md`, `docs/ROADMAP.md`

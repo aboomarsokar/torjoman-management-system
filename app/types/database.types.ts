@@ -886,6 +886,7 @@ export type Database = {
           id: string
           report_month: number
           report_year: number
+          return_note: string | null
           status: Database["public"]["Enums"]["report_status"]
           submitted_at: string | null
           target_pages_snapshot: number | null
@@ -907,6 +908,7 @@ export type Database = {
           id?: string
           report_month: number
           report_year: number
+          return_note?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           submitted_at?: string | null
           target_pages_snapshot?: number | null
@@ -928,6 +930,7 @@ export type Database = {
           id?: string
           report_month?: number
           report_year?: number
+          return_note?: string | null
           status?: Database["public"]["Enums"]["report_status"]
           submitted_at?: string | null
           target_pages_snapshot?: number | null
@@ -1291,6 +1294,90 @@ export type Database = {
           },
         ]
       }
+      quran_records: {
+        Row: {
+          created_at: string
+          from_ayah: number | null
+          from_surah: number | null
+          id: string
+          notes: string | null
+          pages_memorized: number
+          pages_reviewed: number | null
+          recorded_by: string | null
+          report_id: string
+          student_id: string
+          to_ayah: number | null
+          to_surah: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_ayah?: number | null
+          from_surah?: number | null
+          id?: string
+          notes?: string | null
+          pages_memorized?: number
+          pages_reviewed?: number | null
+          recorded_by?: string | null
+          report_id: string
+          student_id: string
+          to_ayah?: number | null
+          to_surah?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_ayah?: number | null
+          from_surah?: number | null
+          id?: string
+          notes?: string | null
+          pages_memorized?: number
+          pages_reviewed?: number | null
+          recorded_by?: string | null
+          report_id?: string
+          student_id?: string
+          to_ayah?: number | null
+          to_surah?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quran_records_from_surah_fkey"
+            columns: ["from_surah"]
+            isOneToOne: false
+            referencedRelation: "surahs"
+            referencedColumns: ["number"]
+          },
+          {
+            foreignKeyName: "quran_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quran_records_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quran_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quran_records_to_surah_fkey"
+            columns: ["to_surah"]
+            isOneToOne: false
+            referencedRelation: "surahs"
+            referencedColumns: ["number"]
+          },
+        ]
+      }
       students: {
         Row: {
           avatar_url: string | null
@@ -1506,6 +1593,7 @@ export type Database = {
     }
     Functions: {
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_manage_halaqa: { Args: { hid: string }; Returns: boolean }
       can_manage_profile_photo: { Args: { p_folder: string }; Returns: boolean }
@@ -1543,6 +1631,19 @@ export type Database = {
         }[]
       }
       my_halaqa_id: { Args: never; Returns: string }
+      my_quran_months: {
+        Args: never
+        Returns: {
+          from_ayah: number
+          from_surah: number
+          pages_memorized: number
+          pages_reviewed: number
+          report_month: number
+          report_year: number
+          to_ayah: number
+          to_surah: number
+        }[]
+      }
       my_student_id: { Args: never; Returns: string }
       quran_page_of: {
         Args: { p_ayah: number; p_surah: number }

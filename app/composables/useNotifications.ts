@@ -7,7 +7,8 @@ import type { Database } from '~/types/database.types'
  *  - المعلّم: تنبيهات إدارية جديدة لم يؤكّد اطّلاعه عليها + نتائج رُصدت اليوم.
  *  - المختبِر: بنود اختبار بانتظار رصده.
  *  - المشرف الميداني: زيارات اليوم.
- *  - المعتمِدون (الإداري والفني والمديرة الإدارية): تقارير شهرية مُرسلة بانتظار الاعتماد (RLS يقصر نطاقها).
+ *  - مَن يعتمد رصد الشهر (الإداري، والمديرة الإدارية، والمشرف الميداني لحلقاته — لا المدير الفني): رصدٌ مُرسَلٌ بانتظار الاعتماد.
+ *    RLS يقصر نطاقه، والمشرفُ يُصفّى صراحةً على `halaqat.supervisor_id`. معرّفُ العنصر معرّفُ التقرير فتُسقطه pendingQueue ما دام إشعارُه غيرَ مقروء.
  * تحديث: عند التركيب + عند تغيّر المسار + استطلاع كل 60 ثانية.
  */
 export type NotifItem = { id: string, label: string, sub?: string, to: string, icon: string }
@@ -15,7 +16,7 @@ export type NotifItem = { id: string, label: string, sub?: string, to: string, i
 export function useNotifications() {
   const supabase = useSupabaseClient<Database>()
   const { role, profile } = useProfile()
-  const { canApprove } = usePermissions()
+  const { canApproveReports } = usePermissions()
   const route = useRoute()
 
   const items = ref<NotifItem[]>([])
@@ -77,11 +78,15 @@ export function useNotifications() {
       }
     }
 
-    if (canApprove.value) {
-      const { data } = await supabase
+    if (canApproveReports.value) {
+      // المشرف الميداني: حلقاته وحدها (inner لتسقط الصفوف الأخرى من الجانب الآخر للتضمين)
+      const mine = r === 'field_supervisor'
+      let query = supabase
         .from('monthly_reports')
-        .select('id, report_month, report_year, halaqa:halaqa_id(name)')
+        .select(`id, report_month, report_year, halaqa:halaqa_id${mine ? '!inner' : ''}(name, supervisor_id)`)
         .eq('status', 'submitted')
+      if (mine) query = query.eq('halaqa.supervisor_id', me)
+      const { data } = await query
         .order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(10)
         .returns<{ id: string, report_month: number, report_year: number, halaqa: { name: string } | null }[]>()
       for (const rep of data ?? []) {

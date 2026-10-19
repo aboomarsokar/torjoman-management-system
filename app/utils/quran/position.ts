@@ -4,11 +4,25 @@
  * المستوى الأول فقط) فيُستورد صراحةً.
  */
 import { KHATM_POSITION } from '~/constants/quran'
+import type { Database } from '~/types/database.types'
 
 export interface Position { surah: number, ayah: number }
 
 /** جزءُ البرنامج (صفُّ `program_juz`): على حدود السور، مرقّمٌ بترتيب الحفظ 30←1. */
 export interface ProgramJuz { number: number, start: Position, end: Position }
+
+type ProgramJuzRow = Database['public']['Tables']['program_juz']['Row']
+
+/** صفوفُ `program_juz` ← أجزاءُ الموضع بترتيب الحفظ (الجزء 30 أولاً ثم 29 … 1)؛ لا تغيّر المدخلات. */
+export function toProgramJuz(rows: Pick<ProgramJuzRow, 'number' | 'start_surah' | 'start_ayah' | 'end_surah' | 'end_ayah'>[]): ProgramJuz[] {
+  return rows
+    .map(r => ({
+      number: r.number,
+      start: { surah: r.start_surah, ayah: r.start_ayah },
+      end: { surah: r.end_surah, ayah: r.end_ayah }
+    }))
+    .sort((a, b) => b.number - a.number)
+}
 
 /** سالبٌ إن سبق `a` الموضعَ `b` بترتيب الحفظ. */
 export function comparePositions(a: Position, b: Position): number {

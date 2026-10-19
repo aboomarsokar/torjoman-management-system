@@ -16,6 +16,8 @@ export function usePermissions() {
     isManager: isIn(['admin_manager', 'technical_manager']),
     canAssign: isIn(['admin_manager', 'technical_manager', 'women_admin', 'field_supervisor']),
     canApprove: isIn(['admin_manager', 'technical_manager', 'women_admin']),
+    /** من يعتمد رصد الشهر (قرار 2026-10-19): الإداري، والمديرة للبنات، والمشرف الميدانيّ لحلقاته — لا الفنيّ (يطّلع ولا يعتمد). */
+    canApproveReports: isIn(['admin_manager', 'women_admin', 'field_supervisor']),
     isTeacher: is('teacher'),
     isStudent: is('student'),
     isFieldSupervisor: is('field_supervisor'),

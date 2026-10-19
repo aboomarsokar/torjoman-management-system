@@ -4,6 +4,7 @@
  */
 import { PROGRAM_JUZ_COUNT } from '~/constants/quran'
 import type { Database } from '~/types/database.types'
+import { countAttendance } from '~/utils/quran/attendanceCount'
 import type { Position, ProgramJuz } from '~/utils/quran/position'
 import { completedJuz, isKhatm, nextPosition, startForNewStudent } from '~/utils/quran/position'
 import type { Outcome, ProratedPlan } from '~/utils/quran/plan'
@@ -85,10 +86,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
   }
 
   return input.students.map((s) => {
-    const heldDays = input.days.filter(d => !s.enrollment_date || d >= s.enrollment_date)
-    const absent = absentDays.get(s.id)
-    const daysHeld = heldDays.length
-    const daysAttended = daysHeld - heldDays.filter(d => absent?.has(d)).length
+    const { held: daysHeld, attended: daysAttended } = countAttendance(input.days, absentDays.get(s.id), s.enrollment_date)
     const record = recordByStudent.get(s.id) ?? null
     const previous = input.previousEnds[s.id] ?? null
     const heldParts = Math.max(0, Math.min(PROGRAM_JUZ_COUNT, s.quran_parts ?? 0))

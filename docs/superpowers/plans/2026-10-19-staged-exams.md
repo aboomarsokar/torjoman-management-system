@@ -89,7 +89,12 @@ export function partsCount(c: ExamCycle): number            // parts_to − part
 export function partsAfterPass(c: ExamCycle): number        // 31 − parts_from
 export function dueCycle(cycles: ExamCycle[], passedIds: Set<number>, pendingIds: Set<number>): { cycle: ExamCycle | null, blocked: 'pending' | 'done' | null }
 export function reachedHint(c: ExamCycle, juzReached: number): string | null   // «لم يبلغ موضعُه المعتمد حدودَ هذه الدورة بعد» إن juzReached < partsAfterPass(c)
+/** حدودُ الدورة من تقسيمة البرنامج (طلب المستخدم 2026-10-19: «الاختبارات بناءً على تقسيمة الأجزاء»):
+ *  البداية = بدايةُ الجزء parts_to، والنهاية = نهايةُ الجزء parts_from — بترتيب الحفظ. */
+export function cycleSpan(c: ExamCycle, juz: ProgramJuz[]): { from: Position, to: Position } | null
+export function cycleSpanLabel(c: ExamCycle, juz: ProgramJuz[], surahName: (n: number) => string): string  // 'من الناس 1 إلى المجادلة 22'
 ```
+- اختبارٌ إلزاميّ لـ`cycleSpan` بالتقسيمة الحقيقية: الدورة 1 (28–30) ← من (114,1) إلى (58,22)؛ الدورة 8 (13–15) ← من (18,1) إلى (12,111) يوسف؛ الدورة 13 (3–5) ← من (4,1) إلى (2,141)؛ الدورة 15 (1–10) ← من (9,1) إلى (1,7).
 - `buildJourney(quranParts, cycles, results)`: المحطّات = الدورات بـ`sort_order`؛ `reached = quranParts >= partsAfterPass(c)`؛ الاجتيازُ لا يُلغيه رسوبٌ لاحق؛ `nextStation`/`upcomingStation` كما اليوم؛ و`stageLabel` القديم يُستبدل بـ`cycleLabel`.
 - **TDD:** `dueCycle` (لا شيء مجتاز ← 1؛ 1 و2 مجتازتان ← 3؛ 3 معلّقة ← blocked pending؛ الكلّ ← done؛ رسوبٌ في 3 ← 3)، `partsAfterPass` (28–30 ← 3؛ 21–30 ← 10؛ 1–10 ← 30)، `cycleRange`، `reachedHint`، و`buildJourney` (quranParts 3 ← الدورة 1 «بُلغت»؛ نجاحٌ ثم رسوب ← مجتازة).
 - [ ] TDD ← التنفيذ ← Commit `feat(exams): منطقُ الدورات والرحلة بالمراحل — نقيٌّ ومختبَر`.
@@ -99,7 +104,7 @@ export function reachedHint(c: ExamCycle, juzReached: number): string | null   /
 ### Task 3: شاشةُ «خطة الاختبارات» بتبويبين
 
 **Files:** Rewrite `app/pages/exam-plan/index.vue`؛ Create `app/components/exams/PlanStage.vue`, `app/components/exams/JuzTable.vue`.
-- **تبويب «الخطة»:** ثلاثةُ أقسام (المرحلة الأولى/الثانية/الثالثة) بجدولٍ كصورة المستخدم: الدورات · عدد الأجزاء · تفصيل الأجزاء (`a – b` بالأرقام) · وصف السور؛ والدورةُ الخامسة مُبرزة (صفٌّ بخلفية `--navy`/نصٍّ فاتح بالمتغيّرات). المديران الإداري والفني: زرّ «تعديل» لكلّ دورة (نافذة: من جزء، إلى جزء، وصف السور؛ تحقّقٌ 1 ≤ من ≤ إلى ≤ 30)؛ والبقيّةُ قراءة.
+- **تبويب «الخطة»:** ثلاثةُ أقسام (المرحلة الأولى/الثانية/الثالثة) بجدولٍ كصورة المستخدم: الدورات · عدد الأجزاء · تفصيل الأجزاء (`a – b` بالأرقام) · وصف السور · **حدودُها من التقسيمة** (`cycleSpanLabel`: «من الناس 1 إلى المجادلة 22»)؛ والدورةُ الخامسة مُبرزة (صفٌّ بخلفية `--navy`/نصٍّ فاتح بالمتغيّرات). المديران الإداري والفني: زرّ «تعديل» لكلّ دورة (نافذة: من جزء، إلى جزء، وصف السور؛ تحقّقٌ 1 ≤ من ≤ إلى ≤ 30)؛ والبقيّةُ قراءة.
 - **تبويب «تقسيمة الأجزاء»:** جدول `program_juz` 30 ← 1: رقم الجزء · بدايته (`<سورة> <آية>` باسم السورة من `useQuranReference`) · نهايته؛ والجزء 1 ينتهي «الفاتحة 7».
 - الجوال: بطاقاتٌ بنمط الحاوية. لا تمرير أفقيّ على 375.
 - [ ] التنفيذ ← lint/test/vue-tsc ← Commit `feat(exams): خطةُ الاختبارات بالمراحل الثلاث وتقسيمةُ الأجزاء`.
@@ -109,7 +114,7 @@ export function reachedHint(c: ExamCycle, juzReached: number): string | null   /
 ### Task 4: شاشةُ الاختبارات — الترشيح والرصد والنتائج بالدورات
 
 **Files:** Modify `app/pages/exams/index.vue` (يُقسَّم إن تجاوز 300 سطر إلى `app/components/exams/Nominate.vue` و`GradeQueue.vue`)، `app/components/exams/GradeModal.vue`، `app/components/exams/ResultsBrowser.vue`.
-- **الترشيح (المعلم):** لكلّ طالبٍ نشط دورتُه المستحقّة ثابتةً (`dueCycle`) بعرض `cycleLabel` + `cycleRange`، وحالةٌ «بانتظار رصد المختبِر» أو «أتمّ الخطة»؛ وتلميحُ `reachedHint` بالأجزاء المكتملة المعتمدة (`completedJuz` لآخر نهايةٍ معتمَدة من `quran_records` — عبر `useQuranMonth` أو استعلامٍ واحد بـ`in(student_id)`) — تلميحٌ لا منع. الإرسال يُدرج `exam_list_items` بـ`exam_cycle_id` (لا `exam_plan_id`).
+- **الترشيح (المعلم):** لكلّ طالبٍ نشط دورتُه المستحقّة ثابتةً (`dueCycle`) بعرض `cycleLabel` + `cycleRange` + `cycleSpanLabel` (حدودها من التقسيمة)، وكذلك في طابور الرصد ونافذة الرصد عند المختبِر، وحالةٌ «بانتظار رصد المختبِر» أو «أتمّ الخطة»؛ وتلميحُ `reachedHint` بالأجزاء المكتملة المعتمدة (`completedJuz` لآخر نهايةٍ معتمَدة من `quran_records` — عبر `useQuranMonth` أو استعلامٍ واحد بـ`in(student_id)`) — تلميحٌ لا منع. الإرسال يُدرج `exam_list_items` بـ`exam_cycle_id` (لا `exam_plan_id`).
 - **طابور الرصد (المختبِر والمديران):** البنود بـ`exam_cycle_id` بلا نتيجة، بعرض الدورة؛ و**البنود القديمة** (`exam_plan_id` بلا دورة) تُعرض بنطاقها القديم كما هي حتى تُحذف.
 - **GradeModal:** نصُّ «المجموع من 100» ← «من 99»، والبقيّة كما هي.
 - **ResultsBrowser:** الدورةُ بدل النطاق القديم؛ وفلاتر كما هي.

@@ -2,7 +2,7 @@
 /**
  * نافذةُ رصد شهرٍ لطالب: من سورة/آية (افتراضاً ما يلي آخرَ ما رُصد له) إلى سورة/آية بترتيب الحفظ
  * (من الناس إلى الفاتحة)، والصفحاتُ تُحسب من الموضعين عند كلّ تغيير ويعدّلها المعلم (0–604)،
- * وصفحاتُ المراجعة (اختيارية) والملاحظات. «لم يحفظ جديداً» يُفرغ المواضع ويجعل الصفحاتِ صفراً.
+ * وصفحاتُ المراجعة (اختيارية؛ في السجلّ الجديد تتبع المحفوظةَ حتى يعدّلها المعلم بيده — طلب المستخدم 2026-10-19) والملاحظات. «لم يحفظ جديداً» يُفرغ المواضع ويجعل الصفحاتِ صفراً.
  * البحثُ في السور عربيٌّ متسامح (`filterByLabel`، و«ياسين» لـ«يس»)، والتحقّقُ هنا تجربةٌ والحكمُ للقاعدة.
  * `readOnly`: عرضٌ بلا حفظ.
  */
@@ -38,6 +38,8 @@ const fromQuery = ref('')
 const toQuery = ref('')
 // الملءُ من السجلّ لا يُعيد حسابَ الصفحات (رقمُ المعلم المحفوظ يبقى كما سلّمه)
 let hydrating = false
+/** المراجعةُ تتبع المحفوظة في السجلّ الجديد، وتنفصل عنها حين يكتبها المعلم بيده. */
+const reviewFollows = ref(false)
 
 const from = computed<Position>(() => ({ surah: state.fromSurah, ayah: state.fromAyah ?? 0 }))
 const to = computed<Position>(() => ({ surah: state.toSurah, ayah: state.toAyah ?? 0 }))
@@ -49,14 +51,16 @@ watch([open, () => props.row], ([isOpen, row]) => {
   const rec = row.record
   const start = rec?.from ?? row.suggestedFrom ?? PATH_START
   const end = rec?.to ?? start
+  const pages = rec ? rec.pagesMemorized : row.suggestedFrom ? autoPages(start, end) ?? 0 : 0
+  reviewFollows.value = !rec
   Object.assign(state, {
     none: rec ? rec.from === null : row.suggestedFrom === null,
     fromSurah: start.surah,
     fromAyah: start.ayah,
     toSurah: end.surah,
     toAyah: end.ayah,
-    pages: rec ? rec.pagesMemorized : row.suggestedFrom ? autoPages(start, end) ?? 0 : 0,
-    reviewed: rec?.pagesReviewed ?? null,
+    pages,
+    reviewed: rec ? rec.pagesReviewed : pages || null,
     notes: rec?.notes ?? ''
   })
   fromQuery.value = ''
@@ -75,6 +79,15 @@ watch(() => [state.none, state.fromSurah, state.fromAyah, state.toSurah, state.t
   if (toMax && (state.toAyah ?? 0) > toMax) state.toAyah = toMax
   state.pages = state.none ? 0 : autoPages(from.value, to.value) ?? state.pages
 })
+
+// «لم يحفظ جديداً» لا يُصفّر المراجعة: قد يراجع من لم يحفظ
+watch(() => state.pages, (p) => {
+  if (hydrating || props.readOnly || !reviewFollows.value || state.none) return
+  state.reviewed = p || null
+})
+function onReviewedInput() {
+  if (!hydrating) reviewFollows.value = false
+}
 
 const surahOptions = computed(() => [...surahs.value].reverse().map(s => ({
   label: `${s.number}. ${s.name}`,
@@ -204,7 +217,7 @@ function save() {
           </UFormField>
           <UFormField
             label="صفحات المراجعة"
-            hint="اختياري"
+            :hint="reviewFollows && !state.none ? 'مثل المحفوظة' : 'اختياري'"
           >
             <UInputNumber
               v-model="state.reviewed"
@@ -213,6 +226,7 @@ function save() {
               :disabled="locked"
               size="lg"
               class="w-full"
+              @update:model-value="onReviewedInput"
             />
           </UFormField>
         </div>
@@ -279,7 +293,8 @@ function save() {
 
 <style scoped>
 .rec { display: flex; flex-direction: column; gap: 16px; }
-.range { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 12px; }
+/* المحاذاةُ من الأسفل: عنوانٌ بتلميحٍ ينكسر سطرين على الشاشة الضيّقة كان يُنزل مربّعَه عن جاره */
+.range { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 12px; align-items: end; }
 .range.pair { grid-template-columns: 1fr 1fr; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .err { margin: 0; padding: 10px 14px; border-radius: var(--r-control); background: var(--err-soft); color: var(--err); font-size: 14px; font-weight: 600; }

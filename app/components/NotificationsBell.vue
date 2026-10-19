@@ -2,7 +2,8 @@
 /**
  * جرسُ الشريط العلوي بقسمين: «بانتظارك» (طوابيرُ محسوبة من useNotifications)
  * و«الإشعارات» (أخبارٌ مخزّنة من useInbox). العدّاد = غيرُ المقروء + ما ينتظر بعد إسقاط ما يمثّله خبرٌ غيرُ مقروء.
- * الضغط على خبرٍ يعلّمه مقروءاً وينتقل إلى رابطه.
+ * الضغطُ على أيّ بندٍ يُغلق القائمة فوراً وينتقل إلى رابطه (طلب المستخدم 2026-10-19)، والخبرُ يُعلَّم مقروءاً
+ * في الخلفية — كانت القائمةُ تبقى مفتوحةً فوق الصفحة الجديدة، والانتقالُ ينتظر التعليم.
  * عند وصول إشعارٍ جديد يهتزّ الجرس ويرنّ (صوتٌ مولَّد بلا ملفّ)؛ ولا حركة مع prefers-reduced-motion.
  */
 import { notificationIcon } from '~/constants/notifications'
@@ -59,17 +60,22 @@ onUnmounted(() => {
   if (ringTimer) clearTimeout(ringTimer)
 })
 const now = ref(new Date())
+const open = ref(false)
+watch(open, (o) => {
+  if (o) now.value = new Date()
+})
 
 async function openRow(row: InboxRow) {
-  if (!row.read_at) await markRead([row.id])
+  open.value = false
+  if (!row.read_at) void markRead([row.id])
   if (row.link) await navigateTo(row.link)
 }
 </script>
 
 <template>
   <UPopover
+    v-model:open="open"
     :ui="{ content: 'w-96 max-w-[94vw]' }"
-    @update:open="(o: boolean) => { if (o) now = new Date() }"
   >
     <div class="bell-wrap">
       <button
@@ -101,6 +107,7 @@ async function openRow(row: InboxRow) {
             :key="n.id"
             :to="n.to"
             class="notif-item"
+            @click="open = false"
           >
             <UIcon
               :name="n.icon"

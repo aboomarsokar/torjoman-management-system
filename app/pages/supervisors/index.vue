@@ -10,7 +10,8 @@ definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'المشرفون — ترجمان' })
 
 const supabase = useSupabaseClient<Database>()
-const { isManager, isReadOnly } = usePermissions()
+// role: ما دام فارغاً لا قفل ولا محتوى (كان القفل يومض للمدير عند التحميل الكامل)
+const { role, isManager, isReadOnly } = usePermissions()
 const canView = computed(() => isManager.value || isReadOnly.value)
 
 type Row = { id: string, name: string, employeeNumber: string | null, halqat: number, commitment: number | null }
@@ -46,7 +47,8 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
       commitment: a && a.due > 0 ? Math.round(a.done / a.due * 100) : null
     }
   })
-}, { server: false, default: () => [] })
+  // يُعاد الجلب حين يصل الدور: عند التحميل الكامل يُستدعى قبل الملف فيردّ [] (كانت الصفحة تقول «لا مشرفين»)
+}, { server: false, default: () => [], watch: [canView] })
 
 const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'success' : c >= 70 ? 'info' : 'error'
 </script>
@@ -59,12 +61,12 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
     />
 
     <UiEmptyState
-      v-if="!canView"
+      v-if="role && !canView"
       icon="i-lucide-lock"
       title="هذه الصفحة للمدير الإداري والمدير الفني."
     />
 
-    <ClientOnly v-else>
+    <ClientOnly v-else-if="canView">
       <div
         v-if="pending"
         class="grid"

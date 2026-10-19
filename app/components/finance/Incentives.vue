@@ -119,6 +119,33 @@ async function reopen() {
   }
 }
 
+// ترحيل التخصيص المعتمد كحركة «صادر/حوافز» — حركةٌ واحدة للشهر (source_key)، وإعادة الترحيل تُحدّثها.
+// كانت الحوافز المعتمدة لا تدخل الملف المالي أصلاً فيبدو الرصيد أعلى من حقيقته.
+async function postAsTransaction() {
+  if (total.value <= 0) {
+    toast.add({ title: 'لا مبلغ لترحيله.', color: 'warning', icon: 'i-lucide-info' })
+    return
+  }
+  working.value = true
+  try {
+    const { error } = await supabase.from('financial_transactions').upsert({
+      transaction_date: new Date().toISOString().slice(0, 10),
+      description: `حوافز الحلقات ${monthName(month.value)} ${year.value}`,
+      category: 'حوافز', type: 'expense', amount: total.value, created_by: profile.value?.id ?? null,
+      source_key: monthSourceKey('incentives', month.value, year.value)
+    }, { onConflict: 'source_key' })
+    if (error) throw error
+    toast.add({ title: 'رُحّلت كحركة «صادر/حوافز» (تُحدَّث إن أُعيد الترحيل).', color: 'success', icon: 'i-lucide-arrow-left-right' })
+  } catch (err) {
+    handle(err)
+  } finally {
+    working.value = false
+  }
+}
+
+// الشهر الجاري يُحمَّل عند الفتح (كان يُطلب ضغط «تحميل» أولاً على شاشةٍ فارغة)
+onMounted(load)
+
 async function markReviewed(s: StmtRow) {
   try {
     const { error } = await supabase.from('incentive_statements').update({ status: 'reviewed', reviewed_by: profile.value?.id ?? null, reviewed_at: new Date().toISOString() }).eq('id', s.id)
@@ -251,17 +278,28 @@ async function markReviewed(s: StmtRow) {
               :ui="{ base: 'rounded-[13px] font-semibold' }"
               @click="approveAlloc"
             />
-            <UButton
-              v-else-if="!isReadOnly"
-              label="فتح للتعديل"
-              color="neutral"
-              variant="outline"
-              size="lg"
-              icon="i-lucide-lock-open"
-              :loading="working"
-              :ui="{ base: 'rounded-[13px]' }"
-              @click="reopen"
-            />
+            <template v-else-if="!isReadOnly">
+              <UButton
+                label="فتح للتعديل"
+                color="neutral"
+                variant="outline"
+                size="lg"
+                icon="i-lucide-lock-open"
+                :loading="working"
+                :ui="{ base: 'rounded-[13px]' }"
+                @click="reopen"
+              />
+              <UButton
+                label="ترحيل كحركة"
+                color="neutral"
+                variant="outline"
+                size="lg"
+                icon="i-lucide-arrow-left-right"
+                :loading="working"
+                :ui="{ base: 'rounded-[13px]' }"
+                @click="postAsTransaction"
+              />
+            </template>
           </div>
         </template>
 

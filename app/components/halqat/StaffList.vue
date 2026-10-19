@@ -2,20 +2,25 @@
 /**
  * طاقم الحلقة مكدَّساً (المعلم ثم المشرف ثم المختبِر، والطلاب اختياراً) — لعمود «الطاقم»
  * في الحاوية المتوسطة ولبطاقات الجوال. الخانة الشاغرة تُكتب بلونٍ أخفت لتُلحظ.
+ * المسمّيات بجنس الحلقة: طاقم حلقة البنات من جنسها (حارس guard_halaqa_staff).
  */
 const props = defineProps<{
   teacher: string | null
   supervisor: string | null
   examiner: string | null
   students?: number
+  gender?: 'male' | 'female' | null
 }>()
 
-const rows = computed(() => [
-  { label: 'المعلّم', value: props.teacher ?? '—', empty: !props.teacher },
-  { label: 'المشرف', value: props.supervisor ?? 'بلا مشرف', empty: !props.supervisor },
-  { label: 'المختبِر', value: props.examiner ?? 'بلا مختبِر', empty: !props.examiner },
-  ...(props.students === undefined ? [] : [{ label: 'الطلاب', value: String(props.students), empty: props.students === 0 }])
-])
+const rows = computed(() => {
+  const f = props.gender === 'female'
+  return [
+    { label: f ? 'المعلّمة' : 'المعلّم', value: props.teacher ?? '—', empty: !props.teacher },
+    { label: f ? 'المشرفة' : 'المشرف', value: props.supervisor ?? (f ? 'بلا مشرفة' : 'بلا مشرف'), empty: !props.supervisor },
+    { label: f ? 'المختبِرة' : 'المختبِر', value: props.examiner ?? (f ? 'بلا مختبِرة' : 'بلا مختبِر'), empty: !props.examiner },
+    ...(props.students === undefined ? [] : [{ label: f ? 'الطالبات' : 'الطلاب', value: String(props.students), empty: props.students === 0 }])
+  ]
+})
 </script>
 
 <template>

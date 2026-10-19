@@ -14,6 +14,7 @@ const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
+// role (من useProfile أعلاه): ما دام فارغاً لا قفل ولا محتوى (كان «للمعلّم» يومض للمدير عند التحميل الكامل)
 const { isTeacher, canApprove, isReadOnly } = usePermissions()
 const canReview = computed(() => canApprove.value || isReadOnly.value)
 
@@ -150,12 +151,12 @@ const fmt = (n: number) => n.toLocaleString('ar')
     />
 
     <UiEmptyState
-      v-else-if="!isTeacher"
+      v-else-if="role && !isTeacher"
       icon="i-lucide-lock"
       title="هذه الصفحة للمعلّم."
     />
 
-    <template v-else>
+    <template v-else-if="isTeacher">
       <!-- المُحدِّدات -->
       <div class="card pick">
         <div class="pick-fields">

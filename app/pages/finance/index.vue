@@ -6,7 +6,8 @@
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الملف المالي — ترجمان' })
 
-const { isAdmin, isReadOnly } = usePermissions()
+// role: ما دام فارغاً (الملف لم يصل بعد) لا قفل ولا محتوى — كان القفل يومض للمدير نفسه عند التحميل الكامل
+const { role, isAdmin, isReadOnly } = usePermissions()
 const canView = computed(() => isAdmin.value || isReadOnly.value)
 
 const tabs = [
@@ -26,12 +27,12 @@ const tab = ref('overview')
     />
 
     <UiEmptyState
-      v-if="!canView"
+      v-if="role && !canView"
       icon="i-lucide-lock"
       title="هذه الصفحة للمدير الإداري فقط."
     />
 
-    <template v-else>
+    <template v-else-if="canView">
       <div class="tabs">
         <button
           v-for="t in tabs"

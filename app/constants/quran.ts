@@ -9,6 +9,18 @@ export const PROGRAM_JUZ_COUNT = 30
 /** صفحاتُ الجزء بحساب المعلّمين (604 ÷ 30 ≈ 20.13 فيُعَدّ عشرين) — فلا كسورَ عشرية. */
 export const PAGES_PER_JUZ = 20
 
+/**
+ * أوّلُ شهرٍ يُقسَّط فيه المطلوبُ بالحضور. رصدُ الحضور أُطلق في 19/10/2026، فالشهرُ 10 وما قبله
+ * مطلوبُه كاملٌ للجميع (قرار 2026-10-19) — لا نسبةَ على شهرٍ لم يُسجَّل حضورُه كلُّه.
+ */
+export const ATTENDANCE_PRORATION_FROM = { year: 2026, month: 11 } as const
+
+/** هل يُقسَّط مطلوبُ هذا الشهر بالحضور؟ */
+export function prorationApplies(year: number, month: number): boolean {
+  const from = ATTENDANCE_PRORATION_FROM
+  return year > from.year || (year === from.year && month >= from.month)
+}
+
 /** نهايةُ المسار: الفاتحة 1:7 — من بلغها ختم. */
 export const KHATM_POSITION = { surah: 1, ayah: 7 } as const
 

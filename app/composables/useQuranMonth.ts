@@ -5,6 +5,7 @@
  */
 import type { Ref } from 'vue'
 import type { Database } from '~/types/database.types'
+import { prorationApplies } from '~/constants/quran'
 import type { Position } from '~/utils/quran/position'
 import { buildStudentRows } from '~/utils/quran/month'
 import type { QuranRecordRow, ReportHeader, StudentMonthRow } from '~/utils/quran/month'
@@ -93,6 +94,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
         previousEnds: latestEnds(history, before, false),
         approvedEnds: latestEnds(history, { year: y, month: m + 1 }, true),
         days: (daysRes.data ?? []).map(d => d.day),
+        prorate: prorationApplies(y, m),
         absences: absencesRes.data ?? [],
         target: reportRes.data?.target_pages_snapshot ?? settings.data?.target_memorization_pages ?? null,
         juz: reference.juz.value,

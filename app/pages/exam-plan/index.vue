@@ -1,234 +1,178 @@
 <script setup lang="ts">
 /**
- * خطة الاختبارات (§4.11).
- * كل مجموعة محطّتان: مرحلي (3 أجزاء) وتجميعي (5)، مخزّنتان كصفّين في exam_plan.
- * تُعرض كصفّ واحد لكل مجموعة. التعديل/الإضافة/الحذف للمديرَين، والبقية للاطّلاع.
+ * خطة الاختبارات المرحلية — تبويبان: «الخطة» (ثلاث مراحل × خمس دورات من `exam_cycles`، وحدودُ كلّ دورةٍ
+ * من تقسيمة البرنامج) و«تقسيمة الأجزاء» (`program_juz`، 30 ← 1).
+ * التعديل (من جزء، إلى جزء، وصف السور) للمديرَين الإداري والفني بتحديثٍ واحد؛ والحكمُ الأخير لقاعدة
+ * البيانات: قيدُ الاحتواء (دورة 2 ⊇ 1، 4 ⊇ 3، 5 ⊇ 1–4 داخل المرحلة) تردّ رسالتَه العربيّة فتُعرض كما هي.
  */
 import type { Database } from '~/types/database.types'
+import { CYCLE_COLUMNS, CYCLE_LABELS, STAGE_LABELS, toExamCycle } from '~/utils/exams/cycles'
+import type { ExamCycle } from '~/utils/exams/cycles'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'خطة الاختبارات — ترجمان' })
 
-type PlanRow = Database['public']['Tables']['exam_plan']['Row']
-type Group = { group_number: number, partial: PlanRow | null, cumulative: PlanRow | null }
-
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-/** التعديل للمديرَين (الإداري والفني) كما يسمح RLS؛ مشرف المشروع وغيره للاطّلاع. */
+/** التعديل للمديرَين كما يسمح RLS ومنحُ الأعمدة؛ مشرف المشروع وغيره للاطّلاع. */
 const { isManager } = usePermissions()
+const quran = useQuranReference()
 
-// جلب غير حاجز: لا يوقف عرض الصفحة، والسكيلتون يغطّي انتظار البيانات
-const { data: rows, refresh, pending } = useLazyAsyncData<PlanRow[]>(
-  'exam-plan',
+const tab = ref<'plan' | 'juz'>('plan')
+const tabs = [
+  { value: 'plan' as const, label: 'الخطة' },
+  { value: 'juz' as const, label: 'تقسيمة الأجزاء' }
+]
+const STAGES = [1, 2, 3]
+
+// جلب غير حاجز: السكيلتون يغطّي الانتظار
+const { data: cycles, refresh, pending } = useLazyAsyncData<ExamCycle[]>(
+  'exam-cycles',
   async () => {
-    const { data, error } = await supabase.from('exam_plan').select('*').order('group_number')
+    const { data, error } = await supabase
+      .from('exam_cycles')
+      .select(CYCLE_COLUMNS)
+      .order('stage_number')
+      .order('cycle_number')
     if (error) {
-      console.error('[exam-plan] فشل الجلب:', error.message)
+      handle(error)
       return []
     }
-    return data ?? []
+    return (data ?? []).map(toExamCycle)
   },
   { server: false, default: () => [] }
 )
-
-const groups = computed<Group[]>(() => {
-  const map = new Map<number, Group>()
-  for (const r of rows.value ?? []) {
-    const g = map.get(r.group_number) ?? { group_number: r.group_number, partial: null, cumulative: null }
-    if (r.stage_type === 'partial') g.partial = r
-    else g.cumulative = r
-    map.set(r.group_number, g)
-  }
-  return [...map.values()].sort((a, b) => a.group_number - b.group_number)
-})
-const range = (r: PlanRow | null) => r ? `${r.parts_from} – ${r.parts_to}` : '—'
-
-const columns = computed(() => {
-  const base = [
-    { key: 'num', label: '#' },
-    { key: 'group_number', label: 'المجموعة' },
-    { key: 'partial', label: 'مرحلي (3 أجزاء)' },
-    { key: 'cumulative', label: 'تجميعي (5 أجزاء)' }
-  ]
-  return isManager.value ? [...base, { key: 'actions', label: 'إجراءات', align: 'end' as const }] : base
+// فشلُ مراجع القرآن (يُعرض خطؤه من useQuranReference) لا يُدوِّر الهيكلَ للأبد:
+// الخطةُ تظهر بلا حدود السور، وتبويبُ التقسيمة يعرض حالةً فارغة
+const quranTried = ref(false)
+onMounted(async () => {
+  await quran.load()
+  quranTried.value = true
 })
 
-// ── إضافة/تعديل ──
+const byStage = (n: number) => (cycles.value ?? []).filter(c => c.stage_number === n)
+const loading = computed(() => pending.value || (!quran.ready.value && !quranTried.value))
+
+// ── تعديل دورة ──
 const modalOpen = ref(false)
 const saving = ref(false)
-const editing = ref<Group | null>(null)
-const form = reactive({ group_number: '', p_from: '', p_to: '', c_from: '', c_to: '' })
+const editing = ref<ExamCycle | null>(null)
+const form = reactive({ parts_from: '', parts_to: '', surahs_label: '' })
 
-function nextGroupNumber() {
-  const max = Math.max(0, ...groups.value.map(g => g.group_number))
-  return String(max + 1)
-}
-function openCreate() {
-  editing.value = null
-  Object.assign(form, { group_number: nextGroupNumber(), p_from: '', p_to: '', c_from: '', c_to: '' })
+function openEdit(c: ExamCycle) {
+  editing.value = c
+  Object.assign(form, { parts_from: String(c.parts_from), parts_to: String(c.parts_to), surahs_label: c.surahs_label })
   modalOpen.value = true
 }
-function openEdit(g: Group) {
-  editing.value = g
-  Object.assign(form, {
-    group_number: String(g.group_number),
-    p_from: g.partial ? String(g.partial.parts_from) : '',
-    p_to: g.partial ? String(g.partial.parts_to) : '',
-    c_from: g.cumulative ? String(g.cumulative.parts_from) : '',
-    c_to: g.cumulative ? String(g.cumulative.parts_to) : ''
-  })
-  modalOpen.value = true
+
+/** يحوّل نصَّ الخانة إلى عددٍ صحيحٍ في 1–30، وإلا null — مصدرٌ واحدٌ للتحقّق وللحفظ. */
+function toJuz(v: string): number | null {
+  const n = v.trim() === '' ? Number.NaN : Number(v)
+  return Number.isInteger(n) && n >= 1 && n <= 30 ? n : null
 }
 
 function validate(s: typeof form) {
   const errors: { name: string, message: string }[] = []
-  const n = (v: string) => Number.parseInt(v, 10)
-  if (!s.group_number || n(s.group_number) <= 0) errors.push({ name: 'group_number', message: 'رقم المجموعة مطلوب.' })
-  for (const [f, t, key] of [[s.p_from, s.p_to, 'p_to'], [s.c_from, s.c_to, 'c_to']] as const) {
-    if (!f || !t) errors.push({ name: key, message: 'حدّد المدى كاملاً.' })
-    else if (n(f) < 1 || n(t) > 30 || n(f) > n(t)) errors.push({ name: key, message: 'مدى غير صحيح (1–30، من ≤ إلى).' })
-  }
+  const from = toJuz(s.parts_from)
+  const to = toJuz(s.parts_to)
+  if (from === null) errors.push({ name: 'parts_from', message: 'رقمٌ صحيحٌ من 1 إلى 30.' })
+  if (to === null) errors.push({ name: 'parts_to', message: 'رقمٌ صحيحٌ من 1 إلى 30.' })
+  else if (from !== null && from > to) errors.push({ name: 'parts_to', message: 'يجب ألّا يقلّ «إلى» عن «من».' })
+  if (!s.surahs_label.trim()) errors.push({ name: 'surahs_label', message: 'وصف السور مطلوب.' })
   return errors
 }
 
 async function save() {
+  if (!editing.value) return
+  const from = toJuz(form.parts_from)
+  const to = toJuz(form.parts_to)
+  if (from === null || to === null || from > to) return
   saving.value = true
   try {
-    const gn = Number.parseInt(form.group_number, 10)
-    const partial = { group_number: gn, parts_from: +form.p_from, parts_to: +form.p_to, stage_type: 'partial' as const }
-    const cumulative = { group_number: gn, parts_from: +form.c_from, parts_to: +form.c_to, stage_type: 'cumulative' as const }
-
-    const ops: PromiseLike<{ error: unknown }>[] = []
-    const pId = editing.value?.partial?.id
-    const cId = editing.value?.cumulative?.id
-    ops.push(pId ? supabase.from('exam_plan').update(partial).eq('id', pId) : supabase.from('exam_plan').insert(partial))
-    ops.push(cId ? supabase.from('exam_plan').update(cumulative).eq('id', cId) : supabase.from('exam_plan').insert(cumulative))
-    const results = await Promise.all(ops)
-    const failed = results.find(r => r.error)
-    if (failed?.error) throw failed.error
-
-    toast.add({ title: editing.value ? 'تم تحديث المجموعة.' : 'تمت إضافة المجموعة.', color: 'success', icon: 'i-lucide-circle-check' })
+    const { data, error } = await supabase
+      .from('exam_cycles')
+      .update({ parts_from: from, parts_to: to, surahs_label: form.surahs_label.trim() })
+      .eq('id', editing.value.id)
+      .select('id')
+    if (error) throw error
+    // تحديثٌ لم يمسّ صفّاً (تصفيةُ RLS) ليس نجاحاً
+    if (!data?.length) throw new Error('لم يُحفظ التعديل — قد لا تملك هذه الخطوة.')
+    toast.add({ title: 'تم تحديث الدورة.', color: 'success', icon: 'i-lucide-circle-check' })
     modalOpen.value = false
     await refresh()
   } catch (err) {
+    // رسالةُ القاعدة العربيّة (قيد الاحتواء) تُعرض كما هي
     handle(err)
   } finally {
     saving.value = false
   }
 }
 
-// ── حذف ──
-const deleteTarget = ref<Group | null>(null)
-const deleting = ref(false)
-async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    const ids = [deleteTarget.value.partial?.id, deleteTarget.value.cumulative?.id].filter((x): x is number => x != null)
-    const { error } = await supabase.from('exam_plan').delete().in('id', ids)
-    if (error) throw error
-    toast.add({ title: 'تم حذف المجموعة.', color: 'neutral', icon: 'i-lucide-trash-2' })
-    deleteTarget.value = null
-    await refresh()
-  } catch (err) {
-    handle(err)
-  } finally {
-    deleting.value = false
-  }
-}
+const editTitle = computed(() => editing.value
+  ? `تعديل ${CYCLE_LABELS[editing.value.cycle_number] ?? ''} — ${STAGE_LABELS[editing.value.stage_number] ?? ''}`
+  : 'تعديل الدورة')
 </script>
 
 <template>
   <div class="plan">
     <UiPageHeader
       title="خطة الاختبارات"
-      subtitle="يستحقّ الطالب الاختبار عند بلوغ محطته — مرحلي (3 أجزاء) ثم تجميعي (5 أجزاء)."
-    >
-      <template #actions>
-        <UButton
-          v-if="isManager"
-          label="إضافة مجموعة"
-          color="primary"
-          size="lg"
-          icon="i-lucide-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
-          @click="openCreate"
-        />
-      </template>
-    </UiPageHeader>
+      subtitle="ثلاث مراحل، لكلٍّ منها خمس دورات؛ والدورة الخامسة تجمع الأربع قبلها. حدودُ كلّ دورةٍ تُحسب من تقسيمة الأجزاء."
+    />
+
+    <UiFilterChips
+      v-model="tab"
+      :options="tabs"
+      class="tabs"
+    />
 
     <ClientOnly>
-      <UiSkeletonTable
-        v-if="pending"
-        :columns="columns"
-      />
+      <template v-if="loading">
+        <UiSkeletonTable :columns="[{ key: 'a', label: 'الدورات' }, { key: 'b', label: 'عدد الأجزاء' }, { key: 'c', label: 'وصف السور' }]" />
+      </template>
+      <template v-else-if="tab === 'plan'">
+        <UiEmptyState
+          v-if="!cycles?.length"
+          icon="i-lucide-list-ordered"
+          title="لا دورات بعد"
+          description="لم تُحمَّل دوراتُ الاختبار."
+        />
+        <template v-else>
+          <ExamsPlanStage
+            v-for="n in STAGES"
+            :key="n"
+            :stage="n"
+            :cycles="byStage(n)"
+            :juz="quran.juz.value"
+            :surah-name="quran.surahName"
+            :can-edit="isManager"
+            @edit="openEdit"
+          />
+          <p
+            v-if="!isManager"
+            class="note"
+          >
+            الخطةُ للاطّلاع؛ تعديلُها للمديرَين الإداري والفني.
+          </p>
+        </template>
+      </template>
       <UiEmptyState
-        v-else-if="groups.length === 0"
-        icon="i-lucide-list-ordered"
-        title="لا مجموعات بعد"
-        description="أضِف أول مجموعة لتبدأ خطة الاختبارات."
+        v-else-if="!quran.ready.value"
+        icon="i-lucide-triangle-alert"
+        title="تعذّر تحميل تقسيمة الأجزاء"
+        description="أعد تحميل الصفحة للمحاولة مجدداً."
       />
-      <UiDataTable
+      <ExamsJuzTable
         v-else
-        :columns="columns"
-        :rows="groups"
-        row-key="group_number"
-      >
-        <template #num="{ index }">
-          <span class="muted">{{ index + 1 }}</span>
-        </template>
-        <template #group_number="{ row }">
-          <span class="g-num">المجموعة {{ row.group_number }}</span>
-        </template>
-        <template #partial="{ row }">
-          <span class="pill pill-blue">{{ range(row.partial) }}</span>
-        </template>
-        <template #cumulative="{ row }">
-          <span class="pill pill-green">{{ range(row.cumulative) }}</span>
-        </template>
-        <template #actions="{ row }">
-          <div class="actions">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="تعديل"
-              @click="openEdit(row)"
-            />
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-trash-2"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="حذف"
-              @click="deleteTarget = row"
-            />
-          </div>
-        </template>
-      </UiDataTable>
+        :juz="quran.juz.value"
+        :surah-name="quran.surahName"
+      />
     </ClientOnly>
 
-    <div class="note">
-      <UIcon
-        name="i-lucide-info"
-        class="size-5"
-      />
-      <p v-if="isManager">
-        بصفتك المدير يمكنك إضافة المجموعات وتعديلها وحذفها. المعلّم يحدّد نطاق اختبار الطالب من الخطة وفق مستواه.
-      </p>
-      <p v-else>
-        الخطة للاطّلاع، والمعلّم يحدّد نطاق اختبار الطالب منها وفق مستواه. تعديل الخطة صلاحية المدير.
-      </p>
-    </div>
-
-    <!-- نافذة إضافة/تعديل -->
     <UModal
       v-model:open="modalOpen"
-      :title="editing ? 'تعديل المجموعة' : 'إضافة مجموعة'"
+      :title="editTitle"
     >
       <template #body>
         <UForm
@@ -237,94 +181,55 @@ async function confirmDelete() {
           class="form"
           @submit="save"
         >
+          <div class="row">
+            <UFormField
+              label="من جزء"
+              name="parts_from"
+              class="f"
+            >
+              <UInput
+                v-model="form.parts_from"
+                type="number"
+                min="1"
+                max="30"
+                dir="ltr"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+            <UFormField
+              label="إلى جزء"
+              name="parts_to"
+              class="f"
+            >
+              <UInput
+                v-model="form.parts_to"
+                type="number"
+                min="1"
+                max="30"
+                dir="ltr"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+          </div>
           <UFormField
-            label="رقم المجموعة"
-            name="group_number"
+            label="وصف السور"
+            name="surahs_label"
+            help="مثل: المجادلة – الناس"
           >
             <UInput
-              v-model="form.group_number"
-              type="number"
-              min="1"
-              dir="ltr"
+              v-model="form.surahs_label"
               size="lg"
               class="w-full"
               :ui="{ base: 'rounded-[13px]' }"
             />
           </UFormField>
-          <div class="seg">
-            <span class="seg-title pill-blue">مرحلي (3 أجزاء)</span>
-            <div class="row">
-              <UFormField
-                label="من جزء"
-                name="p_from"
-                class="f"
-              >
-                <UInput
-                  v-model="form.p_from"
-                  type="number"
-                  min="1"
-                  max="30"
-                  dir="ltr"
-                  size="lg"
-                  class="w-full"
-                  :ui="{ base: 'rounded-[13px]' }"
-                />
-              </UFormField>
-              <UFormField
-                label="إلى جزء"
-                name="p_to"
-                class="f"
-              >
-                <UInput
-                  v-model="form.p_to"
-                  type="number"
-                  min="1"
-                  max="30"
-                  dir="ltr"
-                  size="lg"
-                  class="w-full"
-                  :ui="{ base: 'rounded-[13px]' }"
-                />
-              </UFormField>
-            </div>
-          </div>
-          <div class="seg">
-            <span class="seg-title pill-green">تجميعي (5 أجزاء)</span>
-            <div class="row">
-              <UFormField
-                label="من جزء"
-                name="c_from"
-                class="f"
-              >
-                <UInput
-                  v-model="form.c_from"
-                  type="number"
-                  min="1"
-                  max="30"
-                  dir="ltr"
-                  size="lg"
-                  class="w-full"
-                  :ui="{ base: 'rounded-[13px]' }"
-                />
-              </UFormField>
-              <UFormField
-                label="إلى جزء"
-                name="c_to"
-                class="f"
-              >
-                <UInput
-                  v-model="form.c_to"
-                  type="number"
-                  min="1"
-                  max="30"
-                  dir="ltr"
-                  size="lg"
-                  class="w-full"
-                  :ui="{ base: 'rounded-[13px]' }"
-                />
-              </UFormField>
-            </div>
-          </div>
+          <p class="hint">
+            عدّل الدورة الأوسع أوّلاً إن ضيّقت دورةً داخلها.
+          </p>
           <div class="form-actions">
             <UButton
               label="إلغاء"
@@ -336,7 +241,7 @@ async function confirmDelete() {
             />
             <UButton
               type="submit"
-              :label="editing ? 'حفظ التغييرات' : 'إضافة المجموعة'"
+              label="حفظ التغييرات"
               color="primary"
               size="lg"
               :loading="saving"
@@ -346,34 +251,14 @@ async function confirmDelete() {
         </UForm>
       </template>
     </UModal>
-
-    <!-- تأكيد الحذف -->
-    <UiConfirmModal
-      :open="!!deleteTarget"
-      title="حذف المجموعة"
-      :loading="deleting"
-      @update:open="v => { if (!v) deleteTarget = null }"
-      @confirm="confirmDelete"
-    >
-      هل أنت متأكّد من حذف «<strong>المجموعة {{ deleteTarget?.group_number }}</strong>» بمحطّتيها؟ لا يمكن التراجع.
-    </UiConfirmModal>
   </div>
 </template>
 
 <style scoped>
-.muted { color: var(--ink-2); }
-.g-num { font-weight: 600; color: var(--ink); white-space: nowrap; }
-.pill { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: 999px; font-size: 14.5px; font-weight: 700; }
-.pill-blue { background: var(--blue-soft); color: var(--blue-ink); }
-.pill-green { background: var(--green-soft); color: var(--green-ink); }
-.actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-
-.note { margin-top: 18px; padding: 16px 20px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; color: var(--blue-ink); }
-.note p { margin: 0; font-size: 15px; line-height: 1.8; color: var(--ink-2); }
-
+.tabs { margin-bottom: 18px; }
+.hint { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.note { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 .form { display: flex; flex-direction: column; gap: 16px; }
-.seg { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
-.seg-title { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }
 .row .f { flex: 1; min-width: 120px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }

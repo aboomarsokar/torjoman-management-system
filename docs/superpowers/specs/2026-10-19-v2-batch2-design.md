@@ -121,6 +121,8 @@
 
 ## الجزء ٣ — خطة الاختبارات المرحلية
 
+> **تعديلٌ عند التخطيط (2026-10-19):** تُبنى الدورات في **جدولٍ جديد `exam_cycles`** وعمودٍ `exam_list_items.exam_cycle_id` بجانب `exam_plan` القديم، لا بإعادة بناء `exam_plan` — لأنّ الكود المنشور يقرأ أعمدته وخادمَ التطوير على قاعدة الإنتاج؛ والقديمُ يُحذف بعد النشر بإذن المستخدم. الخطة: `docs/superpowers/plans/2026-10-19-staged-exams.md`.
+
 ### الخطة
 - `exam_plan` يُعاد بناؤه: `id`، `stage_number 1..3`، `cycle_number 1..5`، `parts_from`، `parts_to`، `surahs_label`، `sort_order` (= (المرحلة−1)×5 + الدورة). فريدٌ على `(stage_number, cycle_number)`، و`1 ≤ parts_from ≤ parts_to ≤ 30`. يُحذف `group_number` و`stage_type` ونوع `exam_stage_type`.
 - البذرة (15 دورة كما في صورة المستخدم):

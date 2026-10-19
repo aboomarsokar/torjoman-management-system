@@ -10,6 +10,8 @@ defineProps<{
   columns: { key: string, label: string, align?: 'start' | 'end' | 'center', class?: string }[]
   rows: T[]
   rowKey?: string
+  /** صنفٌ يُضاف لصفّ الجدول (لا للبطاقة) — لإبراز صفٍّ بعينه؛ التنسيقُ من الصفحة بـ`:deep()`. */
+  rowClass?: (row: T, index: number) => string | undefined
 }>()
 </script>
 
@@ -35,6 +37,7 @@ defineProps<{
           <tr
             v-for="(row, i) in rows"
             :key="rowKey ? String(row[rowKey]) : i"
+            :class="rowClass?.(row, i)"
           >
             <td
               v-for="c in columns"

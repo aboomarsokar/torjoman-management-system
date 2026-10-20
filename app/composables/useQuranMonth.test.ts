@@ -142,6 +142,36 @@ describe('buildStudentRows — النتيجة والسجلّ', () => {
   })
 })
 
+describe('buildStudentRows — رُصد في حلقته السابقة', () => {
+  it('بلا سجلٍّ في أيّ مكان ← recordedElsewhere=false', () => {
+    const [row] = build()
+    expect(row!.recordedElsewhere).toBe(false)
+    expect(row!.record).toBeNull()
+  })
+  it('سجلُّ هذه الحلقة وحدَه ← recordedElsewhere=false', () => {
+    const [row] = build({ records: [record()] })
+    expect(row!.recordedElsewhere).toBe(false)
+    expect(row!.record).not.toBeNull()
+  })
+  it('سجلٌّ في الخارج وحدَه ← الصفُّ يحمله، وrecordedElsewhere=true، والتصنيفُ من صفحاته', () => {
+    const [row] = build({ elsewhereRecords: [record({ id: 'old', pages_memorized: 35 })] })
+    expect(row!.recordedElsewhere).toBe(true)
+    expect(row!.record).toMatchObject({ id: 'old', pagesMemorized: 35 })
+    expect(row!.outcome).toBe('done')
+    expect(build({ elsewhereRecords: [record({ pages_memorized: 10 })] })[0]!.outcome).toBe('short')
+  })
+  it('سجلٌّ في الحلقة وفي الخارج ← سجلُّ الحلقة يغلب', () => {
+    const [row] = build({ records: [record({ id: 'mine' })], elsewhereRecords: [record({ id: 'old' })] })
+    expect(row!.record!.id).toBe('mine')
+    expect(row!.recordedElsewhere).toBe(false)
+  })
+  it('سجلُّ الخارج لطالبٍ ليس في القائمة يُتجاهل، ويُحتسب في ملخّص النتائج لمن هو فيها', () => {
+    expect(build({ elsewhereRecords: [record({ student_id: 'other' })] })[0]!.recordedElsewhere).toBe(false)
+    const summary = summarizeOutcomes(build({ elsewhereRecords: [record({ pages_memorized: 40 })] }))
+    expect(summary).toMatchObject({ done: 1, unrecorded: 0, recordedPct: 100 })
+  })
+})
+
 describe('buildStudentRows — الأجزاء المنجزة', () => {
   it('من آخر موضعٍ معتمَد لا من سجلّ الشهر الحاليّ', () => {
     const rows = build({

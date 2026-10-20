@@ -2,7 +2,7 @@
 /**
  * بطاقةُ طالبٍ في كشف الإنجاز القرآني — هويّةٌ ثمّ وقائعُ ثمّ فعل: الاسمُ وما وصل إليه من الأجزاء
  * (أو «خَتم»)، ثم شاراتُ الشهر (الصفحاتُ وأجزاؤها، المطلوبُ والتصنيف، الحضور، حالةُ الرصد)، ثم زرٌّ
- * «رصد» / «تعديل» / «عرض» بحسب ما يملكه الناظر (`cardAction`). لا منطقَ هنا غيرُ العرض.
+ * «رصد» / «تعديل» / «عرض» بحسب ما يملكه الناظر (`cardAction`)؛ وما رُصد في الحلقة السابقة تحمله شارةٌ محايدة بدل حالة تقرير هذه الحلقة ويُعرض للقراءة وحدَها. لا منطقَ هنا غيرُ العرض.
  */
 import { PROGRAM_JUZ_COUNT, monthlyJuzLabel } from '~/constants/quran'
 import type { StudentMonthRow } from '~/utils/quran/month'
@@ -78,7 +78,15 @@ const button = computed(() => props.action ? ACTIONS[props.action] : null)
         :label="row.daysHeld ? `حضر ${row.daysAttended} من ${row.daysHeld}` : 'لا أيامَ للحلقة بعد'"
       />
       <UBadge
-        v-if="record"
+        v-if="row.recordedElsewhere"
+        color="neutral"
+        variant="subtle"
+        size="lg"
+        icon="i-lucide-history"
+        label="رُصد في حلقته السابقة"
+      />
+      <UBadge
+        v-else-if="record"
         :color="REPORT_STATUS_COLORS[statusKey]"
         variant="subtle"
         size="lg"

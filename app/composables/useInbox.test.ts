@@ -2,7 +2,7 @@
  * دوالّ الصندوق النقيّة: دمجُ الوارد الفوريّ بلا تكرار، والتعليمُ المحلّيّ، والوقتُ النسبيّ.
  */
 import { describe, expect, it } from 'vitest'
-import { markRowsRead, mergeIncoming, mergeRows, newUnreadIds, pendingQueue, relativeTimeAr, type InboxRow } from './useInbox'
+import { markRowsRead, mergeIncoming, mergeRows, newUnreadIds, pendingQueue, relativeTimeAr, replacedBy, type InboxRow } from './useInbox'
 
 function row(id: string, created_at: string, read_at: string | null = null, source_id: string | null = null): InboxRow {
   return { id, kind: 'alert_issued', title: 't', body: null, link: '/alerts', source_id, read_at, created_at }
@@ -31,6 +31,30 @@ describe('mergeIncoming', () => {
   })
 })
 
+describe('الأخبارُ القابلة للاستبدال (transport_paid)', () => {
+  const paid = (id: string, at: string, link = '/transport?y=2026&m=10', read_at: string | null = null): InboxRow =>
+    ({ id, kind: 'transport_paid', title: 'سُدّدت رحلاتُك', body: null, link, source_id: null, read_at, created_at: at })
+
+  it('الواصلُ يُسقط غيرَ المقروء من نوعه ورابطه', () => {
+    const out = mergeIncoming([paid('old', '2026-10-20T08:00:00Z'), row('x', '2026-10-20T07:00:00Z')], paid('new', '2026-10-20T08:01:00Z'))
+    expect(out.map(r => r.id)).toEqual(['new', 'x'])
+  })
+  it('لا يُسقط المقروءَ ولا خبرَ شهرٍ آخر ولا نوعاً غيرَ قابلٍ للاستبدال', () => {
+    const current = [
+      paid('read', '2026-10-20T07:00:00Z', '/transport?y=2026&m=10', '2026-10-20T07:30:00Z'),
+      paid('sep', '2026-10-20T07:10:00Z', '/transport?y=2026&m=9'),
+      row('a', '2026-10-20T07:20:00Z'), row('b', '2026-10-20T07:25:00Z')
+    ]
+    expect(mergeIncoming(current, paid('new', '2026-10-20T08:00:00Z')).map(r => r.id)).toEqual(['new', 'b', 'a', 'sep', 'read'])
+    expect(replacedBy(row('a', '2026-10-20T07:20:00Z'), row('c', '2026-10-20T08:00:00Z'))).toBe(false)
+  })
+  it('القراءةُ الكاملة تُسقط صفّاً حُذف في القاعدة وليس أحدثَ منها', () => {
+    const current = [paid('old', '2026-10-20T08:00:00Z'), row('a', '2026-10-20T07:00:00Z')]
+    const fetched = [paid('new', '2026-10-20T08:01:00Z'), row('a', '2026-10-20T07:00:00Z')]
+    expect(mergeRows(current, fetched).map(r => r.id)).toEqual(['new', 'a'])
+  })
+})
+
 describe('mergeRows', () => {
   it('يُبقي صفّاً فوريّاً أحدثَ لم تلتقطه قراءةٌ بدأت قبله', () => {
     const current = [row('new', '2026-10-19T09:00:00Z'), row('a', '2026-10-19T08:00:00Z')]
@@ -55,7 +79,7 @@ describe('mergeRows', () => {
   })
 
   it('يقصّ عند الحدّ', () => {
-    const out = mergeRows([row('a', '2026-10-19T08:00:00Z')], [row('b', '2026-10-19T09:00:00Z'), row('c', '2026-10-19T07:00:00Z')], 2)
+    const out = mergeRows([row('a', '2026-10-19T08:00:00Z')], [row('b', '2026-10-19T09:00:00Z'), row('a', '2026-10-19T08:00:00Z'), row('c', '2026-10-19T07:00:00Z')], 2)
     expect(out.map(r => r.id)).toEqual(['b', 'a'])
   })
 })

@@ -64,13 +64,18 @@ const scoped = computed(() => (visits.value ?? []).filter(v =>
   && (supervisorF.value === 'all' || v.supervisor_id === supervisorF.value)))
 
 const statusF = ref<VisitDisplayStatus | 'all'>('all')
-const chipOptions = [
-  { value: 'all' as const, label: 'الكل' },
-  { value: 'scheduled' as const, label: 'مجدولة' },
-  { value: 'done' as const, label: 'في وقتها' },
-  { value: 'late' as const, label: 'متأخّرة' },
-  { value: 'missed' as const, label: 'فائتة' }
-]
+// الحالةُ قائمةٌ منسدلة في صفّ الفلاتر بعدد كلّ حالةٍ في الشهر والمشرف المختارَين (طلب المستخدم 2026-10-20)
+const statusItems = computed(() => {
+  const list = scoped.value.map(display)
+  const n = (s: VisitDisplayStatus) => list.filter(x => x === s).length
+  return [
+    { value: 'all' as const, label: `كل الحالات (${list.length})` },
+    { value: 'scheduled' as const, label: `مجدولة (${n('scheduled')})` },
+    { value: 'done' as const, label: `في وقتها (${n('done')})` },
+    { value: 'late' as const, label: `متأخّرة (${n('late')})` },
+    { value: 'missed' as const, label: `فائتة (${n('missed')})` }
+  ]
+})
 const filtered = computed(() => scoped.value.filter(v => statusF.value === 'all' || display(v) === statusF.value))
 const stats = computed(() => {
   const list = scoped.value.map(display)
@@ -156,17 +161,27 @@ async function confirmDelete() {
       <UiSelect
         v-model="period"
         :items="periodItems"
-        size="md"
+        size="xl"
         class="sel"
         aria-label="الشهر"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect
         v-if="!isFieldSupervisor"
         v-model="supervisorF"
         :items="supervisorItems"
-        size="md"
+        size="xl"
         class="sel wide"
         aria-label="المشرف"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
+      />
+      <UiSelect
+        v-model="statusF"
+        :items="statusItems"
+        size="xl"
+        class="sel"
+        aria-label="الحالة"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
     </div>
 
@@ -196,12 +211,6 @@ async function confirmDelete() {
         tone="blue"
       />
     </div>
-
-    <UiFilterChips
-      v-model="statusF"
-      :options="chipOptions"
-      class="mb-4"
-    />
 
     <ClientOnly>
       <UiSkeletonTable
@@ -362,16 +371,20 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
-.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-.sel { width: 150px; }
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; container: vfilters / inline-size; }
+.sel { width: 170px; }
 .sel.wide { width: 220px; }
+/* ضيّقٌ: القوائمُ تتقاسم الصفّ (والمشرفُ سطرٌ كامل للإدارة) بعرض الشريط لا الشاشة */
+@container vfilters (max-width: 599px) {
+  .sel { flex: 1 1 0; width: auto; min-width: 0; }
+  .sel.wide { flex-basis: 100%; order: -1; }
+}
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 22px; }
-.mb-4 { margin-bottom: 18px; }
 .strong { font-weight: 600; color: var(--ink); white-space: nowrap; }
 .visitor-cell { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
 @media (max-width: 1100px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) { .stats { grid-template-columns: 1fr 1fr; gap: 12px; } .sel, .sel.wide { flex: 1 1 140px; width: auto; } }
+@media (max-width: 560px) { .stats { grid-template-columns: 1fr 1fr; gap: 12px; } }
 </style>

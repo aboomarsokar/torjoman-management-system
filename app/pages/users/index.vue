@@ -56,10 +56,11 @@ function countFor(key: Role | 'all') {
   const list = users.value ?? []
   return key === 'all' ? list.length : list.filter(u => u.role === key).length
 }
-const chipOptions = computed(() => ([
-  { value: 'all' as const, label: 'الكل' },
+// قائمةٌ منسدلة بعدد كلّ دور (كانت ثمانيةَ أزرارٍ تأخذ ثلاثة أسطر على الجوال — طلب المستخدم 2026-10-20)
+const roleFilterItems = computed(() => ([
+  { value: 'all' as const, label: 'كل الأدوار' },
   ...STAFF_ROLES.map(r => ({ value: r, label: roleLabel(r, null) }))
-]).map(c => ({ ...c, count: countFor(c.value) })))
+]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
 // البحث بالاسم أو الرقم الوظيفي (يقبل الأرقام العربية) — فوق تصفية الدور
 const query = ref('')
 const filteredUsers = computed(() => (users.value ?? []).filter(u =>
@@ -205,9 +206,13 @@ async function confirmReset() {
           :total="(users ?? []).length"
           class="search"
         />
-        <UiFilterChips
+        <UiSelect
           v-model="filter"
-          :options="chipOptions"
+          :items="roleFilterItems"
+          size="xl"
+          class="filter-sel"
+          aria-label="الدور"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
         />
       </div>
 
@@ -484,9 +489,13 @@ async function confirmReset() {
 </template>
 
 <style scoped>
-.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; container: toolbar / inline-size; }
 .search { width: 300px; max-width: 100%; }
-@media (max-width: 600px) { .search { width: 100%; } }
+.filter-sel { width: 220px; }
+/* متى ضاق الشريطُ عن البحث والقائمة في سطر: كلٌّ منهما سطرٌ كامل (بعرض الشريط لا الشاشة) */
+@container toolbar (max-width: 539px) {
+  .search, .filter-sel { width: 100%; }
+}
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }

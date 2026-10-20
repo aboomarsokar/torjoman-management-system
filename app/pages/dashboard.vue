@@ -6,8 +6,6 @@
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
-import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
-import { buildJourney, upcomingLabel, type CycleResultInput } from '~/utils/journey'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'لوحة التحكم — ترجمان' })
@@ -96,57 +94,7 @@ watch(showOverview, (v) => {
   if (v) loadManagerData()
 }, { immediate: true })
 
-// ── لوحة المعلّم «حلقتي» ──
-type TeacherRow = { id: string, full_name: string, quran_parts: number | null, next: string, done: boolean }
-type TeacherExamResult = { student_id: string, passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }
-const myHalqa = ref<{ id: string, name: string, daily_time: string | null } | null>(null)
-const teacherRows = ref<TeacherRow[]>([])
-const teacherLoaded = ref(false)
-
-async function loadTeacherData() {
-  try {
-    const { data: h } = await supabase.from('halaqat').select('id, name, daily_time').eq('teacher_id', profile.value?.id ?? '').limit(1).maybeSingle()
-    myHalqa.value = h
-    if (!h) {
-      teacherRows.value = []
-      teacherLoaded.value = true
-      return
-    }
-    const [{ data: studs }, { data: cycleRows, error: cyclesError }, { data: examResults }] = await Promise.all([
-      supabase.from('students').select('id, full_name, quran_parts').eq('halaqa_id', h.id).eq('status', 'active').order('full_name'),
-      supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order'),
-      supabase.from('exam_results').select('student_id, passed, total_score, exam_list_item:exam_list_item_id(exam_cycle_id), student:student_id!inner(halaqa_id)').eq('student.halaqa_id', h.id).returns<TeacherExamResult[]>()
-    ])
-    if (cyclesError) handle(cyclesError)
-    const cycles = (cycleRows ?? []).map(toExamCycle)
-    // نتائج اختبارات طلاب الحلقة مجمّعة حسب الطالب — لتعكس «المحطة القادمة» المُجتاز فعلياً
-    const resultsByStudent = new Map<string, CycleResultInput[]>()
-    for (const r of examResults ?? []) {
-      const arr = resultsByStudent.get(r.student_id) ?? []
-      arr.push({ exam_cycle_id: r.exam_list_item?.exam_cycle_id ?? null, passed: r.passed, total_score: r.total_score })
-      resultsByStudent.set(r.student_id, arr)
-    }
-    teacherRows.value = (studs ?? []).map((s) => {
-      const j = buildJourney(s.quran_parts, cycles, resultsByStudent.get(s.id) ?? [])
-      return {
-        id: s.id,
-        full_name: s.full_name,
-        quran_parts: s.quran_parts,
-        next: upcomingLabel(j),
-        done: !j.upcomingStation && j.totalStations > 0
-      }
-    })
-    teacherLoaded.value = true
-  } catch (err) {
-    handle(err)
-  }
-}
-
-watch(isTeacher, (v) => {
-  if (v) loadTeacherData()
-}, { immediate: true })
-
-const fmtTime = (t: string | null) => t ? t.slice(0, 5) : '—'
+// ── لوحة المعلّم: DashboardTeacherHome (تجلب بياناتها بنفسها — useTeacherDashboard) ──
 
 // ── لوحة المشرف ──
 type SHalqa = { id: string, name: string, teacher: string, students: number }
@@ -261,7 +209,7 @@ const settingCards = [
   <div class="dash">
     <div class="welcome">
       <h2>أهلاً، {{ fullName }} 👋</h2>
-      <p>إليك نظرة عامة على المشروع.</p>
+      <p>{{ isTeacher ? 'ما ينتظرك اليوم، وأرقام حلقتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}</p>
     </div>
 
     <ClientOnly>
@@ -337,132 +285,7 @@ const settingCards = [
       </template>
 
       <template v-else-if="isTeacher">
-        <ClientOnly>
-          <template v-if="teacherLoaded && !myHalqa">
-            <div class="card placeholder">
-              <p>لا توجد حلقة معيّنة لك بعد. تواصل مع الإدارة لإسناد حلقتك.</p>
-            </div>
-          </template>
-          <template v-else-if="myHalqa">
-            <!-- ترويسة الحلقة + إجراءات سريعة -->
-            <div class="card thead">
-              <div class="thead-info">
-                <div class="ico ico-blue">
-                  <UIcon
-                    name="i-lucide-book-open"
-                    class="size-6"
-                  />
-                </div>
-                <div>
-                  <h3>{{ myHalqa.name }}</h3>
-                  <p>{{ teacherRows.length }} طالب · الوقت اليومي {{ fmtTime(myHalqa.daily_time) }}</p>
-                </div>
-              </div>
-              <div class="thead-actions">
-                <UButton
-                  to="/exams"
-                  label="ترشيح للاختبار"
-                  color="primary"
-                  size="lg"
-                  icon="i-lucide-clipboard-check"
-                  :ui="{ base: 'rounded-[13px] font-semibold' }"
-                />
-                <UButton
-                  to="/reports"
-                  label="تقرير الشهر"
-                  color="neutral"
-                  variant="outline"
-                  size="lg"
-                  icon="i-lucide-file-text"
-                  :ui="{ base: 'rounded-[13px] font-semibold' }"
-                />
-              </div>
-            </div>
-
-            <!-- طلاب الحلقة -->
-            <UiEmptyState
-              v-if="!teacherRows.length"
-              icon="i-lucide-users"
-              title="لا طلاب نشطون في حلقتك"
-            />
-            <div
-              v-else
-              class="card table-wrap"
-            >
-              <table>
-                <thead>
-                  <tr>
-                    <th class="ta-start">
-                      #
-                    </th>
-                    <th class="ta-start">
-                      الطالب
-                    </th>
-                    <th>الأجزاء المثبتة</th>
-                    <th class="ta-start">
-                      المحطة المستحقّة القادمة
-                    </th>
-                    <th class="ta-end">
-                      —
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(r, i) in teacherRows"
-                    :key="r.id"
-                  >
-                    <td class="ta-start muted">
-                      {{ i + 1 }}
-                    </td>
-                    <td class="ta-start strong">
-                      {{ r.full_name }}
-                    </td>
-                    <td>{{ r.quran_parts != null ? `${r.quran_parts} / 30` : '—' }}</td>
-                    <td
-                      class="ta-start"
-                      :class="{ done: r.done }"
-                    >
-                      {{ r.next }}
-                    </td>
-                    <td>
-                      <div class="ta-end">
-                        <UButton
-                          :to="`/students/${r.id}`"
-                          label="الملف"
-                          color="neutral"
-                          variant="outline"
-                          size="sm"
-                          icon="i-lucide-user"
-                          :ui="{ base: 'rounded-[10px]' }"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <!-- الجوال: بطاقات بدل الجدول المتمرّر (الضغط على البطاقة يفتح ملف الطالب) -->
-            <ul
-              v-if="teacherRows.length"
-              class="t-cards"
-            >
-              <li
-                v-for="r in teacherRows"
-                :key="r.id"
-              >
-                <UiCardRow
-                  :title="r.full_name"
-                  :to="`/students/${r.id}`"
-                  :fields="[
-                    { label: 'الأجزاء المثبتة', value: r.quran_parts != null ? `${r.quran_parts} / 30` : null },
-                    { label: 'المحطة القادمة', value: r.next }
-                  ]"
-                />
-              </li>
-            </ul>
-          </template>
-        </ClientOnly>
+        <DashboardTeacherHome />
       </template>
 
       <template v-else-if="isSupervisor">
@@ -747,31 +570,6 @@ const settingCards = [
 .unit { font-size: 15px; font-weight: 600; color: var(--ink-3); }
 
 .placeholder { padding: 40px; text-align: center; color: var(--ink-2); }
-
-/* لوحة المعلّم */
-.thead { padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
-.thead-info { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.thead-info h3 { margin: 0; font-size: 19px; font-weight: 700; color: var(--ink); }
-.thead-info p { margin: 5px 0 0; font-size: 14px; color: var(--ink-2); }
-.thead-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-/* لوحة المعلم دون 720px (الجوال): طلاب الحلقة بطاقاتٌ بدل الجدول المتمرّر */
-.dash { container: dash / inline-size; }
-.t-cards { display: none; list-style: none; margin: 0; padding: 0; }
-@container dash (max-width: 719px) {
-  .dash .table-wrap { display: none; }
-  .t-cards { display: grid; gap: 10px; }
-}
-.table-wrap { overflow-x: auto; }
-.table-wrap table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 560px; }
-.table-wrap thead tr { background: var(--surface-2); }
-.table-wrap th { padding: 13px 14px; font-weight: 600; color: var(--ink-3); font-size: 13px; white-space: nowrap; text-align: center; }
-.table-wrap td { padding: 12px 14px; vertical-align: middle; text-align: center; border-top: 1px solid var(--line); }
-.ta-start { text-align: start; }
-.ta-end { display: flex; justify-content: flex-end; }
-.strong { font-weight: 600; color: var(--ink); }
-.muted { color: var(--ink-2); }
-.done { color: var(--green-ink); font-weight: 600; }
 
 /* لوحة المشرف */
 .stats-3 { grid-template-columns: repeat(3, 1fr); }

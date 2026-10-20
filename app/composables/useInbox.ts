@@ -17,9 +17,21 @@ export interface InboxRow {
   created_at: string
 }
 
+/**
+ * أنواعٌ تستبدل القاعدةُ خبرَها غيرَ المقروء بخبرٍ جديد (تحذف القديم ثم تُدرج): خبرُ التسديد واحدٌ لكلّ صاحبٍ وشهر.
+ * الجرسُ لا يسمع الحذف، فالواصلُ منها يُسقط غيرَ المقروء من نوعه ورابطه.
+ */
+export const REPLACEABLE_KINDS: readonly string[] = ['transport_paid']
+
+/** هل يحلّ `next` محلَّ `prev`؟ (النوعُ نفسُه القابلُ للاستبدال، والرابطُ نفسُه، وكلاهما غيرُ مقروء). */
+export function replacedBy(prev: InboxRow, next: InboxRow): boolean {
+  return prev.id !== next.id && !prev.read_at && !next.read_at
+    && prev.kind === next.kind && prev.link === next.link && REPLACEABLE_KINDS.includes(next.kind)
+}
+
 /** يدمج صفّاً واصلاً (فوريّاً أو باستطلاع) بلا تكرار، بترتيب الوقت النازل، مقصوصاً عند الحدّ. */
 export function mergeIncoming(rows: InboxRow[], row: InboxRow, limit = INBOX_LIMIT): InboxRow[] {
-  return [row, ...rows.filter(r => r.id !== row.id)]
+  return [row, ...rows.filter(r => r.id !== row.id && !replacedBy(r, row))]
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
     .slice(0, limit)
 }
@@ -29,8 +41,12 @@ export function mergeIncoming(rows: InboxRow[], row: InboxRow, limit = INBOX_LIM
  * القراءةُ لا تتراجع — صفٌّ مقروءٌ في أيٍّ من الجهتين يبقى مقروءاً.
  */
 export function mergeRows(current: InboxRow[], fetched: InboxRow[], limit = INBOX_LIMIT): InboxRow[] {
+  // صفٌّ في اليد غائبٌ عن القراءة وليس أحدثَ منها حُذف في القاعدة (خبرٌ استُبدل) — يسقط
+  const fetchedIds = new Set(fetched.map(r => r.id))
+  const newestFetched = Math.max(-Infinity, ...fetched.map(r => Date.parse(r.created_at)))
+  const kept = current.filter(r => fetchedIds.has(r.id) || Date.parse(r.created_at) > newestFetched)
   const byId = new Map<string, InboxRow>()
-  for (const r of [...current, ...fetched]) {
+  for (const r of [...kept, ...fetched]) {
     const prev = byId.get(r.id)
     byId.set(r.id, prev ? { ...r, read_at: prev.read_at ?? r.read_at } : r)
   }
@@ -163,8 +179,10 @@ export function useInbox() {
           const row = payload.new as InboxRow
           // قد يكون الصفّ وصل قبلُ بالاستطلاع — فلا يُعدّ مرّتين
           const known = rows.value.some(r => r.id === row.id)
+          // خبرٌ يستبدل خبراً غيرَ مقروء (حُذف في القاعدة) لا يزيد العدّاد
+          const replaced = rows.value.filter(r => replacedBy(r, row)).length
           rows.value = mergeIncoming(rows.value, row)
-          if (!known && !row.read_at) unread.value += 1
+          if (!known && !row.read_at) unread.value = Math.max(0, unread.value + 1 - replaced)
         })
       .subscribe()
   }

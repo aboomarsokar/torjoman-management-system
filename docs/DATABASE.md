@@ -1,6 +1,6 @@
 # مخطط قاعدة البيانات — ترجمان القرآني
 
-> **الحالة (2026-10-19):** يطابق الهجرات حتى `20261019110259_quran_records_final_fixes` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18)، ومراجعُ المصحف (§19)، والحضورُ اليوميّ بالاستثناء (§20)، والرصدُ القرآنيّ الشهريّ ومسارُ اعتماد المشرف (§21)، والاختبارات المرحلية `exam_cycles` (§22 — الهجرات `20261019121528` و`20261019122626` و`20261019142657`؛ الخطةُ القديمة `exam_plan` باقيةٌ حتى تُحذف بعد النشر). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات ← §19 مراجع المصحف ← §20 الحضور اليوميّ ← §21 الرصد القرآنيّ الشهريّ ← §22 الاختبارات المرحلية.
+> **الحالة (2026-10-20):** يطابق الهجرات حتى `20261020084426_transport_paid_single_notice` — أساس الإصدار الثاني: ثمانية أدوار، النطاق في الدور (لا عمود `section`)، دخولٌ بالرقم الوظيفي/الهوية، حساب لكل طالب، صورة شخصية، وإشعاراتُ الأحداث داخل المنصّة (§18)، ومراجعُ المصحف (§19)، والحضورُ اليوميّ بالاستثناء (§20)، والرصدُ القرآنيّ الشهريّ ومسارُ اعتماد المشرف (§21)، والاختبارات المرحلية `exam_cycles` (§22 — الهجرات `20261019121528` و`20261019122626` و`20261019142657`، ثم `20261019145800_drop_exam_plan` التي حذفت الخطةَ القديمة `exam_plan` وكلَّ ما يتبعها وجعلت `exam_cycle_id` إلزامياً)، وكشفُ المواصلات `transport_trips` (§23 — الهجرات `20261020075719` و`20261020084426`، ونوعُ الإشعار `statement_returned` في `20261020080625`، §18). قراءة الأقسام بالترتيب: §1 `profiles` ← §2 `students` ← §17 الأدوار ودوالّ النطاق والحرّاس والمستودعات ← §18 الإشعارات ← §19 مراجع المصحف ← §20 الحضور اليوميّ ← §21 الرصد القرآنيّ الشهريّ ← §22 الاختبارات المرحلية ← §23 كشف المواصلات.
 > هذا الملف **مصدر الحقيقة** لبنية القاعدة، ويطابق آخر migration دائماً.
 > أي تغيير = migration جديد + تحديث هذا الملف + إعادة توليد الأنواع.
 
@@ -36,12 +36,12 @@ profiles ──────┐ (assigned_by self-reference — «عيّنه»)
     │
     ├─< admin_alerts (issuer_id, teacher_id)   التنبيهات الإدارية
     ├─< notifications (recipient_id)           إشعارات الأحداث — تكتبها مُشغّلات، ويقرؤها صاحبها وحده (§18)
+    ├─< transport_trips (profile_id)           رحلات المواصلات — المشرف الميداني والمختبِر، والتسديد للمدير الإداري (§23)
     ├─< meeting_minutes (created_by)           محاضر الاجتماعات
     ├─< monthly_salaries (profile_id)          الرواتب الشهرية المرجعية (المدير الإداري)
     └─< financial_transactions (created_by)    الحركات المالية
 
 exam_cycles (بيانات مرجعية: 15 دورةً — يعدّلها المدير الإداري والمدير الفني، §22)
-exam_plan (قديم — يُحذف بعد النشر؛ حلّ محلّه exam_cycles)
 app_settings (إعدادات المدير الإداري القابلة للضبط)
 news (الأخبار — المدير الإداري ينشرها، عامّة على Landing)
 ```
@@ -205,32 +205,9 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ---
 
-## 5. `exam_plan` — خطة الاختبارات (بيانات مرجعية ثابتة) — **قديم — يُحذف بعد النشر**
+## 5. `exam_plan` — حُذف 2026-10-19 (هجرة 20261019145800)
 
-> ⚠️ **قديم — يُحذف بعد النشر.** حلّ محلّه جدول `exam_cycles` (15 دورةً بثلاث مراحل — §22) منذ 2026-10-19؛ لا شاشةَ تقرؤه ولا تكتب فيه، ويبقى مع `exam_list_items.exam_plan_id` و`guard_station_sequence` و`my_exam_results()` والنوع `exam_stage_type` وفرعِ `exam_plan` في `bump_parts_on_pass` حتى يُحذف الجميع بهجرةٍ واحدة بعد النشر (التنظيف هو المهمة 8 من خطة الجزء ٣). بياناتُ الاختبار في القاعدة فارغةٌ بعد حذف بيانات التجربة (2026-10-19) فلا بنودَ قديمةً تُفقد.
-
-6 مجموعات، لكل مجموعة مستويان (مرحلي 3 أجزاء + تجميعي 5 أجزاء). يعدّلها المدير من شاشة الخطة (§4.11).
-
-| العمود | النوع | ملاحظات |
-|---|---|---|
-| `id` | int PK | |
-| `group_number` | int | 1–6 |
-| `stage_type` | enum | `partial` (مرحلي) / `cumulative` (تجميعي) |
-| `parts_from` | int | بداية النطاق (جزء) |
-| `parts_to` | int | نهاية النطاق (جزء) |
-
-البيانات الأولية (seed):
-
-| المجموعة | مرحلي | تجميعي |
-|---|---|---|
-| 1 | 1–3 | 1–5 |
-| 2 | 6–8 | 6–10 |
-| 3 | 11–13 | 11–15 |
-| 4 | 16–18 | 16–20 |
-| 5 | 21–23 | 21–25 |
-| 6 | 26–28 | 26–30 |
-
-**RLS:** قراءة لكل حساب مسجَّل؛ **الكتابة** `admin_manager` و`technical_manager` (§4.11).
+> حُذف جدولُ `exam_plan` (خطة المجموعات الست) ونوعُه `exam_stage_type` بالهجرة `20261019145800_drop_exam_plan` بعد أن حلّ محلّه `exam_cycles` (15 دورةً بثلاث مراحل — §22). لا تُعاد قراءةُ مواصفاته من هنا؛ المرجع الوحيد الآن §22.
 
 ---
 
@@ -253,9 +230,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `id` | uuid PK | |
 | `exam_list_id` | uuid FK → exam_lists | |
 | `student_id` | uuid FK → students | |
-| `exam_cycle_id` | smallint FK → exam_cycles (`on delete restrict`) | **الدورة المرشَّح لها** (منذ `20261019121528`) — فارغٌ للبنود القديمة وحدها؛ فهرس `idx_exam_list_items_cycle`، وفهرس `idx_exam_list_items_student` على الطالب |
-| `exam_plan_id` | int FK → exam_plan | **قديم — يُحذف بعد النشر**؛ النطاق المُحدَّد من المعلم في الخطة السابقة (`on delete set null`)، فارغٌ في كلّ بندٍ جديد |
+| `exam_cycle_id` | smallint **NOT NULL** FK → exam_cycles (`on delete restrict`) | **الدورة المرشَّح لها** (منذ `20261019121528`؛ إلزاميٌّ منذ `20261019145800`) — فهرس `idx_exam_list_items_cycle`، وفهرس `idx_exam_list_items_student` على الطالب |
 | `teacher_note` | text | ملاحظة اختيارية |
+
+> حُذف 2026-10-19 (هجرة 20261019145800) العمودُ القديم `exam_plan_id` (النطاق في الخطة السابقة)؛ فكلُّ بندٍ الآن بدورة.
 
 **RLS** (`lists_*` و`items_*`):
 - **القراءة:** `can_view_halaqa(halaqa_id)` لكل من يرى الحلقة (البنود عبر قائمتها).
@@ -268,7 +246,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## 7. `exam_results` — نتائج اختبار الطالب
 
-المختبِر يُدخل النتيجة (منذ 2026-10-15؛ قبلها المشرف). المجموع الأعلى **99** (تسعُ خاناتٍ من 10 + التجويد حتى 9 — `EXAM_MAX_TOTAL` في `app/constants/exams.ts`). عند الاجتياز يرفع مُشغِّل `bump_parts_on_pass` قيمة `students.quran_parts` إلى عدد أجزاء الدورة المحقَّق من الناس = `31 − exam_cycles.parts_from` (لا يُنقِصها أبداً؛ والبنود القديمة بـ`exam_plan.parts_to` كما كانت) — التفصيل في §22. الاجتياز عند علامة قابلة للضبط (افتراضي 80%).
+المختبِر يُدخل النتيجة (منذ 2026-10-15؛ قبلها المشرف). المجموع الأعلى **99** (تسعُ خاناتٍ من 10 + التجويد حتى 9 — `EXAM_MAX_TOTAL` في `app/constants/exams.ts`). عند الاجتياز يرفع مُشغِّل `bump_parts_on_pass` قيمة `students.quran_parts` إلى عدد أجزاء الدورة المحقَّق من الناس = `31 − exam_cycles.parts_from` (لا يُنقِصها أبداً) — التفصيل في §22. الاجتياز عند علامة قابلة للضبط (افتراضي 80%).
 
 | العمود | النوع | ملاحظات |
 |---|---|---|
@@ -298,7 +276,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **القراءة:** الطالب نتائجه (`student_id = my_student_id()`)، ومن يرى حلقة الطالب (`can_view_halaqa`) — المشرف الميداني والمعلم قارئان.
 - **الإدراج:** المديران، أو المختبِر لطلاب حلقاته باسمه (`examiner_id = auth.uid()` و`is_halaqa_examiner`).
 - **التعديل:** الراصد نفسه أو المديران؛ و`with check` يعيد فحص النطاق على الطالب الجديد فلا تُحوَّل نتيجةٌ إلى طالبٍ خارج حلقات المختبِر. **الحذف:** `admin_manager` وحده.
-- ⚠️ سياستا `exam_list_items`/`monthly_reports` لا يجتازهما الطالب (`can_view_halaqa`)، فتضمينُهما يصله `null` — لذلك تقرأ رحلته بالدوالّ `my_exam_cycle_results()` و`my_approved_pages()` و`my_quran_months()` (§17، §22) — و`my_exam_results()` القديمة لا يقرؤها كودٌ بعد الآن وتُحذف بعد النشر.
+- ⚠️ سياستا `exam_list_items`/`monthly_reports` لا يجتازهما الطالب (`can_view_halaqa`)، فتضمينُهما يصله `null` — لذلك تقرأ رحلته بالدوالّ `my_exam_cycle_results()` و`my_approved_pages()` و`my_quran_months()` (§17، §22) — و`my_exam_results()` القديمة حُذفت 2026-10-19 (هجرة 20261019145800).
 - **إشعار الرصد:** كلُّ نتيجةٍ جديدة تُصدر `exam_graded` لمعلّم الحلقة وللطالب (§22).
 
 ---
@@ -591,13 +569,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `is_halaqa_teacher(hid)` / `is_halaqa_examiner(hid)` / `is_halaqa_supervisor(hid)` | الإسناد المباشر (المعلم والمختبِر وهذا الأخير للمشرف الميداني فقط)؛ المعلم والمختبِر يشترطان حساباً نشطاً |
 | `my_student_id()` / `my_halaqa_id()` | سجلّ الطالب وحلقته من `students.user_id = auth.uid()` |
 | `my_exam_cycle_results()` | **رحلة الطالب (منذ `20261019121528`):** `(exam_cycle_id, passed, total_score, exam_date)` لكلّ محاولات الطالب نفسه على الدورات (مقصورة على `students.user_id = auth.uid()`، بلا `teacher_note`)، مرتَّبةً بالدورة ثم التاريخ. `security definer`، `search_path=''`، `revoke … from public, anon`، `grant execute … to authenticated` (§22) |
-| `my_exam_results()` | **قديم — يُحذف بعد النشر.** `(exam_plan_id, passed, total_score, exam_date)` على الخطة القديمة؛ لا يستدعيها كودٌ بعد انتقال الرحلة إلى الدورات |
+| `my_exam_results()` | حُذفت 2026-10-19 (هجرة 20261019145800)؛ حلّت محلّها `my_exam_cycle_results()` أعلاه |
 | `my_approved_pages()` | مجموع `pages_memorized` من `quran_records` الطالب نفسه في الشهور **المعتمدة** وحدها (حُوِّلت من الجدول القديم في `20261019094547`) |
 | `my_quran_months()` | **سجلُّ الطالب:** `(report_year, report_month, from_surah, from_ayah, to_surah, to_ayah, pages_memorized, pages_reviewed)` لشهوره المعتمدة وحدها مرتَّبةً بالأقدم، مقصورةً على `my_student_id()` (§21) |
+| `private.can_log_transport()` | **مَن يُدخل رحلات مواصلات** (منذ `20261020075719`، §23): `field_supervisor` و`examiner` (بحسابٍ نشط، من `current_user_role()`). إضافةُ دورٍ سطرٌ واحد هنا وفي `TRANSPORT_LOGGER_ROLES` (يحرسهما اختبار). `security definer`، `search_path=''`، مسحوبة من `public` و`anon` و`authenticated` **ثم** `grant execute … to authenticated, service_role` (السياسة تُقيّمها بصلاحية المنفِّذ) |
 | `can_view_profile_photo(folder)` / `can_manage_profile_photo(folder)` | سياسات مستودع الصور (§ المستودعات) |
 | `claim_employee_number()` | `nextval` من `employee_number_seq` (يبدأ 1001، حدّه 9999) — **للخدمة وحدها** (`grant … to service_role` فقط، مسحوب من `authenticated`) |
 
-> سبب `my_exam_cycle_results()` (وقبلها `my_exam_results()`) و`my_approved_pages()` و`my_quran_months()`: الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) ولا يقرأ `quran_records` مباشرةً (أُسقط فرعُ الطالب منها في `20261019095659`) فتصله التضمينات `null` — محطّاتٌ مجتازة تظهر «مستحقّة» وصفحاتُ الحفظ المعتمدة صفر. الدوال تفتح له سطوره المعتمدة وحدها دون فتح الجداول (`20261018083507`، و`20261019094547` للأخيرتين).
+> سبب `my_exam_cycle_results()` (وقبلها `my_exam_results()` المحذوفة 2026-10-19) و`my_approved_pages()` و`my_quran_months()`: الطالب لا يجتاز سياستَي `exam_list_items` و`monthly_reports` (`can_view_halaqa`) ولا يقرأ `quran_records` مباشرةً (أُسقط فرعُ الطالب منها في `20261019095659`) فتصله التضمينات `null` — محطّاتٌ مجتازة تظهر «مستحقّة» وصفحاتُ الحفظ المعتمدة صفر. الدوال تفتح له سطوره المعتمدة وحدها دون فتح الجداول (`20261018083507`، و`20261019094547` للأخيرتين).
 
 ### الحرّاس (مُشغِّلات `SECURITY DEFINER`؛ الخدمة والهجرات `auth.uid() is null` تمرّ دائماً)
 
@@ -612,13 +591,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `students_sync_gender_to_profile_ins/_upd` ← `sync_student_gender_to_profile` | يزامن `profiles.gender` لحساب الطالب من `students.gender` |
 | `halaqat_guard_staff` ← `guard_halaqa_staff` | **لكل كاتبٍ حتى الخدمة:** جنس الحلقة مطلوب؛ المعلم (`teacher`) والمشرف (`field_supervisor`) والمختبِر من جنسها؛ المعلم على حلقةٍ نشطة واحدة (يُفحص عند تغيّر المعلم أو تفعيل الحلقة فقط)؛ لا يتغيّر جنس حلقةٍ فيها طلاب من الجنس الآخر؛ ويختم `assigned_by` بالمستدعي عند الإنشاء وتغيير المعلم/المشرف (`23514`) |
 | `profiles_guard_gender_vs_halaqat` ← `guard_staff_gender_vs_halaqat` | لا يتغيّر جنس موظفٍ هو في طاقم حلقةٍ من الجنس الآخر |
-| `exam_list_items_guard_sequence` ← `guard_station_sequence` | **قديم — يُحذف بعد النشر.** ما زال قائماً للبنود القديمة وحدها (`exam_plan_id`): لا يُرشَّح طالبٌ لمحطةٍ قبل اجتياز كل محطةٍ قبلها بترتيب `exam_plan.parts_to` تصاعدياً (`23514`). **يمرّ بلا فحصٍ على كل بندٍ بلا `exam_plan_id`** (`v_to is null`) — أي كلُّ بندٍ جديد بدورة؛ وحارسُ الدورات `guard_cycle_sequence` أدناه هو المرجع. (كان هنا تحذيرٌ من انقلاب مفتاح الترتيب إن قُلبت الخطة؛ زال بزوال الاعتماد على `exam_plan`.) |
+| `exam_list_items_guard_sequence` ← `guard_station_sequence` | حُذف 2026-10-19 (هجرة 20261019145800)؛ حلّ محلّه `exam_list_items_guard_cycle` أدناه |
 | `exam_list_items_guard_cycle` ← `guard_cycle_sequence` | **لكل كاتب، للبنود بدورةٍ وحدها** (`exam_cycle_id` ليس فارغاً؛ وتتابعُ مُشغِّلٍ آخر `pg_trigger_depth() > 1` يمرّ): عند الإدراج أو تغيير الدورة/الطالب يأخذ قفلاً استشارياً لكل طالب (`pg_advisory_xact_lock`) كي لا يمرّ ترشيحان متزامنان، ثم يرفض (`23514`): (١) ترشيحاً ثانياً لطالبٍ له ترشيحٌ بدورةٍ بلا نتيجة، (٢) أيَّ دورةٍ غير **المستحقّة** = أولُ دورةٍ بـ`sort_order` لم يجتزها الطالب (نتيجةٌ `passed`)، (٣) الترشيحَ بعد إتمام الدورات الخمس عشرة. الرسائل: «للطالب ترشيحٌ بانتظار الرصد…»، «الدورةُ المستحقّة للطالب: المرحلة % · الدورة %.»، «أتمّ الطالب الخطة…» |
 | `exam_list_items_guard_graded` ← `guard_graded_item` | **لكل كاتب** (`before update or delete`): بندٌ له نتيجةٌ لا يُحذف («لا يُحذف ترشيحٌ رُصدت نتيجته.») ولا تُغيَّر دورتُه أو طالبُه («لا تُغيَّر دورةُ ترشيحٍ مرصود.») وإلا تراجعت «الدورة المستحقّة» بصمت. **يُستثنى** الحذفُ المتتالي من حذف الطالب نفسه (التاريخُ يزول بزوال صاحبه). وهو ما يمنع حذفَ حلقةٍ لها ترشيحاتٌ مرصودة (تُعطَّل بدل أن تُحذف) |
 | `exam_results_guard_link` ← `guard_result_link` | `before update`: لا يُنقل `student_id` النتيجة، ولا `exam_list_item_id` إلى بندٍ آخر؛ **يُستثنى** تصفيرُه بـ`on delete set null` حين يزول البند نفسه |
 | `exam_results_guard_pass_mark` ← `guard_result_pass_mark` | **لكل كاتب** (`before insert or update`، منذ `20261019142657`): عند الإدراج `pass_mark_snapshot := app_settings.pass_mark` (قيمةُ العميل تُهمَل، فلا يُنجِّح راصدٌ الجميعَ بوضع 0)، وعند التعديل تبقى كما رُصدت؛ وإن كان للنتيجة `exam_list_item_id` وجب أن يطابق `student_id` طالبَ الترشيح («الطالب في النتيجة لا يطابق طالبَ الترشيح.»)؛ ونتيجةٌ بلا ترشيح لا تُربط بترشيحٍ لاحقاً («لا تُربط نتيجةٌ قائمةٌ بترشيحٍ بعد رصدها.»). كلُّها `23514`. لا يكرّر ما يمنعه `guard_result_link` (نقلُ الطالب أو نقلُ نتيجةٍ مربوطة). `security definer`، `search_path=''`، `revoke all … from public, anon, authenticated` |
 | `exam_cycles_guard_edit` ← `guard_exam_cycle_edit` | `before update`: لا يُغيَّر `id` ولا `stage_number` ولا `cycle_number` (`23514`) — تعديلُ الأجزاء والتسمية وحدها، حزامٌ فوق منح الأعمدة |
 | `exam_cycles_consistency` ← `check_exam_cycles_consistency` | **قيدٌ مؤجَّل** (`constraint trigger … deferrable initially deferred`، `after update for each row`): بعد كلّ تعديل يُفحص داخل كل مرحلة أنّ الدورة 2 تحوي الأولى، و4 تحوي 3، و5 تحوي 1–4 (`parts_from` أصغر أو يساوي و`parts_to` أكبر أو يساوي)؛ المؤجَّل يتيح تعديلَ عدّة دوراتٍ معاً في معاملةٍ واحدة. الرسالة «المرحلة %: نطاقُ الدورة % يجب أن يشمل نطاقَ الدورة %.» |
+| `transport_trips_guard` ← `private.guard_transport_trip` | **لكل كاتب** (`before insert or update`، §23): التاريخُ لا يسبق **اليومَ بتوقيت غزة** (`23514`)؛ وغيرُ المدير الإداري لا يُدرج رحلةً مسدَّدة ولا يمسّ `paid`/`paid_at`/`paid_by`/`profile_id` (`42501`)؛ وصاحبُ الرحلة عند الإدراج أو نقلِها يجب أن يكون `field_supervisor` أو `examiner` (`23514`، فيحمي إدراجَ المدير الإداري لغيرهم) |
 | `supervision_visits_guard_visitor` ← `guard_visit_visitor` | **لكل كاتب:** الزائر المشرف الميداني المُسنَد للحلقة نفسها (منذ `20261019091015`؛ كان يقبل المديرَين)؛ يُفحص عند الإنشاء وتغيير الحلقة أو الزائر فقط (`23514`). والسياسات: الإدراج والتعديل وسجلّ إعادة الجدولة لصاحب الزيارة، والحذف له وللمدير الإداري، والقراءة `can_view_halaqa` |
 
 > المُشغِّلات `admin_alerts_notify` و`supervision_visits_notify` و`exam_list_items_notify_nominated` و`exam_results_notify_graded` ليست حرّاساً: هي مُنتِجات الإشعارات (§18، §22). وبقية مُشغِّلات الاختبار: `exam_results_bump_parts` (إدراج) و`exam_results_bump_parts_on_update` (انتقالٌ إلى «ناجح») ← `bump_parts_on_pass` (§22).
@@ -646,7 +626,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **دخول الموظف** لم يعد مساراً خادمياً (`/api/auth/staff-login` حُذف 2026-10-18): المتصفّح يشتقّ البريد من الرقم ويدخل مباشرةً كالطالب، ثم يفحص `profiles.status`. **حالة الدخول** (`profiles.status`) يغيّرها المدير الإداري مباشرةً (حارس `guard_profile_privileged`) — من إدارة المستخدمين للموظف ومن ملف الطالب للطالب؛ وهي مستقلّة عن `students.status` الدراسية.
 
-> **حالة البيانات:** بيانات الاختبار حُذفت 2026-10-18 (بقي `exam_plan` و`app_settings`)، والحساب الأول `1001` للمدير الإداري — كلمة مروره لا تُكتب في أي ملف. الاستيراد من Excel مؤجَّل: سيُدخل المستخدم الطلاب بمساعدة Claude.
+> **حالة البيانات:** بيانات الاختبار حُذفت 2026-10-18 (بقي `exam_plan` و`app_settings` حينها؛ وحُذف `exam_plan` لاحقاً 2026-10-19 بهجرة `20261019145800`)، والحساب الأول `1001` للمدير الإداري — كلمة مروره لا تُكتب في أي ملف. الاستيراد من Excel مؤجَّل: سيُدخل المستخدم الطلاب بمساعدة Claude.
 
 ---
 
@@ -667,7 +647,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 |---|---|---|
 | `id` | uuid PK | `gen_random_uuid()` |
 | `recipient_id` | uuid FK → auth.users | `not null`، `on delete cascade` |
-| `kind` | text | قيدُ `check` على الأنواع العشرة أدناه |
+| `kind` | text | قيدُ `check` على الأنواع الأحد عشر أدناه |
 | `title` | text | `not null`؛ `char_length(btrim(title))` بين 1 و120 |
 | `body` | text | اختياري؛ ≤ 400 حرفاً |
 | `link` | text | اختياري؛ **مسارٌ داخليّ فقط**: `^/[A-Za-z0-9/_?=&-]*$` — إشعارٌ يقود خارج المنصّة بابُ تصيّد |
@@ -675,7 +655,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `read_at` | timestamptz | `null` = غير مقروء |
 | `created_at` | timestamptz | `default now()` |
 
-**أنواع `kind` (العشرة):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان**) · `exam_nominated` · `exam_graded` (الجزء ٣ — **مُنتَجان منذ `20261019121528`**، §22) · `transport_paid` (الجزء ٤) · `impersonation_started` · `impersonation_write` (الجزء ٥). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
+**أنواع `kind` (الأحد عشر):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان**) · `exam_nominated` · `exam_graded` (الجزء ٣ — **مُنتَجان منذ `20261019121528`**، §22) · `transport_paid` (الجزء ٤ — **مُنتَج** منذ `20261020075719`، وصار خبراً واحداً يُحدَّث لكلّ صاحبٍ وشهر منذ `20261020084426`، §23) · `impersonation_started` · `impersonation_write` (الجزء ٥). و`statement_returned` (**مُنتَج** منذ `20261020080625` — إعادةُ كشف الحوافز إلى المعلّم). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
 
 **الفهارس:**
 
@@ -695,16 +675,18 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 | الاسم | النوع | ما تفعله |
 |---|---|---|
-| `private.notify(p_recipient, p_kind, p_title, p_body, p_link, p_source_table, p_source_id)` | `security definer`، `search_path=''`، void | **البابُ الوحيد للكتابة.** (١) لا شيء إن كان المستلم فارغاً، أو كان هو المستدعي (`auth.uid()`) — فلا يُشعَر أحدٌ بفعله هو؛ والخدمةُ والهجرات (`auth.uid()` فارغ) لا تُستثنى من هذا الشرط الثاني. (٢) يقصّ العنوان إلى 120 حرفاً والنصّ إلى 400 **ولا يرفض**: الرفض كان سيُسقط العمليةَ الأصلية. (٣) **تحقّقٌ مسبق بتحذيرٍ لا استثناء:** نوعٌ خارج العشرة، أو رابطٌ لا يطابق `^/[A-Za-z0-9/_?=&-]*$`، أو عنوانٌ فارغٌ بعد القصّ ← `raise warning 'notify: …'` ثم `return` بلا إدراج (القيدُ نفسه كان سيرمي ويُسقط العمليةَ الأصلية). (٤) يُدرج، ثم يقلّم ما مضى عليه ثلاثة أشهر بدفعةٍ أقصاها 200 صفّ **بـ`for update skip locked`** (ما أقفله غيرُنا يُترك لدورةٍ لاحقة)؛ والإدراجُ والتقليمُ معاً داخل كتلة `begin … exception when others then raise warning 'notify failed: %', sqlerrm; end` — **فشلٌ داخل notify لا يُسقط عمليةَ المستخدم أبداً** (منتِجو الأجزاء القادمة سيُشعِرون عدّة مستلمين في معاملةٍ واحدة). قائمةُ الأنواع داخل الدالّة نسخةٌ ثانية من القيد: إضافةُ نوعٍ تعدّل القيدَ والدالّة معاً. مسحوبةٌ من `public` و`anon` و`authenticated` — تُستدعى من المُشغِّلات وحدها. |
+| `private.notify(p_recipient, p_kind, p_title, p_body, p_link, p_source_table, p_source_id)` | `security definer`، `search_path=''`، void | **البابُ الوحيد للكتابة.** (١) لا شيء إن كان المستلم فارغاً، أو كان هو المستدعي (`auth.uid()`) — فلا يُشعَر أحدٌ بفعله هو؛ والخدمةُ والهجرات (`auth.uid()` فارغ) لا تُستثنى من هذا الشرط الثاني. (٢) يقصّ العنوان إلى 120 حرفاً والنصّ إلى 400 **ولا يرفض**: الرفض كان سيُسقط العمليةَ الأصلية. (٣) **تحقّقٌ مسبق بتحذيرٍ لا استثناء:** نوعٌ خارج الأحد عشر، أو رابطٌ لا يطابق `^/[A-Za-z0-9/_?=&-]*$`، أو عنوانٌ فارغٌ بعد القصّ ← `raise warning 'notify: …'` ثم `return` بلا إدراج (القيدُ نفسه كان سيرمي ويُسقط العمليةَ الأصلية). (٤) يُدرج، ثم يقلّم ما مضى عليه ثلاثة أشهر بدفعةٍ أقصاها 200 صفّ **بـ`for update skip locked`** (ما أقفله غيرُنا يُترك لدورةٍ لاحقة)؛ والإدراجُ والتقليمُ معاً داخل كتلة `begin … exception when others then raise warning 'notify failed: %', sqlerrm; end` — **فشلٌ داخل notify لا يُسقط عمليةَ المستخدم أبداً** (منتِجو الأجزاء القادمة سيُشعِرون عدّة مستلمين في معاملةٍ واحدة). قائمةُ الأنواع داخل الدالّة نسخةٌ ثانية من القيد: إضافةُ نوعٍ تعدّل القيدَ والدالّة معاً. مسحوبةٌ من `public` و`anon` و`authenticated` — تُستدعى من المُشغِّلات وحدها. |
 | `private.notify_alert_issued()` | trigger، `security definer` | ينادي `notify`: المستلم `teacher_id`، والنوع `alert_issued`، والعنوان «تنبيهٌ إداريّ جديد»، والنصّ `violation_type`، والرابط `/alerts`، والمصدر `admin_alerts`. |
 | `private.notify_visit_scheduled()` | trigger، `security definer` | ينادي `notify`: المستلم `supervisor_id` (المشرف الميداني)، والنوع `visit_scheduled`، والعنوان «جُدولت لك زيارةٌ إشرافية»، والنصّ «اسم الحلقة · DD-MM-YYYY HH24:MI» بتوقيت غزة (إن غاب اسم الحلقة يصير «حلقة»)، والرابط `/visits`، والمصدر `supervision_visits`. **لا إشعار إن جدولها المشرف لنفسه** (يمنعه `notify`). |
 | `public.mark_notifications_read(p_ids uuid[] default null)` | `security definer`، يُرجع integer | يعلّم **إشعارات المنادي** غير المقروءة وحدها (`auth.uid()`) — المحدَّد بالمعرّفات، أو الكلّ إن كانت `null` — ويُرجع عددها. **لا سياسة `update`**: صاحب الإشعار لا يعيد كتابة نصّه. `grant execute … to authenticated`، و`revoke` من `public` و`anon`. |
 | `private.notify_exam_nominated()` | trigger على الجملة، `security definer` | ينادي `notify` **مرّةً لكلّ قائمةٍ** (لا لكلّ طالب) من جدول الانتقال `new_items`: المستلم مختبِرُ الحلقة (`halaqat.examiner_id`)، والنوع `exam_nominated`، والعنوان «ترشيحٌ جديد للاختبار»، والنصّ «اسم الحلقة · عدد المرشّحين: N»، والرابط `/exams`، والمصدر `exam_lists`. (§22) |
 | `private.notify_exam_graded()` | trigger، `security definer` | ينادي `notify` مرّتين: لمعلّم حلقة الطالب «اسم الطالب · ناجح/ناجحة/راسب/راسبة · المجموع N» ورابطُه `/exams`، وللطالب نفسه «نتيجتُك: … · المجموع N» ورابطُه `/me`؛ النوع `exam_graded`، والعنوان «رُصدت نتيجةُ اختبار»، والمصدر `exam_results`. الصياغة بجنس الطالب. (§22) |
+| `private.refresh_transport_notice(p_owner, p_year, p_month)` | `security definer`، `search_path=''`، void، مسحوبة من العميل | **خبرُ `transport_paid` الوحيد** (§23): يحذف غيرَ المقروء من أخبار هذا الصاحب وهذا الشهر (الرابط `/transport?y=&m=`)، ثم إن بقي مسدَّدٌ منذ آخر خبرٍ **قرأه** عن الشهر (`paid_at > max(read_at)`) أنشأ خبراً واحداً بعددِه ومبلغه. يُستدعى من `set_transport_paid` وحدها. |
 | `admin_alerts_notify` | مُشغِّل `AFTER INSERT ON admin_alerts FOR EACH ROW` | ← `private.notify_alert_issued()` |
 | `supervision_visits_notify` | مُشغِّل `AFTER INSERT ON supervision_visits FOR EACH ROW` | ← `private.notify_visit_scheduled()` |
 | `exam_list_items_notify_nominated` | مُشغِّل `AFTER INSERT ON exam_list_items` (`referencing new table as new_items`، `FOR EACH STATEMENT`) | ← `private.notify_exam_nominated()` |
 | `exam_results_notify_graded` | مُشغِّل `AFTER INSERT ON exam_results FOR EACH ROW` | ← `private.notify_exam_graded()` |
+| `incentive_statements_notify_returned` | مُشغِّل `AFTER UPDATE OF returned_at ON incentive_statements` بشرط `new.returned_at` جديدٌ غيرُ فارغ | ← `private.notify_statement_returned()`: خبرُ `statement_returned` لمعلّم حلقة الكشف، العنوان «أُعيد إليك كشف الحوافز للتعديل»، والنصّ «الشهر MM-YYYY · ملاحظةُ المراجِع» (مقصوصةً عند 300)، والرابط `/incentives`، والمصدر `incentive_statements` |
 
 > المُشغِّلان بعد الإدراج (`AFTER`) فلا يغيّران الصفّ الأصليّ، ويعيدان `null`. دوالّهما `security definer` وبلا منحٍ للعميل.
 
@@ -904,7 +886,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## 22. الاختبارات المرحلية: `exam_cycles` (الدفعة الثانية، الجزء ٣)
 
-> الهجرتان: `20261019121528_exam_cycles` (الجدول والبذرة والحارس والمُنتِجان والدالّة) ← `20261019122626_exam_cycles_hardening` (تحصين التاريخ: لا يُمحى ترشيحٌ مرصود، ونتيجةٌ واحدة لكل ترشيح، واتّساق الدورات، وصياغة الإشعارات بالجنس). **إضافيّتان**: لا تمسّان `exam_plan` ولا `guard_station_sequence` ولا `my_exam_results()` (باقيةٌ للبنود القديمة حتى تُحذف بعد النشر). كلُّ هجرةٍ تفحص نفسها في كتلة `do` آخرها. الخطة: `docs/superpowers/plans/2026-10-19-staged-exams.md`.
+> الهجرتان: `20261019121528_exam_cycles` (الجدول والبذرة والحارس والمُنتِجان والدالّة) ← `20261019122626_exam_cycles_hardening` (تحصين التاريخ: لا يُمحى ترشيحٌ مرصود، ونتيجةٌ واحدة لكل ترشيح، واتّساق الدورات، وصياغة الإشعارات بالجنس). كانتا إضافيّتين لا تمسّان `exam_plan`؛ وحذفتها بعدهما `20261019145800_drop_exam_plan` (أدناه). كلُّ هجرةٍ تفحص نفسها في كتلة `do` آخرها. الخطة: `docs/superpowers/plans/2026-10-19-staged-exams.md`.
 
 **الفكرة:** رحلة الاختبار 15 دورةً ثابتة العدد في **ثلاث مراحل × خمس دورات**، تُجتاز **بالترتيب** من الناس صعوداً (لا قفز فوق دورة). كلُّ دورةٍ نطاقُها أجزاءُ برنامجٍ `parts_from`–`parts_to` مرقّمةً بترتيب الحفظ (الجزء 30 = الناس). والدورة الثانية تحوي الأولى، والرابعة تحوي الثالثة، والخامسة تحوي الأربع قبلها (شاملة المرحلة). **حدودُ كلّ دورةٍ بالسورة والآية تُحسب عند العرض من `program_juz` (§19)** ولا تُخزَّن: البداية = بدايةُ الجزء `parts_to` والنهاية = نهايةُ الجزء `parts_from` (فالجزء 13 ينتهي عند يوسف 111).
 
@@ -941,7 +923,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ### رفعُ الأجزاء `public.bump_parts_on_pass()`
 
-`security definer`، `search_path = public`. بعد إدراج نتيجةٍ ناجحة (أو انتقالِ نتيجةٍ إلى «ناجح» — مُشغِّل التحديث الجديد `exam_results_bump_parts_on_update … when (new.passed and not old.passed)` لتصحيح رصدٍ لاحقاً): **لبندٍ بدورة** `students.quran_parts = 31 − exam_cycles.parts_from`، **ولبندٍ قديم** `exam_plan.parts_to` كما كان (عند الإدراج وحده). **لا يُنقِص أبداً** (`coalesce(quran_parts, 0) < v_parts`)، فمن اجتاز دورةً أقلّ بعد ما اجتاز أكبر يبقى ما بلغه (اجتيازُ 1/1 لطالبٍ له 8 أجزاء لا يغيّره).
+`security definer`، `search_path = public`. بعد إدراج نتيجةٍ ناجحة (أو انتقالِ نتيجةٍ إلى «ناجح» — مُشغِّل التحديث الجديد `exam_results_bump_parts_on_update … when (new.passed and not old.passed)` لتصحيح رصدٍ لاحقاً): `students.quran_parts = 31 − exam_cycles.parts_from` عبر `exam_list_items.exam_cycle_id` (الدورةُ وحدها منذ `20261019145800`؛ حُذف فرعُ `exam_plan.parts_to` القديم). **لا يُنقِص أبداً** (`coalesce(quran_parts, 0) < v_parts`)، فمن اجتاز دورةً أقلّ بعد ما اجتاز أكبر يبقى ما بلغه (اجتيازُ 1/1 لطالبٍ له 8 أجزاء لا يغيّره).
 
 ### المُنتِجان (عبر `private.notify` وحدها — §18)
 
@@ -959,10 +941,75 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 ### حالة البيانات والإزالة اللاحقة
 
 - بياناتُ الاختبار التجريبية (قوائم وبنود ونتائج وإشعاراتها) حُذفت بإذن المستخدم 2026-10-19 بعد التحقّق في المتصفح؛ جداولُ الاختبار فارغة، فلا بنودَ قديمة بلا دورة.
-- **بعد النشر وبإذن صريح:** هجرةٌ واحدة تحذف `exam_plan` والعمود `exam_list_items.exam_plan_id` والنوع `exam_stage_type` و`guard_station_sequence` و`my_exam_results()` وفرع `exam_plan` في `bump_parts_on_pass`، وتجعل `exam_cycle_id` غيرَ فارغ (المهمة 8 في الخطة). **الواجهةُ لم تعد تعرض البنود القديمة** (2026-10-19): طابورُ الرصد ومتصفّحُ النتائج لا يضمّان `exam_plan` ولا يعرضان بنداً بلا دورة، فحذفُ الخطة القديمة لا يُفرغ شاشةً بصمت.
+- **حُذفت الخطةُ القديمة 2026-10-19** بالهجرة `20261019145800_drop_exam_plan`: جدول `exam_plan` والنوع `exam_stage_type` والعمود `exam_list_items.exam_plan_id` والمُشغِّل `exam_list_items_guard_sequence` ودالّته `guard_station_sequence()` والدالّة `my_exam_results()` وفرع `exam_plan` في `bump_parts_on_pass`؛ وصار `exam_list_items.exam_cycle_id` **NOT NULL**. تفحص الهجرةُ نفسها (لا أثرَ للنموذج القديم في جدولٍ أو دالّةٍ أو عرض، والمُشغِّلُ `exam_results_bump_parts` قائم). اختبارات RLS لرحلة الطالب (`supabase/tests/v2_rls.sql`، ر-1…ر-4) حُوّلت إلى `exam_cycles` و`my_exam_cycle_results()`.
 
 ### الفحص الذاتي
 
 كلتا الهجرتين تُلغيان نفسيهما عند أيّ خلل: عدد الدورات ليس 15، أو `sort_order` غير متّصل 1–15، أو المدى لا يغطّي 1–30، أو تغطيةُ المراحل ليست (21–30، 11–20، 1–10)، أو المنحُ خاطئة (`anon` يقرأ، أو `authenticated` يُدرج/يحذف أو يعدّل `stage_number`)، أو RLS غير مفعّل أو السياستان ناقصتان، أو دوالّ `private` مكشوفةٌ للعميل، أو `my_exam_cycle_results` منحُها خاطئ، أو أيّ من المُشغِّلات الأحد عشر ناقصٌ أو على جدولٍ خاطئ أو معطَّل، أو `uq_exam_results_item` ليس فريداً (أو بقي `idx_exam_results_item`)، أو `bump_parts_on_pass` لا تجمع المسارين، أو صياغةُ الإشعارات لم تُحدَّث، أو البذرة تخالف قاعدة الاتّساق.
 
 **هجرةٌ ثالثة `20261019142657_exam_results_pass_mark_guard`** (إضافيّة): المُشغِّل `exam_results_guard_pass_mark` أعلاه، و`revoke all on exam_lists, exam_list_items, exam_results from anon` — دفاعٌ في العمق (RLS يمنعه أصلاً، والصفحةُ العامة تقرأ بـ`service_role`). وتفحص نفسَها: المُشغِّل قائمٌ على `exam_results`، والدالّةُ غيرُ قابلةٍ للتنفيذ من `anon` و`authenticated`، و`anon` بلا `select` على الجداول الثلاثة، و`authenticated` ما زال يُدرج في `exam_results` و`exam_list_items`. وسلوكُها فُحص قبل التطبيق في معاملةٍ تُلغى (`rollback-ok`): علامةٌ مرسلة 0 صارت قيمةَ الإعدادات، والتعديلُ لا يغيّرها، وطالبٌ مخالف وربطٌ لاحق رُفضا، والإدراجُ بلا العمود يمرّ (القيد `not null` يُفحص بعد المُشغِّل).
+
+---
+
+## 23. كشف المواصلات: `transport_trips` (الدفعة الثانية، الجزء ٤)
+
+> الهجرتان: `20261020075719_transport_trips` (الجدول والسياسات والحارس ودالّة التسديد) ← `20261020084426_transport_paid_single_notice` (إشعارُ التسديد واحدٌ يُحدَّث — قرار المستخدم 2026-10-20). وسبقتهما `20261020080625_statement_returned_notify` (نوعُ إشعارٍ آخر، §18). كلُّ هجرةٍ تفحص نفسها في كتلة `do` آخرها. الخطة: `docs/superpowers/plans/2026-10-20-transport.md`. **مستقلٌّ عن الملف المالي** (قرار المستخدم 2026-10-19): لا يمسّ `financial_transactions`.
+
+**الفكرة:** المشرف الميداني والمختبِر يدخلان رحلاتهما (التاريخ، البيان، المبلغ، ملاحظات)، والمدير الإداري يراها كلَّها ويسدّدها، ومشرف المشروع يقرأ. غير المسدَّدة تُعدَّل وتُحذف من صاحبها؛ والمسدَّدة مقفلةٌ عليه.
+
+### الجدول `public.transport_trips`
+
+| العمود | النوع | ملاحظات |
+|---|---|---|
+| `id` | uuid PK | `gen_random_uuid()` |
+| `profile_id` | uuid FK → `profiles` | `not null`، **الافتراضيّ `auth.uid()`**، `on delete cascade` — صاحبُ الرحلة |
+| `trip_date` | date | `not null`؛ لا يتجاوز اليومَ بتوقيت غزة (الحارس) |
+| `description` | text | `not null`؛ `btrim(description) <> ''` و`char_length ≤ 200` |
+| `amount` | numeric(10,2) | `not null`؛ `amount > 0 and amount <= 10000` |
+| `notes` | text | اختياري؛ `char_length ≤ 500` |
+| `paid` | boolean | `not null default false` |
+| `paid_at` | timestamptz | وقتُ التسديد |
+| `paid_by` | uuid FK → `profiles` | مَن سدّد؛ `on delete set null` |
+| `created_at` / `updated_at` | timestamptz | `default now()`؛ `trg_transport_trips_updated_at` ← `set_updated_at` على التعديل |
+
+**قيد الختم `transport_paid_stamp`:** `(paid and paid_at is not null) or (not paid and paid_at is null and paid_by is null)` — لا مسدَّدةَ بلا وقت، ولا غيرُ مسدَّدةٍ بأثر تسديد.
+
+**الفهارس:** `transport_trips_profile_date` على `(profile_id, trip_date)` (رحلاتي)، و`transport_trips_date` على `(trip_date)` (كلّ الرحلات في شهر). **لا فهرس على `paid_by`** (مؤجَّل).
+
+### RLS (4 سياسات؛ `revoke all … from public, anon, authenticated` **ثم** `grant select, insert, update, delete` لـ`authenticated`؛ `anon` بلا منح)
+
+| السياسة | الشرط |
+|---|---|
+| `transport_select` | `profile_id = auth.uid()` **أو** `is_admin_manager()` **أو** `is_project_supervisor()` |
+| `transport_insert` | `(private.can_log_transport() and profile_id = auth.uid() and not paid)` **أو** `is_admin_manager()` |
+| `transport_update` (`using` و`with check`) | `(profile_id = auth.uid() and not paid)` **أو** `is_admin_manager()` |
+| `transport_delete` | `(profile_id = auth.uid() and not paid)` **أو** `is_admin_manager()` |
+
+فالمدير الفني والمديرة الإدارية والمعلم والطالب **لا يقرؤون ولا يكتبون**. والمدير الإداري تتيح له السياساتُ الإدراجَ والتعديل والحذف على أيّ رحلة (مسدَّدةً أو لا)، مع أنّ الواجهة لا تعرض له إلا التسديد.
+
+### الدوالّ والحارس
+
+| الاسم | ما يفعله |
+|---|---|
+| `private.can_log_transport()` | `security definer`، `search_path=''`، `stable`: دورُ المنادي (`current_user_role()`، أي بحسابٍ نشط) `field_supervisor` أو `examiner`. المنحُ: `authenticated` و`service_role` (§17) |
+| `transport_trips_guard` ← `private.guard_transport_trip()` | `before insert or update`، `security definer`، `search_path=''`، **لكل كاتب**: (١) `trip_date` بعد اليوم بتوقيت `Asia/Gaza` ← «لا تُسجَّل رحلةٌ بتاريخٍ لم يأتِ بعد.» (`23514`). (٢) غيرُ المدير الإداري: لا يُدرج `paid`/`paid_at`/`paid_by`، ولا يغيّرها ولا `profile_id` عند التعديل ← «التسديدُ للمدير الإداري وحده.» (`42501`). (٣) عند الإدراج أو نقلِ الرحلة: صاحبُها في `profiles` بدور `field_supervisor` أو `examiner` وإلا «صاحبُ الرحلة ليس مشرفاً ميدانياً ولا مختبِراً.» (`23514`). مسحوبة من العميل |
+| `public.set_transport_paid(p_ids uuid[], p_paid boolean)` ← integer | `security definer`، `search_path=''`؛ **للمدير الإداري وحده** (وإلا `42501`). مصفوفةٌ فارغة أو `p_paid` فارغ ← 0. يحدّث ما حالتُه تخالف `p_paid` فقط: `paid` و`paid_at = now()` و`paid_by = auth.uid()` عند التسديد، ويصفّرها عند الإلغاء. يجمع المتغيّر منها في جدولٍ مؤقّت `_transport_changed` (`on commit drop`) ثم يستدعي `private.refresh_transport_notice` **لكلّ (صاحب، شهر) تغيّرت فيه رحلة** — تسديداً أو إلغاءً. يردّ **عددَ الرحلات التي تغيّرت حالتُها**. `revoke` من `public` و`anon` و`authenticated` **ثم** `grant execute … to authenticated` |
+| `private.refresh_transport_notice(p_owner, p_year, p_month)` | تفصيله في التالي |
+
+### إشعارُ التسديد: خبرٌ واحدٌ يُحدَّث لكلّ (صاحب، شهر)
+
+قرار المستخدم 2026-10-20: تشغيلُ مفتاح «مسدَّدة» وإطفاؤه مراراً كان يرسل خبراً جديداً في كلّ مرّة (جُرّب فصار ستّةً لرحلةٍ واحدة). الآن، عند كلّ تسديدٍ أو إلغاء:
+
+1. **يُحذف** غيرُ المقروء من أخبار `transport_paid` لهذا الصاحب وهذا الرابط `/transport?y=<سنة>&m=<شهر>`.
+2. **يُحسب** المسدَّدُ من رحلات الشهر **منذ آخر خبرٍ قرأه** صاحبُها عن الشهر نفسه (`paid_at > max(read_at)`، أو كلُّه إن لم يقرأ شيئاً).
+3. **إن بقي شيءٌ** أُنشئ خبرٌ واحد: العنوان «سُدّدت رحلاتُك»، والنصّ «عدد الرحلات: N · المبلغ: X ₪ · الشهر: MM-YYYY» (الشهر بالأرقام)، والرابط `/transport?y=&m=`، والمصدر `transport_trips` (بلا `source_id`). **إن لم يبقَ** (أُلغي تسديدُ كلّ ما فيه) زال الخبر.
+
+فالجرسُ يرنّ عند كلّ تغيير (الخبرُ جديدٌ غيرُ مقروء)، ولا يتكدّس. وما قرأه الصاحب لا يُمسّ؛ تسديدٌ لاحقٌ في الشهر نفسه يُنتج خبراً جديداً بما سُدّد بعد القراءة وحده. وكتابتُه عبر `private.notify` (§18) كسائر المُنتِجين: لا يُشعَر المنادي بفعله، ويُقلَّم النصّ، وفشلُه لا يُسقط التسديد.
+
+### الفحص الذاتي
+
+الأولى تُلغي نفسَها إن: RLS غير مفعّل على `transport_trips`، أو السياسات ليست أربعاً، أو `anon` يقرؤه، أو `can_log_transport` بلا منح `authenticated` و`service_role`، أو `set_transport_paid` مكشوفةٌ لـ`anon` أو غيرُ قابلة للتنفيذ من `authenticated`، أو الحارس مفقود. والثانية: `set_transport_paid` لا تستدعي `refresh_transport_notice`، أو منحُ الدالّتين خاطئ (`refresh_transport_notice` قابلةٌ للتنفيذ من `authenticated`). وسلوكُ الهجرتين فُحص قبل التثبيت في معاملاتٍ تُلغى (`rollback-ok`).
+
+### حالة البيانات
+
+بقيت من تجربة المتصفح 2026-10-20 رحلتان لحساب «تجريبي — مشرف ميداني» في 10-2026 وأخبارُ تسديدها، وتنتظر الحذفَ بإذن المستخدم؛ ولا بيانات مواصلات حقيقية غيرها.

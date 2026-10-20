@@ -29,6 +29,8 @@ export interface StudentMonthRow {
   studentId: string
   name: string
   record: MonthRecord | null
+  /** السجلُّ رُصد في تقرير حلقةٍ أخرى (حلقته السابقة) لهذا الشهر: يُعرض للقراءة ولا يُرصد ولا يُعدَّل ولا يُحذف هنا. */
+  recordedElsewhere: boolean
   /** بعد آخر نهايةٍ سابقة، وإلا بدايةُ الطالب الجديد؛ null بعد الختم. */
   suggestedFrom: Position | null
   /** الاقتراحُ من نهايةٍ سابقةٍ مرصودة (لا من بداية الطالب الجديد بحسب محفوظه). */
@@ -48,6 +50,8 @@ export interface BuildRowsInput {
   students: { id: string, full_name: string, enrollment_date: string | null, quran_parts: number | null }[]
   /** سجلّاتُ هذا الشهر. */
   records: QuranRecordRow[]
+  /** سجلّاتُ الطلاب لهذا الشهر في تقارير حلقاتٍ أخرى (طالبٌ نُقل بعد رصده)؛ سجلُّ هذه الحلقة يغلبها. */
+  elsewhereRecords?: QuranRecordRow[]
   /** آخرُ «إلى» في شهرٍ سابق (أيّ حالة). */
   previousEnds: Record<string, Position | null>
   /** آخرُ «إلى» معتمَد. */
@@ -80,6 +84,10 @@ function toMonthRecord(r: QuranRecordRow): MonthRecord {
 /** صفوفُ طلاب الحلقة لشهرٍ واحد؛ لا تغيّر المدخلات. */
 export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
   const recordByStudent = new Map(input.records.map(r => [r.student_id, toMonthRecord(r)]))
+  const elsewhereByStudent = new Map<string, MonthRecord>()
+  for (const r of input.elsewhereRecords ?? []) {
+    if (!elsewhereByStudent.has(r.student_id)) elsewhereByStudent.set(r.student_id, toMonthRecord(r))
+  }
   const absentDays = new Map<string, Set<string>>()
   for (const a of input.absences) {
     const set = absentDays.get(a.student_id) ?? new Set<string>()
@@ -89,7 +97,9 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
 
   return input.students.map((s) => {
     const { held: daysHeld, attended: daysAttended } = countAttendance(input.days, absentDays.get(s.id), s.enrollment_date)
-    const record = recordByStudent.get(s.id) ?? null
+    const own = recordByStudent.get(s.id) ?? null
+    const elsewhere = own ? null : elsewhereByStudent.get(s.id) ?? null
+    const record = own ?? elsewhere
     const previous = input.previousEnds[s.id] ?? null
     const heldParts = Math.max(0, Math.min(PROGRAM_JUZ_COUNT, s.quran_parts ?? 0))
     const plan = input.prorate === false
@@ -100,6 +110,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
       studentId: s.id,
       name: s.full_name,
       record,
+      recordedElsewhere: elsewhere !== null,
       suggestedFrom: previous ? nextPosition(previous, input.ayahCountOf) : startForNewStudent(s.quran_parts ?? 0, input.juz),
       suggestedFromPrevious: previous !== null,
       daysHeld,

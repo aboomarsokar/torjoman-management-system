@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import {
-  applyPasswordChange, FLAG_CLEAR_FAILED, PASSWORD_MISMATCH, PASSWORD_SAME_AS_CURRENT, PASSWORD_TOO_SHORT,
+  applyPasswordChange, FLAG_CLEAR_FAILED, PASSWORD_MISMATCH, PASSWORD_SAME_AS_CURRENT, PASSWORD_TOO_SHORT, PASSWORD_WEAK,
   passwordChangeError, type PasswordChangeSteps
 } from './useChangePassword'
 
@@ -57,6 +57,6 @@ describe('applyPasswordChange', () => {
     expect(same.s.clearFlag).not.toHaveBeenCalled()
 
     const weak = steps({ updatePassword: async () => ({ error: { code: 'weak_password', message: 'weak' } }) })
-    await expect(applyPasswordChange('newpass123', weak.s)).rejects.toMatchObject({ message: 'weak' })
+    await expect(applyPasswordChange('newpass123', weak.s)).rejects.toMatchObject({ message: PASSWORD_WEAK })
   })
 })

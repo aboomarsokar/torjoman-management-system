@@ -37,6 +37,9 @@ const halaqaId = ref<string | null>(null)
 let periodSettled = !!linked
 
 // المعلم حلقتُه، والمشرفُ الميدانيّ حلقاتُه وحدَها، وغيرُهما ما تسمح به RLS — النشطةُ وحدَها
+// الحلقاتُ تُجلب في المتصفّح: قبل التركيب لا يُحكم بـ«لا حلقات» (كان الخادمُ يرسمها فيخالف التهيئة)
+const mounted = ref(false)
+onMounted(() => { mounted.value = true })
 const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<HalaqaRow[]>('quran-halaqat', async () => {
   if (!role.value) return []
   let query = supabase.from('halaqat').select('id, name, gender, supervisor_id').eq('status', 'active').order('name')
@@ -181,7 +184,7 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
     </UiPageHeader>
 
     <UiEmptyState
-      v-if="role && !halaqatPending && !halaqat.length"
+      v-if="mounted && role && !halaqatPending && !halaqat.length"
       icon="i-lucide-book-open"
       :title="isTeacher ? 'لا حلقة معيّنة لك' : 'لا حلقات في نطاقك'"
     />
@@ -201,7 +204,7 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
       />
 
       <QuranHalaqaList
-        v-if="!halaqaId && !isTeacher && !halaqatPending"
+        v-if="mounted && !halaqaId && !isTeacher && !halaqatPending"
         :items="listItems"
         @pick="halaqaId = $event"
       />

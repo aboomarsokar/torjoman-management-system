@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * صفحة الطالب «صفحتي» — للقراءة فقط (لا أزرار تعديلٍ على بياناته)، في ثلاثة تبويبات (طلبُ المستخدم 2026-10-20):
+ * صفحة الطالب «صفحتي» — للقراءة، إلا أربعةَ حقولٍ يعدّلها بنفسه من «بياناتي» (جوّاله وبريد وليّ أمره والسكن
+ * وأقرب مسجد — StudentContactModal ← `update_my_contact()`)، في ثلاثة تبويبات (طلبُ المستخدم 2026-10-20):
  * - «لوحة التحكم»: أرقامُه الأساسية في نظرة — التقدّم، والحضور هذا الشهر، والاختبارات، والمحطّة القادمة، وحلقته.
  * - «رحلتي»: رحلتُه على دورات الاختبار وسجلُّ شهوره المعتمدة.
  * - «بياناتي»: بطاقاتُ بياناته (المصدرُ نفسه لملف الطالب الداخلي — StudentDetailCards).
@@ -32,7 +33,7 @@ watch(role, (r) => {
 }, { immediate: true })
 
 // جلب غير حاجز؛ يُعاد عند وصول الحساب. الربط صريحٌ بـuser_id (لا يُترك للـRLS وحده) كي لا يُقرأ غير صفّه.
-const { data: me, pending } = useLazyAsyncData<StudentRow | null>(
+const { data: me, pending, refresh: refreshMe } = useLazyAsyncData<StudentRow | null>(
   'my-student',
   async () => {
     const userId = profile.value?.id
@@ -76,6 +77,7 @@ const tab = computed<Tab>({
 })
 
 const pwOpen = ref(false)
+const contactOpen = ref(false)
 const mustChangePassword = computed(() => profile.value?.must_change_password === true)
 </script>
 
@@ -195,11 +197,29 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
             own-records
             bare
           />
-          <StudentDetailCards
-            v-else
-            :sections="sections"
-          />
+          <template v-else>
+            <div class="edit-bar">
+              <p>
+                تستطيع تعديل جوالك وبريد وليّ أمرك والسكن وأقرب مسجد. وبقيّةُ بياناتك تعدّلها الإدارة — أخبر معلّمك إن وجدت فيها خطأً.
+              </p>
+              <UButton
+                label="تعديل بيانات التواصل"
+                icon="i-lucide-pencil"
+                color="primary"
+                class="min-h-11 shrink-0"
+                :ui="{ base: 'rounded-xl font-semibold justify-center' }"
+                @click="contactOpen = true"
+              />
+            </div>
+            <StudentDetailCards :sections="sections" />
+          </template>
         </div>
+
+        <StudentContactModal
+          v-model:open="contactOpen"
+          :student="me"
+          @saved="refreshMe"
+        />
       </template>
     </ClientOnly>
 
@@ -229,7 +249,11 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
 .tab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
 .tab:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
+.edit-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; background: var(--blue-soft); border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px; margin-bottom: 20px; }
+.edit-bar p { margin: 0; flex: 1 1 280px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+
 @media (max-width: 640px) {
+  .edit-bar :deep(button) { width: 100%; }
   .band { grid-template-columns: auto minmax(0, 1fr); padding: 20px 18px; gap: 16px 14px; border-radius: 20px; }
   .av { width: 62px; height: 62px; border-radius: 18px; font-size: 24px; }
   .band-info h1 { font-size: 20px; }

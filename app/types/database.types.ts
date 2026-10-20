@@ -1651,6 +1651,7 @@ export type Database = {
         Args: { p_ids: string[]; p_paid: boolean }
         Returns: number
       }
+      visible_halaqa_ids: { Args: never; Returns: string[] }
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"

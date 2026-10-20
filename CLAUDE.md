@@ -155,6 +155,7 @@
 - العمليات التي تتطلّب `service_role` (إنشاء حساب موظف أو طالب، إعادة تعيين كلمة مرور، حذف الطالب مع حسابه، تصحيح هويته مع بريد دخوله) تُنفّذ في **مسار خادمي** (`server/api/`: `users.post.ts` و`students.post.ts` و`users/reset-password.post.ts` و`students/[id].delete.ts` و`students/[id]/national-id.patch.ts`) يتحقّق أولاً أن المستدعي **المدير الإداري** (`requireAdminManager`) — لا بريد ولا دعوات ولا استعادة ذاتية. والكلمة المؤقّتة يولّدها الخادم ولا يرسلها العميل أبداً
 - **لا يُرسَل بريد إلى `staff.torjoman.org` ولا `students.torjoman.org`** — بريدان داخليان تشتقّهما الشيفرة من الرقم الوظيفي/الهوية لأن Supabase يشترط بريداً؛ ولا تُسجَّل كلمات المرور في أي ملف أو سجلّ
 - **كل دالّة في سياسة RLS:** `SECURITY DEFINER` + `set search_path = public` + `grant execute … to authenticated` صراحةً (سحب PUBLIC بلا منحٍ يُعمي المستخدمين)
+- **أداء السياسات:** القراءةُ المحميّة بالحلقة `(halaqa_id = any ((select public.visible_halaqa_ids())::uuid[]))` لا `can_view_halaqa(halaqa_id)` لكلّ صفّ، و`(select auth.uid())` لا `auth.uid()` (DATABASE.md §17). ودوالُّ المشغّلات بلا `EXECUTE` لـ`anon`/`authenticated`
 - تحقّق من صحة كل input قبل إرساله لقاعدة البيانات
 - **رقم الهوية** يُعرض مقنّعاً (آخر 4 أرقام) لغير أصحاب الصلاحية
 

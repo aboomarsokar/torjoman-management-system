@@ -162,20 +162,21 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
       title="الإنجاز القرآني"
       subtitle="رصدُ حفظ الشهر لكلّ طالب من سورةٍ وآيةٍ إلى سورةٍ وآية، ثم إرسالُه للاعتماد."
     >
-      <template
-        v-if="halaqaId && rows.length"
-        #actions
-      >
-        <UButton
-          label="تصدير Excel"
-          icon="i-lucide-file-spreadsheet"
-          color="neutral"
-          variant="outline"
-          size="lg"
-          :loading="exporting"
-          :ui="{ base: 'rounded-[13px]' }"
-          @click="doExport"
-        />
+      <template #actions>
+        <!-- الصفوفُ تُجلب في المتصفّح؛ رسمُ الزرّ في الخادم وحده كان يُخالف التهيئة (Hydration mismatch) -->
+        <ClientOnly>
+          <UButton
+            v-if="halaqaId && rows.length"
+            label="تصدير Excel"
+            icon="i-lucide-file-spreadsheet"
+            color="neutral"
+            variant="outline"
+            size="lg"
+            :loading="exporting"
+            :ui="{ base: 'rounded-[13px]' }"
+            @click="doExport"
+          />
+        </ClientOnly>
       </template>
     </UiPageHeader>
 

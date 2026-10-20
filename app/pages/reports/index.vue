@@ -168,20 +168,19 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
       subtitle="رصدُ حفظ الشهر لكلّ طالب من سورةٍ وآيةٍ إلى سورةٍ وآية، ثم إرسالُه للاعتماد."
     >
       <template #actions>
-        <!-- الصفوفُ تُجلب في المتصفّح؛ رسمُ الزرّ في الخادم وحده كان يُخالف التهيئة (Hydration mismatch) -->
-        <ClientOnly>
-          <UButton
-            v-if="halaqaId && rows.length"
-            label="تصدير Excel"
-            icon="i-lucide-file-spreadsheet"
-            color="neutral"
-            variant="outline"
-            size="lg"
-            :loading="exporting"
-            :ui="{ base: 'rounded-[13px]' }"
-            @click="doExport"
-          />
-        </ClientOnly>
+        <!-- حاضرٌ من أوّل رسمٍ (خادماً ومتصفّحاً) ومعطّلٌ حتى تصل الصفوف — فلا يقفز ولا يخالف التهيئة -->
+        <UButton
+          label="تصدير Excel"
+          icon="i-lucide-file-spreadsheet"
+          color="neutral"
+          variant="outline"
+          size="lg"
+          :loading="exporting"
+          :disabled="!halaqaId || !rows.length"
+          :title="halaqaId ? undefined : 'اختر حلقةً للتصدير'"
+          :ui="{ base: 'rounded-[13px]' }"
+          @click="doExport"
+        />
       </template>
     </UiPageHeader>
 

@@ -1,4 +1,8 @@
 import type { Database } from '~/types/database.types'
+import { once } from '~/utils/once'
+
+/** مفتاحُ مراقِب الهويّة الوحيد على تطبيق Nuxt. */
+const PROFILE_IDENTITY_WATCH = Symbol('profile-identity-watch')
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type Role = Database['public']['Enums']['user_role']
@@ -47,9 +51,16 @@ export function useProfile() {
     { server: false, default: () => null }
   )
 
-  // إعادة الجلب عند تغيّر هويّة المستخدم فقط (دخول/خروج)، لا عند تنقّل الصفحات
-  watch(() => user.value?.sub, (id, prev) => {
-    if (id !== prev) refresh()
+  // إعادة الجلب عند تغيّر هويّة المستخدم فقط (دخول/خروج)، لا عند تنقّل الصفحات — بمراقِبٍ **واحدٍ للتطبيق**:
+  // كان كلّ استدعاءٍ لـuseProfile (27 موضعاً، منها usePermissions) يسجّل مراقِبه، فعند الدخول يُطلق كلٌّ منها
+  // جلباً (getUser + profiles)، وقفلُ جلسة Supabase يُسلسلها، فتنتظر طلباتُ الصفحة كلُّها خلفها
+  // (سجلّ 2026-10-20: ستّة أزواجٍ متتالية ≈ 1.1 ث قبل أوّل طلبٍ للّوحة). نطاقٌ منفصل كي لا يموت بزوال المكوّن الأول.
+  once(useNuxtApp(), PROFILE_IDENTITY_WATCH, () => {
+    effectScope(true).run(() => {
+      watch(() => user.value?.sub, (id, prev) => {
+        if (id !== prev) void refresh()
+      })
+    })
   })
 
   const role = computed<Role | null>(() => profile.value?.role ?? null)

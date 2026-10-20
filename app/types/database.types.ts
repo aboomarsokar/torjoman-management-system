@@ -1485,6 +1485,63 @@ export type Database = {
           },
         ]
       }
+      transport_trips: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          paid: boolean
+          paid_at: string | null
+          paid_by: string | null
+          profile_id: string
+          trip_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          paid?: boolean
+          paid_at?: string | null
+          paid_by?: string | null
+          profile_id?: string
+          trip_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          paid?: boolean
+          paid_at?: string | null
+          paid_by?: string | null
+          profile_id?: string
+          trip_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_trips_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transport_trips_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit_reschedule_log: {
         Row: {
           changed_at: string
@@ -1589,6 +1646,10 @@ export type Database = {
       return_statement: {
         Args: { p_note: string; p_statement: string }
         Returns: undefined
+      }
+      set_transport_paid: {
+        Args: { p_ids: string[]; p_paid: boolean }
+        Returns: number
       }
     }
     Enums: {

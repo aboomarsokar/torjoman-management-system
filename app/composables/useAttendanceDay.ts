@@ -24,6 +24,7 @@ export function summarizeDay(students: { id: string }[], absences: Record<string
 export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>) {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()
+  const { blockIfReadOnly } = useImpersonation()
   const held = ref(false)
   const absences = ref<Record<string, AbsenceKind>>({})
   const locked = ref(false)
@@ -69,6 +70,8 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
   function write(run: () => PromiseLike<{ error: unknown }>): Promise<boolean> {
     const result = writes.then(async () => {
       try {
+        // نيابةُ القراءة: الحذفُ الذي لا يطابق صفّاً يعود نجاحاً صامتاً — فيُرفض قبل الإرسال
+        blockIfReadOnly()
         const { error } = await run()
         if (error) throw error
         return true

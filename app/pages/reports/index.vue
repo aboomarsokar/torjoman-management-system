@@ -37,6 +37,11 @@ const halaqaId = ref<string | null>(null)
 let periodSettled = !!linked
 
 // المعلم حلقتُه، والمشرفُ الميدانيّ حلقاتُه وحدَها، وغيرُهما ما تسمح به RLS — النشطةُ وحدَها
+// الحلقاتُ تُجلب في المتصفّح: قبل التركيب لا يُحكم بـ«لا حلقات» (كان الخادمُ يرسمها فيخالف التهيئة)
+const mounted = ref(false)
+onMounted(() => {
+  mounted.value = true
+})
 const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<HalaqaRow[]>('quran-halaqat', async () => {
   if (!role.value) return []
   let query = supabase.from('halaqat').select('id, name, gender, supervisor_id').eq('status', 'active').order('name')
@@ -162,10 +167,8 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
       title="الإنجاز القرآني"
       subtitle="رصدُ حفظ الشهر لكلّ طالب من سورةٍ وآيةٍ إلى سورةٍ وآية، ثم إرسالُه للاعتماد."
     >
-      <template
-        v-if="halaqaId && rows.length"
-        #actions
-      >
+      <template #actions>
+        <!-- حاضرٌ من أوّل رسمٍ (خادماً ومتصفّحاً) ومعطّلٌ حتى تصل الصفوف — فلا يقفز ولا يخالف التهيئة -->
         <UButton
           label="تصدير Excel"
           icon="i-lucide-file-spreadsheet"
@@ -173,6 +176,8 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
           variant="outline"
           size="lg"
           :loading="exporting"
+          :disabled="!halaqaId || !rows.length"
+          :title="halaqaId ? undefined : 'اختر حلقةً للتصدير'"
           :ui="{ base: 'rounded-[13px]' }"
           @click="doExport"
         />
@@ -180,7 +185,7 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
     </UiPageHeader>
 
     <UiEmptyState
-      v-if="role && !halaqatPending && !halaqat.length"
+      v-if="mounted && role && !halaqatPending && !halaqat.length"
       icon="i-lucide-book-open"
       :title="isTeacher ? 'لا حلقة معيّنة لك' : 'لا حلقات في نطاقك'"
     />
@@ -200,7 +205,7 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
       />
 
       <QuranHalaqaList
-        v-if="!halaqaId && !isTeacher && !halaqatPending"
+        v-if="mounted && !halaqaId && !isTeacher && !halaqatPending"
         :items="listItems"
         @pick="halaqaId = $event"
       />

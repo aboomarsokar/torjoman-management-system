@@ -23,6 +23,8 @@ const { isAdmin, isStudent } = usePermissions()
 const { handle } = useErrorHandler()
 const { prime, urlFor } = useProfilePhotoUrls()
 const { refresh: refreshMyPhoto } = useMyPhoto()
+// في النيابة لا تُغيَّر كلمةُ مرور غيرك (مشغّلُ auth.users يرفض أصلاً) — فيُخفى الزرّ والتنبيه حتى يُعرف أنها ليست نيابة
+const { notImpersonating } = useImpersonation()
 const toast = useToast()
 
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
@@ -248,8 +250,15 @@ const pwOpen = ref(false)
             </div>
           </div>
           <div class="band-actions">
+            <ImpersonationStartButton
+              v-if="!isSelf"
+              :profile-id="data.p.id"
+              :name="data.p.full_name"
+              :role="data.p.role"
+              :status="data.p.status"
+            />
             <UButton
-              v-if="isSelf"
+              v-if="isSelf && notImpersonating"
               label="تغيير كلمة المرور"
               color="neutral"
               variant="outline"
@@ -272,7 +281,7 @@ const pwOpen = ref(false)
 
         <!-- تنبيه الكلمة الافتراضية -->
         <ProfilePasswordBanner
-          v-if="isSelf && data.p.must_change_password"
+          v-if="isSelf && notImpersonating && data.p.must_change_password"
           @change="pwOpen = true"
         />
 

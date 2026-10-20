@@ -1,4 +1,5 @@
 import { requireAdminManager } from '../../utils/supabaseAdmin'
+import { requireWritableSession } from '../../utils/impersonationGuard'
 import { parseResetPasswordInput } from '../../utils/accountInput'
 import { generateTempPassword } from '../../utils/tempPassword'
 
@@ -11,7 +12,8 @@ import { generateTempPassword } from '../../utils/tempPassword'
  * جلسةٍ قديمة (جهازٌ مسروق) على الحساب بوضع كلمةٍ جديدة (هجرة 20261020093000).
  */
 export default defineEventHandler(async (event) => {
-  const { admin } = await requireAdminManager(event)
+  const { admin, caller } = await requireAdminManager(event)
+  requireWritableSession(caller)
   const parsed = parseResetPasswordInput(await readBody(event))
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
   const { userId } = parsed.value

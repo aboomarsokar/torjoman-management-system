@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * إدارة المستخدمين (§4.12) — للمدير الإداري (ومشرف المشروع اطّلاعاً بلا كتابة).
+ * إدارة المستخدمين (§4.12) — للمدير الإداري (ومشرف المشروع والمدير الفني اطّلاعاً بلا كتابة؛ والفنيُّ منها «ادخل بحسابه»).
  * قائمة العاملين + تصفية بالدور + إنشاء حساب برقمٍ وظيفيّ مولَّد (عبر مسار خادمي) + تفعيل/تعطيل.
  * الطلاب لا يظهرون هنا (حساباتهم تُنشأ من شاشة الطلاب).
  */
@@ -20,8 +20,8 @@ const supabase = useSupabaseClient<Database>()
 const { role: myRole } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isReadOnly } = usePermissions()
-const canView = computed(() => isAdmin.value || isReadOnly.value)
+const { isAdmin, isReadOnly, isTechnical } = usePermissions()
+const canView = computed(() => isAdmin.value || isReadOnly.value || isTechnical.value)
 
 const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'neutral' | 'error'> = {
   project_supervisor: 'neutral',
@@ -283,6 +283,13 @@ async function confirmReset() {
                 icon="i-lucide-id-card"
                 :ui="{ base: 'rounded-[10px]' }"
               />
+              <ImpersonationStartButton
+                :profile-id="row.id"
+                :name="row.full_name"
+                :role="row.role"
+                :status="row.status"
+                size="sm"
+              />
               <UButton
                 v-if="isAdmin"
                 label="إعادة تعيين الكلمة"
@@ -336,10 +343,17 @@ async function confirmReset() {
                 />
               </template>
               <template
-                v-if="isAdmin"
+                v-if="isAdmin || isTechnical"
                 #actions
               >
+                <ImpersonationStartButton
+                  :profile-id="row.id"
+                  :name="row.full_name"
+                  :role="row.role"
+                  :status="row.status"
+                />
                 <UButton
+                  v-if="isAdmin"
                   label="إعادة تعيين الكلمة"
                   color="neutral"
                   variant="outline"
@@ -348,6 +362,7 @@ async function confirmReset() {
                   @click="resetTarget = row"
                 />
                 <UButton
+                  v-if="isAdmin"
                   :label="row.status === 'disabled' ? 'تفعيل' : 'تعطيل'"
                   :color="row.status === 'disabled' ? 'success' : 'neutral'"
                   variant="outline"

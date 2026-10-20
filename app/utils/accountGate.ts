@@ -13,9 +13,18 @@ export interface GateProfile {
 
 export type GateDecision = 'allow' | 'change-password' | 'sign-out'
 
-export function accountGateDecision(profile: GateProfile | null, path: string, isPublic: boolean): GateDecision {
+/**
+ * `impersonating`: في النيابة لا يُساق المديرُ إلى تغيير كلمةِ غيره (والكلمةُ لا تُغيَّر بالنيابة أصلاً —
+ * مشغّلُ auth.users يرفض) — فيمرّ.
+ */
+export function accountGateDecision(
+  profile: GateProfile | null,
+  path: string,
+  isPublic: boolean,
+  opts: { impersonating?: boolean } = {}
+): GateDecision {
   if (!profile) return 'allow'
   if (profile.status !== 'active') return 'sign-out'
-  if (profile.must_change_password && !isPublic && path !== CHANGE_PASSWORD_PATH) return 'change-password'
+  if (profile.must_change_password && !isPublic && path !== CHANGE_PASSWORD_PATH && !opts.impersonating) return 'change-password'
   return 'allow'
 }

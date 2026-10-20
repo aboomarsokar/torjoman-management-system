@@ -120,6 +120,7 @@ export function useInbox() {
   const unread = ref(0)
   const loaded = ref(false)
   const { handle } = useErrorHandler()
+  const { state: impersonation } = useImpersonation()
 
   async function load() {
     const uid = user.value?.sub
@@ -153,6 +154,8 @@ export function useInbox() {
   }
 
   async function markRead(ids: string[] | null) {
+    // النائبُ يقرأ ولا يعلّم إشعاراتِ الموظف مقروءةً (والقاعدةُ تحرس الدالّة) — بلا نداءٍ ولا رسالة
+    if (impersonation.value) return
     const { data, error } = await supabase.rpc('mark_notifications_read', ids ? { p_ids: ids } : {})
     if (error) {
       handle(error)

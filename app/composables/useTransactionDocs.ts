@@ -35,6 +35,8 @@ export function useTransactionDocs(transactionId: Ref<string | null>) {
   const docs = ref<TransactionDoc[]>([])
   const loading = ref(false)
   const uploading = ref(false)
+  // في نيابة القراءة يُرفض الرفعُ والحذفُ قبل الإرسال برسالةٍ عربية (رفضُ المستودع إنجليزيٌّ عامّ)
+  const { blockIfReadOnly } = useImpersonation()
 
   async function load() {
     docs.value = []
@@ -63,6 +65,7 @@ export function useTransactionDocs(transactionId: Ref<string | null>) {
     uploading.value = true
     let added = 0
     try {
+      blockIfReadOnly()
       for (const file of files) {
         const path = financeDocPath(txId, crypto.randomUUID(), file.type)
         const { error: upErr } = await supabase.storage.from(FINANCE_DOCS_BUCKET).upload(path, file, { contentType: file.type })
@@ -86,6 +89,7 @@ export function useTransactionDocs(transactionId: Ref<string | null>) {
 
   async function remove(doc: TransactionDoc) {
     try {
+      blockIfReadOnly()
       const { error } = await supabase.from('transaction_attachments').delete().eq('id', doc.id)
       if (error) throw error
       await supabase.storage.from(FINANCE_DOCS_BUCKET).remove([doc.storage_path])

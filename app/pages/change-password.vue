@@ -17,13 +17,18 @@ const { signOut } = useAuth()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
+// في النيابة: لا تُغيَّر كلمةُ مرور غيرك — النموذجُ معطَّل (والحارسُ الحقيقيّ مشغّلُ auth.users).
+// الشاشةُ بلا تخطيط اللوحة، فتسأل الخادمَ بنفسها.
+const { state: impersonation, ensureChecked } = useImpersonation()
+onMounted(() => void ensureChecked())
+
 const mustChange = computed(() => profile.value?.must_change_password === true)
 const pw = reactive({ next: '', confirm: '' })
 const showPassword = ref(false)
 const saving = ref(false)
 
 async function submit() {
-  if (!profile.value) return
+  if (!profile.value || impersonation.value) return
   const invalid = passwordChangeError(pw.next, pw.confirm)
   if (invalid) {
     toast.add({ title: invalid, color: 'error', icon: 'i-lucide-circle-alert' })
@@ -61,6 +66,15 @@ async function submit() {
         </template>
       </p>
 
+      <UAlert
+        v-if="impersonation"
+        color="warning"
+        variant="subtle"
+        icon="i-lucide-shield-alert"
+        title="لا تُغيَّر كلمةُ مرور غيرك بالنيابة."
+        class="imp-alert"
+      />
+
       <form
         class="form"
         @submit.prevent="submit"
@@ -73,6 +87,7 @@ async function submit() {
             v-model="pw.next"
             :type="showPassword ? 'text' : 'password'"
             autocomplete="new-password"
+            :disabled="!!impersonation"
             dir="ltr"
             icon="i-lucide-lock"
             size="xl"
@@ -96,6 +111,7 @@ async function submit() {
             v-model="pw.confirm"
             :type="showPassword ? 'text' : 'password'"
             autocomplete="new-password"
+            :disabled="!!impersonation"
             dir="ltr"
             icon="i-lucide-lock"
             size="xl"
@@ -110,7 +126,7 @@ async function submit() {
           size="xl"
           block
           :loading="saving"
-          :disabled="!profile"
+          :disabled="!profile || !!impersonation"
           :ui="{ base: 'rounded-[13px] font-semibold' }"
         />
       </form>
@@ -136,6 +152,7 @@ async function submit() {
 .mark { height: 60px; width: auto; margin: 0 auto 14px; display: block; filter: var(--logo-filter); }
 h1 { margin: 0; text-align: center; font-size: 26px; font-weight: 700; color: var(--ink); }
 .lead { margin: 12px 0 24px; text-align: center; font-size: 15px; line-height: 1.8; color: var(--ink-2); }
+.imp-alert { margin-bottom: 18px; }
 .form { display: flex; flex-direction: column; gap: 16px; }
 .logout { margin-top: 14px; }
 </style>

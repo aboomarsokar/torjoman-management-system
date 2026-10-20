@@ -23,6 +23,17 @@ export const IMPERSONATION_TARGETS: Record<ImpersonatorRole, readonly Role[]> = 
 /** النصُّ نفسُه في private.assert_session_writable (يحرسه اختبار). */
 export const IMPERSONATION_READ_ONLY_MESSAGE = 'أنت تتصفّح بالنيابة — قراءةٌ فقط، فلا يُحفظ شيءٌ باسم غيرك. فعّل وضعَ التعديل من الشريط إن لزم.'
 
+/** ردُّ `GET /api/me/impersonation` — مصدرٌ واحد للخادم والواجهة. */
+export interface ImpersonationStatus {
+  targetName: string
+  actorName: string
+  actorRole: ImpersonatorRole
+  expiresAt: string
+  writeUntil: string | null
+  /** المختومةُ تُعرض شريطاً ما دامت الجلسةُ تعمل — شريطٌ يختفي وجلسةٌ باقية هو ما بُني هذا لمنعه. */
+  ended: boolean
+}
+
 export function isImpersonatorRole(role: Role | null | undefined): role is ImpersonatorRole {
   return role != null && (IMPERSONATOR_ROLES as readonly Role[]).includes(role)
 }

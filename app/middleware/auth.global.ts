@@ -11,6 +11,7 @@
 import type { Database } from '~/types/database.types'
 import { CHANGE_PASSWORD_PATH } from '~/constants/auth'
 import { accountGateDecision, type GateProfile } from '~/utils/accountGate'
+import { isSessionSwitching } from '~/utils/impersonation'
 
 const PUBLIC_PATHS = ['/', '/login']
 
@@ -22,6 +23,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const isPublic = PUBLIC_PATHS.includes(to.path) || to.path.startsWith('/auth') || to.path.startsWith('/s/') || to.path.startsWith('/news/')
 
   if (!user.value) {
+    // تبديلُ جلسة النيابة جارٍ: SIGNED_OUT عابرٌ من رمزٍ أبطله الخادم — والتحميلُ الكامل آتٍ
+    if (isSessionSwitching()) return abortNavigation()
     return isPublic ? undefined : navigateTo('/login')
   }
   if (to.path === '/login') {
@@ -39,9 +42,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
     profile = error ? null : data
   }
 
-  const decision = accountGateDecision(profile, to.path, isPublic)
+  let decision = accountGateDecision(profile, to.path, isPublic)
+  // النادرُ وحده يسأل الخادم: في النيابة لا يُساق المديرُ إلى تغيير كلمةِ غيره، ولا يُخرَج الموظفُ من أجهزته
+  const impersonating = decision !== 'allow' && !!(await useImpersonation().ensureChecked())
+  if (impersonating) decision = accountGateDecision(profile, to.path, isPublic, { impersonating })
   if (decision === 'sign-out') {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut(impersonating ? { scope: 'local' } : undefined)
     return navigateTo('/login')
   }
   if (decision === 'change-password') {

@@ -83,6 +83,8 @@ export async function removeProfilePhoto(backend: PhotoBackend, profileId: strin
 export function useProfilePhoto() {
   const client = useSupabaseClient<Database>()
   const isSaving = ref(false)
+  // في نيابة القراءة يُرفض الرفعُ قبل الإرسال برسالةٍ عربية (رفضُ المستودع إنجليزيٌّ عامّ)
+  const { blockIfReadOnly } = useImpersonation()
 
   const backend: PhotoBackend = {
     // النوعُ نوعُ ما خرج لا ما طُلب: سفاري قد يُخرج PNG من toBlob('image/webp').
@@ -106,12 +108,18 @@ export function useProfilePhoto() {
 
   /** يرفع الصورة ويثبّت مسارها في صفّ الحساب. */
   function upload(profileId: string, file: File): Promise<string> {
-    return withSaving(() => uploadProfilePhoto(backend, profileId, file))
+    return withSaving(async () => {
+      blockIfReadOnly()
+      return uploadProfilePhoto(backend, profileId, file)
+    })
   }
 
   /** يُزيل الصورة. */
   function remove(profileId: string): Promise<void> {
-    return withSaving(() => removeProfilePhoto(backend, profileId))
+    return withSaving(async () => {
+      blockIfReadOnly()
+      return removeProfilePhoto(backend, profileId)
+    })
   }
 
   return { isSaving, upload, remove }

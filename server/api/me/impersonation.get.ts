@@ -7,17 +7,10 @@
 import type { Database } from '~/types/database.types'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { readSessionClaims } from '../../utils/caller'
-import type { ImpersonatorRole } from '~/constants/impersonation'
+import type { ImpersonationStatus, ImpersonatorRole } from '~/constants/impersonation'
 
-export interface ImpersonationStatus {
-  targetName: string
-  actorName: string
-  actorRole: ImpersonatorRole
-  expiresAt: string
-  writeUntil: string | null
-  /** المختومةُ تُعرض شريطاً ما دامت الجلسةُ تعمل — شريطٌ يختفي وجلسةٌ باقية هو ما بُني هذا لمنعه. */
-  ended: boolean
-}
+// النوعُ في الثوابت (مصدرٌ واحد للخادم والواجهة) — ويُعاد تصديرُه هنا لمن استورده من المسار.
+export type { ImpersonationStatus }
 
 export default defineEventHandler(async (event): Promise<ImpersonationStatus | null> => {
   const claims = await readSessionClaims(event)

@@ -1651,6 +1651,15 @@ export type Database = {
         Args: { p_ids: string[]; p_paid: boolean }
         Returns: number
       }
+      update_my_contact: {
+        Args: {
+          p_guardian_email: string
+          p_nearest_mosque: string
+          p_phone: string
+          p_residence: string
+        }
+        Returns: undefined
+      }
       visible_halaqa_ids: { Args: never; Returns: string[] }
     }
     Enums: {

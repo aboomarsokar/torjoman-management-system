@@ -9,6 +9,8 @@ import { PASSWORD_MIN_LENGTH } from '~/constants/auth'
 export const PASSWORD_TOO_SHORT = `كلمة المرور ${PASSWORD_MIN_LENGTH} أحرف على الأقل.`
 export const PASSWORD_MISMATCH = 'الكلمتان غير متطابقتين.'
 export const PASSWORD_SAME_AS_CURRENT = 'اختر كلمة مرورٍ مختلفة عن الحالية.'
+/** «Prevent use of leaked passwords» في Supabase (فعّله المستخدم 2026-10-20) يرفض الكلماتِ المسرّبة والشائعة. */
+export const PASSWORD_WEAK = 'هذه الكلمة شائعةٌ أو ظهرت في تسريباتٍ معروفة — اختر كلمةً أطولَ وغيرَ متوقَّعة.'
 export const FLAG_CLEAR_FAILED = 'تغيّرت كلمة المرور لكن تعذّر تحديث حالة حسابك — أعد المحاولة بكلمةٍ أخرى أو تواصل مع المدير الإداري.'
 
 /** فحص المدخلين قبل أي طلب: الطول والتطابق. null = صالح. */
@@ -30,6 +32,7 @@ export async function applyPasswordChange(next: string, steps: PasswordChangeSte
   const { error } = await steps.updatePassword(next)
   if (error) {
     if (error.code === 'same_password') throw new Error(PASSWORD_SAME_AS_CURRENT)
+    if (error.code === 'weak_password') throw new Error(PASSWORD_WEAK)
     throw error
   }
   const flag = await steps.clearFlag()

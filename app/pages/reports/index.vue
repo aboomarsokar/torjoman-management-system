@@ -124,12 +124,13 @@ const recordOpen = computed({
 })
 const saving = ref(false)
 function openCard(row: StudentMonthRow) {
-  editingReadOnly.value = !canEdit.value
+  editingReadOnly.value = !canEdit.value || row.recordedElsewhere
   editing.value = row
 }
 async function onSave(input: RecordInput) {
   const row = editing.value
-  if (!row) return
+  // رصدُ الحلقة السابقة للعرض فقط (والقاعدةُ ترفضه كذلك)
+  if (!row || row.recordedElsewhere) return
   saving.value = true
   const ok = await saveRecord(row.studentId, input)
   saving.value = false
@@ -258,7 +259,7 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
               :key="r.studentId"
               :row="r"
               :status="status"
-              :action="cardAction(!!r.record, canEdit)"
+              :action="cardAction(!!r.record, canEdit, r.recordedElsewhere)"
               :surah-name="reference.surahName"
               @open="openCard(r)"
             />

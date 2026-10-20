@@ -85,9 +85,12 @@ export function canEditMonth(input: { readOnly: boolean, isTeacher: boolean, can
 
 export type CardAction = 'record' | 'edit' | 'view'
 
-/** زرُّ البطاقة: «رصد» بلا سجلّ، «تعديل» لسجلٍّ قابلٍ للكتابة، «عرض» لما لا يُكتب؛ null لا سجلَّ يُعرض. */
-export function cardAction(hasRecord: boolean, canEdit: boolean): CardAction | null {
-  if (canEdit) return hasRecord ? 'edit' : 'record'
+/**
+ * زرُّ البطاقة: «رصد» بلا سجلّ، «تعديل» لسجلٍّ قابلٍ للكتابة، «عرض» لما لا يُكتب؛ null لا سجلَّ يُعرض.
+ * ما رُصد في الحلقة السابقة (`recordedElsewhere`) للعرض وحدَه أيّاً كانت صلاحيةُ الناظر.
+ */
+export function cardAction(hasRecord: boolean, canEdit: boolean, recordedElsewhere = false): CardAction | null {
+  if (canEdit && !recordedElsewhere) return hasRecord ? 'edit' : 'record'
   return hasRecord ? 'view' : null
 }
 

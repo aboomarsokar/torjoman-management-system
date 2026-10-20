@@ -1,15 +1,18 @@
 <script setup lang="ts">
 /**
- * صفحة الطالب «صفحتي» — ملفّه وحضوره هذا الشهر ورحلته وسجلّ شهوره المعتمَدة، للقراءة فقط (لا أزرار تعديل).
- * - البيانات من `students` حيث user_id = حساب الطالب (RLS يقصرها عليه)، وبطاقاتها ورحلتها
- *   هي نفسها مكوّنات ملف الطالب الداخلي (StudentDetailCards / StudentJourneyCard).
- * - الصورة الشخصية: يرفعها الطالب (الذكر) ويُزيلها بنفسه؛ والطالبة بلا حقلٍ ولا صورة — الحرف الأول دائماً.
+ * صفحة الطالب «صفحتي» — للقراءة فقط (لا أزرار تعديلٍ على بياناته)، في ثلاثة تبويبات (طلبُ المستخدم 2026-10-20):
+ * - «لوحة التحكم»: أرقامُه الأساسية في نظرة — التقدّم، والحضور هذا الشهر، والاختبارات، والمحطّة القادمة، وحلقته.
+ * - «رحلتي»: رحلتُه على دورات الاختبار وسجلُّ شهوره المعتمدة.
+ * - «بياناتي»: بطاقاتُ بياناته (المصدرُ نفسه لملف الطالب الداخلي — StudentDetailCards).
+ * التبويبُ في الرابط (`?tab=`) فيبقى بعد التحديث، والأولُ بلا معامل.
+ * - الصورة الشخصية: الحرفُ الأول في الشريط هو زرُّ تغييرها (ProfilePhotoButton) — للطالب الذكر؛
+ *   والطالبة بلا صورة — الحرفُ الأول ساكناً.
  * - كلمة المرور: الطالب يبدأ بكلمةٍ افتراضية (must_change_password) ويغيّرها من هنا — لا ملفّ وظيفيّاً له،
  *   و/profile/me تُحوّله إلى هذه الصفحة.
  * - من ليس طالباً يُعاد إلى لوحته.
  */
 import type { Database } from '~/types/database.types'
-import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
+import { displayPhotoPath } from '~/constants/profilePhoto'
 import { buildStudentSections } from '~/utils/studentSections'
 
 definePageMeta({ layout: 'dashboard' })
@@ -21,8 +24,7 @@ type StudentRow = Database['public']['Tables']['students']['Row'] & {
 
 const supabase = useSupabaseClient<Database>()
 const { profile, role, pending: profilePending, fetchProfile } = useProfile()
-const { url: myPhotoUrl, refresh: refreshMyPhoto } = useMyPhoto()
-const { isStudent } = usePermissions()
+const { refresh: refreshMyPhoto } = useMyPhoto()
 
 // العاملون لا صفحة طالب لهم — يعودون إلى لوحتهم متى عُرف الدور
 watch(role, (r) => {
@@ -51,11 +53,27 @@ const { attendance } = useMyAttendance(() => me.value ? { studentId: me.value.id
 
 const loading = computed(() => profilePending.value || pending.value)
 const sections = computed(() => me.value ? buildStudentSections(me.value) : [])
+const halaqa = computed(() => me.value?.halaqa
+  ? { name: me.value.halaqa.name, teacher: me.value.halaqa.teacher?.full_name ?? null, time: me.value.halaqa.daily_time?.slice(0, 5) ?? null }
+  : null)
 
-// الصورة: للذكر فقط (الحراسة مكرّرة هنا وفي displayPhotoPath وفي القاعدة)
-const photoAllowed = computed(() => isStudent.value && canHavePhoto(me.value?.gender))
-const photoUrl = computed(() => photoAllowed.value ? myPhotoUrl.value : null)
 const photoPath = computed(() => displayPhotoPath(profile.value))
+
+// التبويبات — في الرابط
+type Tab = 'dashboard' | 'journey' | 'data'
+const TABS: { key: Tab, label: string, icon: string }[] = [
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard' },
+  { key: 'journey', label: 'رحلتي', icon: 'i-lucide-route' },
+  { key: 'data', label: 'بياناتي', icon: 'i-lucide-id-card' }
+]
+const route = useRoute()
+const router = useRouter()
+const tab = computed<Tab>({
+  get: () => TABS.find(t => t.key === route.query.tab)?.key ?? 'dashboard',
+  set: (v) => {
+    void router.replace({ query: { ...route.query, tab: v === 'dashboard' ? undefined : v } })
+  }
+})
 
 const pwOpen = ref(false)
 const mustChangePassword = computed(() => profile.value?.must_change_password === true)
@@ -84,28 +102,29 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
         <!-- الشريط العلوي -->
         <div class="band">
           <div class="av">
-            <ProfileAvatar
+            <ProfilePhotoButton
+              :profile-id="profile.id"
               :name="me.full_name"
-              :photo-url="photoUrl"
+              :photo-path="photoPath"
+              :gender="me.gender"
+              @changed="refreshMyPhoto"
             />
           </div>
           <div class="band-info">
-            <div class="band-top">
-              <h1>{{ me.full_name }}</h1>
+            <h1>{{ me.full_name }}</h1>
+            <div class="band-sub">
               <UBadge
                 :label="STUDENT_STATUS[me.status]?.label"
                 :color="STUDENT_STATUS[me.status]?.color"
                 variant="soft"
+                class="band-badge"
               />
-            </div>
-            <div class="band-sub">
-              {{ me.halaqa?.name || 'بلا حلقة' }}
-              <template v-if="me.halaqa?.teacher?.full_name">
-                · المعلّم {{ me.halaqa.teacher.full_name }}
-              </template>
-              <template v-if="me.halaqa?.daily_time">
-                · {{ me.halaqa.daily_time.slice(0, 5) }}
-              </template>
+              <span>{{ me.halaqa?.name || 'بلا حلقة' }}</span>
+              <span v-if="me.halaqa?.teacher?.full_name">المعلّم {{ me.halaqa.teacher.full_name }}</span>
+              <span
+                v-if="halaqa?.time"
+                dir="ltr"
+              >{{ halaqa.time }}</span>
             </div>
           </div>
           <div class="band-actions">
@@ -115,7 +134,8 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
               color="neutral"
               variant="ghost"
               size="md"
-              :ui="{ base: 'min-h-11 rounded-xl bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25' }"
+              block
+              :ui="{ base: 'min-h-11 rounded-xl bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25 justify-center' }"
               @click="pwOpen = true"
             />
           </div>
@@ -127,51 +147,59 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
           @change="pwOpen = true"
         />
 
-        <!-- الصورة الشخصية (اختيارية؛ لا تُعرض لطالبة) -->
-        <section
-          v-if="photoAllowed"
-          class="photo-card"
+        <!-- التبويبات -->
+        <div
+          class="tabs"
+          role="tablist"
+          aria-label="أقسام صفحتي"
         >
-          <ProfilePhotoField
-            :profile-id="profile.id"
-            :name="me.full_name"
-            :photo-path="photoPath"
-            :gender="me.gender"
-            @changed="refreshMyPhoto"
+          <button
+            v-for="t in TABS"
+            :id="`tab-${t.key}`"
+            :key="t.key"
+            type="button"
+            role="tab"
+            class="tab"
+            :class="{ active: tab === t.key }"
+            :aria-selected="tab === t.key"
+            :aria-controls="`panel-${t.key}`"
+            @click="tab = t.key"
+          >
+            <UIcon
+              :name="t.icon"
+              class="size-[18px]"
+            />
+            {{ t.label }}
+          </button>
+        </div>
+
+        <div
+          :id="`panel-${tab}`"
+          role="tabpanel"
+          :aria-labelledby="`tab-${tab}`"
+        >
+          <StudentDashboard
+            v-if="tab === 'dashboard'"
+            :student-id="me.id"
+            :quran-parts="me.quran_parts"
+            :enrollment-date="me.enrollment_date"
+            :attendance="attendance"
+            :halaqa="halaqa"
+            @open="tab = $event"
           />
-        </section>
-
-        <!-- بطاقات البيانات (للقراءة فقط) -->
-        <StudentDetailCards :sections="sections" />
-
-        <!-- حضوري هذا الشهر -->
-        <section
-          v-if="attendance"
-          class="att-card"
-          aria-label="حضوري هذا الشهر"
-        >
-          <span class="att-ico"><UIcon
-            name="i-lucide-calendar-check"
-            class="size-5"
-          /></span>
-          <div>
-            <h3>حضوري هذا الشهر</h3>
-            <p v-if="attendance.held">
-              حضر {{ attendance.attended }} من {{ attendance.held }} <span class="att-month">({{ attendance.label }})</span>
-            </p>
-            <p v-else>
-              لم تنعقد حلقتك بعدُ هذا الشهر <span class="att-month">({{ attendance.label }})</span>
-            </p>
-          </div>
-        </section>
-
-        <!-- الرحلة -->
-        <StudentJourneyCard
-          :student-id="me.id"
-          :quran-parts="me.quran_parts"
-          :enrollment-date="me.enrollment_date"
-          own-records
-        />
+          <StudentJourneyCard
+            v-else-if="tab === 'journey'"
+            :student-id="me.id"
+            :quran-parts="me.quran_parts"
+            :enrollment-date="me.enrollment_date"
+            own-records
+            bare
+          />
+          <StudentDetailCards
+            v-else
+            :sections="sections"
+          />
+        </div>
       </template>
     </ClientOnly>
 
@@ -185,23 +213,34 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
 </template>
 
 <style scoped>
-.band { background: var(--band); border-radius: 22px; padding: 28px 30px; box-shadow: var(--shadow-lg); margin-bottom: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; overflow: hidden; }
-.band-info { min-width: 0; flex: 1; }
-.band-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.band-top h1 { margin: 0; font-size: 25px; font-weight: 700; color: #fff; }
-.band-sub { font-size: 15px; color: var(--band-sub); margin-top: 6px; }
-.band-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.band { background: var(--band); border-radius: 22px; padding: 26px 28px; box-shadow: var(--shadow-lg); margin-bottom: 20px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; }
+.av { width: 72px; height: 72px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; }
+.band-info { min-width: 0; }
+.band-info h1 { margin: 0; font-size: 25px; font-weight: 700; line-height: 1.35; color: #fff; text-wrap: balance; }
+.band-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 14.5px; color: var(--band-sub); }
+.band-sub > span + span::before { content: '·'; margin-inline-end: 14px; opacity: .7; }
+.band-badge { margin-inline-end: 2px; }
+.band-actions { display: flex; align-items: center; }
 
-.att-card { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 22px; margin-bottom: 22px; }
-.att-ico { width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--green-soft); color: var(--green-ink); }
-.att-card h3 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--ink); }
-.att-card p { margin: 0; font-size: 15px; color: var(--ink-2); }
-.att-month { color: var(--ink-3); font-size: 13px; }
+/* التبويبات: مقطّعٌ واحد — بعرض الشاشة على الجوال، وبقدر محتواه على الحاسوب */
+.tabs { display: inline-flex; gap: 4px; padding: 5px; margin-bottom: 20px; background: var(--surface-3); border: 1px solid var(--line); border-radius: 16px; max-width: 100%; }
+.tab { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 20px; border: none; border-radius: 12px; background: transparent; color: var(--ink-2); font: inherit; font-size: 14.5px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background .15s, color .15s, box-shadow .15s; }
+.tab:hover { color: var(--ink); }
+.tab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.tab:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
-.photo-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 22px; margin-bottom: 22px; }
+@media (max-width: 640px) {
+  .band { grid-template-columns: auto minmax(0, 1fr); padding: 20px 18px; gap: 16px 14px; border-radius: 20px; }
+  .av { width: 62px; height: 62px; border-radius: 18px; font-size: 24px; }
+  .band-info h1 { font-size: 20px; }
+  .band-sub { font-size: 13.5px; gap: 4px 10px; }
+  .band-sub > span + span::before { margin-inline-end: 10px; }
+  .band-actions { grid-column: 1 / -1; }
+  .tabs { display: flex; width: 100%; }
+  .tab { padding: 0 8px; gap: 6px; font-size: 14px; }
+}
 
-/* هيكل التحميل فقط — البطاقات الحقيقية في StudentDetailCards */
+/* هيكل التحميل فقط — البطاقات الحقيقية في المكوّنات */
 .grid-skel { columns: 2; column-gap: 22px; }
 @media (max-width: 768px) { .grid-skel { columns: 1; } }
 </style>

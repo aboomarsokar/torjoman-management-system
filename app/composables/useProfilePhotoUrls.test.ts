@@ -101,4 +101,16 @@ describe('createProfilePhotoUrlStore', () => {
     expect(store.urlFor('a/photo.webp')).toBeNull()
     expect(store.urlFor('b/photo.webp')).toBe('signed:b/photo.webp')
   })
+
+  it('حالةٌ مُحيت بعد الخروج (undefined) لا تُسقط القراءة ولا التوقيع', async () => {
+    const cache = { value: undefined } as unknown as ValueBox<SignedCache>
+    const generations = { value: undefined } as unknown as ValueBox<Record<string, number>>
+    const store = createProfilePhotoUrlStore(cache, generations, async paths => okSign(paths), () => NOW)
+
+    expect(store.urlFor('me/photo.webp')).toBeNull()
+    await store.prime(['me/photo.webp'])
+    expect(store.urlFor('me/photo.webp')).toBe('signed:me/photo.webp')
+    store.invalidate('me/photo.webp')
+    expect(store.urlFor('me/photo.webp')).toBeNull()
+  })
 })

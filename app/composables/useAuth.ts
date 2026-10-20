@@ -40,7 +40,10 @@ export function useAuth() {
   /** تسجيل الخروج ثم العودة لشاشة الدخول — ومحوُ روابط الصور الموقَّعة (لا تصلح لمن بعده). */
   async function signOut() {
     await supabase.auth.signOut()
-    clearNuxtState([PROFILE_PHOTOS_SIGNED_KEY, PROFILE_PHOTOS_GENERATIONS_KEY])
+    // تفريغٌ لا محو: `clearNuxtState` يجعل الحالةَ undefined فيسقط أوّلُ قارئٍ لصورةٍ بعد الدخول التالي
+    // («Cannot read properties of undefined» في urlFrom)
+    useState(PROFILE_PHOTOS_SIGNED_KEY).value = {}
+    useState(PROFILE_PHOTOS_GENERATIONS_KEY).value = {}
     await navigateTo('/login')
   }
 

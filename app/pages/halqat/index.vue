@@ -52,13 +52,14 @@ const NO_SUP = NO_STAFF
 
 const genderF = ref<Gender | 'all'>('all')
 const statusF = ref<Status | 'all'>('all')
-const genderChips = computed(() => {
+// قائمتان منسدلتان كصفحة الطلاب (طلب المستخدم 2026-10-20) — العددُ بجانب كلّ خيار
+const genderFilterItems = computed(() => {
   const all = halqat.value ?? []
   const n = (g: Gender) => all.filter(h => h.gender === g).length
   return [
-    { value: 'all' as const, label: 'الكل', count: all.length },
-    { value: 'male' as const, label: 'بنين', count: n('male') },
-    { value: 'female' as const, label: 'بنات', count: n('female') }
+    { value: 'all' as const, label: `البنين والبنات (${all.length})` },
+    { value: 'male' as const, label: `بنين (${n('male')})` },
+    { value: 'female' as const, label: `بنات (${n('female')})` }
   ]
 })
 const filtered = computed(() => (halqat.value ?? []).filter(h =>
@@ -185,16 +186,21 @@ async function confirmDelete() {
     <!-- العنوان في الشريط العلوي؛ هنا صفّ أدواتٍ واحد: التصفية ثم الإنشاء -->
     <div class="toolbar">
       <div class="filters">
-        <UiFilterChips
+        <UiSelect
           v-model="genderF"
-          :options="genderChips"
+          :items="genderFilterItems"
+          size="xl"
+          class="filter-sel"
+          aria-label="الجنس"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
         />
-        <USelect
+        <UiSelect
           v-model="statusF"
           :items="[{ label: 'كل الحالات', value: 'all' }, ...statusItems]"
-          size="md"
-          class="status-sel"
-          :ui="{ base: 'rounded-[11px]' }"
+          size="xl"
+          class="filter-sel"
+          aria-label="الحالة"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
         />
       </div>
       <UButton
@@ -204,7 +210,7 @@ async function confirmDelete() {
         size="md"
         icon="i-lucide-plus"
         class="create"
-        :ui="{ base: 'rounded-[12px] font-semibold' }"
+        :ui="{ base: 'rounded-[12px] font-semibold min-h-12' }"
         @click="openCreate"
       />
     </div>
@@ -542,7 +548,7 @@ async function confirmDelete() {
 .halqat { container: halqat / inline-size; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .filters { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
-.status-sel { min-width: 140px; }
+.filter-sel { width: 190px; }
 
 .num { font-variant-numeric: tabular-nums; }
 .idx { color: var(--ink-3); font-size: 13px; }
@@ -563,7 +569,9 @@ async function confirmDelete() {
   .halqat :deep(.table-wrap) { display: none; }
   .cards { display: grid; gap: 12px; }
   .toolbar { align-items: stretch; }
-  .create { width: 100%; justify-content: center; }
+  .filters { width: 100%; flex-wrap: nowrap; }
+  .filter-sel { flex: 1 1 0; width: auto; min-width: 0; }
+  .create { width: 100%; justify-content: center; min-height: 48px; }
 }
 .hcard { background: var(--surface); border-radius: 16px; padding: 16px; }
 .hcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }

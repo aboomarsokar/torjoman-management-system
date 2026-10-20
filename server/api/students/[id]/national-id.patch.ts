@@ -1,4 +1,5 @@
 import { requireAdminManager } from '../../../utils/supabaseAdmin'
+import { requireWritableSession } from '../../../utils/impersonationGuard'
 import { authCreateError, DUPLICATE_IDENTITY_MESSAGE, parseNationalIdInput, parseRecordId, studentRowError } from '../../../utils/accountInput'
 import { studentEmailFromIdentity } from '~/constants/accounts'
 
@@ -8,7 +9,8 @@ import { studentEmailFromIdentity } from '~/constants/accounts'
  * لماذا خادميّ: التحديث المباشر كان يغيّر students.national_id وحده فيعجز الطالب عن الدخول بهويته المصحَّحة.
  */
 export default defineEventHandler(async (event) => {
-  const { admin } = await requireAdminManager(event)
+  const { admin, caller } = await requireAdminManager(event)
+  requireWritableSession(caller)
   const parsedId = parseRecordId(getRouterParam(event, 'id'))
   if (!parsedId.ok) throw createError({ statusCode: 400, statusMessage: parsedId.message })
   const parsed = parseNationalIdInput(await readBody(event))

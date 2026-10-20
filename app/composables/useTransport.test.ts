@@ -4,6 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useTransport } from './useTransport'
+import { IMPERSONATION_BLOCKED_MESSAGE } from '~/utils/impersonation'
 
 /** عميلٌ وهميّ يسجّل السلسلة ويُرجع `result` عند انتظارها. */
 function fakeClient(result: { data: unknown, error: unknown }) {
@@ -19,9 +20,14 @@ function fakeClient(result: { data: unknown, error: unknown }) {
   return { client: { from: () => chain }, calls }
 }
 
-function stub(result: { data: unknown, error: unknown }) {
+function stub(result: { data: unknown, error: unknown }, readOnly = false) {
   const f = fakeClient(result)
   vi.stubGlobal('useSupabaseClient', () => f.client)
+  vi.stubGlobal('useImpersonation', () => ({
+    blockIfReadOnly: () => {
+      if (readOnly) throw new Error(IMPERSONATION_BLOCKED_MESSAGE)
+    }
+  }))
   return f
 }
 
@@ -30,6 +36,13 @@ const input = { id: 't1', trip_date: '2026-10-05', description: 'زيارة', am
 afterEach(() => vi.unstubAllGlobals())
 
 describe('useTransport', () => {
+  it('نيابةُ القراءة تُرفض قبل أيّ طلب — لا «قد تكون الرحلةُ سُدّدت» الكاذبة', async () => {
+    const f = stub({ data: [], error: null }, true)
+    await expect(useTransport().saveTrip(input)).rejects.toThrow(IMPERSONATION_BLOCKED_MESSAGE)
+    await expect(useTransport().deleteTrip('t1')).rejects.toThrow(IMPERSONATION_BLOCKED_MESSAGE)
+    expect(f.calls).toEqual([])
+  })
+
   it('تعديلٌ لم يمسّ صفّاً يرمي «لم يُحفظ»', async () => {
     stub({ data: [], error: null })
     await expect(useTransport().saveTrip(input)).rejects.toThrow('لم يُحفظ — قد تكون الرحلةُ سُدّدت.')

@@ -7,8 +7,11 @@ const MAX_BYTES = 5 * 1024 * 1024 // 5MB
 
 export function useUpload() {
   const supabase = useSupabaseClient()
+  // رفضُ المستودع في نيابة القراءة رسالةٌ إنجليزيةٌ عامّة — فالفحصُ المسبق أوضح (والحارسُ في القاعدة)
+  const { blockIfReadOnly } = useImpersonation()
 
   async function uploadImage(file: File, folder: string): Promise<string> {
+    blockIfReadOnly()
     if (!file.type.startsWith('image/')) throw new Error('الملف يجب أن يكون صورة.')
     if (file.size > MAX_BYTES) throw new Error('حجم الصورة يتجاوز 5 ميغابايت.')
 

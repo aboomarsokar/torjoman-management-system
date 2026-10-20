@@ -19,6 +19,8 @@ const COLUMNS = 'id, profile_id, trip_date, description, amount, notes, paid, pa
 
 export function useTransport() {
   const supabase = useSupabaseClient<Database>()
+  // نيابةُ القراءة تُرفض قبل الإرسال: تحديثٌ لا يطابق صفّاً كان يقول «قد تكون الرحلةُ سُدّدت»
+  const { blockIfReadOnly } = useImpersonation()
 
   /** رحلاتُ الشهر مرتّبةً بالتاريخ ثم وقت الإنشاء؛ و`profileId` يحصرها في موظفٍ بعينه. */
   async function fetchMonth(year: number, month: number, opts: { profileId?: string } = {}): Promise<Trip[]> {
@@ -34,6 +36,7 @@ export function useTransport() {
 
   /** إضافةُ رحلة (بلا `id`) أو تعديلُ غير المسدَّدة (بـ`id`). */
   async function saveTrip(input: TripInput): Promise<void> {
+    blockIfReadOnly()
     const body = { trip_date: input.trip_date, description: input.description, amount: input.amount, notes: input.notes }
     if (!input.id) {
       const { error } = await supabase.from('transport_trips').insert(body)
@@ -47,6 +50,7 @@ export function useTransport() {
 
   /** حذفُ رحلةٍ غير مسدَّدة. */
   async function deleteTrip(id: string): Promise<void> {
+    blockIfReadOnly()
     const { data, error } = await supabase.from('transport_trips').delete().eq('id', id).select('id')
     if (error) throw error
     if (!data?.length) throw new Error('لم تُحذف — قد تكون الرحلةُ سُدّدت.')
@@ -54,6 +58,7 @@ export function useTransport() {
 
   /** تسديدٌ أو إلغاءُ تسديدٍ جماعيّ (للمدير الإداري)؛ يُرجع عددَ الرحلات التي تغيّرت. */
   async function setPaid(ids: string[], paid: boolean): Promise<number> {
+    blockIfReadOnly()
     const { data, error } = await supabase.rpc('set_transport_paid', { p_ids: ids, p_paid: paid })
     if (error) throw error
     return data ?? 0

@@ -12,11 +12,17 @@ const { url: myPhotoUrl } = useMyPhoto()
 const { signOut } = useAuth()
 const toast = useToast()
 const route = useRoute()
+// النيابةُ تُسأل من الخادم مرّةً لكلّ تحميلٍ كامل، غيرَ حاجزة (الشريطُ يظهر حين تصل)
+const { ensureChecked: checkImpersonation, reloadOnIdentityChange } = useImpersonation()
+onMounted(() => void checkImpersonation())
+// لسانٌ آخر بدأ نيابةً أو أنهاها (الكعكةُ مشتركة) ← إعادةُ تحميل هذا اللسان
+reloadOnIdentityChange()
 
-// طرد فوري لأي حساب يُعطَّل أثناء الجلسة (الخيار 1 لإنفاذ التعطيل)
-watch(status, (s) => {
+// طرد فوري لأي حساب يُعطَّل أثناء الجلسة (الخيار 1 لإنفاذ التعطيل) — وفي النيابة الحسابُ المعطَّل حسابُ الموظف لا المدير
+watch(status, async (s) => {
   if (s === 'disabled') {
-    toast.add({ title: 'تم تعطيل حسابك. تواصل مع الإدارة.', color: 'error', icon: 'i-lucide-ban' })
+    const title = (await checkImpersonation()) ? 'عُطِّل حسابُ الموظف — انتهت النيابة.' : 'تم تعطيل حسابك. تواصل مع الإدارة.'
+    toast.add({ title, color: 'error', icon: 'i-lucide-ban' })
     signOut()
   }
 }, { immediate: true })
@@ -47,7 +53,8 @@ const SCOPED_STAFF: Role[] = [...LEADERS, WOMEN, FIELD]
 const mainNav: Item[] = [
   { key: 'me', label: 'صفحتي', icon: 'i-lucide-house', to: '/me', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher'] },
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN] },
+  // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
+  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] },
   { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF },
   { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'] },
@@ -242,42 +249,46 @@ const isActive = matches
 
     <!-- MAIN -->
     <div class="main">
-      <header class="topbar">
-        <div class="top-start">
-          <button
-            class="hamburger"
-            aria-label="القائمة"
-            @click="drawerOpen = true"
-          >
-            <UIcon
-              name="i-lucide-menu"
-              class="size-6"
-            />
-          </button>
-          <h1 class="top-title">
-            {{ navTitle }}
-          </h1>
-        </div>
-        <div class="top-end">
-          <NotificationsBell />
-          <div class="top-user">
-            <div class="top-usertext">
-              <div class="tu-name">
-                {{ fullName }}
-              </div>
-              <div class="tu-role">
-                {{ roleLabel }}
-              </div>
-            </div>
-            <div class="top-av">
-              <ProfileAvatar
-                :name="fullName"
-                :photo-url="myPhotoUrl"
+      <!-- شريطُ النيابة والترويسة ثابتان معاً أعلى العمود — الشريطُ لا يُخفى في شاشة -->
+      <div class="top-stack">
+        <ImpersonationBar />
+        <header class="topbar">
+          <div class="top-start">
+            <button
+              class="hamburger"
+              aria-label="القائمة"
+              @click="drawerOpen = true"
+            >
+              <UIcon
+                name="i-lucide-menu"
+                class="size-6"
               />
+            </button>
+            <h1 class="top-title">
+              {{ navTitle }}
+            </h1>
+          </div>
+          <div class="top-end">
+            <NotificationsBell />
+            <div class="top-user">
+              <div class="top-usertext">
+                <div class="tu-name">
+                  {{ fullName }}
+                </div>
+                <div class="tu-role">
+                  {{ roleLabel }}
+                </div>
+              </div>
+              <div class="top-av">
+                <ProfileAvatar
+                  :name="fullName"
+                  :photo-url="myPhotoUrl"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       <main class="content">
         <slot />
@@ -319,7 +330,8 @@ const isActive = matches
 
 /* MAIN */
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.topbar { height: 76px; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 20; }
+.top-stack { flex-shrink: 0; position: sticky; top: 0; z-index: 20; }
+.topbar { height: 76px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
 .top-start { display: flex; align-items: center; gap: 13px; min-width: 0; }
 .hamburger { display: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .top-title { font-size: 22px; font-weight: 700; margin: 0; color: var(--ink); white-space: nowrap; }

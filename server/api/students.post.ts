@@ -1,4 +1,5 @@
 import { requireAdminManager } from '../utils/supabaseAdmin'
+import { requireWritableSession } from '../utils/impersonationGuard'
 import { authCreateError, DUPLICATE_IDENTITY_MESSAGE, parseStudentInput, studentHalaqaError, studentRowError } from '../utils/accountInput'
 import { generateTempPassword } from '../utils/tempPassword'
 import { studentEmailFromIdentity } from '~/constants/accounts'
@@ -9,7 +10,8 @@ import { studentEmailFromIdentity } from '~/constants/accounts'
  * أي فشلٍ بعد إنشاء حساب Auth يتراجع عمّا سبق كي لا تبقى بقايا.
  */
 export default defineEventHandler(async (event) => {
-  const { admin, user } = await requireAdminManager(event)
+  const { admin, user, caller } = await requireAdminManager(event)
+  requireWritableSession(caller)
   const parsed = parseStudentInput(await readBody(event))
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
   const { fullName, gender, nationalId, halaqaId, birthDate, guardianPhone } = parsed.value

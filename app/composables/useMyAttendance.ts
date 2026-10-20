@@ -5,7 +5,7 @@ import type { AttendanceCount } from '~/utils/quran/attendanceCount'
 import { gazaToday, periodLabel } from '~/utils/reportWindow'
 
 /**
- * حضورُ الطالب نفسِه في الشهر الجاري (بتوقيت غزة): أيامُ حلقته من `attendance_days` وغياباتُه
+ * حضورُ الطالب في الشهر الجاري (بتوقيت غزة) — لصفحة الطالب نفسه ولملفّه عند العاملين: أيامُ حلقته من `attendance_days` وغياباتُه
  * من `attendance_absences` — كلاهما مقروءٌ له بالسياسات. «حضر a من b» حيث b أيامُ الحلقة المنعقدة
  * منذ التحاقه. جلبٌ غير حاجز على العميل؛ `null` ما دام لم يصل أو تعذّر.
  */
@@ -27,7 +27,8 @@ export function summarizeMyMonth(
 
 export function useMyAttendance(source: () => { studentId: string, halaqaId: string | null, enrollmentDate: string | null } | null) {
   const supabase = useSupabaseClient<Database>()
-  const { data, pending } = useLazyAsyncData<MyAttendance | null>('my-attendance-month', async () => {
+  // المفتاحُ بالطالب: العاملُ يتنقّل بين ملفّات طلابٍ كثيرين، فلا يُعرض حضورُ السابق لحظةً على اللاحق
+  const { data, pending } = useLazyAsyncData<MyAttendance | null>(() => `attendance-month-${source()?.studentId ?? 'none'}`, async () => {
     const s = source()
     if (!s?.halaqaId) return null
     const [y, m] = gazaToday().split('-').map(Number) as [number, number]
@@ -42,6 +43,6 @@ export function useMyAttendance(source: () => { studentId: string, halaqaId: str
       return null
     }
     return summarizeMyMonth(y, m, (daysRes.data ?? []).map(d => d.day), (absRes.data ?? []).map(a => a.day), s.enrollmentDate)
-  }, { server: false, default: () => null, watch: [() => source()?.studentId, () => source()?.halaqaId] })
+  }, { server: false, default: () => null, watch: [() => source()?.halaqaId] })
   return { attendance: data, pending }
 }

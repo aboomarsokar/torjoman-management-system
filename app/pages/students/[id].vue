@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
- * ملف الطالب (§4.23) — عرض تفصيلي لسجلّ الطالب.
- * بيانات أساسية + قرآنية + سكن + وليّ الأمر والتواصل. رحلة الطالب (§4.22)
- * تُضاف مع وحدتي التقارير والاختبارات.
- * الصورة الشخصية (Task 6b) تُعرض من حساب الطالب، ولا صورة لطالبة.
- * حساب الدخول (إعادة تعيين الكلمة وتعطيل الدخول) للمدير الإداري وحده — StudentAccountActions.
+ * ملف الطالب (§4.23) عند العاملين — **بشكل «صفحتي» نفسه** (طلبُ المستخدم 2026-10-20): الشريطُ العلويّ
+ * والتبويباتُ الثلاثة («لوحة التحكم» و«رحلته» و«بياناته») مكوّناتٌ مشتركة مع `/me`، والقراءةُ بسياسات
+ * العامل لا بدوالّ الطالب (`self = false`).
+ * الصورة الشخصية تُعرض من حساب الطالب، ولا صورة لطالبة.
+ * نسخُ رابط الاطّلاع لمن يعمل على الطالب، وإعادةُ توليده وحسابُ الدخول (إعادة تعيين الكلمة وتعطيل الدخول)
+ * للمدير الإداري وحده — StudentAccountActions في تبويب «بياناته».
  */
 import type { Database } from '~/types/database.types'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
@@ -84,6 +85,16 @@ async function regenerateLink() {
 }
 
 const sections = computed(() => student.value ? buildStudentSections(student.value) : [])
+const halaqa = computed(() => student.value?.halaqa
+  ? { name: student.value.halaqa.name, teacher: student.value.halaqa.teacher?.full_name ?? null, time: student.value.halaqa.daily_time?.slice(0, 5) ?? null }
+  : null)
+
+// حضورُه هذا الشهر (أيامُ حلقته وغياباتُه — مقروءةٌ للعامل في نطاقه)
+const { attendance } = useMyAttendance(() => student.value
+  ? { studentId: student.value.id, halaqaId: student.value.halaqa_id, enrollmentDate: student.value.enrollment_date }
+  : null)
+
+const tab = useStudentTab()
 </script>
 
 <template>
@@ -117,36 +128,22 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
       />
 
       <template v-else>
-        <!-- شريط علوي -->
-        <div class="band">
-          <div class="av">
-            <ProfileAvatar
+        <!-- الشريط العلوي (مشتركٌ مع «صفحتي») -->
+        <StudentBand
+          :name="student.full_name"
+          :status="student.status"
+          :gender="student.gender"
+          :halaqa="halaqa"
+        >
+          <template #avatar>
+            <span class="face"><ProfileAvatar
               :name="student.full_name"
               :photo-url="photoUrl"
-            />
-          </div>
-          <div class="band-info">
-            <div class="band-top">
-              <h2>{{ student.full_name }}</h2>
-              <UBadge
-                :label="STUDENT_STATUS[student.status]?.label"
-                :color="STUDENT_STATUS[student.status]?.color"
-                variant="soft"
-              />
-            </div>
-            <div class="band-sub">
-              {{ student.halaqa?.name || 'بلا حلقة' }}
-              <template v-if="student.halaqa?.teacher?.full_name">
-                · {{ student.gender === 'female' ? 'المعلّمة' : 'المعلّم' }} {{ student.halaqa.teacher.full_name }}
-              </template>
-              <template v-if="student.halaqa?.daily_time">
-                · {{ student.halaqa.daily_time.slice(0, 5) }}
-              </template>
-            </div>
-          </div>
-          <div
+            /></span>
+          </template>
+          <template
             v-if="canManage"
-            class="band-actions"
+            #actions
           >
             <UButton
               label="نسخ رابط الاطّلاع"
@@ -154,7 +151,7 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
               color="neutral"
               variant="ghost"
               size="md"
-              :ui="{ base: 'rounded-xl bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25' }"
+              :ui="{ base: 'min-h-11 rounded-xl bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25 justify-center' }"
               @click="copyLink"
             />
             <UButton
@@ -164,31 +161,53 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
               variant="ghost"
               size="md"
               :loading="regenerating"
-              :ui="{ base: 'rounded-xl bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25' }"
+              class="regen"
+              :ui="{ base: 'min-h-11 min-w-11 rounded-xl bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25 justify-center' }"
               aria-label="إعادة توليد الرابط"
               title="إعادة توليد الرابط (يُبطل القديم)"
               @click="regenerateLink"
             />
-          </div>
+          </template>
+        </StudentBand>
+
+        <StudentTabs
+          v-model="tab"
+          :self="false"
+        />
+
+        <div
+          :id="`panel-${tab}`"
+          role="tabpanel"
+          :aria-labelledby="`tab-${tab}`"
+        >
+          <StudentDashboard
+            v-if="tab === 'dashboard'"
+            :student-id="student.id"
+            :quran-parts="student.quran_parts"
+            :enrollment-date="student.enrollment_date"
+            :attendance="attendance"
+            :halaqa="halaqa"
+            :self="false"
+            :gender="student.gender"
+          />
+          <StudentJourneyCard
+            v-else-if="tab === 'journey'"
+            :student-id="student.id"
+            :quran-parts="student.quran_parts"
+            :enrollment-date="student.enrollment_date"
+            bare
+          />
+          <template v-else>
+            <!-- حساب الدخول (المدير الإداري): إعادة تعيين الكلمة وتعطيل الدخول -->
+            <StudentAccountActions
+              v-if="isAdmin && student.user_id"
+              :user-id="student.user_id"
+              :student-name="student.full_name"
+              :national-id="student.national_id"
+            />
+            <StudentDetailCards :sections="sections" />
+          </template>
         </div>
-
-        <!-- حساب الدخول (المدير الإداري): إعادة تعيين الكلمة وتعطيل الدخول -->
-        <StudentAccountActions
-          v-if="isAdmin && student.user_id"
-          :user-id="student.user_id"
-          :student-name="student.full_name"
-          :national-id="student.national_id"
-        />
-
-        <!-- بطاقات البيانات -->
-        <StudentDetailCards :sections="sections" />
-
-        <!-- رحلة الطالب على خطة الاختبارات (حسب الحفظ) -->
-        <StudentJourneyCard
-          :student-id="student.id"
-          :quran-parts="student.quran_parts"
-          :enrollment-date="student.enrollment_date"
-        />
       </template>
     </ClientOnly>
   </div>
@@ -198,13 +217,10 @@ const sections = computed(() => student.value ? buildStudentSections(student.val
 .back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
 .back:hover { color: var(--ink); }
 
-.band { background: var(--band); border-radius: 22px; padding: 28px 30px; box-shadow: var(--shadow-lg); margin-bottom: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.av { width: 70px; height: 70px; border-radius: 20px; background: rgba(255, 255, 255, .16); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; flex: none; overflow: hidden; }
-.band-info { min-width: 0; flex: 1; }
-.band-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.band-top h2 { margin: 0; font-size: 25px; font-weight: 700; color: #fff; }
-.band-sub { font-size: 15px; color: var(--band-sub); margin-top: 6px; }
-.band-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* الصورةُ تُقصّ في إطار الشريط (الحرفُ أو الصورة) */
+.face { width: 100%; height: 100%; border-radius: inherit; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+/* زرُّ إعادة التوليد مربّعٌ لا يتمدّد على الجوال */
+.regen { flex: none !important; }
 
 /* هيكل التحميل فقط — البطاقات الحقيقية في StudentDetailCards */
 .grid { columns: 2; column-gap: 22px; }

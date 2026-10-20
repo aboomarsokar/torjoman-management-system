@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canEditTrip, formatAmount, groupByEmployee, monthBounds, numberTrips, payAllText, sumAmount, unpaid, validateTrip } from './transport'
+import { canEditTrip, formatAmount, groupByEmployee, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, unpaid, validateTrip } from './transport'
 import type { Trip } from './transport'
 
 const trip = (over: Partial<Trip> = {}): Trip => ({
@@ -88,5 +88,39 @@ describe('validateTrip', () => {
     expect(names({ ...ok, amount: '12.345' })).toEqual(['amount'])
     expect(names({ ...ok, amount: '10001' })).toEqual(['amount'])
     expect(names({ ...ok, notes: 'x'.repeat(501) })).toEqual(['notes'])
+  })
+})
+
+describe('normalizeAmount والمبلغ بلوحة المفاتيح العربية', () => {
+  const ok = { trip_date: '2026-10-05', description: 'زيارة', amount: '20', notes: '' }
+  const check = (amount: string, today = '2026-10-20') => validateTrip({ ...ok, amount }, today).map(e => e.name)
+  it('الأرقام الهندية والفارسية والفاصلتان والفراغ', () => {
+    expect(normalizeAmount('٢٠')).toBe('20')
+    expect(normalizeAmount('۱۲۳')).toBe('123')
+    expect(normalizeAmount('١٢٫٥')).toBe('12.5')
+    expect(normalizeAmount('20,5')).toBe('20.5')
+    expect(normalizeAmount(' 20 ')).toBe('20')
+  })
+  it('٢٠ سليمٌ ويُرسَل 20', () => {
+    expect(check('٢٠')).toEqual([])
+    expect(Number(normalizeAmount('٢٠'))).toBe(20)
+  })
+  it('١٢٫٥ سليمٌ ويُرسَل 12.5', () => {
+    expect(check('١٢٫٥')).toEqual([])
+    expect(Number(normalizeAmount('١٢٫٥'))).toBe(12.5)
+  })
+  it('20,5 سليمٌ ويُرسَل 20.5', () => {
+    expect(check('20,5')).toEqual([])
+    expect(Number(normalizeAmount('20,5'))).toBe(20.5)
+  })
+  it(' 20 سليمٌ', () => {
+    expect(check(' 20 ')).toEqual([])
+  })
+  it('1e3 والفارغ غيرُ سليمين', () => {
+    expect(check('1e3')).toEqual(['amount'])
+    expect(check('')).toEqual(['amount'])
+  })
+  it('تاريخٌ يساوي اليوم سليم', () => {
+    expect(validateTrip({ ...ok, trip_date: '2026-10-20' }, '2026-10-20')).toEqual([])
   })
 })

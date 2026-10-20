@@ -76,6 +76,15 @@ export function payAllText(trips: Pick<Trip, 'amount'>[]): string {
   return `تسديد ${tripsCount(trips.length)} بمبلغ ${formatAmount(sumAmount(trips))}؟`
 }
 
+/** ما يكتبه المستخدم بلوحة المفاتيح العربية ← صيغةٌ رقميةٌ لاتينية: يقصّ الفراغ، ويحوّل الأرقام الهندية `٠-٩` والفارسية `۰-۹` إلى `0-9`، والفاصلةَ العشرية `٫` والفاصلة `,` إلى `.`. */
+export function normalizeAmount(s: string): string {
+  return s
+    .trim()
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/[٫,]/g, '.')
+}
+
 /** تحقّقُ نموذج الرحلة (القاعدةُ هي الحَكَم؛ هذا لتجربةٍ أوضح). `today` بتوقيت غزة. */
 export function validateTrip(
   input: { trip_date: string, description: string, amount: string, notes: string },
@@ -87,8 +96,9 @@ export function validateTrip(
   const desc = input.description.trim()
   if (!desc) errors.push({ name: 'description', message: 'البيان مطلوب.' })
   else if (desc.length > TRANSPORT_DESCRIPTION_MAX) errors.push({ name: 'description', message: `البيان لا يتجاوز ${TRANSPORT_DESCRIPTION_MAX} حرفاً.` })
-  const amount = Number(input.amount)
-  if (!/^\d+(\.\d{1,2})?$/.test(input.amount.trim()) || !(amount > 0) || amount > TRANSPORT_AMOUNT_MAX) {
+  const raw = normalizeAmount(input.amount)
+  const amount = Number(raw)
+  if (!/^\d+(\.\d{1,2})?$/.test(raw) || !(amount > 0) || amount > TRANSPORT_AMOUNT_MAX) {
     errors.push({ name: 'amount', message: `مبلغٌ موجبٌ حتى ${TRANSPORT_AMOUNT_MAX} بخانتين عشريّتين على الأكثر.` })
   }
   if (input.notes.length > TRANSPORT_NOTES_MAX) errors.push({ name: 'notes', message: `الملاحظات لا تتجاوز ${TRANSPORT_NOTES_MAX} حرف.` })

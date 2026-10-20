@@ -30,7 +30,8 @@ function defaultDate(): string {
   return `${from.slice(0, 8)}${String(last).padStart(2, '0')}`
 }
 
-watch(open, (v) => {
+// تُملأ عند الفتح، وتُعاد إن تبدّلت الرحلةُ والنافذةُ مفتوحة
+watch([open, () => props.trip], ([v]) => {
   if (!v) return
   const t = props.trip
   form.trip_date = t ? t.trip_date : defaultDate()
@@ -97,7 +98,6 @@ async function save() {
             <UInput
               v-model="form.amount"
               inputmode="decimal"
-              dir="ltr"
               :placeholder="`حتى ${TRANSPORT_AMOUNT_MAX}`"
               size="lg"
               class="w-full"

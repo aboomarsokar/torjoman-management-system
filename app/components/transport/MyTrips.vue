@@ -13,31 +13,29 @@ const { fetchMonth, deleteTrip } = useTransport()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
+const monthKey = computed(() => `transport-mine-${props.year}-${props.month}`)
+/** آخرُ شهرٍ اكتمل جلبُه: الهيكلُ عند تغيّر الشهر وحده، لا عند تحديث القائمة بعد حفظٍ أو حذف. */
+const loadedKey = ref<string | null>(null)
+
 const { data: trips, pending, refresh } = useLazyAsyncData<Trip[]>(
-  () => `transport-mine-${props.year}-${props.month}`,
+  () => monthKey.value,
   async () => {
+    const key = monthKey.value
     try {
       return await fetchMonth(props.year, props.month)
     } catch (err) {
       handle(err)
       return []
+    } finally {
+      loadedKey.value = key
     }
   },
   { server: false, default: () => [] }
 )
+const loadingMonth = computed(() => pending.value && loadedKey.value !== monthKey.value)
 
 /** صفُّ العرض: الرحلةُ مرقَّمةً بنصوصها المنسّقة وحقِّ تعديلها. */
-type Row = {
-  id: string
-  serial: number
-  date: string
-  description: string
-  amountText: string
-  notes: string
-  paid: boolean
-  editable: boolean
-  trip: Trip
-}
+type Row = { id: string, serial: number, date: string, description: string, amountText: string, notes: string, paid: boolean, editable: boolean, trip: Trip }
 
 const rows = computed<Row[]>(() => numberTrips(trips.value ?? []).map(t => ({
   id: t.id,
@@ -138,7 +136,7 @@ async function confirmDelete() {
     </div>
 
     <UiSkeletonTable
-      v-if="pending"
+      v-if="loadingMonth"
       :columns="columns"
     />
     <UiEmptyState
@@ -282,18 +280,13 @@ async function confirmDelete() {
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
 .sums { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 16px; color: var(--ink-2); }
 .sums .num { color: var(--ink); font-weight: 700; }
-.dot { color: var(--ink-3); }
-.add { flex: none; }
+.dot { color: var(--ink-3); } .add { flex: none; }
 .num { font-variant-numeric: tabular-nums; }
-.strong { font-weight: 600; color: var(--ink); }
-.muted { color: var(--ink-2); }
+.strong { font-weight: 600; color: var(--ink); } .muted { color: var(--ink-2); }
 .badge { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.badge.paid { background: var(--green-soft); color: var(--green-ink); }
-.badge.unpaid { background: var(--surface-2); color: var(--ink-2); }
+.badge.paid { background: var(--green-soft); color: var(--green-ink); } .badge.unpaid { background: var(--surface-2); color: var(--ink-2); }
 .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .serial { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 600; }
 .locked { margin: 0; flex: 1 1 100%; font-size: 13.5px; color: var(--ink-3); }
-@media (max-width: 560px) {
-  .add { width: 100%; }
-}
+@media (max-width: 560px) { .add { width: 100%; } }
 </style>

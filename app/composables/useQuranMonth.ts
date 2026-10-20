@@ -65,10 +65,10 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
       if (failure) throw failure
       const ids = (students.data ?? []).map(s => s.id)
 
-      // استعلامٌ واحد لكلّ جدول: سجلّاتُ الشهر، وتاريخُ نهايات الطلاب. التاريخُ محدودٌ بآخر HISTORY_MONTHS شهراً
-      // قبل الشهر المعروض على مستوى السنة (حدُّ سنةٍ كاملة يكفي لقصّ الخادم؛ `latestEnds` يحسم الأدقّ) ومرتّبٌ بالأحدث
+      // استعلامٌ واحد لكلّ جدول: سجلّاتُ الشهر، وتاريخُ نهايات الطلاب، وسجلّاتُ الشهر نفسه في حلقاتٍ أخرى. التاريخُ محدودٌ
+      // بآخر HISTORY_MONTHS شهراً قبل الشهر المعروض على مستوى السنة (حدُّ سنةٍ كاملة يكفي لقصّ الخادم؛ `latestEnds` يحسم الأدقّ) ومرتّبٌ بالأحدث
       const lowerYear = shiftMonth(y, m, -HISTORY_MONTHS).year
-      const [recordsRes, historyRes] = ids.length
+      const [recordsRes, historyRes, elsewhereRes] = ids.length
         ? await Promise.all([
             reportRes.data
               ? supabase.from('quran_records').select('*').eq('report_id', reportRes.data.id).in('student_id', ids)
@@ -78,10 +78,16 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
               .in('student_id', ids).not('to_surah', 'is', null)
               .gte('report.report_year', lowerYear)
               .order('report(report_year)', { ascending: false })
-              .order('report(report_month)', { ascending: false })
+              .order('report(report_month)', { ascending: false }),
+            // طالبٌ نُقل إلى هذه الحلقة وله رصدٌ لهذا الشهر في تقرير حلقةٍ أخرى (بأيّ حالة: القاعدةُ ترفض رصدَه ثانيةً في أيّها)
+            supabase.from('quran_records')
+              .select('*, report:monthly_reports!inner(halaqa_id, report_year, report_month)')
+              .in('student_id', ids)
+              .eq('report.report_year', y).eq('report.report_month', m)
+              .neq('report.halaqa_id', hid)
           ])
-        : [{ data: [] as QuranRecordRow[], error: null }, { data: [], error: null }]
-      const failure2 = recordsRes.error ?? historyRes.error
+        : [{ data: [] as QuranRecordRow[], error: null }, { data: [], error: null }, { data: [] as QuranRecordRow[], error: null }]
+      const failure2 = recordsRes.error ?? historyRes.error ?? elsewhereRes.error
       if (failure2) throw failure2
       if (mine !== generation) return
 
@@ -91,6 +97,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
       rows.value = buildStudentRows({
         students: students.data ?? [],
         records: recordsRes.data ?? [],
+        elsewhereRecords: (elsewhereRes.data ?? []) as QuranRecordRow[],
         previousEnds: latestEnds(history, before, false),
         approvedEnds: latestEnds(history, { year: y, month: m + 1 }, true),
         days: (daysRes.data ?? []).map(d => d.day),
@@ -135,6 +142,11 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
   ): Promise<boolean> {
     const hid = halaqaId.value
     if (!hid) return false
+    // شهرُ الطالب رُصد في حلقته السابقة: لا رصدَ ثانيةً (القاعدةُ تحرس الشيءَ نفسه عند السباق)
+    if (rows.value.find(r => r.studentId === studentId)?.recordedElsewhere) {
+      handle(new Error('رُصد هذا الشهرُ للطالب في حلقته السابقة.'))
+      return false
+    }
     if (loading.value) {
       handle(new Error('انتظر حتى يكتمل التحميل.'))
       return false

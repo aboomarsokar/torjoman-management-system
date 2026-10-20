@@ -18,6 +18,7 @@ function row(over: Partial<StudentMonthRow> = {}): StudentMonthRow {
     studentId: 's1',
     name: 'أحمد علي',
     record: null,
+    recordedElsewhere: false,
     suggestedFrom: { surah: 114, ayah: 1 },
     suggestedFromPrevious: false,
     daysHeld: 10,
@@ -100,6 +101,10 @@ describe('cardAction', () => {
     expect(cardAction(true, true)).toBe('edit')
     expect(cardAction(true, false)).toBe('view')
     expect(cardAction(false, false)).toBeNull()
+  })
+  it('ما رُصد في الحلقة السابقة للعرض وحدَه ولو ملك الناظرُ الكتابة', () => {
+    expect(cardAction(true, true, true)).toBe('view')
+    expect(cardAction(true, false, true)).toBe('view')
   })
 })
 

@@ -130,7 +130,7 @@ function save() {
 <template>
   <UModal
     v-model:open="open"
-    :title="shown ? `رصد ${shown.name}` : ''"
+    :title="shown ? `رصد ${shown.name}${shown.recordedElsewhere ? ' — رُصد في حلقته السابقة' : ''}` : ''"
     description="من الناس إلى الفاتحة: السورةُ تنازلياً والآيةُ داخلها تصاعدياً."
   >
     <template #body>

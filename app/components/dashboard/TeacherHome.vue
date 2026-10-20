@@ -5,9 +5,12 @@
  * (حضورُ الشهر، وحفظُ آخر شهرٍ معتمد، والمستحقّون للاختبار، ونتائجُ اختبارات الشهر) ← «طلاب يحتاجون انتباهك».
  * قائمةُ كلّ الطلاب مكانُها شاشة «الطلاب». البياناتُ من `useTeacherDashboard` (خطوتا جلب).
  */
-import { formatAmount } from '~/utils/transport'
+import { formatAmount, isolateLtr } from '~/utils/transport'
 import { formatDay, gazaToday, periodLabel } from '~/utils/reportWindow'
 import { teacherActions } from '~/utils/teacherDashboard'
+
+// الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
+const day = (iso: string) => isolateLtr(formatDay(iso))
 
 const { dash, pending } = useTeacherDashboard()
 
@@ -15,7 +18,7 @@ const d = computed(() => (dash.value && dash.value.halaqa ? dash.value : null))
 const noHalaqa = computed(() => !pending.value && dash.value?.halaqa === null)
 const monthLabel = computed(() => {
   const t = gazaToday()
-  return periodLabel(Number(t.slice(0, 4)), Number(t.slice(5, 7)))
+  return isolateLtr(periodLabel(Number(t.slice(0, 4)), Number(t.slice(5, 7))))
 })
 
 const actions = computed(() => d.value
@@ -27,8 +30,8 @@ const actions = computed(() => d.value
       studentCount: d.value.studentCount,
       incentive: d.value.incentive,
       newAlerts: d.value.newAlerts,
-      money: formatAmount,
-      day: formatDay
+      money: (n: number) => isolateLtr(formatAmount(n)),
+      day
     })
   : [])
 
@@ -37,7 +40,7 @@ const tiles = computed(() => {
   if (!v) return []
   return [
     { key: 'att', icon: 'i-lucide-calendar-check', tone: 'green', label: 'حضور الشهر', value: v.attendance.pct != null ? `${v.attendance.pct}٪` : '—', sub: v.attendance.held ? `${v.attendance.attended} من ${v.attendance.held} · ${monthLabel.value}` : `لم تنعقد الحلقة بعد · ${monthLabel.value}` },
-    { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue', label: 'حفظ آخر شهر معتمد', value: v.lastMonth ? `${v.lastMonth.pages}` : '—', unit: v.lastMonth ? 'صفحة' : '', sub: v.lastMonth ? `${v.lastMonth.perStudent} للطالب · ${v.lastMonth.label}` : 'لا شهر معتمد بعد' },
+    { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue', label: 'حفظ آخر شهر معتمد', value: v.lastMonth ? `${v.lastMonth.pages}` : '—', unit: v.lastMonth ? 'صفحة' : '', sub: v.lastMonth ? `${v.lastMonth.perStudent} للطالب · ${isolateLtr(v.lastMonth.label)}` : 'لا شهر معتمد بعد' },
     { key: 'elig', icon: 'i-lucide-clipboard-check', tone: 'navy', label: 'مستحقّون للاختبار', value: String(v.eligible.length), sub: v.eligible.length ? 'أتمّوا نطاق دورتهم ولم يُرشَّحوا' : 'لا أحد ينتظر ترشيحاً' },
     { key: 'exams', icon: 'i-lucide-award', tone: 'green', label: 'اختبارات الشهر', value: String(v.exams.passed), unit: 'ناجح', sub: `${v.exams.failed} يعيد · ${monthLabel.value}` }
   ]

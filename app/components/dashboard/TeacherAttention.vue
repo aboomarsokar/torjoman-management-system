@@ -4,6 +4,7 @@
  * ومن لم يُرصد له في شهر الرصد، والمستحقّون للاختبار. كلُّ اسمٍ يفتح ملفَّ الطالب، والزائدُ «و N آخرون».
  */
 import { ABSENCE_ATTENTION_DAYS, ATTENTION_LIST_MAX } from '~/constants/teacherDashboard'
+import { isolateLtr } from '~/utils/transport'
 
 interface Person { id: string, name: string, count?: number }
 interface Props {
@@ -19,7 +20,7 @@ const props = defineProps<Props>()
 
 const groups = computed(() => [
   { key: 'abs', icon: 'i-lucide-user-x', tone: 'err', title: `غاب ${ABSENCE_ATTENTION_DAYS} أيام فأكثر هذا الشهر`, people: props.absentees, to: '/attendance', cta: 'الحضور' },
-  ...(props.showUnrecorded ? [{ key: 'rec', icon: 'i-lucide-book-dashed', tone: 'blue', title: `لم يُرصد له في شهر ${props.recordingLabel}`, people: props.unrecorded, to: '/reports', cta: 'الرصد' }] : []),
+  ...(props.showUnrecorded ? [{ key: 'rec', icon: 'i-lucide-book-dashed', tone: 'blue', title: `لم يُرصد له في شهر ${isolateLtr(props.recordingLabel)}`, people: props.unrecorded, to: '/reports', cta: 'الرصد' }] : []),
   { key: 'exam', icon: 'i-lucide-clipboard-check', tone: 'green', title: 'مستحقّون للاختبار ولم يُرشَّحوا', people: props.eligible, to: '/exams', cta: 'رشّح' }
 ].filter(g => g.people.length))
 

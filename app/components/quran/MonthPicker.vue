@@ -87,13 +87,15 @@ function step(by: number) {
 /* يملأ عرضَ حاويته: السهمان ثابتان والحقلان يتقاسمان الباقي */
 .mp { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
 .mp-step { flex: none; min-width: 48px; min-height: 48px; }
-.mp-field { flex: 1 1 0; width: auto; min-width: 0; min-height: 48px; font-variant-numeric: tabular-nums; }
+/* `.mp-field` غلافُ UiSelect (للتخطيط)، والزرُّ داخله */
+.mp-field { flex: 1 1 0; width: auto; min-width: 0; }
+.mp-field :deep(button) { min-height: 48px; font-variant-numeric: tabular-nums; }
 .mp-sep { flex: none; color: var(--ink-3); }
 /* جوال ضيّق: يضيق الصفّ بالحقلين لا بالسهمين (أهدافُ اللمس تبقى ≥ 44px) */
 @media (max-width: 480px) {
   .mp { gap: 4px; }
   .mp-step { min-width: 44px; min-height: 44px; }
-  .mp-field { padding-inline: 8px 24px; }
+  .mp-field :deep(button) { min-height: 44px; padding-inline: 8px 24px; }
   .mp-field :deep([data-slot='trailing']) { padding-inline-end: 6px; }
 }
 </style>

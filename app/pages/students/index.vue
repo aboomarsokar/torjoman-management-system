@@ -329,7 +329,9 @@ async function confirmDelete() {
         aria-label="الحالة"
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
+      <!-- لا منتقي لمن يرى حلقةً واحدة (المعلم) — طلب المستخدم 2026-10-20 -->
       <UiSelect
+        v-if="(halqat ?? []).length > 1"
         v-model="halqaF"
         :items="halqaFilterItems"
         size="xl"

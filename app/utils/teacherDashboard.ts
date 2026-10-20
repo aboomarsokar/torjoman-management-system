@@ -8,6 +8,7 @@ import { countAttendance } from '~/utils/quran/attendanceCount'
 import { defaultPeriod, type Period, type ReportStatus } from '~/utils/quran/screen'
 import type { NomineeRow } from '~/utils/exams/nomination'
 import { openingDay, periodLabel, shiftMonth } from '~/utils/reportWindow'
+import { isolateLtr } from '~/utils/transport'
 
 export interface DashStudent { id: string, full_name: string, enrollment_date: string | null }
 export interface DashReport { id: string, report_year: number, report_month: number, status: ReportStatus, return_note: string | null }
@@ -131,6 +132,8 @@ export function teacherActions(i: ActionsInput): TeacherAction[] {
   const out: TeacherAction[] = []
   const r = i.recording
   const reportLink = `/reports?y=${r.period.year}&m=${r.period.month}`
+  // «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10» (الشَّرطةُ لا تصل أرقاماً تلي حروفاً عربية) — تُعزل لاتينيّاً
+  const month = isolateLtr(r.label)
 
   // حضور اليوم (الجمعة بلا حلقة)
   if (!i.todayAttendance.isFriday) {
@@ -143,11 +146,11 @@ export function teacherActions(i: ActionsInput): TeacherAction[] {
   const progress = `رُصد ${i.recordedCount} من ${i.studentCount}`
   const window = i.today >= r.opensOn ? 'الإرسال مفتوح الآن' : `يُرسَل ابتداءً من ${i.day(r.opensOn)}`
   if (r.state === 'returned') {
-    out.push({ key: 'rec', tone: 'urgent', icon: 'i-lucide-undo-2', title: `أُعيد إليك رصد شهر ${r.label}`, detail: r.returnNote ?? undefined, to: reportLink, cta: 'افتح الرصد' })
+    out.push({ key: 'rec', tone: 'urgent', icon: 'i-lucide-undo-2', title: `أُعيد إليك رصد شهر ${month}`, detail: r.returnNote ?? undefined, to: reportLink, cta: 'افتح الرصد' })
   } else if (r.state === 'none' || r.state === 'draft') {
-    out.push({ key: 'rec', tone: 'todo', icon: 'i-lucide-book-marked', title: `رصد شهر ${r.label}: ${progress}`, detail: window, to: reportLink, cta: 'افتح الرصد' })
+    out.push({ key: 'rec', tone: 'todo', icon: 'i-lucide-book-marked', title: `رصد شهر ${month}: ${progress}`, detail: window, to: reportLink, cta: 'افتح الرصد' })
   } else {
-    out.push({ key: 'rec', tone: 'done', icon: 'i-lucide-book-check', title: r.state === 'approved' ? `اعتُمد رصد شهر ${r.label}` : `أُرسل رصد شهر ${r.label} — بانتظار الاعتماد`, to: reportLink })
+    out.push({ key: 'rec', tone: 'done', icon: 'i-lucide-book-check', title: r.state === 'approved' ? `اعتُمد رصد شهر ${month}` : `أُرسل رصد شهر ${month} — بانتظار الاعتماد`, to: reportLink })
   }
 
   // كشف الحوافز للشهر الجاري — إن خُصّص مبلغٌ أو بدأ الكشف

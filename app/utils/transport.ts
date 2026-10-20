@@ -39,6 +39,11 @@ export function formatAmount(n: number): string {
   return `${Number.isInteger(n) ? String(n) : n.toFixed(2)} ₪`
 }
 
+/** يعزل النصَّ في اتجاهٍ لاتينيّ (LRI…PDI) كي لا ينقلب «315 ₪» داخل سياقٍ عربيّ (حقول البطاقات). */
+export function isolateLtr(s: string): string {
+  return `\u2066${s}\u2069`
+}
+
 /** الرحلاتُ غيرُ المسدَّدة وحدها. */
 export function unpaid(trips: Trip[]): Trip[] {
   return trips.filter(t => !t.paid)

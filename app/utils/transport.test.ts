@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canEditTrip, formatAmount, groupByEmployee, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, unpaid, validateTrip } from './transport'
+import { canEditTrip, formatAmount, groupByEmployee, isolateLtr, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, unpaid, validateTrip } from './transport'
 import type { Trip } from './transport'
 
 const trip = (over: Partial<Trip> = {}): Trip => ({
@@ -122,5 +122,11 @@ describe('normalizeAmount والمبلغ بلوحة المفاتيح العرب�
   })
   it('تاريخٌ يساوي اليوم سليم', () => {
     expect(validateTrip({ ...ok, trip_date: '2026-10-20' }, '2026-10-20')).toEqual([])
+  })
+})
+
+describe('isolateLtr', () => {
+  it('يلفّ النصَّ بعازلَي الاتجاه اللاتينيّ', () => {
+    expect(isolateLtr('315 ₪')).toBe('\u2066315 ₪\u2069')
   })
 })

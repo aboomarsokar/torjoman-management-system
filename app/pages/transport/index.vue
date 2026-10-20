@@ -2,7 +2,7 @@
 /**
  * كشف المواصلات: الشهرُ في الرابط (`?y=&m=`، الافتراضيّ شهرُ اليوم بتوقيت غزة)، والعرضُ بحسب الدور —
  * المشرف الميداني والمختبِر يدخلان رحلاتهما («رحلاتي»)، والمدير الإداري ومشرف المشروع يرون الجميع
- * (يُبنى في المهمة التالية)، وغيرهم لا شأن لهم بالشاشة. الحكمُ لـRLS؛ هذا طبقةُ تجربة.
+ * («كلّ الرحلات»، والمدير الإداري يسدّد ومشرف المشروع يقرأ)، وغيرهم لا شأن لهم بالشاشة. الحكمُ لـRLS؛ هذا طبقةُ تجربة.
  */
 import { TRANSPORT_LOGGER_ROLES } from '~/constants/transport'
 import { gazaToday } from '~/utils/reportWindow'
@@ -27,6 +27,13 @@ function fromQuery(): { year: number, month: number } {
 const initial = fromQuery()
 const year = ref(initial.year)
 const month = ref(initial.month)
+
+/** رابطٌ يُفتح والصفحةُ قائمة (إشعار `/transport?y=&m=`): يُعاد تطبيقُ الشهر المتحقَّق منه. لا حلقة: كلٌّ من المراقِبَين يقارن قبل أن يكتب. */
+watch(() => [route.query.y, route.query.m], () => {
+  const q = fromQuery()
+  if (q.year !== year.value) year.value = q.year
+  if (q.month !== month.value) month.value = q.month
+})
 
 watch([year, month], ([y, m]) => {
   if (Number(route.query.y) === y && Number(route.query.m) === m) return
@@ -63,11 +70,10 @@ const subtitle = computed(() => {
         :year="year"
         :month="month"
       />
-      <!-- مؤقّت: يُستبدل بـ TransportAllTrips في المهمة التالية -->
-      <UiEmptyState
+      <TransportAllTrips
         v-else
-        icon="i-lucide-bus"
-        title="عرضُ كلّ الرحلات يُبنى في المهمة التالية"
+        :year="year"
+        :month="month"
       />
     </template>
     <UiEmptyState

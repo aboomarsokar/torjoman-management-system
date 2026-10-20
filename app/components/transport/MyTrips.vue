@@ -5,7 +5,7 @@
  * جدولٌ على سطح المكتب وبطاقاتٌ على الجوال (`#card`).
  */
 import { formatDay, periodLabel } from '~/utils/reportWindow'
-import { canEditTrip, formatAmount, numberTrips, sumAmount, unpaid, type Trip } from '~/utils/transport'
+import { canEditTrip, formatAmount, isolateLtr, numberTrips, sumAmount, unpaid, type Trip } from '~/utils/transport'
 
 const props = defineProps<{ year: number, month: number }>()
 
@@ -23,7 +23,7 @@ const { data: trips, pending, refresh } = useLazyAsyncData<Trip[]>(
       return []
     }
   },
-  { server: false, default: () => [], watch: [() => props.year, () => props.month] }
+  { server: false, default: () => [] }
 )
 
 /** صفُّ العرض: الرحلةُ مرقَّمةً بنصوصها المنسّقة وحقِّ تعديلها. */
@@ -79,6 +79,12 @@ function openEdit(r: Row) {
 }
 
 const deleteTarget = ref<Row | null>(null)
+/** تاريخُ آخر رحلةٍ طُلب حذفُها — يبقى في رسالة النافذة أثناء إغلاقها فلا تومض «حذف رحلة ؟». */
+const deleteDate = ref('')
+function askDelete(r: Row) {
+  deleteDate.value = r.date
+  deleteTarget.value = r
+}
 const deleteOpen = computed({
   get: () => !!deleteTarget.value,
   set: (v: boolean) => {
@@ -93,11 +99,11 @@ async function confirmDelete() {
   try {
     await deleteTrip(target.id)
     toast.add({ title: 'حُذفت الرحلة.', color: 'success', icon: 'i-lucide-circle-check' })
-    deleteTarget.value = null
   } catch (err) {
     handle(err)
   } finally {
     deleting.value = false
+    deleteTarget.value = null
     await refresh()
   }
 }
@@ -201,7 +207,7 @@ async function confirmDelete() {
             aria-label="حذف"
             :disabled="!row.editable"
             :ui="{ base: 'rounded-[10px] min-h-11 min-w-11 justify-center' }"
-            @click="deleteTarget = row"
+            @click="askDelete(row)"
           />
         </div>
       </template>
@@ -210,7 +216,7 @@ async function confirmDelete() {
           :title="row.description"
           :subtitle="row.date"
           :fields="[
-            { label: 'المبلغ', value: row.amountText },
+            { label: 'المبلغ', value: isolateLtr(row.amountText) },
             { label: 'الملاحظات', value: row.notes }
           ]"
         >
@@ -239,7 +245,7 @@ async function confirmDelete() {
                 variant="outline"
                 icon="i-lucide-trash-2"
                 :ui="{ base: 'rounded-[10px]' }"
-                @click="deleteTarget = row"
+                @click="askDelete(row)"
               />
             </template>
             <p
@@ -263,7 +269,7 @@ async function confirmDelete() {
     <UiConfirmModal
       v-model:open="deleteOpen"
       title="حذف رحلة"
-      :message="`حذف رحلة ${deleteTarget?.date ?? ''}؟`"
+      :message="`حذف رحلة ${deleteDate}؟`"
       confirm-label="حذف"
       :loading="deleting"
       @confirm="confirmDelete"

@@ -138,7 +138,7 @@ async function confirmDelete() {
     </div>
 
     <UiSkeletonTable
-      v-if="pending && !rows.length"
+      v-if="pending"
       :columns="columns"
     />
     <UiEmptyState

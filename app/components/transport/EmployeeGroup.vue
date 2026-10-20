@@ -107,20 +107,23 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
         <span class="muted">{{ row.notes || '—' }}</span>
       </template>
       <template #paid="{ row }">
-        <div class="paidcell">
+        <!-- لافتةٌ تلفّ المفتاح فتصير منطقةُ اللمس 44×44 كاملةً -->
+        <label
+          v-if="canPay"
+          class="paidcell"
+        >
           <USwitch
-            v-if="canPay"
             :model-value="row.paid"
             :disabled="row.busy"
             :aria-label="row.switchLabel"
             @update:model-value="(v: boolean) => emit('toggle', row.id, v)"
           />
-          <span
-            v-else
-            class="badge"
-            :class="row.paid ? 'paid' : 'unpaid'"
-          >{{ row.paid ? 'مسدَّدة' : 'غير مسدَّدة' }}</span>
-        </div>
+        </label>
+        <span
+          v-else
+          class="badge"
+          :class="row.paid ? 'paid' : 'unpaid'"
+        >{{ row.paid ? 'مسدَّدة' : 'غير مسدَّدة' }}</span>
       </template>
       <template #card="{ row }">
         <UiCardRow
@@ -147,7 +150,7 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
             v-if="canPay"
             #actions
           >
-            <div class="cardpay">
+            <label class="cardpay">
               <span class="cardpay-label">مسدَّدة</span>
               <USwitch
                 :model-value="row.paid"
@@ -155,7 +158,7 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
                 :aria-label="row.switchLabel"
                 @update:model-value="(v: boolean) => emit('toggle', row.id, v)"
               />
-            </div>
+            </label>
           </template>
         </UiCardRow>
       </template>
@@ -173,7 +176,7 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
 .num { font-variant-numeric: tabular-nums; }
 .strong { font-weight: 600; color: var(--ink); }
 .muted { color: var(--ink-2); }
-.paidcell { display: flex; justify-content: flex-end; align-items: center; min-height: 44px; }
+.paidcell { display: inline-flex; justify-content: center; align-items: center; min-width: 44px; min-height: 44px; padding: 0 6px; }
 .badge { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .badge.paid { background: var(--green-soft); color: var(--green-ink); }
 .badge.unpaid { background: var(--surface-2); color: var(--ink-2); }

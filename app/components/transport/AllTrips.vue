@@ -6,7 +6,7 @@
  * ومشرف المشروع يقرأ فقط. الحكمُ لـRLS ودالّة `set_transport_paid`؛ هذا طبقةُ تجربة.
  */
 import { periodLabel } from '~/utils/reportWindow'
-import { formatAmount, groupByEmployee, payAllText, sumAmount, unpaid, type Trip } from '~/utils/transport'
+import { formatAmount, groupByEmployee, payAllText, sumAmount, tripsCount, unpaid, type Trip } from '~/utils/transport'
 
 const props = defineProps<{ year: number, month: number }>()
 
@@ -47,7 +47,9 @@ const ALL = 'all'
 const selected = ref<string>(ALL)
 const employeeItems = computed(() => [
   { label: 'كلّ الموظفين', value: ALL },
-  ...(loggers.value ?? []).map(l => ({ label: l.full_name, value: l.id }))
+  ...[...(loggers.value ?? [])]
+    .sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'))
+    .map(l => ({ label: l.full_name, value: l.id }))
 ])
 
 const label = computed(() => periodLabel(props.year, props.month))
@@ -89,7 +91,12 @@ async function toggle(id: string, paid: boolean) {
   setLocalPaid(id, paid)
   try {
     const changed = await setPaid([id], paid)
-    if (!changed) await refreshTrips() // لم يتغيّر شيء: حالتُها في القاعدة غيرُ ما ظنّته الشاشة
+    if (!changed) {
+      // لم يتغيّر شيء: حالتُها في القاعدة غيرُ ما ظنّته الشاشة — نرجع ثم نقرأ من جديد
+      setLocalPaid(id, before)
+      toast.add({ title: 'لم تتغيّر — حُدِّثت القائمة.', color: 'info', icon: 'i-lucide-info' })
+      await refreshTrips()
+    }
   } catch (err) {
     setLocalPaid(id, before)
     handle(err)
@@ -106,9 +113,11 @@ const confirmIds = ref<string[]>([])
 const confirmMessage = ref('')
 
 async function askPayAll() {
+  const { year, month } = props
   checking.value = true
   try {
-    const fresh = await fetchMonth(props.year, props.month)
+    const fresh = await fetchMonth(year, month)
+    if (year !== props.year || month !== props.month) return // تغيّر الشهرُ أثناء القراءة: لا يُعرض تأكيدٌ لشهرٍ سابق
     trips.value = fresh
     const list = unpaid(selected.value === ALL ? fresh : fresh.filter(t => t.profile_id === selected.value))
     if (!list.length) {
@@ -130,7 +139,8 @@ async function confirmPayAll() {
   paying.value = true
   try {
     const n = await setPaid(confirmIds.value, true)
-    toast.add({ title: `سُدّدت ${n} رحلة.`, color: 'success', icon: 'i-lucide-circle-check' })
+    if (n > 0) toast.add({ title: `سُدّدت ${tripsCount(n)}.`, color: 'success', icon: 'i-lucide-circle-check' })
+    else toast.add({ title: 'لم تتغيّر أيّ رحلة — حُدِّثت القائمة.', color: 'info', icon: 'i-lucide-info' })
   } catch (err) {
     handle(err)
   } finally {
@@ -140,10 +150,12 @@ async function confirmPayAll() {
   }
 }
 
-/** إعادةُ قراءة الشهر بعد التسديد؛ الفشلُ يُبلَّغ ولا يمحو ما على الشاشة. */
+/** إعادةُ قراءة الشهر؛ الفشلُ يُبلَّغ ولا يمحو ما على الشاشة، ونتيجةٌ وصلت بعد تغيّر الشهر تُسقَط. */
 async function refreshTrips() {
+  const { year, month } = props
   try {
-    trips.value = await fetchMonth(props.year, props.month)
+    const fresh = await fetchMonth(year, month)
+    if (year === props.year && month === props.month) trips.value = fresh
   } catch (err) {
     handle(err)
   }
@@ -207,7 +219,7 @@ async function refreshTrips() {
     </div>
 
     <UiSkeletonTable
-      v-if="pending && !groups.length"
+      v-if="pending"
       :columns="skeletonColumns"
     />
     <UiEmptyState

@@ -70,15 +70,15 @@ export function groupByEmployee(trips: Trip[], names: Record<string, string>) {
 }
 
 /** لفظُ عدد الرحلات بالعربية: مفرد، ومثنّى، وجمع (3–10 «رحلات»، 11 فما فوق «رحلة»). */
-function tripsCount(n: number): string {
+export function tripsCount(n: number): string {
   if (n === 1) return 'رحلة واحدة'
   if (n === 2) return 'رحلتين'
   return n <= 10 ? `${n} رحلات` : `${n} رحلة`
 }
 
-/** نصُّ نافذة «تسديد الكل»: العددُ والمبلغ. */
+/** نصُّ نافذة «تسديد الكل»: العددُ والمبلغ (المبلغُ معزولٌ لاتينيّاً فلا ينقلب «315 ₪»). */
 export function payAllText(trips: Pick<Trip, 'amount'>[]): string {
-  return `تسديد ${tripsCount(trips.length)} بمبلغ ${formatAmount(sumAmount(trips))}؟`
+  return `تسديد ${tripsCount(trips.length)} بمبلغ ${isolateLtr(formatAmount(sumAmount(trips)))}؟`
 }
 
 /** ما يكتبه المستخدم بلوحة المفاتيح العربية ← صيغةٌ رقميةٌ لاتينية: يقصّ الفراغ، ويحوّل الأرقام الهندية `٠-٩` والفارسية `۰-۹` إلى `0-9`، والفاصلةَ العشرية `٫` والفاصلة `,` إلى `.`. */

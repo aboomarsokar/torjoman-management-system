@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canEditTrip, formatAmount, groupByEmployee, isolateLtr, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, unpaid, validateTrip } from './transport'
+import { canEditTrip, formatAmount, groupByEmployee, isolateLtr, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, tripsCount, unpaid, validateTrip } from './transport'
 import type { Trip } from './transport'
 
 const trip = (over: Partial<Trip> = {}): Trip => ({
@@ -55,10 +55,16 @@ describe('groupByEmployee', () => {
 
 describe('payAllText', () => {
   it('صيغُ العدد', () => {
-    expect(payAllText([trip({ amount: 20 })])).toBe('تسديد رحلة واحدة بمبلغ 20 ₪؟')
-    expect(payAllText([trip(), trip()])).toBe('تسديد رحلتين بمبلغ 40 ₪؟')
-    expect(payAllText(Array.from({ length: 3 }, () => trip({ amount: 10 })))).toBe('تسديد 3 رحلات بمبلغ 30 ₪؟')
-    expect(payAllText(Array.from({ length: 11 }, () => trip({ amount: 1 })))).toBe('تسديد 11 رحلة بمبلغ 11 ₪؟')
+    expect(payAllText([trip({ amount: 20 })])).toBe('تسديد رحلة واحدة بمبلغ \u206620 ₪\u2069؟')
+    expect(payAllText([trip(), trip()])).toBe('تسديد رحلتين بمبلغ \u206640 ₪\u2069؟')
+    expect(payAllText(Array.from({ length: 3 }, () => trip({ amount: 10 })))).toBe('تسديد 3 رحلات بمبلغ \u206630 ₪\u2069؟')
+    expect(payAllText(Array.from({ length: 11 }, () => trip({ amount: 1 })))).toBe('تسديد 11 رحلة بمبلغ \u206611 ₪\u2069؟')
+  })
+})
+
+describe('tripsCount', () => {
+  it('مفردٌ ومثنّى وجمع', () => {
+    expect([1, 2, 3, 10, 11].map(tripsCount)).toEqual(['رحلة واحدة', 'رحلتين', '3 رحلات', '10 رحلات', '11 رحلة'])
   })
 })
 

@@ -9,7 +9,8 @@
 import type { Database } from '~/types/database.types'
 import type { ImpersonationStatus } from '~/constants/impersonation'
 import {
-  IMPERSONATION_BLOCKED_MESSAGE, IMPERSONATION_STATE_KEY, markSessionSwitching, sessionReadOnly, SESSION_SWITCH_FAILED
+  IMPERSONATION_BLOCKED_MESSAGE, IMPERSONATION_STATE_KEY, isSessionSwitching, markSessionSwitching, sessionReadOnly,
+  SESSION_SWITCH_FAILED, shouldReloadOnIdentityChange
 } from '~/utils/impersonation'
 import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
 
@@ -19,6 +20,8 @@ export const IMPERSONATION_ENDED_RELOGIN = 'انتهت النيابة — سجّ
 /** ردّا مسارَي البدء والإنهاء (server/api/impersonate.post.ts و impersonate/end.post.ts). */
 type StartResult = { refreshToken: string, targetName: string, targetHome: string, expiresAt: string }
 type EndResult = { ok: true } | { refreshToken: string, returnTo: string }
+/** مآلُ الإنهاء — الشريطُ يختار رسالته بعده: عاد إلى حسابه، أو خرج إلى الدخول، أو خُتمت بلا عودة. */
+export type EndOutcome = 'resumed' | 'signed-out' | 'ended'
 
 /** خطوتا التبديل محقونتين — كي تُختبرا بلا Supabase ولا متصفّح. */
 export interface SessionSwitchSteps {
@@ -54,6 +57,8 @@ export function useImpersonation() {
   const toast = useToast()
   const state = useState<ImpersonationStatus | null>(IMPERSONATION_STATE_KEY, () => null)
   const isChecked = useState<boolean>(`${IMPERSONATION_STATE_KEY}-checked`, () => false)
+  /** «ليست نيابةً» يقيناً: قبل اكتمال الفحص مجهول — فما يُمنع في النيابة لا يومض قبله. */
+  const notImpersonating = computed(() => isChecked.value && state.value === null)
 
   /** يسأل الخادم؛ تعثّرُ الشبكة لا يُخفي شريطاً ظاهراً (تبقى الحالةُ كما هي). */
   async function refresh(): Promise<void> {
@@ -121,11 +126,11 @@ export function useImpersonation() {
    * يُنهي النيابة ويعود إلى حساب الفاعل (`returnTo`). `resume: false` خروجٌ بلا عودة (useAuth.signOut).
    * الإنهاءُ المرفوض (401/409) ← خروجٌ محلّيّ إلى الدخول برسالة.
    */
-  async function end(opts: { resume?: boolean } = {}): Promise<void> {
+  async function end(opts: { resume?: boolean } = {}): Promise<EndOutcome> {
     const resume = opts.resume ?? true
     if (!resume) {
       await $fetch('/api/impersonate/end', { method: 'POST', body: { resume: false } })
-      return
+      return 'ended'
     }
     try {
       await switching(async () => {
@@ -133,9 +138,11 @@ export function useImpersonation() {
         if (!('refreshToken' in result)) throw new Error(SESSION_SWITCH_FAILED)
         await applySessionSwitch(result.refreshToken, result.returnTo, switchSteps)
       })
+      return 'resumed'
     } catch (err) {
-      if (endFailureIsTerminal(err)) return signOutLocally(IMPERSONATION_ENDED_RELOGIN)
-      throw err
+      if (!endFailureIsTerminal(err)) throw err
+      await signOutLocally(IMPERSONATION_ENDED_RELOGIN)
+      return 'signed-out'
     }
   }
 
@@ -143,6 +150,18 @@ export function useImpersonation() {
   async function setWriteMode(on: boolean): Promise<void> {
     await $fetch('/api/impersonate/write-mode', { method: 'POST', body: { on } })
     await refresh()
+  }
+
+  /**
+   * لسانٌ آخر بدّل الجلسة (بدءُ نيابةٍ أو إنهاؤها — الكعكةُ مشتركة وrefreshSession يُذاع): هذا اللسانُ
+   * يُعاد تحميلُه كي لا يبقى حسابَ غيره بلا شريط أو بشريطٍ بائت. يُستدعى مرّةً من تخطيط اللوحة؛
+   * بلا `immediate` فلا يعمل عند أوّل تحميل، والتحميلُ يبدأ عمراً جديداً فلا حلقة.
+   */
+  function reloadOnIdentityChange(): void {
+    const user = useSupabaseUser()
+    watch(() => user.value?.sub, (next, prev) => {
+      if (shouldReloadOnIdentityChange(prev, next, isSessionSwitching())) window.location.reload()
+    })
   }
 
   /** دالّةٌ لا computed: الوقتُ يمضي ولا يتغيّر شيءٌ في الذاكرة. */
@@ -155,5 +174,8 @@ export function useImpersonation() {
     if (isReadOnlyNow()) throw new Error(IMPERSONATION_BLOCKED_MESSAGE)
   }
 
-  return { state, isChecked, refresh, ensureChecked, start, end, setWriteMode, isReadOnlyNow, blockIfReadOnly }
+  return {
+    state, isChecked, notImpersonating, refresh, ensureChecked, start, end, setWriteMode,
+    isReadOnlyNow, blockIfReadOnly, reloadOnIdentityChange
+  }
 }

@@ -19,12 +19,13 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { size: 'lg' })
 
 const { profile } = useProfile()
-const { state, start } = useImpersonation()
+const { notImpersonating, start } = useImpersonation()
 const { handle } = useErrorHandler()
 
 const visible = computed(() => {
   const me = profile.value
-  return !!me && state.value === null
+  // قبل اكتمال فحص النيابة مجهول ← لا يظهر (لا يومض داخل نيابة)
+  return !!me && notImpersonating.value
     && isImpersonatorRole(me.role) && mayImpersonateRole(me.role, props.role)
     && props.status === 'active' && props.profileId !== me.id
 })

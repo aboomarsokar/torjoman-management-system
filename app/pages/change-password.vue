@@ -19,8 +19,23 @@ const toast = useToast()
 
 // في النيابة: لا تُغيَّر كلمةُ مرور غيرك — النموذجُ معطَّل (والحارسُ الحقيقيّ مشغّلُ auth.users).
 // الشاشةُ بلا تخطيط اللوحة، فتسأل الخادمَ بنفسها.
-const { state: impersonation, ensureChecked } = useImpersonation()
-onMounted(() => void ensureChecked())
+// والنموذجُ معطَّلٌ كذلك حتى يكتمل الفحص (لا يومض مفتوحاً داخل نيابة).
+const { state: impersonation, notImpersonating, ensureChecked } = useImpersonation()
+// تعذّرُ الفحص (شبكة) لا يحبس صاحبَ العلَم خلف نموذجٍ معطَّل: يُعاد كلَّ خمس ثوانٍ حتى يُعرف
+let recheck: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  void ensureChecked()
+  recheck = setInterval(() => {
+    if (notImpersonating.value || impersonation.value) {
+      if (recheck) clearInterval(recheck)
+      return
+    }
+    void ensureChecked()
+  }, 5000)
+})
+onUnmounted(() => {
+  if (recheck) clearInterval(recheck)
+})
 
 const mustChange = computed(() => profile.value?.must_change_password === true)
 const pw = reactive({ next: '', confirm: '' })
@@ -28,7 +43,7 @@ const showPassword = ref(false)
 const saving = ref(false)
 
 async function submit() {
-  if (!profile.value || impersonation.value) return
+  if (!profile.value || !notImpersonating.value) return
   const invalid = passwordChangeError(pw.next, pw.confirm)
   if (invalid) {
     toast.add({ title: invalid, color: 'error', icon: 'i-lucide-circle-alert' })
@@ -87,7 +102,7 @@ async function submit() {
             v-model="pw.next"
             :type="showPassword ? 'text' : 'password'"
             autocomplete="new-password"
-            :disabled="!!impersonation"
+            :disabled="!notImpersonating"
             dir="ltr"
             icon="i-lucide-lock"
             size="xl"
@@ -111,7 +126,7 @@ async function submit() {
             v-model="pw.confirm"
             :type="showPassword ? 'text' : 'password'"
             autocomplete="new-password"
-            :disabled="!!impersonation"
+            :disabled="!notImpersonating"
             dir="ltr"
             icon="i-lucide-lock"
             size="xl"
@@ -126,7 +141,7 @@ async function submit() {
           size="xl"
           block
           :loading="saving"
-          :disabled="!profile || !!impersonation"
+          :disabled="!profile || !notImpersonating"
           :ui="{ base: 'rounded-[13px] font-semibold' }"
         />
       </form>

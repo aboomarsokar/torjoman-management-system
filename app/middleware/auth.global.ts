@@ -44,10 +44,20 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   let decision = accountGateDecision(profile, to.path, isPublic)
   // النادرُ وحده يسأل الخادم: في النيابة لا يُساق المديرُ إلى تغيير كلمةِ غيره، ولا يُخرَج الموظفُ من أجهزته
-  const impersonating = decision !== 'allow' && !!(await useImpersonation().ensureChecked())
+  const impersonation = decision !== 'allow' ? useImpersonation() : null
+  const impersonating = !!impersonation && !!(await impersonation.ensureChecked())
   if (impersonating) decision = accountGateDecision(profile, to.path, isPublic, { impersonating })
   if (decision === 'sign-out') {
-    await supabase.auth.signOut(impersonating ? { scope: 'local' } : undefined)
+    if (impersonation && impersonating) {
+      // الهدفُ عُطِّل في أثناء النيابة: تُختم على الخادم ثم خروجٌ محلّيّ (لا global يمسّ أجهزةَ الموظف)
+      await impersonation.end({ resume: false })
+        .catch((err: unknown) => console.error('[auth] تعذّر إنهاءُ النيابة عند الخروج:', err))
+      await supabase.auth.signOut({ scope: 'local' })
+      impersonation.state.value = null
+      impersonation.isChecked.value = false
+    } else {
+      await supabase.auth.signOut()
+    }
     return navigateTo('/login')
   }
   if (decision === 'change-password') {

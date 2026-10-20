@@ -3,10 +3,11 @@
  * شريطُ الدخول بالنيابة — أعلى العمود الرئيس في لوحة كلّ دور، لا يُخفى في شاشة ما دامت الجلسةُ نيابة.
  * أصفر للقراءة («أنت تتصفّح بحساب X · قراءةٌ فقط · تنتهي HH:MM»)، وأحمر في وضع التعديل بعدٍّ تنازليّ.
  * الحالةُ من الخادم (useImpersonation): انغلاقُ النافذة يسأل الخادمَ ولا يبدّل اللونَ محلّياً،
- * وبلوغُ الانتهاء (أو صفٌّ مختوم) يعود إلى حساب الفاعل مرّةً واحدة.
+ * وبلوغُ الانتهاء (أو صفٌّ مختوم) يعود إلى حساب الفاعل — والتعثّرُ يُعاد بعد مهلة، والرسالةُ بعد ردّ الخادم.
+ * العدُّ بالثواني مخفيٌّ عن قارئ الشاشة (منطقةٌ حيّة)، ويُقرأ بدلَه الدقائقُ وحدها.
  */
 import { WRITE_WINDOW_MINUTES } from '~/constants/impersonation'
-import { clockLabel, countdownLabel, expired, writeOpen } from '~/utils/impersonation'
+import { clockLabel, countdownLabel, expired, minutesLeftLabel, writeOpen } from '~/utils/impersonation'
 
 const { state, refresh, end, setWriteMode } = useImpersonation()
 const { handle } = useErrorHandler()
@@ -14,18 +15,12 @@ const toast = useToast()
 
 const now = ref(Date.now())
 let tick: ReturnType<typeof setInterval> | null = null
-onMounted(() => {
-  tick = setInterval(() => {
-    now.value = Date.now()
-  }, 1000)
-})
-onUnmounted(() => {
-  if (tick) clearInterval(tick)
-})
 
 const writing = computed(() => writeOpen(state.value, now.value))
 const endsAt = computed(() => (state.value ? clockLabel(state.value.expiresAt) : ''))
 const countdown = computed(() => (state.value?.writeUntil ? countdownLabel(state.value.writeUntil, now.value) : '00:00'))
+// لقارئ الشاشة: الدقائقُ وحدها (لا يُعلَن العدُّ كلَّ ثانية في المنطقة الحيّة)
+const minutesLeft = computed(() => (state.value?.writeUntil ? minutesLeftLabel(state.value.writeUntil, now.value) : ''))
 const writeLabel = `فعّل التعديل — ${WRITE_WINDOW_MINUTES} دقائق`
 
 // انغلاقُ نافذة الكتابة: الخادمُ يُسأل (قد مدّدها أو أغلقها) — لا تبديلَ لونٍ محلّياً
@@ -34,7 +29,12 @@ watch(writing, (open, was) => {
 })
 
 const busy = ref(false)
+/** إنهاءٌ جارٍ — ويبقى مرفوعاً بعد النجاح (التحميلُ آتٍ) كي لا تُعاد المحاولة. */
 let ending = false
+/** الإنهاءُ التلقائيّ المتعثّر يُعاد بعد مهلة، لا كلَّ ثانية؛ ورسالةُ تعثّره مرّةً واحدة. */
+const AUTO_END_RETRY_MS = 10_000
+let nextAutoEnd = 0
+let autoEndFailed = false
 
 async function run(task: () => Promise<void>, fallback: string) {
   if (busy.value) return
@@ -48,19 +48,36 @@ async function run(task: () => Promise<void>, fallback: string) {
   }
 }
 
-function finish() {
+/** يُنهي النيابة؛ والرسالةُ بعد ردّ الخادم: «تعود إلى حسابك» للعودة، و«سجّل دخولك» يقولها end نفسُه عند الرفض. */
+async function finish(auto = false) {
+  if (ending) return
   ending = true
-  void run(() => end(), 'تعذّر إنهاءُ النيابة.').finally(() => {
+  busy.value = true
+  try {
+    const outcome = await end()
+    if (auto && outcome === 'resumed') {
+      toast.add({ title: 'انتهت مدّةُ النيابة — تعود إلى حسابك.', color: 'warning', icon: 'i-lucide-timer-off' })
+    }
+  } catch (err) {
     ending = false
-  })
+    nextAutoEnd = Date.now() + AUTO_END_RETRY_MS
+    if (!auto || !autoEndFailed) handle(err, 'تعذّر إنهاءُ النيابة.')
+    if (auto) autoEndFailed = true
+  } finally {
+    busy.value = false
+  }
 }
 
-// الانتهاءُ أو الختم ← رسالةٌ ثم عودةٌ مرّةً واحدة
-watch([() => expired(state.value, now.value), () => state.value?.ended === true], ([isExpired, isEnded]) => {
-  if ((isExpired || isEnded) && !ending) {
-    toast.add({ title: 'انتهت مدّةُ النيابة — تعود إلى حسابك.', color: 'warning', icon: 'i-lucide-timer-off' })
-    finish()
-  }
+// النبضةُ تُعيد محاولةَ الإنهاء ما دامت النيابةُ منتهيةً أو مختومة ولم ينجح الإنهاء
+onMounted(() => {
+  tick = setInterval(() => {
+    now.value = Date.now()
+    const s = state.value
+    if (s && (s.ended || expired(s, now.value)) && !ending && now.value >= nextAutoEnd) void finish(true)
+  }, 1000)
+})
+onUnmounted(() => {
+  if (tick) clearInterval(tick)
 })
 
 const toggleWrite = (on: boolean) => run(() => setWriteMode(on), 'تعذّر تبديلُ وضع التعديل.')
@@ -80,7 +97,10 @@ const toggleWrite = (on: boolean) => run(() => setWriteMode(on), 'تعذّر ت�
         class="size-5 shrink-0"
       />
       <span v-if="writing">
-        أنت تعدّل باسم <strong>{{ state.targetName }}</strong> — كلُّ تعديلٍ مسجَّل · <bdi dir="ltr">{{ countdown }}</bdi>
+        أنت تعدّل باسم <strong>{{ state.targetName }}</strong> — كلُّ تعديلٍ مسجَّل · <bdi
+          dir="ltr"
+          aria-hidden="true"
+        >{{ countdown }}</bdi><span class="sr-only">{{ minutesLeft }}</span>
       </span>
       <span v-else>
         أنت تتصفّح بحساب <strong>{{ state.targetName }}</strong> · قراءةٌ فقط · تنتهي <bdi dir="ltr">{{ endsAt }}</bdi>
@@ -117,7 +137,7 @@ const toggleWrite = (on: boolean) => run(() => setWriteMode(on), 'تعذّر ت�
         type="button"
         class="imp-btn imp-btn-strong"
         :disabled="busy"
-        @click="finish"
+        @click="finish()"
       >
         <UIcon
           name="i-lucide-log-out"

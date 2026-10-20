@@ -13,13 +13,16 @@ const { signOut } = useAuth()
 const toast = useToast()
 const route = useRoute()
 // النيابةُ تُسأل من الخادم مرّةً لكلّ تحميلٍ كامل، غيرَ حاجزة (الشريطُ يظهر حين تصل)
-const { ensureChecked: checkImpersonation } = useImpersonation()
+const { ensureChecked: checkImpersonation, reloadOnIdentityChange } = useImpersonation()
 onMounted(() => void checkImpersonation())
+// لسانٌ آخر بدأ نيابةً أو أنهاها (الكعكةُ مشتركة) ← إعادةُ تحميل هذا اللسان
+reloadOnIdentityChange()
 
-// طرد فوري لأي حساب يُعطَّل أثناء الجلسة (الخيار 1 لإنفاذ التعطيل)
-watch(status, (s) => {
+// طرد فوري لأي حساب يُعطَّل أثناء الجلسة (الخيار 1 لإنفاذ التعطيل) — وفي النيابة الحسابُ المعطَّل حسابُ الموظف لا المدير
+watch(status, async (s) => {
   if (s === 'disabled') {
-    toast.add({ title: 'تم تعطيل حسابك. تواصل مع الإدارة.', color: 'error', icon: 'i-lucide-ban' })
+    const title = (await checkImpersonation()) ? 'عُطِّل حسابُ الموظف — انتهت النيابة.' : 'تم تعطيل حسابك. تواصل مع الإدارة.'
+    toast.add({ title, color: 'error', icon: 'i-lucide-ban' })
     signOut()
   }
 }, { immediate: true })

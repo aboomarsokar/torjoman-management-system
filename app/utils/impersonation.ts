@@ -4,7 +4,7 @@
  * وعلَمُ «تبديل الجلسة جارٍ» الذي يسأله وسيطُ المسارات.
  * الخادمُ هو الحَكَم في كلّ ذلك — هذه طبقةُ تجربة.
  */
-import type { ImpersonationStatus } from '~/constants/impersonation'
+import { IMPERSONATION_READ_ONLY_MESSAGE, type ImpersonationStatus } from '~/constants/impersonation'
 
 /** مفتاحُ حالة النيابة في useState — يقرؤه useErrorHandler بلا useImpersonation. */
 export const IMPERSONATION_STATE_KEY = 'impersonation'
@@ -34,6 +34,21 @@ export function countdownLabel(untilIso: string, nowMs: number): string {
   return `${pad(Math.floor(left / 60))}:${pad(left % 60)}`
 }
 
+/** ما يُقرأ لقارئ الشاشة بدل العدّ بالثواني (لا يُعلَن كلَّ ثانية): «تبقّى N د» بالتقريب إلى أعلى. */
+export function minutesLeftLabel(untilIso: string, nowMs: number): string {
+  const minutes = Math.max(0, Math.ceil((Date.parse(untilIso) - nowMs) / 60_000))
+  return `تبقّى ${minutes} د`
+}
+
+/**
+ * لسانٌ آخر بدّل الجلسةَ (الكعكةُ مشتركة وrefreshSession يُذاع بين الألسنة): هذا اللسانُ صار حسابَ غيره
+ * بلا شريط، أو بقي شريطُه بعد الإنهاء — فيُعاد تحميلُه. لا عند أوّل تحميل (prev فارغ)، ولا عند الخروج
+ * (next فارغ — الوسيطُ يتولّاه)، ولا في اللسان الذي يبدّل بنفسه (تحميلُه الكامل آتٍ).
+ */
+export function shouldReloadOnIdentityChange(prev: string | null | undefined, next: string | null | undefined, switchingHere: boolean): boolean {
+  return !!prev && !!next && prev !== next && !switchingHere
+}
+
 /** نافذةُ الكتابة مفتوحة: `writeUntil` في المستقبل. */
 export function writeOpen(s: Pick<ImpersonationStatus, 'writeUntil'> | null, nowMs: number): boolean {
   return !!s?.writeUntil && Date.parse(s.writeUntil) > nowMs
@@ -58,7 +73,8 @@ export function impersonateConfirmText(name: string): { title: string, lines: st
 }
 
 /**
- * رفضٌ عامّ (RLS `42501`، أو 403 من المستودع برسالةٍ إنجليزية) في نيابة القراءة ← رسالةُ وضع القراءة.
+ * رفضُ RLS («row-level security» أو رسالةُ حارس القاعدة) أو 403 من المستودع في نيابة القراءة ← رسالةُ وضع القراءة.
+ * ⚠️ لا كلَّ `42501`/«permission denied»: ذاك وجهُ المنح المنسيّ — إخفاؤه خلف «وضع القراءة» يُضلّ التشخيص.
  * null لغير ذلك فيمضي المعالجُ إلى ترجمته المعتادة.
  */
 export function readOnlyRefusal(
@@ -67,12 +83,12 @@ export function readOnlyRefusal(
   nowMs: number
 ): string | null {
   if (!sessionReadOnly(s, nowMs) || !err || typeof err !== 'object') return null
-  const e = err as { code?: unknown, statusCode?: unknown, status?: unknown, message?: unknown }
-  const message = typeof e.message === 'string' ? e.message.toLowerCase() : ''
-  const denied = e.code === '42501'
-    || String(e.statusCode ?? e.status ?? '') === '403'
-    || message.includes('row-level security') || message.includes('permission denied')
-  return denied ? IMPERSONATION_BLOCKED_MESSAGE : null
+  const e = err as { statusCode?: unknown, status?: unknown, message?: unknown, name?: unknown, __isStorageError?: unknown }
+  const message = typeof e.message === 'string' ? e.message : ''
+  const rls = message.toLowerCase().includes('row-level security') || message.includes(IMPERSONATION_READ_ONLY_MESSAGE)
+  const storageForbidden = (e.__isStorageError === true || e.name === 'StorageApiError')
+    && String(e.statusCode ?? e.status ?? '') === '403'
+  return rls || storageForbidden ? IMPERSONATION_BLOCKED_MESSAGE : null
 }
 
 // ── علَمُ تبديل الجلسة ──

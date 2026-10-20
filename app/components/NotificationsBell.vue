@@ -16,7 +16,7 @@ const { items: queueItems } = useNotifications()
 const { rows, unread, loaded, markRead } = useInbox()
 const { play: chime } = useNotificationChime()
 // في النيابة لا يُعلَّم شيءٌ مقروءاً باسم الموظف — يُخفى «تعليم الكل» (والتعليمُ الفرديّ يعود في useInbox)
-const { state: impersonation } = useImpersonation()
+const { notImpersonating } = useImpersonation()
 
 // الخبرُ غيرُ المقروء يمثّل بندَه في الطابور: يُخفى البندُ ولا يُعدّ حتى يُقرأ الخبر
 const queue = computed(() => pendingQueue(queueItems.value, rows.value))
@@ -132,7 +132,7 @@ async function openRow(row: InboxRow) {
         <div class="notif-head notif-head-row">
           <span>الإشعارات</span>
           <button
-            v-if="unread > 0 && !impersonation"
+            v-if="unread > 0 && notImpersonating"
             type="button"
             class="notif-markall"
             @click="markRead(null)"

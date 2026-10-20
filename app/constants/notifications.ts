@@ -12,7 +12,8 @@ export const NOTIFICATION_KINDS = [
   'exam_graded',
   'transport_paid',
   'impersonation_started',
-  'impersonation_write'
+  'impersonation_write',
+  'statement_returned'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -27,7 +28,8 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   exam_graded: 'i-lucide-clipboard-check',
   transport_paid: 'i-lucide-wallet',
   impersonation_started: 'i-lucide-eye',
-  impersonation_write: 'i-lucide-pencil'
+  impersonation_write: 'i-lucide-pencil',
+  statement_returned: 'i-lucide-undo-2'
 }
 
 /** آخرُ ما يُعرض في لوحة الجرس. */

@@ -60,6 +60,9 @@ _(التالي بعد الجزء ٣: المواصلات والدخول بالن�
 - **chore:** إعداد Supabase client مُنمّط بنوع Database
 -->
 
+### 2026-10-20
+- **feat(notify): إشعارُ المعلّم حين يُعاد إليه كشفُ الحوافز** (موافقة المستخدم 2026-10-20). نوعٌ جديد `statement_returned` في القيد وفي `private.notify` وفي `NOTIFICATION_KINDS` (أيقونة `i-lucide-undo-2`)، ومُشغِّلٌ بعد تحديث `returned_at` يُشعر معلّمَ الحلقة بالشهر بالأرقام وملاحظةِ المراجِع، والرابط `/incentives`. هجرة `20261020080625_statement_returned_notify` (مطبَّقة وفحصُها الذاتيّ والسلوكيّ مرّا).
+
 ### 2026-10-19
 - **refactor(db): حذفُ خطة الاختبارات القديمة من القاعدة.** هجرة `20261019145800_drop_exam_plan` (طُبّقت على الإنتاج): حُذف `exam_plan` والنوع `exam_stage_type` والعمود `exam_list_items.exam_plan_id` و`guard_station_sequence()` ومُشغِّلها و`my_exam_results()` وفرع `exam_plan` في `bump_parts_on_pass`، وصار `exam_cycle_id` إلزامياً. حُدّثت `docs/DATABASE.md` واختبارات `supabase/tests/v2_rls.sql` (ر-1…ر-4) إلى `exam_cycles` و`my_exam_cycle_results()`.
 - **fix(pwa): الصفحةُ تُفتح بآخر نسخةٍ بلا تحديثٍ يدويّ.** شكا المستخدم أنّ منتقي الشهر يظهر بشكله القديم أوّلاً ثم يصحّ بعد تحديث الشاشة. السبب: `@vite-pwa/nuxt` يضع `navigateFallback: '/'` (و`sw.js` المنشور فيه `createHandlerBoundToURL("/")`)، فكلُّ تنقّلٍ كان يُقدَّم من هيكل «/» المحفوظ من النشر السابق حتى ينزل عاملُ الخدمة الجديد ويعيد التحميل — ومنه أيضاً تحذيرُ «Hydration mismatch» لأنّ كلّ صفحةٍ تُبنى على هيكل «/». صار `navigateFallback: null` (التنقّلُ من الشبكة دائماً؛ العملُ بلا إنترنت غيرُ مبنيّ — ROADMAP #14)، وفحصُ نسخةٍ جديدة كلَّ ساعة (`client.periodicSyncForUpdates`) وعند العودة إلى التبويب أو التطبيق (`plugins/pwa-update.client.ts`)، و`autoUpdate` يعيد التحميل متى نزلت.

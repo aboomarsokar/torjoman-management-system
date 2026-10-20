@@ -652,7 +652,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `read_at` | timestamptz | `null` = غير مقروء |
 | `created_at` | timestamptz | `default now()` |
 
-**أنواع `kind` (العشرة):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان**) · `exam_nominated` · `exam_graded` (الجزء ٣ — **مُنتَجان منذ `20261019121528`**، §22) · `transport_paid` (الجزء ٤) · `impersonation_started` · `impersonation_write` (الجزء ٥). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
+**أنواع `kind` (الأحد عشر):** `report_submitted` · `report_approved` · `report_returned` (الجزء ٢) · `alert_issued` · `visit_scheduled` (**مُنتَجان**) · `exam_nominated` · `exam_graded` (الجزء ٣ — **مُنتَجان منذ `20261019121528`**، §22) · `transport_paid` (الجزء ٤) · `impersonation_started` · `impersonation_write` (الجزء ٥). و`statement_returned` (**مُنتَج** منذ `20261020080625` — إعادةُ كشف الحوافز إلى المعلّم). القيد يحملها كلّها من اليوم، ومُنتِجُها يُضاف مع جزئه.
 
 **الفهارس:**
 
@@ -682,6 +682,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `supervision_visits_notify` | مُشغِّل `AFTER INSERT ON supervision_visits FOR EACH ROW` | ← `private.notify_visit_scheduled()` |
 | `exam_list_items_notify_nominated` | مُشغِّل `AFTER INSERT ON exam_list_items` (`referencing new table as new_items`، `FOR EACH STATEMENT`) | ← `private.notify_exam_nominated()` |
 | `exam_results_notify_graded` | مُشغِّل `AFTER INSERT ON exam_results FOR EACH ROW` | ← `private.notify_exam_graded()` |
+| `incentive_statements_notify_returned` | مُشغِّل `AFTER UPDATE OF returned_at ON incentive_statements` بشرط `new.returned_at` جديدٌ غيرُ فارغ | ← `private.notify_statement_returned()`: خبرُ `statement_returned` لمعلّم حلقة الكشف، العنوان «أُعيد إليك كشف الحوافز للتعديل»، والنصّ «الشهر MM-YYYY · ملاحظةُ المراجِع» (مقصوصةً عند 300)، والرابط `/incentives`، والمصدر `incentive_statements` |
 
 > المُشغِّلان بعد الإدراج (`AFTER`) فلا يغيّران الصفّ الأصليّ، ويعيدان `null`. دوالّهما `security definer` وبلا منحٍ للعميل.
 

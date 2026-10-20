@@ -12,7 +12,7 @@ import { openSessionFor } from '../utils/impersonationSession'
 import { IMPERSONATION_WINDOW_MINUTES, STALE_SWEEP_HOURS } from '~/constants/impersonation'
 
 export default defineEventHandler(async (event) => {
-  const { caller, admin } = await requireCaller(event)
+  const { caller, admin, accessToken: actorToken } = await requireCaller(event)
   if (caller.isImpersonating) throw createError({ statusCode: 403, statusMessage: NESTED_IMPERSONATION_MESSAGE })
   requireWritableSession(caller)
 
@@ -66,10 +66,16 @@ export default defineEventHandler(async (event) => {
   })
   if (insertError) {
     // لا صفَّ فلا تُبطلها end_impersonation_sessions — تُغلق برمزها محلّياً (global يُخرج الموظفَ من أجهزته).
-    await admin.auth.admin.signOut(opened.accessToken, 'local')
+    const { error: signOutError } = await admin.auth.admin.signOut(opened.accessToken, 'local')
+    if (signOutError) console.error('[impersonate] تعذّر إغلاقُ الجلسة غير الموسومة:', signOutError)
     console.error('[impersonate] تعذّر تسجيلُ النيابة:', insertError)
     throw createError({ statusCode: 500, statusMessage: 'تعذّر بدء النيابة.' })
   }
+
+  // جلسةُ الفاعل الأصليّة تُغلق محلّياً (أجهزتُه الأخرى لا تُمسّ): لا يحملها أحدٌ بعد أن يبدّل المتصفّحُ إلى النيابة،
+  // فتبقى يتيمةً حيّة. والعودةُ لا تحتاجها — end/resume يفتح للفاعل جلسةً جديدة. فشلُ الإغلاق لا يُفشل البدء.
+  const { error: actorSignOutError } = await admin.auth.admin.signOut(actorToken, 'local')
+  if (actorSignOutError) console.error('[impersonate] تعذّر إغلاقُ جلسة الفاعل الأصليّة:', actorSignOutError)
 
   // رمزُ التحديث وحده — العميلُ يبدّل الجلسةَ بـrefreshSession ثم تحميلٌ كامل.
   return { refreshToken: opened.refreshToken, targetName: target.full_name, targetHome: '/dashboard', expiresAt }

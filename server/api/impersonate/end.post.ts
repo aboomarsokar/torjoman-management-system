@@ -1,6 +1,9 @@
 /**
  * إنهاءُ النيابة — يختم الصفَّ ويُبطل جلسةَ النيابة وحدها (لا جلساتِ الموظف)، ويُصدر للفاعل جلسةً جديدة يعود بها.
- * ⚠️ بلا requireCaller: يرمي 401 على النيابة المنتهية، وهي أحوجُ ما تكون للإنهاء — فيُقرأ معرّفُ الجلسة من الادّعاءات.
+ * ⚠️ بلا requireCaller: يرمي 401 على النيابة المنتهية — فيُقرأ معرّفُ الجلسة من الادّعاءات، ويُسأل عن الحياة هنا.
+ * ⚠️ الخروجُ (resume=false) يعمل على أيّ صفٍّ ولو ماتت جلستُه: ختمٌ وإبطالٌ لا يمنحان شيئاً.
+ * ⚠️ العودةُ لا تُصدر جلسةَ مديرٍ إلا من نيابةٍ قائمة (لم تُختم) وجلسةٍ حيّة في auth.sessions — رمزٌ مُبطَلٌ
+ * أو نيابةٌ مختومة ← 401، وإلا صار كلُّ رمز نيابةٍ قديمٍ مفتاحاً لحساب المدير حتى ينتهي.
  * ⚠️ الصفُّ يُختم ولا يُحذف: هو السجلّ، وحذفُه يقلب جلسةً حيّةً كاملةَ الكتابة.
  * ⚠️ جلسةُ العودة تُفتح أوّلاً ثم يُبطَل الذهاب — لو أُبطل أوّلاً وتعذّرت العودةُ بقي بلا جلسةٍ أصلاً.
  * باب خروجٍ مستثنى من requireWritableSession (impersonationGuardCoverage.test.ts).
@@ -8,7 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { readSessionClaims } from '../../utils/caller'
+import { isSessionLive, readSessionClaims, SESSION_ENDED_MESSAGE } from '../../utils/caller'
 import { parseEndInput } from '../../utils/impersonationScope'
 import { openSessionFor } from '../../utils/impersonationSession'
 import { isImpersonatorRole } from '~/constants/impersonation'
@@ -34,18 +37,27 @@ export default defineEventHandler(async (event) => {
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
 
   const admin = serverSupabaseServiceRole<Database>(event)
-  const { data: row } = claims.sessionId
-    ? await admin.from('impersonation_sessions')
-        .select('session_id, actor_profile_id, ended_at, return_to')
-        .eq('session_id', claims.sessionId)
-        .maybeSingle()
-    : { data: null }
+  const [{ data: row }, live] = await Promise.all([
+    claims.sessionId
+      ? admin.from('impersonation_sessions')
+          .select('session_id, actor_profile_id, ended_at, return_to')
+          .eq('session_id', claims.sessionId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    isSessionLive(admin, claims)
+  ])
   if (!row) throw createError({ statusCode: 400, statusMessage: 'هذه الجلسةُ ليست نيابة.' })
   const ended = row.ended_at !== null
 
   if (!parsed.value.resume) {
     await closeSession(admin, row.session_id, ended, 'signed_out')
     return { ok: true }
+  }
+
+  // لا عودةَ من نيابةٍ مختومة أو جلسةٍ مُبطَلة — يُتمّ الإغلاقَ ويُرسل إلى الدخول.
+  if (ended || !live) {
+    await closeSession(admin, row.session_id, ended, 'manual')
+    throw createError({ statusCode: 401, statusMessage: SESSION_ENDED_MESSAGE })
   }
 
   // الفاعلُ يُقرأ الآن لا من الصفّ: عُطِّل أو تغيّر دورُه أو حُذف ← لا جلسةَ عودة.

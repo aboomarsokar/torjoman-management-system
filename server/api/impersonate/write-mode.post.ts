@@ -7,9 +7,9 @@
  */
 import type { Database } from '~/types/database.types'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { readSessionClaims } from '../../utils/caller'
+import { isSessionLive, readSessionClaims, SESSION_ENDED_MESSAGE } from '../../utils/caller'
 import { parseWriteModeInput } from '../../utils/impersonationScope'
-import { isImpersonatorRole, WRITE_WINDOW_MINUTES } from '~/constants/impersonation'
+import { isImpersonatorRole, mayImpersonateRole, WRITE_WINDOW_MINUTES } from '~/constants/impersonation'
 
 export default defineEventHandler(async (event): Promise<{ writeUntil: string | null }> => {
   const claims = await readSessionClaims(event)
@@ -19,23 +19,39 @@ export default defineEventHandler(async (event): Promise<{ writeUntil: string | 
   const { on } = parsed.value
 
   const admin = serverSupabaseServiceRole<Database>(event)
-  const { data: row } = claims.sessionId
-    ? await admin.from('impersonation_sessions')
-        .select('session_id, actor_profile_id, target_profile_id, ended_at, expires_at')
-        .eq('session_id', claims.sessionId)
-        .maybeSingle()
-    : { data: null }
+  const [{ data: row }, live] = await Promise.all([
+    claims.sessionId
+      ? admin.from('impersonation_sessions')
+          .select('session_id, actor_profile_id, target_profile_id, ended_at, expires_at')
+          .eq('session_id', claims.sessionId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    on ? isSessionLive(admin, claims) : Promise.resolve(true)
+  ])
   const now = Date.now()
   const expiresAt = row ? new Date(row.expires_at).getTime() : 0
   if (!row || row.ended_at !== null || expiresAt <= now) {
     throw createError({ statusCode: 400, statusMessage: 'هذه الجلسةُ ليست نيابةً قائمة.' })
   }
 
-  const { data: actor } = row.actor_profile_id
-    ? await admin.from('profiles').select('role, status').eq('id', row.actor_profile_id).maybeSingle()
-    : { data: null }
-  if (!actor || actor.status !== 'active' || !isImpersonatorRole(actor.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'وضعُ التعديل للمدير الإداري والمدير الفني وحدهما.' })
+  // الفتحُ وحده يُحرس: الإغلاقُ يُنقص الصلاحية، ورفضُه يُبقي النافذةَ مفتوحة.
+  if (on) {
+    if (!live) throw createError({ statusCode: 401, statusMessage: SESSION_ENDED_MESSAGE })
+    // الفاعلُ والهدفُ يُقرآن الآن: فاعلٌ عُطِّل، أو هدفٌ تغيّر دورُه إلى ما لا يُناب عنه، لا يُفتح له.
+    const [{ data: actor }, { data: target }] = await Promise.all([
+      row.actor_profile_id
+        ? admin.from('profiles').select('role, status').eq('id', row.actor_profile_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      row.target_profile_id
+        ? admin.from('profiles').select('role, status').eq('id', row.target_profile_id).maybeSingle()
+        : Promise.resolve({ data: null })
+    ])
+    if (!actor || actor.status !== 'active' || !isImpersonatorRole(actor.role)) {
+      throw createError({ statusCode: 403, statusMessage: 'وضعُ التعديل للمدير الإداري والمدير الفني وحدهما.' })
+    }
+    if (!target || target.status !== 'active' || !mayImpersonateRole(actor.role, target.role)) {
+      throw createError({ statusCode: 403, statusMessage: 'لم يعد لك الدخولُ بحساب هذا الموظف — أنهِ النيابة.' })
+    }
   }
 
   const writeUntil = new Date(Math.min(on ? now + WRITE_WINDOW_MINUTES * 60_000 : now, expiresAt)).toISOString()

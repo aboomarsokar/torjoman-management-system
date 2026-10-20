@@ -47,7 +47,8 @@ export async function openSessionFor(
   const sessionId = sessionIdFromAccessToken(session.access_token)
   if (!sessionId) {
     // رمزٌ بلا معرّف جلسةٍ لا يُوسَم فلا يُسلَّم — ويُغلق محلّياً وحده (global يُخرج صاحبَ الحساب من أجهزته).
-    await admin.auth.admin.signOut(session.access_token, 'local')
+    const { error: signOutError } = await admin.auth.admin.signOut(session.access_token, 'local')
+    if (signOutError) console.error('[openSessionFor] تعذّر إغلاقُ الجلسة غير الموسومة:', signOutError)
     throw createError({ statusCode: 500, statusMessage: 'رمزٌ بلا معرّف جلسة — لا تُفتح النيابة.' })
   }
   return { accessToken: session.access_token, refreshToken: session.refresh_token, sessionId }

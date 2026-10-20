@@ -1,4 +1,5 @@
 import { requireAdminManager } from '../utils/supabaseAdmin'
+import { requireWritableSession } from '../utils/impersonationGuard'
 import { authCreateError, parseStaffInput, staffProfileError } from '../utils/accountInput'
 import { generateTempPassword } from '../utils/tempPassword'
 import { staffEmailFromNumber } from '~/constants/accounts'
@@ -12,7 +13,8 @@ import { staffEmailFromNumber } from '~/constants/accounts'
  * ⚠️ المدير الإداري والفني: نشطٌ واحد لكلٍّ منهما (حارسٌ/فهرسٌ في القاعدة يرفع 23505 ← 409).
  */
 export default defineEventHandler(async (event) => {
-  const { admin, user } = await requireAdminManager(event)
+  const { admin, user, caller } = await requireAdminManager(event)
+  requireWritableSession(caller)
   const parsed = parseStaffInput(await readBody(event))
   if (!parsed.ok) throw createError({ statusCode: 400, statusMessage: parsed.message })
   const { fullName, role, gender, phone } = parsed.value

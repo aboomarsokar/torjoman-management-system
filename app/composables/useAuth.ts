@@ -14,6 +14,7 @@ import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/com
 export function useAuth() {
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
+  const impersonation = useImpersonation()
 
   /**
    * دخول برقم وظيفي (4 خانات) أو رقم هوية (9 خانات) وكلمة مرور.
@@ -37,9 +38,24 @@ export function useAuth() {
     }
   }
 
-  /** تسجيل الخروج ثم العودة لشاشة الدخول — ومحوُ روابط الصور الموقَّعة (لا تصلح لمن بعده). */
+  /**
+   * تسجيل الخروج ثم العودة لشاشة الدخول — ومحوُ روابط الصور الموقَّعة (لا تصلح لمن بعده).
+   * ⚠️ في النيابة: `signOut()` بلا نطاق = global = إخراجُ الموظف الحقيقيّ من كلّ أجهزته — فإنهاءٌ على الخادم
+   * ثم خروجٌ محلّيّ. وإن تعذّر فحصُ النيابة (شبكة) فمحلّيٌّ احتياطاً.
+   */
   async function signOut() {
-    await supabase.auth.signOut()
+    const current = await impersonation.ensureChecked()
+    if (current || !impersonation.isChecked.value) {
+      if (current) {
+        await impersonation.end({ resume: false })
+          .catch((err: unknown) => console.error('[useAuth] تعذّر إنهاءُ النيابة عند الخروج:', err))
+      }
+      await supabase.auth.signOut({ scope: 'local' })
+    } else {
+      await supabase.auth.signOut()
+    }
+    impersonation.state.value = null
+    impersonation.isChecked.value = false
     // تفريغٌ لا محو: `clearNuxtState` يجعل الحالةَ undefined فيسقط أوّلُ قارئٍ لصورةٍ بعد الدخول التالي
     // («Cannot read properties of undefined» في urlFrom)
     useState(PROFILE_PHOTOS_SIGNED_KEY).value = {}

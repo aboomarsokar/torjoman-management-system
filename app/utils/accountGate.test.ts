@@ -27,6 +27,12 @@ describe('accountGateDecision', () => {
     expect(accountGateDecision({ must_change_password: true, status: 'pending' }, CHANGE_PASSWORD_PATH, false)).toBe('sign-out')
   })
 
+  it('في النيابة لا يُساق المديرُ إلى تغيير كلمةِ غيره، والسلوكُ بلا الخيار كما هو', () => {
+    expect(accountGateDecision(mustChange, '/dashboard', false, { impersonating: true })).toBe('allow')
+    expect(accountGateDecision(mustChange, '/dashboard', false, { impersonating: false })).toBe('change-password')
+    expect(accountGateDecision({ must_change_password: true, status: 'disabled' }, '/me', false, { impersonating: true })).toBe('sign-out')
+  })
+
   it('تعذّر قراءة الملف ← مرور (الحكم لـRLS)', () => {
     expect(accountGateDecision(null, '/dashboard', false)).toBe('allow')
   })

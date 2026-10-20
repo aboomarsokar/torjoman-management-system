@@ -223,6 +223,14 @@
   --chip-late-bg: #FBEAE7;
   --chip-late-ink: #D26458;
   /* متأخرة/خطأ */
+
+  /* شريط النيابة: أصفر للقراءة، أحمر لوضع التعديل */
+  --imp-read-bg: #FAEBCB;
+  --imp-read-ink: #5C4510;
+  --imp-read-line: #E8CF8F;
+  --imp-write-bg: #B84B40;
+  --imp-write-ink: #FFFFFF;
+  --imp-write-line: #973C33;
 }
 
 .dark {
@@ -281,6 +289,14 @@
   --chip-muted-ink: #8AA3B5;
   --chip-late-bg: #3A201D;
   --chip-late-ink: #E58579;
+
+  /* شريط النيابة (ليلي) */
+  --imp-read-bg: #3A2F16;
+  --imp-read-ink: #F0D58E;
+  --imp-read-line: #5A4A22;
+  --imp-write-bg: #7B322B;
+  --imp-write-ink: #FFFFFF;
+  --imp-write-line: #973C33;
 }
 
 /* ============================================================

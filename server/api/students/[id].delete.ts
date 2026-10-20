@@ -1,4 +1,5 @@
 import { requireAdminManager } from '../../utils/supabaseAdmin'
+import { requireWritableSession } from '../../utils/impersonationGuard'
 import { parseRecordId } from '../../utils/accountInput'
 
 /**
@@ -10,7 +11,8 @@ import { parseRecordId } from '../../utils/accountInput'
  * ⚠️ صفوف الطالب التابعة (النتائج والترشيحات…) تُحذف معه بالتتالي (on delete cascade) كما كان.
  */
 export default defineEventHandler(async (event) => {
-  const { admin } = await requireAdminManager(event)
+  const { admin, caller } = await requireAdminManager(event)
+  requireWritableSession(caller)
   const parsedId = parseRecordId(getRouterParam(event, 'id'))
   if (!parsedId.ok) throw createError({ statusCode: 400, statusMessage: parsedId.message })
   const studentId = parsedId.value

@@ -20,6 +20,8 @@ export type { MonthRecord, QuranRecordRow, ReportHeader, StudentMonthRow, BuildR
 export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, month: Ref<number>) {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()
+  // نيابةُ القراءة تُرفض قبل الإرسال: تحديثٌ لا يطابق صفّاً يعود «0 صفوف» بلا رفضٍ صريح
+  const { blockIfReadOnly } = useImpersonation()
   const reference = useQuranReference()
   const report = ref<ReportHeader | null>(null)
   const rows = ref<StudentMonthRow[]>([])
@@ -152,6 +154,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
       return false
     }
     try {
+      blockIfReadOnly()
       const header = await ensureReport(hid)
       const { error } = await supabase.from('quran_records').upsert({
         report_id: header.id,
@@ -178,6 +181,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
     const current = report.value
     if (!current) return false
     try {
+      blockIfReadOnly()
       const { data, error } = await supabase.from('monthly_reports')
         .update(returnNote === undefined ? { status } : { status, return_note: returnNote })
         .eq('id', current.id)

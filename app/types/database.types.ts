@@ -601,6 +601,90 @@ export type Database = {
           },
         ]
       }
+      impersonation_sessions: {
+        Row: {
+          actor_name: string
+          actor_profile_id: string | null
+          actor_role: Database["public"]["Enums"]["user_role"]
+          ended_at: string | null
+          ended_reason: string | null
+          expires_at: string
+          return_to: string | null
+          session_id: string
+          started_at: string
+          target_name: string
+          target_profile_id: string | null
+          write_until: string | null
+        }
+        Insert: {
+          actor_name: string
+          actor_profile_id?: string | null
+          actor_role: Database["public"]["Enums"]["user_role"]
+          ended_at?: string | null
+          ended_reason?: string | null
+          expires_at: string
+          return_to?: string | null
+          session_id: string
+          started_at?: string
+          target_name: string
+          target_profile_id?: string | null
+          write_until?: string | null
+        }
+        Update: {
+          actor_name?: string
+          actor_profile_id?: string | null
+          actor_role?: Database["public"]["Enums"]["user_role"]
+          ended_at?: string | null
+          ended_reason?: string | null
+          expires_at?: string
+          return_to?: string | null
+          session_id?: string
+          started_at?: string
+          target_name?: string
+          target_profile_id?: string | null
+          write_until?: string | null
+        }
+        Relationships: []
+      }
+      impersonation_writes: {
+        Row: {
+          actor_profile_id: string | null
+          id: number
+          new_row: Json | null
+          occurred_at: string
+          old_row: Json | null
+          op: string
+          route: string | null
+          session_id: string
+          table_name: string | null
+          target_profile_id: string | null
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          id?: never
+          new_row?: Json | null
+          occurred_at?: string
+          old_row?: Json | null
+          op: string
+          route?: string | null
+          session_id: string
+          table_name?: string | null
+          target_profile_id?: string | null
+        }
+        Update: {
+          actor_profile_id?: string | null
+          id?: never
+          new_row?: Json | null
+          occurred_at?: string
+          old_row?: Json | null
+          op?: string
+          route?: string | null
+          session_id?: string
+          table_name?: string | null
+          target_profile_id?: string | null
+        }
+        Relationships: []
+      }
       incentive_statement_items: {
         Row: {
           amount: number
@@ -1598,6 +1682,10 @@ export type Database = {
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      end_impersonation_sessions: {
+        Args: { p_session_ids: string[] }
+        Returns: number
       }
       in_admin_scope: {
         Args: { g: Database["public"]["Enums"]["gender_type"] }

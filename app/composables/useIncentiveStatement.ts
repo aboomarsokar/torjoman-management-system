@@ -44,6 +44,8 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
   const supabase = useSupabaseClient<Database>()
   const { profile } = useProfile()
   const { handle } = useErrorHandler()
+  // نيابةُ القراءة تُرفض قبل الإرسال: تحديثٌ لا يطابق صفّاً يعود «0 صفوف» بلا رفضٍ صريح
+  const { blockIfReadOnly } = useImpersonation()
   const toast = useToast()
 
   const loading = ref(false)
@@ -115,6 +117,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     }
     saving.value = true
     try {
+      blockIfReadOnly()
       let sid = statement.value?.id
       if (!sid) {
         const { data, error } = await supabase.from('incentive_statements')

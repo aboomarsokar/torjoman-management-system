@@ -2,6 +2,8 @@
  * معالجة موحّدة للأخطاء — تعرض رسالة عربية واضحة عبر useToast (مبدأ CLAUDE.md).
  * تترجم أشهر أخطاء Supabase Auth إلى العربية، وإلا تعرض رسالة احتياطية.
  */
+import type { ImpersonationStatus } from '~/constants/impersonation'
+import { IMPERSONATION_STATE_KEY, readOnlyRefusal } from '~/utils/impersonation'
 
 /** ترجمة رسائل أخطاء Supabase المعروفة إلى العربية. */
 function translateError(message?: string): string | null {
@@ -19,12 +21,17 @@ function translateError(message?: string): string | null {
 
 export function useErrorHandler() {
   const toast = useToast()
+  // حالةُ النيابة مباشرةً من useState (لا useImpersonation: المعالجُ يُستدعى في كلّ مكوّن)
+  const impersonation = useState<ImpersonationStatus | null>(IMPERSONATION_STATE_KEY, () => null)
 
   /** يعرض رسالة الخطأ كـ toast عربي، ويُرجع النصّ المعروض. */
   function handle(err: unknown, fallback = 'حدث خطأ غير متوقّع. حاول مجدداً.'): string {
     const raw = rawErrorText(err)
+    // رفضٌ عامّ (42501/403 بالإنجليزية — المستودعُ خاصّةً) في نيابة القراءة ← «أنت في وضع القراءة»؛
+    // ورسالةُ حارس القاعدة العربية تمرّ كما هي
+    const readOnly = hasArabic(raw) ? null : readOnlyRefusal(err, impersonation.value, Date.now())
     // رسائل الدخول والخادم عربيةٌ أصلاً (LOGIN_ID_ERROR، رفض الدخول الموحّد) — تُعرض كما هي
-    const message = translateError(raw) ?? (hasArabic(raw) ? raw : fallback)
+    const message = readOnly ?? translateError(raw) ?? (hasArabic(raw) ? raw : fallback)
     toast.add({ title: message, color: 'error', icon: 'i-lucide-circle-alert' })
     return message
   }

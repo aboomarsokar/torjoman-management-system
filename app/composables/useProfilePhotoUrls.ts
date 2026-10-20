@@ -62,28 +62,30 @@ export function createProfilePhotoUrlStore(
   sign: SignBatch,
   now: () => number = Date.now
 ) {
-  const generationOf = (path: string) => generations.value[path] ?? 0
+  // حمايةٌ ثانية: حالةٌ مُحيت (undefined) تُقرأ مخبأً فارغاً لا تُسقط الشاشة
+  const cached = (): SignedCache => cache.value ?? {}
+  const generationOf = (path: string) => (generations.value ?? {})[path] ?? 0
 
   /** يوقّع ما ينقص ويدمجه في المخبأ الحاليّ — إلا ما أُبطل منذ بدء الطلب. */
   async function prime(paths: (string | null | undefined)[]): Promise<void> {
     const startedAt = new Map(
       paths.filter((p): p is string => Boolean(p)).map(p => [p, generationOf(p)])
     )
-    const entries = await signMissing(sign, cache.value, paths, now())
+    const entries = await signMissing(sign, cached(), paths, now())
     const fresh = Object.entries(entries).filter(([path]) => startedAt.get(path) === generationOf(path))
     if (fresh.length === 0) return
-    cache.value = { ...cache.value, ...Object.fromEntries(fresh) }
+    cache.value = { ...cached(), ...Object.fromEntries(fresh) }
   }
 
   /** يُقرأ في القالب — تفاعليٌّ لأنّ `cache` حالةٌ مشتركة. */
   function urlFor(path: string | null | undefined): string | null {
-    return urlFrom(cache.value, path, now())
+    return urlFrom(cached(), path, now())
   }
 
   /** بعد رفعٍ أو إزالة — كي لا يظلّ الرافعُ يرى القديم، ولا يُبعث بطلبٍ كان في الطريق. */
   function invalidate(path: string): void {
-    generations.value = { ...generations.value, [path]: generationOf(path) + 1 }
-    cache.value = withoutPath(cache.value, path)
+    generations.value = { ...(generations.value ?? {}), [path]: generationOf(path) + 1 }
+    cache.value = withoutPath(cached(), path)
   }
 
   return { prime, urlFor, invalidate }

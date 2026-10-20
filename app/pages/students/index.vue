@@ -229,7 +229,7 @@ async function updateStudent(id: string, details: Database['public']['Tables']['
   // الجنس للمدير الإداري وحده، والحلقة لمن يملك الإسناد — لا تُرسل لغيرهما (حارس القاعدة يرفضها)
   const payload = {
     ...details,
-    ...(isAdmin.value ? { gender: form.gender } : {}),
+    ...(isAdmin.value && form.gender ? { gender: form.gender } : {}),
     ...(canAssign.value ? { halaqa_id: form.halaqa_id === HALQA_NONE ? null : form.halaqa_id } : {})
   }
   const { error } = await supabase.from('students').update(payload).eq('id', id)

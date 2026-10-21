@@ -11,8 +11,7 @@ import { MINUTE_SECTIONS, minuteDate, minuteItems, minutePdfTitle } from '~/util
 
 const props = defineProps<{ minute: MinuteRow | null, staff: MinuteStaff[] }>()
 const emit = defineEmits<{ done: [] }>()
-
-const PRINTING_CLASS = 'printing-sheet'
+const { print } = usePrintSheet()
 
 const attendees = computed(() => {
   const byId = new Map(props.staff.map(s => [s.id, s]))
@@ -23,28 +22,11 @@ const sections = computed(() => MINUTE_SECTIONS
   .filter(s => s.items.length))
 const printedOn = minuteDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Gaza' }))
 
-let restoreTitle: string | null = null
-function cleanup() {
-  window.removeEventListener('afterprint', cleanup)
-  document.documentElement.classList.remove(PRINTING_CLASS)
-  if (restoreTitle !== null) document.title = restoreTitle
-  restoreTitle = null
-  emit('done')
-}
-
 watch(() => props.minute, async (m) => {
   if (!m || !import.meta.client) return
-  // تُرسم الورقةُ أوّلاً ثم تُطبع
+  // تُرسم الورقةُ أوّلاً ثم تُطبع (`usePrintSheet`)
   await nextTick()
-  restoreTitle = document.title
-  document.title = minutePdfTitle(m)
-  document.documentElement.classList.add(PRINTING_CLASS)
-  window.addEventListener('afterprint', cleanup)
-  window.print()
-})
-
-onBeforeUnmount(() => {
-  if (restoreTitle !== null) cleanup()
+  print(minutePdfTitle(m), () => emit('done'))
 })
 </script>
 

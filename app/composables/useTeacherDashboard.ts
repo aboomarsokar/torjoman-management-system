@@ -12,9 +12,11 @@ import { HISTORY_MONTHS, monthRange, type HistoryRow } from '~/utils/quran/month
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { behindStudents } from '~/utils/reading'
 import {
-  examEligible, examTally, frequentAbsentees, halaqaAttendance, lastApprovedMonth, recordingStatus, unrecordedStudents,
-  type DashRecord, type DashReport
+  examEligible, examTally, frequentAbsentees, halaqaAttendance, lastRecordedReport, monthSummary, recordingStatus, unrecordedStudents,
+  type DashRecord, type DashReport, type MonthSummary
 } from '~/utils/teacherDashboard'
+import { prorationApplies } from '~/constants/quran'
+import { buildStudentRows, type QuranRecordRow } from '~/utils/quran/month'
 
 type StatementStatus = Database['public']['Enums']['statement_status']
 type RecordRow = HistoryRow & DashRecord
@@ -25,6 +27,44 @@ export function useTeacherDashboard() {
   const { profile } = useProfile()
   const { handle } = useErrorHandler()
   const quran = useQuranReference()
+
+  /**
+   * خلاصةُ آخر شهرٍ رُصد وتقييمُه بالخطة — بالحساب نفسه في شاشة «الإنجاز القرآني» (`buildStudentRows`):
+   * سجلّاتُ تقريره، وحضورُ ذلك الشهر (حضورُ الشهر الجاري في اليد فلا يُجلب ثانيةً)، ومطلوبُه المثبَّت وإلا إعدادُ اليوم.
+   */
+  async function loadLastMonth(
+    report: DashReport | null,
+    students: { id: string, full_name: string, enrollment_date: string | null, quran_parts: number | null }[],
+    current: { halaqaId: string, year: number, month: number, days: string[], absences: { student_id: string, day: string }[] }
+  ): Promise<MonthSummary | null> {
+    if (!report) return null
+    const y = report.report_year
+    const m = report.report_month
+    const isCurrent = y === current.year && m === current.month
+    const range = monthRange(y, m)
+    const none = Promise.resolve({ data: null, error: null })
+    const [recs, days, absences, settings] = await Promise.all([
+      supabase.from('quran_records').select('*').eq('report_id', report.id).returns<QuranRecordRow[]>(),
+      isCurrent ? none : supabase.from('attendance_days').select('day').eq('halaqa_id', current.halaqaId).gte('day', range.from).lte('day', range.to),
+      isCurrent ? none : supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', current.halaqaId).gte('day', range.from).lte('day', range.to),
+      report.target_pages_snapshot != null ? none : supabase.from('app_settings').select('target_memorization_pages').limit(1).maybeSingle()
+    ])
+    const failure = recs.error ?? days.error ?? absences.error ?? settings.error
+    if (failure) throw failure
+    const rows = buildStudentRows({
+      students,
+      records: recs.data ?? [],
+      previousEnds: {},
+      approvedEnds: {},
+      days: isCurrent ? current.days : (days.data ?? []).map(d => d.day),
+      prorate: prorationApplies(y, m),
+      absences: isCurrent ? current.absences : absences.data ?? [],
+      target: report.target_pages_snapshot ?? settings.data?.target_memorization_pages ?? null,
+      juz: quran.juz.value,
+      ayahCountOf: quran.ayahCountOf
+    })
+    return monthSummary(report, rows)
+  }
 
   async function load() {
     const me = profile.value?.id
@@ -44,7 +84,7 @@ export function useTeacherDashboard() {
       supabase.from('students').select('id, full_name, quran_parts, enrollment_date, halaqa_id').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
       supabase.from('attendance_days').select('day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
       supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
-      supabase.from('monthly_reports').select('id, report_year, report_month, status, return_note').eq('halaqa_id', hid)
+      supabase.from('monthly_reports').select('id, report_year, report_month, status, return_note, target_pages_snapshot').eq('halaqa_id', hid)
         .order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(6),
       supabase.from('exam_cycles').select(CYCLE_COLUMNS).order('sort_order'),
       supabase.from('exam_list_items').select('id, student_id, exam_cycle_id, exam_results(passed), student:student_id!inner(halaqa_id)')
@@ -96,7 +136,8 @@ export function useTeacherDashboard() {
       unrecorded,
       attendance: halaqaAttendance(studs, dayList, absenceRows),
       absentees: frequentAbsentees(studs, absenceRows, ABSENCE_ATTENTION_DAYS),
-      lastMonth: lastApprovedMonth(recordRows),
+      lastMonth: await loadLastMonth(lastRecordedReport((reports.data ?? []) as DashReport[], recordRows), studs,
+        { halaqaId: hid, year, month, days: dayList, absences: absenceRows }),
       exams: examTally(results.data ?? []),
       eligible: examEligible(nominees),
       readingBehind,

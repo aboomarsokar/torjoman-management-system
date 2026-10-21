@@ -2,12 +2,14 @@
 /**
  * لوحة المعلم (طلبُ المستخدم 2026-10-20: «الأمور الهامة فقط بالأرقام») — تجيب عن سؤالين:
  * ما المطلوب منّي الآن؟ وكيف حالُ حلقتي؟ بالترتيب: ترويسةُ الحلقة ← «المطلوب منك الآن» ← أربعةُ أرقام
- * (حضورُ الشهر، وحفظُ آخر شهرٍ معتمد، والمستحقّون للاختبار، ونتائجُ اختبارات الشهر) ← «طلاب يحتاجون انتباهك».
+ * (حضورُ الشهر، وحفظُ آخر شهرٍ رُصد مع تقييمه بالخطة، والمستحقّون للاختبار، ونتائجُ اختبارات الشهر) ← «طلاب يحتاجون انتباهك».
  * قائمةُ كلّ الطلاب مكانُها شاشة «الطلاب». البياناتُ من `useTeacherDashboard` (خطوتا جلب).
  */
 import { formatAmount, isolateLtr } from '~/utils/transport'
 import { formatDay, gazaToday, periodLabel } from '~/utils/reportWindow'
-import { teacherActions } from '~/utils/teacherDashboard'
+import { MONTH_STATE_LABELS, teacherActions, type MonthSummary } from '~/utils/teacherDashboard'
+import { OUTCOME_LABELS } from '~/utils/quran/plan'
+import { OUTCOME_COLORS } from '~/utils/quran/screen'
 
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
 const day = (iso: string) => isolateLtr(formatDay(iso))
@@ -35,12 +37,43 @@ const actions = computed(() => d.value
     })
   : [])
 
-const tiles = computed(() => {
+interface Tile {
+  key: string
+  icon: string
+  tone: 'green' | 'blue' | 'navy'
+  label: string
+  value: string
+  unit?: string
+  sub: string
+  /** تقييمُ الشهر بالخطة — شاراتٌ تحت الرقم، والصفرُ لا يُعرض. */
+  chips?: { label: string, color: 'success' | 'warning' | 'neutral' | 'info' }[]
+}
+
+/** «حفظ آخر شهر» (آخرُ شهرٍ رُصد بأيّ حالة) وتقييمُه بالخطة كشاشة الإنجاز القرآني. */
+function lastMonthTile(m: MonthSummary | null): Tile {
+  const base = { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue' as const, label: 'حفظ آخر شهر' }
+  if (!m) return { ...base, value: '—', sub: 'لم يُرصد شهرٌ بعد' }
+  const chips = ([
+    { n: m.done, label: `${m.done} ${OUTCOME_LABELS.done}`, color: OUTCOME_COLORS.done },
+    { n: m.short, label: `${m.short} ${OUTCOME_LABELS.short}`, color: OUTCOME_COLORS.short },
+    { n: m.unmeasured, label: `${m.unmeasured} ${OUTCOME_LABELS.unmeasured}`, color: OUTCOME_COLORS.unmeasured },
+    { n: m.unrecorded, label: `${m.unrecorded} ${OUTCOME_LABELS.unrecorded}`, color: OUTCOME_COLORS.unrecorded }
+  ]).filter(c => c.n > 0).map(({ label, color }) => ({ label, color }))
+  return {
+    ...base,
+    value: String(m.pages),
+    unit: 'صفحة',
+    sub: `${m.perStudent} للطالب · ${isolateLtr(m.label)} · ${MONTH_STATE_LABELS[m.state]}`,
+    chips
+  }
+}
+
+const tiles = computed<Tile[]>(() => {
   const v = d.value
   if (!v) return []
   return [
     { key: 'att', icon: 'i-lucide-calendar-check', tone: 'green', label: 'حضور الشهر', value: v.attendance.pct != null ? `${v.attendance.pct}٪` : '—', sub: v.attendance.held ? `${v.attendance.attended} من ${v.attendance.held} · ${monthLabel.value}` : `لم تنعقد الحلقة بعد · ${monthLabel.value}` },
-    { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue', label: 'حفظ آخر شهر معتمد', value: v.lastMonth ? `${v.lastMonth.pages}` : '—', unit: v.lastMonth ? 'صفحة' : '', sub: v.lastMonth ? `${v.lastMonth.perStudent} للطالب · ${isolateLtr(v.lastMonth.label)}` : 'لا شهر معتمد بعد' },
+    lastMonthTile(v.lastMonth),
     { key: 'elig', icon: 'i-lucide-clipboard-check', tone: 'navy', label: 'مستحقّون للاختبار', value: String(v.eligible.length), sub: v.eligible.length ? 'أتمّوا نطاق دورتهم ولم يُرشَّحوا' : 'لا أحد ينتظر ترشيحاً' },
     { key: 'exams', icon: 'i-lucide-award', tone: 'green', label: 'اختبارات الشهر', value: String(v.exams.passed), unit: 'ناجح', sub: `${v.exams.failed} يعيد · ${monthLabel.value}` }
   ]
@@ -105,6 +138,18 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
               class="t-unit"
             >{{ t.unit }}</span>
           </div>
+          <div
+            v-if="t.chips?.length"
+            class="t-chips"
+          >
+            <UBadge
+              v-for="c in t.chips"
+              :key="c.label"
+              :label="c.label"
+              :color="c.color"
+              variant="soft"
+            />
+          </div>
           <div class="t-sub">
             {{ t.sub }}
           </div>
@@ -144,6 +189,7 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
 .t-num { font-size: 32px; font-weight: 800; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .t-unit { font-size: 15px; font-weight: 600; color: var(--ink-3); margin-inline-start: 6px; }
 .t-sub { font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+.t-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
 
 @media (max-width: 1100px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {

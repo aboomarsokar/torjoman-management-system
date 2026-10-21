@@ -40,7 +40,7 @@ const teacherLabel = computed(() => (props.gender === 'female' ? 'المعلّم
         <span
           v-if="halaqa?.time"
           class="bi"
-        ><bdi dir="ltr">{{ halaqa.time }}</bdi></span>
+        >{{ halaqa.time }}</span>
       </div>
     </div>
     <div

@@ -86,7 +86,7 @@ async function regenerateLink() {
 
 const sections = computed(() => student.value ? buildStudentSections(student.value) : [])
 const halaqa = computed(() => student.value?.halaqa
-  ? { name: student.value.halaqa.name, teacher: student.value.halaqa.teacher?.full_name ?? null, time: student.value.halaqa.daily_time?.slice(0, 5) ?? null }
+  ? { name: student.value.halaqa.name, teacher: student.value.halaqa.teacher?.full_name ?? null, time: formatTime12(student.value.halaqa.daily_time) || null }
   : null)
 
 // حضورُه هذا الشهر (أيامُ حلقته وغياباتُه — مقروءةٌ للعامل في نطاقه)
@@ -190,13 +190,18 @@ const tab = useStudentTab()
             :self="false"
             :gender="student.gender"
           />
-          <StudentJourneyCard
-            v-else-if="tab === 'journey'"
-            :student-id="student.id"
-            :quran-parts="student.quran_parts"
-            :enrollment-date="student.enrollment_date"
-            bare
-          />
+          <template v-else-if="tab === 'journey'">
+            <StudentJourneyCard
+              :student-id="student.id"
+              :quran-parts="student.quran_parts"
+              :enrollment-date="student.enrollment_date"
+              bare
+            />
+            <StudentReadingStations
+              :student-id="student.id"
+              :enrollment-date="student.enrollment_date"
+            />
+          </template>
           <template v-else>
             <!-- حساب الدخول (المدير الإداري): إعادة تعيين الكلمة وتعطيل الدخول -->
             <StudentAccountActions

@@ -47,7 +47,7 @@ const halqaItems = computed(() => props.halqat.map(h => ({
 })))
 const selectedHalqaTime = computed(() => {
   const h = props.halqat.find(x => x.id === form.halaqa_id)
-  return h?.daily_time ? h.daily_time.slice(0, 5) : ''
+  return formatTime12(h?.daily_time)
 })
 const visitorName = computed(() => (isEdit.value ? props.visit?.supervisor?.full_name : profile.value?.full_name) ?? '')
 

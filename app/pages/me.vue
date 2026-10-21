@@ -55,7 +55,7 @@ const { attendance } = useMyAttendance(() => me.value ? { studentId: me.value.id
 const loading = computed(() => profilePending.value || pending.value)
 const sections = computed(() => me.value ? buildStudentSections(me.value) : [])
 const halaqa = computed(() => me.value?.halaqa
-  ? { name: me.value.halaqa.name, teacher: me.value.halaqa.teacher?.full_name ?? null, time: me.value.halaqa.daily_time?.slice(0, 5) ?? null }
+  ? { name: me.value.halaqa.name, teacher: me.value.halaqa.teacher?.full_name ?? null, time: formatTime12(me.value.halaqa.daily_time) || null }
   : null)
 
 const photoPath = computed(() => displayPhotoPath(profile.value))
@@ -143,14 +143,19 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
             :halaqa="halaqa"
             :gender="me.gender"
           />
-          <StudentJourneyCard
-            v-else-if="tab === 'journey'"
-            :student-id="me.id"
-            :quran-parts="me.quran_parts"
-            :enrollment-date="me.enrollment_date"
-            own-records
-            bare
-          />
+          <template v-else-if="tab === 'journey'">
+            <StudentJourneyCard
+              :student-id="me.id"
+              :quran-parts="me.quran_parts"
+              :enrollment-date="me.enrollment_date"
+              own-records
+              bare
+            />
+            <StudentReadingStations
+              :student-id="me.id"
+              :enrollment-date="me.enrollment_date"
+            />
+          </template>
           <template v-else>
             <div class="edit-bar">
               <p>

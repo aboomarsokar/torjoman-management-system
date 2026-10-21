@@ -207,6 +207,12 @@ const pace = computed(() => {
       </section>
     </div>
 
+    <StudentReadingCard
+      :student-id="studentId"
+      :enrollment-date="enrollmentDate"
+      :self="self"
+    />
+
     <!-- حلقتي -->
     <section class="halaqa">
       <div class="hq-item">
@@ -225,10 +231,7 @@ const pace = computed(() => {
         class="hq-item"
       >
         <span class="hq-lbl">الموعد</span>
-        <span
-          class="hq-val"
-          dir="ltr"
-        >{{ halaqa.time }}</span>
+        <span class="hq-val">{{ halaqa.time }}</span>
       </div>
       <div
         v-if="enrollmentDate"

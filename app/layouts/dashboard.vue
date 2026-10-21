@@ -5,6 +5,7 @@
  * المسارات غير المبنيّة بعد تُظهر تنبيه «قيد الإنشاء» (تُربط عند بناء كل شاشة).
  */
 import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
+import { queryFromTab, tabFromQuery, type StudentTab } from '~/composables/useStudentTab'
 
 const { profile, role, status, fullName, pending: profilePending } = useProfile()
 // صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
@@ -39,7 +40,8 @@ function comingSoon() {
   toast.add({ title: 'هذه الشاشة قيد الإنشاء — قريباً.', icon: 'i-lucide-hammer', color: 'info' })
 }
 
-type Item = { key: string, label: string, icon: string, to?: string, roles: Role[] }
+/** `tab`: تبويبُ صفحة الطالب (`/me?tab=`) — عناصرُ الطالب تقابل تبويباتِ صفحته (طلب المستخدم 2026-10-21). */
+type Item = { key: string, label: string, icon: string, to?: string, tab?: StudentTab, roles: Role[] }
 
 // مجموعات الأدوار — مشرف المشروع (PS) يرى كل شاشة قراءة، والكتابة تُحجب داخل الشاشات (isReadOnly)
 const PS: Role = 'project_supervisor'
@@ -51,7 +53,10 @@ const LEADERS: Role[] = [PS, ADMIN, TECH]
 const SCOPED_STAFF: Role[] = [...LEADERS, WOMEN, FIELD]
 
 const mainNav: Item[] = [
-  { key: 'me', label: 'صفحتي', icon: 'i-lucide-house', to: '/me', roles: ['student'] },
+  { key: 'me', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/me', tab: 'dashboard', roles: ['student'] },
+  { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
+  { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
+  { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
   { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] },
@@ -61,6 +66,7 @@ const mainNav: Item[] = [
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: SCOPED_STAFF },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
+  { key: 'programs-staff', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: [...SCOPED_STAFF, 'teacher'] },
   { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'] },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'] },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
@@ -88,8 +94,11 @@ const showProfile = computed(() => role.value && profileItem.roles.includes(role
 
 // المسار أو ما تحته: صفحات التفاصيل (/halqat/<id>، /students/<id>…) تحمل عنوان قسمها وتُبرزه في القائمة
 // (الملف الشخصي استثناء: /profile/<id> ملفّ غيرك، فلا يُبرز «الملف الشخصي» إلا لـ/profile/me)
+// (وعناصرُ تبويبات الطالب تُطابَق بالتبويب أيضاً: «رحلتي» لا تُبرز «لوحة التحكم» على /me نفسها)
 const matches = (item: Item) => !!item.to
-  && (item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
+  && (item.tab
+    ? route.path === item.to && tabFromQuery(route.query.tab) === item.tab
+    : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
 const navTitle = computed(() => {
   const all = [...mainNav, ...managerNav, metricsItem, profileItem]
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
@@ -100,7 +109,7 @@ const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.
 
 function go(item: Item) {
   drawerOpen.value = false
-  if (item.to) navigateTo(item.to)
+  if (item.to) navigateTo(item.tab ? { path: item.to, query: { tab: queryFromTab(item.tab) } } : item.to)
   else comingSoon()
 }
 const isActive = matches

@@ -10,6 +10,7 @@ import { formatDay, gazaToday, periodLabel } from '~/utils/reportWindow'
 import { MONTH_STATE_LABELS, teacherActions, type MonthSummary } from '~/utils/teacherDashboard'
 import { OUTCOME_LABELS } from '~/utils/quran/plan'
 import { OUTCOME_COLORS } from '~/utils/quran/screen'
+import { formatTime12 } from '~/utils/time'
 
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
 const day = (iso: string) => isolateLtr(formatDay(iso))
@@ -49,9 +50,9 @@ interface Tile {
   chips?: { label: string, color: 'success' | 'warning' | 'neutral' | 'info' }[]
 }
 
-/** «حفظ آخر شهر» (آخرُ شهرٍ رُصد بأيّ حالة) وتقييمُه بالخطة كشاشة الإنجاز القرآني. */
+/** «تقييم آخر شهر» (آخرُ شهرٍ رُصد بأيّ حالة) بالخطة كشاشة الإنجاز القرآني — التقييمُ وحده بلا عدد الصفحات (طلب المستخدم 2026-10-21). */
 function lastMonthTile(m: MonthSummary | null): Tile {
-  const base = { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue' as const, label: 'حفظ آخر شهر' }
+  const base = { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue' as const, label: 'تقييم آخر شهر' }
   if (!m) return { ...base, value: '—', sub: 'لم يُرصد شهرٌ بعد' }
   const chips = ([
     { n: m.done, label: `${m.done} ${OUTCOME_LABELS.done}`, color: OUTCOME_COLORS.done },
@@ -59,11 +60,12 @@ function lastMonthTile(m: MonthSummary | null): Tile {
     { n: m.unmeasured, label: `${m.unmeasured} ${OUTCOME_LABELS.unmeasured}`, color: OUTCOME_COLORS.unmeasured },
     { n: m.unrecorded, label: `${m.unrecorded} ${OUTCOME_LABELS.unrecorded}`, color: OUTCOME_COLORS.unrecorded }
   ]).filter(c => c.n > 0).map(({ label, color }) => ({ label, color }))
+  const total = m.done + m.short + m.unmeasured + m.unrecorded
   return {
     ...base,
-    value: String(m.pages),
-    unit: 'صفحة',
-    sub: `${m.perStudent} للطالب · ${isolateLtr(m.label)} · ${MONTH_STATE_LABELS[m.state]}`,
+    value: String(m.done),
+    unit: `${OUTCOME_LABELS.done} من ${total}`,
+    sub: `${isolateLtr(m.label)} · ${MONTH_STATE_LABELS[m.state]}`,
     chips
   }
 }
@@ -107,7 +109,7 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
           <h2>{{ d.halaqa.name }}</h2>
           <p>
             {{ d.studentCount }} طالب<template v-if="d.halaqa.daily_time">
-              · الموعد <span dir="ltr">{{ d.halaqa.daily_time.slice(0, 5) }}</span>
+              · الموعد {{ formatTime12(d.halaqa.daily_time) }}
             </template>
           </p>
         </div>
@@ -162,6 +164,7 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
         :show-unrecorded="showUnrecorded"
         :recording-label="d.recording.label"
         :eligible="d.eligible"
+        :reading-behind="d.readingBehind"
       />
     </template>
   </div>

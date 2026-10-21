@@ -1,0 +1,149 @@
+<script setup lang="ts">
+/**
+ * محطّاتُ مقرّرات القراءة في تبويب الرحلة (للطالب ولملفّه عند العاملين): لكلّ مقرّرٍ كتبُه وصفحاتُه وحالُه
+ * (اجتاز بأعلى نسبة / المستحقّ / لم يُبلغ) وعددُ محاولاته، وتنزيلُ ملفّ المجتاز والمستحقّ. البياناتُ من `useReadingPlan`.
+ */
+import { unitScope } from '~/utils/reading'
+
+interface Props {
+  studentId: string
+  enrollmentDate: string | null
+  /** العنوان — «كلّ المقرّرات» في صفحة البرامج المصاحبة نفسها. */
+  heading?: string
+}
+
+const props = withDefaults(defineProps<Props>(), { heading: 'البرامج المصاحبة' })
+const { journey, coverUrls } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
+// التنزيلُ للمجتاز والمستحقّ (القاعدةُ تقصر الطالبَ عليهما على كلّ حال)
+const { busy, download } = useReadingAdmin()
+</script>
+
+<template>
+  <section
+    class="rs"
+    aria-labelledby="rs-title"
+  >
+    <h3 id="rs-title">
+      <span class="ico"><UIcon
+        name="i-lucide-library"
+        class="size-5"
+      /></span>
+      {{ heading }}
+    </h3>
+    <p
+      v-if="!journey.stations.length"
+      class="none"
+    >
+      لم تُضبط مقرّرات البرامج المصاحبة بعد.
+    </p>
+    <ol v-else>
+      <li
+        v-for="s in journey.stations"
+        :key="s.unit.id"
+        class="st"
+        :class="s.status"
+      >
+        <span class="dot"><UIcon
+          v-if="s.status === 'passed'"
+          name="i-lucide-check"
+          class="size-[13px]"
+        /></span>
+        <div class="st-body">
+          <div class="st-title">
+            {{ s.unit.title }}
+          </div>
+          <div class="st-scope">
+            {{ unitScope(s.unit) }}
+          </div>
+        </div>
+        <!-- التنزيلُ غلافُ المقرّر باهتاً وفوقه «تنزيل» (طلب المستخدم)؛ وبلا غلافٍ زرٌّ عاديّ -->
+        <button
+          v-if="s.unit.pdfPath && s.status !== 'locked' && coverUrls[s.unit.id]"
+          type="button"
+          class="dl dl-cover"
+          :disabled="busy"
+          :aria-label="`تنزيل ${s.unit.title} (PDF)`"
+          @click="download(s.unit)"
+        >
+          <img
+            :src="coverUrls[s.unit.id]"
+            alt=""
+            width="612"
+            height="792"
+            loading="lazy"
+          >
+          <span class="dl-label">
+            <UIcon
+              :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-download'"
+              class="size-5"
+              :class="{ 'animate-spin': busy }"
+            />
+            تنزيل
+          </span>
+        </button>
+        <UButton
+          v-else-if="s.unit.pdfPath && s.status !== 'locked'"
+          icon="i-lucide-download"
+          label="تنزيل"
+          color="primary"
+          variant="solid"
+          size="md"
+          :loading="busy"
+          :aria-label="`تنزيل ${s.unit.title} (PDF)`"
+          class="dl"
+          :ui="{ base: 'min-h-11 rounded-xl justify-center font-semibold px-4' }"
+          @click="download(s.unit)"
+        />
+        <span
+          v-if="s.status === 'passed'"
+          class="tag ok"
+        >اجتاز · {{ s.best }}٪</span>
+        <span
+          v-else-if="s.status === 'due'"
+          class="tag next"
+        >المستحقّ<template v-if="s.last !== null"> · آخر علامة {{ s.last }}٪</template></span>
+        <span
+          v-else
+          class="tag soon"
+        >لم يُبلغ</span>
+      </li>
+    </ol>
+  </section>
+</template>
+
+<style scoped>
+.rs { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); margin-top: 22px; }
+h3 { margin: 0 0 14px; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }
+.ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
+.none { margin: 0; font-size: 14px; color: var(--ink-3); }
+ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.st { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.st:last-child { border-bottom: none; }
+.dot { width: 22px; height: 22px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-2); display: inline-flex; align-items: center; justify-content: center; color: #fff; flex: none; }
+.st.passed .dot { background: var(--green); border-color: var(--green); }
+.st.due .dot { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
+.st-body { flex: 1; min-width: 0; }
+.st-title { font-weight: 700; color: var(--ink); font-size: 15px; }
+.st-scope { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-top: 2px; }
+.tag { flex: none; display: inline-flex; align-items: center; min-height: 26px; padding: 2px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+.tag.ok { background: var(--green-soft); color: var(--green-ink); }
+.tag.next { background: var(--blue-soft); color: var(--blue-ink); }
+.tag.soon { background: var(--surface-3); color: var(--ink-3); }
+/* زرُّ الغلاف: الصورةُ باهتة، والكلمةُ والإشارةُ فوقها */
+.dl-cover { position: relative; flex: none; width: 76px; aspect-ratio: 612 / 792; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface-2); cursor: pointer; transition: transform .2s cubic-bezier(.16, 1, .3, 1), box-shadow .2s cubic-bezier(.16, 1, .3, 1); }
+.dl-cover img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .4; filter: blur(.6px) saturate(.8); transition: opacity .2s; }
+.dl-label { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 8px; border-radius: 10px; background: color-mix(in oklab, var(--surface) 88%, transparent); color: var(--primary); font-size: 13px; font-weight: 800; box-shadow: var(--shadow); }
+.dl-cover:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.dl-cover:hover img { opacity: .55; }
+.dl-cover:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.dl-cover:disabled { cursor: progress; }
+
+@media (max-width: 640px) { .rs { padding: 18px; } }
+/* بطاقةٌ ضيّقة: الاسمُ ونطاقُه بعرض السطر، والشارةُ والتنزيلُ سطرٌ تحتهما (كانت تضيّق النطاقَ فينكسر) */
+@container (max-width: 440px) {
+  .st { flex-wrap: wrap; row-gap: 6px; }
+  .st-body { flex-basis: calc(100% - 34px); }
+  .tag { order: 3; margin-inline-start: 34px; }
+  .dl { order: 4; margin-inline-start: auto; }
+}
+</style>

@@ -76,6 +76,10 @@ export type Database = {
           created_at: string
           id: number
           pass_mark: number
+          reading_pass_mark: number
+          reading_retry_days: number
+          reading_test_minutes: number
+          reading_test_questions: number
           target_memorization_pages: number
           updated_at: string
         }
@@ -83,6 +87,10 @@ export type Database = {
           created_at?: string
           id?: number
           pass_mark?: number
+          reading_pass_mark?: number
+          reading_retry_days?: number
+          reading_test_minutes?: number
+          reading_test_questions?: number
           target_memorization_pages?: number
           updated_at?: string
         }
@@ -90,6 +98,10 @@ export type Database = {
           created_at?: string
           id?: number
           pass_mark?: number
+          reading_pass_mark?: number
+          reading_retry_days?: number
+          reading_test_minutes?: number
+          reading_test_questions?: number
           target_memorization_pages?: number
           updated_at?: string
         }
@@ -1350,6 +1362,200 @@ export type Database = {
           },
         ]
       }
+      reading_attempts: {
+        Row: {
+          answers: Json | null
+          deadline_at: string
+          id: string
+          passed: boolean | null
+          percent: number | null
+          question_ids: number[]
+          score: number | null
+          started_at: string
+          student_id: string
+          submitted_at: string | null
+          total: number
+          unit_id: number
+        }
+        Insert: {
+          answers?: Json | null
+          deadline_at: string
+          id?: string
+          passed?: boolean | null
+          percent?: number | null
+          question_ids: number[]
+          score?: number | null
+          started_at?: string
+          student_id: string
+          submitted_at?: string | null
+          total: number
+          unit_id: number
+        }
+        Update: {
+          answers?: Json | null
+          deadline_at?: string
+          id?: string
+          passed?: boolean | null
+          percent?: number | null
+          question_ids?: number[]
+          score?: number | null
+          started_at?: string
+          student_id?: string
+          submitted_at?: string | null
+          total?: number
+          unit_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_attempts_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "reading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_books: {
+        Row: {
+          author: string | null
+          created_at: string
+          description: string | null
+          id: number
+          pages: number | null
+          title: string
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string
+          description?: string | null
+          id?: never
+          pages?: number | null
+          title: string
+        }
+        Update: {
+          author?: string | null
+          created_at?: string
+          description?: string | null
+          id?: never
+          pages?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
+      reading_questions: {
+        Row: {
+          active: boolean
+          body: string
+          correct: number
+          created_at: string
+          id: number
+          options: string[]
+          unit_id: number
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          correct: number
+          created_at?: string
+          id?: never
+          options: string[]
+          unit_id: number
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          correct?: number
+          created_at?: string
+          id?: never
+          options?: string[]
+          unit_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_questions_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "reading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_unit_parts: {
+        Row: {
+          book_id: number
+          id: number
+          page_from: number
+          page_to: number
+          sort_order: number
+          unit_id: number
+        }
+        Insert: {
+          book_id: number
+          id?: never
+          page_from: number
+          page_to: number
+          sort_order?: number
+          unit_id: number
+        }
+        Update: {
+          book_id?: number
+          id?: never
+          page_from?: number
+          page_to?: number
+          sort_order?: number
+          unit_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_unit_parts_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "reading_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_unit_parts_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "reading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_units: {
+        Row: {
+          cover_path: string | null
+          created_at: string
+          id: number
+          pdf_path: string | null
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          cover_path?: string | null
+          created_at?: string
+          id?: never
+          pdf_path?: string | null
+          sort_order: number
+          title: string
+        }
+        Update: {
+          cover_path?: string | null
+          created_at?: string
+          id?: never
+          pdf_path?: string | null
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           avatar_url: string | null
@@ -1741,6 +1947,11 @@ export type Database = {
       set_transport_paid: {
         Args: { p_ids: string[]; p_paid: boolean }
         Returns: number
+      }
+      start_reading_test: { Args: never; Returns: Json }
+      submit_reading_test: {
+        Args: { p_answers: Json; p_attempt: string }
+        Returns: Json
       }
       update_my_contact: {
         Args: {

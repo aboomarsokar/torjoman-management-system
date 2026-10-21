@@ -109,7 +109,7 @@ describe('لوحة المعلم — الحفظ والاختبارات', () => {
     expect(lastRecordedReport(reports, [])).toBeNull()
   })
 
-  it('خلاصةُ الشهر: الصفحاتُ ومتوسّطُها لمن رُصد له، والتقييمُ بالخطة، و«أُعيد» للمسوّدة المعادة', () => {
+  it('خلاصةُ الشهر: التقييمُ بالخطة، و«أُعيد» للمسوّدة المعادة', () => {
     const plan = { required: 10, full: 10, basis: 'full' as const }
     const row = (id: string, pages: number | null, outcome: StudentMonthRow['outcome']): StudentMonthRow => ({
       studentId: id, name: id, recordedElsewhere: false, suggestedFrom: null, suggestedFromPrevious: false,
@@ -118,9 +118,9 @@ describe('لوحة المعلم — الحفظ والاختبارات', () => {
     })
     const rows = [row('a', 12, 'done'), row('b', 7, 'short'), row('c', null, 'unrecorded')]
     expect(monthSummary(report(2026, 10, 'draft', 'راجع'), rows)).toEqual({
-      label: '10-2026', state: 'returned', pages: 19, perStudent: 9.5, done: 1, short: 1, unmeasured: 0, unrecorded: 1
+      label: '10-2026', state: 'returned', done: 1, short: 1, unmeasured: 0, unrecorded: 1
     })
-    expect(monthSummary(report(2026, 9, 'approved'), []).perStudent).toBe(0)
+    expect(monthSummary(report(2026, 9, 'approved'), [])).toMatchObject({ state: 'approved', done: 0 })
   })
 
   it('نتائجُ الشهر: ناجحٌ ويعيد', () => {

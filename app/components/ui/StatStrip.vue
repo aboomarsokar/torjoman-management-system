@@ -9,6 +9,8 @@ export interface StatItem {
   icon: string
   value: string | number
   label: string
+  /** سطرٌ ثانٍ بخطٍّ أصغر وأرقامٍ بارزة (مثل «67٪ من المحسوم»). */
+  sub?: string
   tone?: 'blue' | 'green' | 'neutral' | 'err'
 }
 
@@ -28,6 +30,7 @@ defineProps<{ items: StatItem[], label?: string }>()
       :tone="s.tone ?? 'blue'"
       :value="s.value"
       :label="s.label"
+      :sub="s.sub"
       stacked
     />
   </section>

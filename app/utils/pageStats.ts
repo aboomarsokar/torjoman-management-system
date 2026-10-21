@@ -54,7 +54,7 @@ export function examResultStats(rows: { passed: boolean | null, total_score: num
   const decided = passed + failed
   return [
     { key: 'all', icon: 'i-lucide-clipboard-list', value: rows.length, label: 'نتيجة اختبار' },
-    { key: 'passed', icon: 'i-lucide-award', tone: 'green', value: passed, label: decided ? `مجتازاً — ${Math.round((passed / decided) * 100)}٪` : 'مجتازاً' },
+    { key: 'passed', icon: 'i-lucide-award', tone: 'green', value: passed, label: 'مجتازاً', ...(decided ? { sub: `${Math.round((passed / decided) * 100)}٪ من المحسوم` } : {}) },
     { key: 'failed', icon: 'i-lucide-rotate-ccw', tone: failed ? 'err' : 'neutral', value: failed, label: 'غيرَ مجتاز (يعيد)' },
     // الرقمُ وحده (كان «87.5 / 99» ينكسر سطرين على الجوال)، والحدُّ في التسمية
     { key: 'avg', icon: 'i-lucide-gauge', value: scores.length ? String(round1(scores.reduce((a, b) => a + b, 0) / scores.length)) : '—', label: `متوسّطُ العلامة من ${maxTotal}` }
@@ -88,7 +88,7 @@ export function userStats(rows: { status: string, role: string }[]): StatItem[] 
   ]
 }
 
-/** المشرفون: عددُهم، والحلقاتُ المسندة، ومن بلا حلقة، ومتوسّطُ الالتزام بالزيارات (لمن له زياراتٌ مستحقّة). */
+/** المشرفون: عددُهم، والحلقاتُ المسندة، ومن بلا حلقة، ومتوسّطُ «إنجاز الزيارات» لشهر اليوم (لمن له حلقاتٌ نشطة). */
 export function supervisorStats(rows: { halqat: number, commitment: number | null }[]): StatItem[] {
   const rated = rows.map(r => r.commitment).filter((c): c is number => c !== null)
   const idle = rows.filter(r => r.halqat === 0).length
@@ -96,7 +96,7 @@ export function supervisorStats(rows: { halqat: number, commitment: number | nul
     { key: 'sups', icon: 'i-lucide-users-round', value: rows.length, label: 'مشرفاً ميدانيّاً' },
     { key: 'halqat', icon: 'i-lucide-book-open', tone: 'green', value: rows.reduce((s, r) => s + r.halqat, 0), label: 'حلقةً مسندة' },
     { key: 'idle', icon: 'i-lucide-user-x', tone: idle ? 'err' : 'neutral', value: idle, label: 'بلا حلقة' },
-    { key: 'commit', icon: 'i-lucide-gauge', value: rated.length ? `${Math.round(rated.reduce((a, b) => a + b, 0) / rated.length)}٪` : '—', label: 'متوسّطُ الالتزام بالزيارات' }
+    { key: 'commit', icon: 'i-lucide-gauge', value: rated.length ? `${Math.round(rated.reduce((a, b) => a + b, 0) / rated.length)}٪` : '—', label: 'متوسّطُ إنجاز الزيارات هذا الشهر' }
   ]
 }
 

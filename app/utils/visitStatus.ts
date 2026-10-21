@@ -20,17 +20,17 @@ export function visitDisplayStatus(v: VisitDates, today: string): VisitDisplaySt
   return 'done'
 }
 
-/** نسبةُ الالتزام: ما تمّ (في موعده أو بعده) ÷ المستحقّ (تمّت + متأخّرة لم تُنفَّذ)، و`null` إن لم تستحقّ زيارة. */
-export function visitCommitment(visits: VisitDates[], today: string): number | null {
-  let done = 0
-  let due = 0
-  for (const v of visits) {
-    const s = visitDisplayStatus(v, today)
-    if (s === 'scheduled') continue
-    due++
-    if (s === 'done') done++
-  }
-  return due ? Math.round(done / due * 100) : null
+/** المطلوبُ من الزيارات: زيارتان لكلّ حلقةٍ في الشهر (سجلُّ تقييم الجودة — قرار المستخدم 2026-10-21). */
+export const VISITS_PER_HALAQA_MONTH = 2
+
+/**
+ * «إنجازُ الزيارات» (قرار المستخدم 2026-10-21، يحلّ محلّ «الالتزام بالمواعيد»): المنفّذةُ ÷ المطلوبة
+ * (الحلقاتُ × 2 × الأشهر)، مقصوصةً على 100٪ — فمن جدول قليلاً ونفّذه لا يبلغ الكمال. `pct` = null بلا مطلوب.
+ */
+export function visitCompletion(visits: VisitDates[], halaqat: number, months = 1) {
+  const done = visits.filter(v => v.status !== 'scheduled').length
+  const required = Math.max(0, halaqat) * VISITS_PER_HALAQA_MONTH * Math.max(1, months)
+  return { done, required, pct: required ? Math.min(100, Math.round((done / required) * 100)) : null }
 }
 
 const GAZA_TIME = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Gaza', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })

@@ -2,7 +2,7 @@
 /**
  * «البرامج المصاحبة» (طلب المستخدم 2026-10-21) — مركزُ المقرّرات الشهرية:
  * · الطالب: بطاقةُ مقرّره المستحقّ (تنزيلُ ملفّه وزرُّ الاختبار) ثم محطّاتُ المقرّرات (وتنزيلُ المجتاز).
- * · العاملون: كلُّ المقرّرات بكتبها وصفحاتها وتنزيلِ ملفّاتها.
+ * · العاملون: «إنجاز الطلاب» لحلقاتهم اطّلاعاً (المشرفُ حلقاتُه، والمعلمُ حلقتُه)، ثم كلُّ المقرّرات بكتبها وملفّاتها.
  * · المديرُ الإداريّ والمديرُ الفنيّ: ومعها رفعُ الملفّات وإضافةُ المقرّرات والكتب.
  */
 definePageMeta({ layout: 'dashboard' })
@@ -40,14 +40,18 @@ const me = useMyReadingStudent()
           :fields="4"
         />
       </template>
-      <ReadingUnitsList
-        v-else-if="role"
-        :manage="canManage"
-      />
+      <template v-else-if="role">
+        <ReadingProgressList />
+        <h2 class="sec">
+          المقرّرات
+        </h2>
+        <ReadingUnitsList :manage="canManage" />
+      </template>
     </ClientOnly>
   </div>
 </template>
 
 <style scoped>
 .pg { max-width: 860px; }
+.sec { margin: 22px 4px 10px; font-size: 17px; font-weight: 700; color: var(--ink); }
 </style>

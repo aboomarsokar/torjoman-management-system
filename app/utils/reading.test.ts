@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { behindStudents, monthsSince, readingJourney, unitScope, type ReadingAttempt, type ReadingUnit } from './reading'
+import { behindStudents, monthsSince, readingJourney, readingProgressRows, unitScope, type ReadingAttempt, type ReadingUnit } from './reading'
 
 const unit = (id: number, parts = [{ book: 'صفقات رابحة', author: null, page_from: 1, page_to: 88 }]): ReadingUnit =>
   ({ id, sort_order: id, title: `المقرّر ${id}`, parts })
@@ -78,5 +78,27 @@ describe('مسار القراءة', () => {
       { id: 'b', full_name: 'بلال', enrollment_date: '2026-10-01' }
     ]
     expect(behindStudents(students, new Map([['a', 1]]), 3, NOW)).toEqual([{ id: 'a', name: 'أنس', count: 2 }])
+  })
+})
+
+describe('إنجاز الطلاب للعاملين', () => {
+  it('لكلّ طالبٍ مقرّرُه وحالُه، والمتأخّرُ أوّلاً', () => {
+    const students = [
+      { id: 'a', full_name: 'أنس', enrollment_date: '2026-07-01' },
+      { id: 'b', full_name: 'بلال', enrollment_date: '2026-07-01' },
+      { id: 'c', full_name: 'حمزة', enrollment_date: '2026-10-15' },
+      { id: 'd', full_name: 'زيد', enrollment_date: '2026-07-01' }
+    ]
+    const attempts = [
+      { ...attempt(1, 40, 2), student_id: 'b' },
+      { ...attempt(1, 90, 60), student_id: 'd' }, { ...attempt(2, 85, 30), student_id: 'd' }, { ...attempt(3, 80, 1), student_id: 'd' }
+    ]
+    const rows = readingProgressRows(students, attempts, units, { retryDays: 7, now: NOW })
+    expect(rows.map(r => [r.name, r.state, r.current?.id ?? null, r.passed, r.last])).toEqual([
+      ['أنس', 'behind', 1, 0, null],
+      ['بلال', 'waiting', 1, 0, 40],
+      ['حمزة', 'new', 1, 0, null],
+      ['زيد', 'done', null, 3, null]
+    ])
   })
 })

@@ -97,6 +97,45 @@ export function readingJourney(units: ReadingUnit[], attempts: ReadingAttempt[],
 
 export type ReadingJourney = ReturnType<typeof readingJourney>
 
+export type ProgressState = 'done' | 'waiting' | 'ahead' | 'onTrack' | 'behind' | 'new'
+
+/**
+ * صفوفُ «إنجاز الطلاب» للعاملين (المعلم والمشرف ومن فوقهما، اطّلاعاً): لكلّ طالبٍ مسارُه بـ`readingJourney` —
+ * مقرّرُه الحالي، والمجتاز، وآخرُ علامة، وحالُه (أتمّ / ينتظر الإعادة / متقدّم / في المسار / متأخّر / جديد).
+ * المتأخّرُ أوّلاً ثم بالاسم.
+ */
+export function readingProgressRows(
+  students: { id: string, full_name: string, enrollment_date: string | null }[],
+  attempts: (ReadingAttempt & { student_id: string })[],
+  units: ReadingUnit[],
+  o: { retryDays: number, now: number }
+) {
+  const byStudent = new Map<string, ReadingAttempt[]>()
+  for (const a of attempts) {
+    const list = byStudent.get(a.student_id) ?? []
+    list.push(a)
+    byStudent.set(a.student_id, list)
+  }
+  const ORDER: Record<ProgressState, number> = { behind: 0, waiting: 1, new: 2, onTrack: 3, ahead: 4, done: 5 }
+  return students
+    .map((s) => {
+      const j = readingJourney(units, byStudent.get(s.id) ?? [], { retryDays: o.retryDays, now: o.now, enrollmentDate: s.enrollment_date })
+      const st = j.due ? j.stations.find(x => x.unit.id === j.due!.id) : null
+      const state: ProgressState = !j.due ? 'done' : j.retryOn ? 'waiting' : j.pace ?? 'new'
+      return {
+        id: s.id,
+        name: s.full_name,
+        current: j.due,
+        passed: j.passedCount,
+        total: j.total,
+        last: st?.last ?? null,
+        retryOn: j.retryOn,
+        state
+      }
+    })
+    .sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.name.localeCompare(b.name, 'ar'))
+}
+
 /** المتأخّرون عن مقرّرهم: اجتازوا أقلَّ من الأشهر منذ التحاقهم (ولم يُتمّوا المقرّرات). */
 export function behindStudents(
   students: { id: string, full_name: string, enrollment_date: string | null }[],

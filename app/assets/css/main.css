@@ -231,6 +231,17 @@
   --imp-write-bg: #B84B40;
   --imp-write-ink: #FFFFFF;
   --imp-write-line: #973C33;
+
+  /* الورقُ المطبوع (محضرٌ إلى PDF): ألوانٌ ثابتةٌ للورق الأبيض لا يبدّلها الوضعُ الليليّ */
+  --paper: #FFFFFF;
+  --paper-ink: #0B2C42;
+  --paper-ink-2: #42607A;
+  --paper-ink-3: #6E8396;
+  --paper-line: #D5E0EA;
+  --paper-accent: #094064;
+  --paper-soft: #EEF4FA;
+  --paper-warn-bg: #FAEBCB;
+  --paper-warn-ink: #6B5112;
 }
 
 .dark {
@@ -390,4 +401,10 @@ button:disabled,
   .stack-wrap td > *:not(.stack-keep) { flex: 1; min-width: 0; width: auto !important; }
   .stack-wrap td.stack-hide { display: none; }
   .stack-wrap tfoot tr { padding: 10px 12px; border-top: 1px solid var(--line); }
+}
+
+/* طباعةُ ورقةٍ واحدة (`MinutesPrintSheet`): وقتَ الطباعة يختفي التطبيقُ كلُّه وتبقى الورقةُ المنقولة إلى body */
+@media print {
+  html.printing-sheet body > *:not(.print-sheet) { display: none !important; }
+  html.printing-sheet, html.printing-sheet body { background: var(--paper) !important; }
 }

@@ -1,14 +1,15 @@
 <script setup lang="ts">
 /**
  * نافذةُ قراءة المحضر: التاريخُ والحالةُ والحاضرون بأدوارهم، ثم أقسامُ المضمون الأربعة بنوداً مرقّمة
- * (كلُّ سطرٍ بند، فيُشار إليه «القرار ٢»). القسمُ الفارغ لا يُعرض. `canEdit` يُظهر زرَّ «تعديل».
+ * (كلُّ سطرٍ بند، فيُشار إليه «القرار ٢»). القسمُ الفارغ لا يُعرض. «تنزيل PDF» لكلّ قارئ (`pdf`)،
+ * و`canEdit` يُظهر زرَّ «تعديل».
  */
 import { roleLabel } from '~/constants/roles'
 import type { MinuteRow, MinuteStaff } from '~/utils/minutes'
 import { MINUTE_SECTIONS, minuteDate, minuteItems } from '~/utils/minutes'
 
 const props = defineProps<{ minute: MinuteRow | null, staff: MinuteStaff[], canEdit: boolean }>()
-const emit = defineEmits<{ close: [], edit: [minute: MinuteRow] }>()
+const emit = defineEmits<{ close: [], edit: [minute: MinuteRow], pdf: [minute: MinuteRow] }>()
 
 // آخرُ محضرٍ عُرض يبقى أثناء حركة الإغلاق (الأبُ يُفرغ `minute` فور الإغلاق)
 const shown = ref<MinuteRow | null>(props.minute)
@@ -106,11 +107,21 @@ const sections = computed(() => MINUTE_SECTIONS
       </div>
     </template>
     <template
-      v-if="canEdit && shown"
+      v-if="shown"
       #footer
     >
       <div class="rd-foot">
         <UButton
+          label="تنزيل PDF"
+          color="neutral"
+          variant="outline"
+          size="lg"
+          icon="i-lucide-file-down"
+          :ui="{ base: 'rounded-[13px]' }"
+          @click="emit('pdf', shown)"
+        />
+        <UButton
+          v-if="canEdit"
           label="تعديل"
           color="neutral"
           variant="outline"
@@ -155,5 +166,5 @@ const sections = computed(() => MINUTE_SECTIONS
   font-size: 12.5px; font-weight: 600; line-height: 24px; text-align: center; font-variant-numeric: tabular-nums;
 }
 .rd-empty { margin: 0; font-size: 14px; color: var(--ink-3); }
-.rd-foot { display: flex; justify-content: flex-end; width: 100%; }
+.rd-foot { display: flex; justify-content: flex-end; gap: 10px; width: 100%; }
 </style>

@@ -80,6 +80,18 @@ export function emptyMinuteForm(today: string): MinuteForm {
   return { title: '', meeting_date: today, attendees: [], agenda: '', decisions: '', deferred_items: '', tasks: '' }
 }
 
+// محارفُ تمنعها أنظمةُ الملفّات في اسم ملفّ PDF المحفوظ
+const FILENAME_UNSAFE = /[\\/:*?"<>|]+/g
+
+/**
+ * عنوانُ المستند وقتَ الطباعة — والمتصفّحُ يقترحه اسماً لملفّ PDF المحفوظ:
+ * «محضر — <العنوان> — 21-10-2026» (التاريخُ بشُرَط لا بخطوطٍ مائلة تمنعها أسماءُ الملفّات).
+ */
+export function minutePdfTitle(m: Pick<MinuteRow, 'title' | 'meeting_date'>): string {
+  const title = m.title.replace(FILENAME_UNSAFE, ' ').replace(/\s+/g, ' ').trim()
+  return `محضر — ${title} — ${minuteDate(m.meeting_date).replaceAll('/', '-')}`
+}
+
 /** نموذجُ التعديل من صفٍّ محفوظ. */
 export function minuteFormFrom(row: MinuteRow): MinuteForm {
   return {

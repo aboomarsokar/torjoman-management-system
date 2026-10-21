@@ -43,8 +43,9 @@ const { data: staff } = useLazyAsyncData<MinuteStaff[]>('minutes-staff', async (
   return data ?? []
 }, { server: false, default: () => [], watch: [canView] })
 
-// ── قراءة ──
+// ── قراءة وتنزيل PDF (طباعةُ ورقةٍ واحدة — MinutesPrintSheet) ──
 const reading = ref<MinuteRow | null>(null)
+const printing = ref<MinuteRow | null>(null)
 
 // ── إنشاء/تعديل ──
 const today = new Date().toISOString().slice(0, 10)
@@ -197,6 +198,16 @@ async function confirmDelete() {
               @click="reading = m"
             />
             <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              icon="i-lucide-file-down"
+              aria-label="تنزيل PDF"
+              title="تنزيل PDF"
+              :ui="{ base: 'rounded-[10px]' }"
+              @click="printing = m"
+            />
+            <UButton
               v-if="isAdmin"
               color="neutral"
               variant="outline"
@@ -236,6 +247,13 @@ async function confirmDelete() {
       :can-edit="isAdmin"
       @close="reading = null"
       @edit="openEdit"
+      @pdf="(m) => printing = m"
+    />
+
+    <MinutesPrintSheet
+      :minute="printing"
+      :staff="staff ?? []"
+      @done="printing = null"
     />
 
     <!-- تأكيد الحذف -->

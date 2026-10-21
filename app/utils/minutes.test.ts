@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MINUTE_SECTIONS, emptyMinuteForm, minuteDate, minuteItems, minutePayload } from './minutes'
+import { MINUTE_SECTIONS, emptyMinuteForm, minuteDate, minuteItems, minutePayload, minutePdfTitle } from './minutes'
 
 describe('minuteItems', () => {
   it('سطرٌ لكلّ بند، بلا أسطر فارغة ولا مسافات طرفيّة', () => {
@@ -57,6 +57,16 @@ describe('minuteDate', () => {
   it('بالأرقام يوماً/شهراً/سنةً', () => {
     expect(minuteDate('2026-10-21')).toBe('21/10/2026')
     expect(minuteDate('2026-01-05T00:00:00Z')).toBe('05/01/2026')
+  })
+})
+
+describe('minutePdfTitle', () => {
+  it('محضر — العنوان — التاريخ بشُرَط', () => {
+    expect(minutePdfTitle({ title: 'اجتماع الإدارة', meeting_date: '2026-10-21' })).toBe('محضر — اجتماع الإدارة — 21-10-2026')
+  })
+
+  it('يُسقط محارفَ أسماء الملفّات الممنوعة ويضمّ المسافات', () => {
+    expect(minutePdfTitle({ title: ' المالية/الرواتب:  "تشرين" ', meeting_date: '2026-10-21' })).toBe('محضر — المالية الرواتب تشرين — 21-10-2026')
   })
 })
 

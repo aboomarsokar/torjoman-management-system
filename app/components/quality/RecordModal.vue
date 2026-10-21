@@ -36,6 +36,7 @@ const criteria = computed(() => {
 const preview = ref<QualityNumbers | null>(null)
 const loading = ref(false)
 const busy = ref(false)
+const printing = ref(false)
 const meetings = ref(MEETINGS_MAX)
 const supNotes = ref('')
 const adminNotes = ref('')
@@ -221,6 +222,17 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
             size="lg"
             @click="open = false"
           />
+          <!-- التنزيلُ لكلّ من يرى السجلّ، بعد إقفاله (أرقامُه قبلها معاينةٌ تتغيّر) -->
+          <UButton
+            v-if="locked"
+            label="تنزيل PDF"
+            color="neutral"
+            variant="outline"
+            size="lg"
+            icon="i-lucide-file-down"
+            :ui="{ base: 'rounded-[13px]' }"
+            @click="printing = true"
+          />
           <UButton
             v-if="locked && (isAdmin || isTechnical)"
             label="فتح التعديل للمشرف"
@@ -257,6 +269,16 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
       </div>
     </template>
   </UModal>
+
+  <QualityPrintSheet
+    :active="printing"
+    :halaqa="halaqa"
+    :record="record"
+    :criteria="criteria"
+    :year="year"
+    :month="month"
+    @done="printing = false"
+  />
 </template>
 
 <style scoped>

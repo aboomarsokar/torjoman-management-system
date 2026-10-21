@@ -45,8 +45,8 @@ const achDen = computed(() => props.numbers.achievement_done + props.numbers.ach
                 المعيار
               </th>
               <th>الدرجة</th>
-              <th>الزيارة الأولى<small>{{ v1 ? day(v1.date) : '—' }}</small></th>
-              <th>الزيارة الثانية<small>{{ v2 ? day(v2.date) : '—' }}</small></th>
+              <th>الزيارة الأولى<small dir="ltr">{{ v1 ? day(v1.date) : '—' }}</small></th>
+              <th>الزيارة الثانية<small dir="ltr">{{ v2 ? day(v2.date) : '—' }}</small></th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +114,8 @@ const achDen = computed(() => props.numbers.achievement_done + props.numbers.ach
           <tr>
             <td class="start">
               تسليم التقارير في وقتها
-              <small class="qs-hint">الإنجاز القرآني {{ numbers.reports_quran }}/{{ REPORTS_QURAN_MAX }} · كشف الحوافز {{ numbers.reports_statement }}/{{ REPORTS_STATEMENT_MAX }} · المهلة حتى {{ day(numbers.reports_deadline) }}</small>
+              <!-- الأرقامُ والتواريخ معزولةٌ لاتينيّاً: «03-11-2026» وسط كلامٍ عربيّ كانت تنقلب «2026-11-03» -->
+              <small class="qs-hint">الإنجاز القرآني <bdi dir="ltr">{{ numbers.reports_quran }}/{{ REPORTS_QURAN_MAX }}</bdi> · كشف الحوافز <bdi dir="ltr">{{ numbers.reports_statement }}/{{ REPORTS_STATEMENT_MAX }}</bdi> · المهلة حتى <bdi dir="ltr">{{ day(numbers.reports_deadline) }}</bdi></small>
             </td>
             <td class="max">
               {{ REPORTS_QURAN_MAX + REPORTS_STATEMENT_MAX }}

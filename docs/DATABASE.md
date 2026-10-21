@@ -1068,3 +1068,22 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 ### ملفّاتُ المقرّرات (2026-10-21)
 
 هجرتا `20261021100211_reading_book_files` و`20261021100329_reading_unit_files`: **ملفُّ PDF لكلّ مقرّرٍ شهريّ** (`reading_units.pdf_path` = `units/<id>.pdf`) في مستودعٍ خاصّ `reading-books` (50 م.ب، PDF وحده)، والتنزيلُ برابطٍ موقَّت (5 دقائق). سياسةُ القراءة `private.can_download_reading_book(name)` (definer، منحٌ لـ`authenticated`): العاملُ النشطُ كلَّ الملفّات، والطالبُ ملفَّ مقرّره المستحقّ وما اجتازه فقط (أتمّها كلَّها ← كلُّها)، والزائرُ لا شيء — مُختبَرةٌ في معاملةٍ ملغاة. والرفعُ والاستبدالُ والحذفُ للمديرَين باسم `units/<رقم>.pdf`. رُفع ملفّا المقرّرين 1 و2 (صفقات رابحة) بـ`scripts/reading-unit-pdf.mjs`، والباقي يرفعه المديرُ من صفحة «البرامج المصاحبة».
+
+---
+
+## 25. نموذجُ الزيارة الإشرافية وسجلُّ تقييم الجودة الشهريّ (2026-10-21)
+
+### نموذجُ الزيارة — هجرة `20261021120416_visit_evaluation_form`
+
+- **`visit_deduction_items`** (ثابت، قراءةٌ لكلّ مسجَّل، بلا كتابة): 14 بند خصمٍ في 6 معايير (`criterion` 1–6، `criterion_label`، `criterion_hint`)، و`per_time` خصمُ المرّة، و`sort_order`.
+- **أعمدةٌ على `supervision_visits`:** `deductions jsonb` (مفتاحُ البند ← عددُ المرّات 0–99)، و`criteria_scores smallint[6]` و`score smallint` (0–42) تحسبهما القاعدة: محصّلةُ المعيار = max(0, 7 − Σ المرّات × خصم المرّة)؛ و`locked_at` و`teacher_ack_at`.
+- **`supervision_visits_score_lock`** ← `private.visit_score_and_lock()` (BEFORE INSERT/UPDATE/DELETE): يحسب، و**يُقفل** حين يحفظ صاحبُ جلسةٍ يومَ التنفيذ مع البنود (ويُصفّر الاطّلاع)؛ والمقفلةُ لا تُعدَّل نتيجتُها ولا موعدُها ولا تُحذف إلا بيد المدير الإداري؛ وعمودا الإقفال والاطّلاع لا يكتبهما إلا المُشغِّل والدالّتان (علما `torjoman.visit_unlock`/`torjoman.visit_ack` في المعاملة).
+- **`unlock_visit_result(p_visit)`** (المدير الإداري والفنيّ) يفتح ويُشعر المشرف (`visit_unlocked`)؛ **`acknowledge_visit(p_visit)`** لمعلّم الحلقة.
+- **`supervision_visits_notify_changes`** ← `private.notify_visit_changes()` (AFTER UPDATE): الإقفالُ ← المعلم (`visit_result`)، وتغييرُ الموعد ← المدير الإداري والفنيّ (`visit_rescheduled`، بالسبب من `visit_reschedule_log`).
+- الحقولُ القديمة (`flow_rating`/`strengths`/`improvements`/`recommendations`) باقيةٌ لزياراتٍ سبقت، ولا يكتبها النموذج.
+
+### سجلُّ الجودة — هجرة `20261021123546_teacher_quality_months`
+
+- **`teacher_quality_months`** (فريدٌ على الحلقة/السنة/الشهر): `meetings_score` 0–8، و`supervisor_notes`، و`admin_notes` (+ `_by`/`_at`)، و**`numbers jsonb`** لقطةُ الحساب عند الحفظ، و`quality`/`achievement`/`final`، و`locked_at`/`teacher_ack_at`. **RLS:** قراءةٌ لمن يرى الحلقة (`visible_halaqa_ids`) وللمعلم سجلَّه؛ **لا سياسةَ كتابة** — الكتابةُ بالدوالّ وحدها (وحارسُ النيابة مع التدقيق).
+- **`private.quality_month_compute(halaqa, y, m, meetings)`**: الزياراتُ بالنموذج في شهر موعدها (المتوسّط × 2 من 84؛ بلا زيارةٍ ← `incomplete` ولا جودة)، والتقاريرُ في وقتها (الإنجازُ القرآنيّ 5 + كشفُ الحوافز 3، إن أُرسل حتى `report_opening_day + 3`)، والجودةُ = (الزيارات + التقارير + الاجتماعات) ÷ 2، وإنجازُ الحلقة = 50 × أنجز ÷ (أنجز + مقصّر + لم يُرصد) بحساب شاشة الإنجاز نفسِه (التقسيطُ بالحضور من 2026-11)، والنهائيُّ = الجودة + الإنجاز.
+- **`quality_month_preview`** (لمن يرى الحلقة) · **`save_quality_month`** (مشرفُ الحلقة؛ ابتداءً من `report_opening_day + 4`؛ يثبّت ويُقفل ويُشعر المعلم `quality_month`) · **`unlock_quality_month`** (الإداري والفنيّ؛ يُشعر المشرف `quality_unlocked`) · **`acknowledge_quality_month`** (المعلم) · **`set_quality_admin_notes`** (المدير الفنيّ).

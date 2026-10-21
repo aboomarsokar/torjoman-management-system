@@ -110,7 +110,7 @@ const stats = computed(() => {
     done: list.filter(s => s === 'done').length,
     overdue: list.filter(s => s === 'late').length,
     completion: c.pct === null ? '—' : `${c.pct}%`,
-    completionSub: c.required ? `${c.done} من ${c.required} مطلوبة` : 'لا حلقات نشطة'
+    completionSub: c.required ? `${c.done} من ${c.required}` : 'لا حلقات نشطة'
   }
 })
 // المشرفُ الميدانيّ يرى زياراته وحدها — هو الزائر فيها، فلا عمودَ «الزائر» له (طلب المستخدم 2026-10-21)

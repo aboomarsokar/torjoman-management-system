@@ -3,8 +3,8 @@
  * مشرف المشروع يرى كل الشاشات بلا أزرار كتابة (isReadOnly).
  * النطاق في الدور نفسه (لا عمود قسم): المديرة الإدارية = قسم البنات.
  */
-/** من يعتمد رصد الشهر (قرار 2026-10-19): الإداري، والمديرة للبنات، والمشرف الميدانيّ لحلقاته — لا الفنيّ (يطّلع ولا يعتمد). */
-export const REPORT_APPROVER_ROLES = ['admin_manager', 'women_admin', 'field_supervisor']
+/** من يعتمد رصد الشهر (قرار 2026-10-21): المشرفُ الميدانيّ لحلقاته وحده — لا الإداريُّ ولا المديرةُ احتياطاً، ولا الفنيّ. */
+export const REPORT_APPROVER_ROLES = ['field_supervisor']
 
 /** هل يعتمد هذا الدور رصدَ الشهر؟ (نطاقُ الحلقات يقصره RLS والتصفية الصريحة للمشرف.) */
 export function canApproveReportsRole(role: string | null | undefined): boolean {

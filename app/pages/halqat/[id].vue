@@ -148,7 +148,7 @@ const today = gazaToday()
                 <span v-if="data.halqa.daily_time"><UIcon
                   name="i-lucide-clock"
                   class="size-4"
-                />{{ data.halqa.daily_time.slice(0, 5) }}</span>
+                />{{ formatTime12(data.halqa.daily_time) }}</span>
               </div>
             </div>
           </div>

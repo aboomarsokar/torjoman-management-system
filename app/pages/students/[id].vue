@@ -86,7 +86,7 @@ async function regenerateLink() {
 
 const sections = computed(() => student.value ? buildStudentSections(student.value) : [])
 const halaqa = computed(() => student.value?.halaqa
-  ? { name: student.value.halaqa.name, teacher: student.value.halaqa.teacher?.full_name ?? null, time: student.value.halaqa.daily_time?.slice(0, 5) ?? null }
+  ? { name: student.value.halaqa.name, teacher: student.value.halaqa.teacher?.full_name ?? null, time: formatTime12(student.value.halaqa.daily_time) || null }
   : null)
 
 // حضورُه هذا الشهر (أيامُ حلقته وغياباتُه — مقروءةٌ للعامل في نطاقه)

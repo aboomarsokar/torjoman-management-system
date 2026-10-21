@@ -231,10 +231,7 @@ const pace = computed(() => {
         class="hq-item"
       >
         <span class="hq-lbl">الموعد</span>
-        <span
-          class="hq-val"
-          dir="ltr"
-        >{{ halaqa.time }}</span>
+        <span class="hq-val">{{ halaqa.time }}</span>
       </div>
       <div
         v-if="enrollmentDate"

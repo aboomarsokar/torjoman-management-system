@@ -55,7 +55,7 @@ const { attendance } = useMyAttendance(() => me.value ? { studentId: me.value.id
 const loading = computed(() => profilePending.value || pending.value)
 const sections = computed(() => me.value ? buildStudentSections(me.value) : [])
 const halaqa = computed(() => me.value?.halaqa
-  ? { name: me.value.halaqa.name, teacher: me.value.halaqa.teacher?.full_name ?? null, time: me.value.halaqa.daily_time?.slice(0, 5) ?? null }
+  ? { name: me.value.halaqa.name, teacher: me.value.halaqa.teacher?.full_name ?? null, time: formatTime12(me.value.halaqa.daily_time) || null }
   : null)
 
 const photoPath = computed(() => displayPhotoPath(profile.value))

@@ -46,6 +46,36 @@ export function alertStats(rows: { status: string, severity: string }[]): StatIt
   ]
 }
 
+/** نتائجُ الاختبارات: كلُّها، والمجتازون، وغيرُ المجتازين، ونسبةُ الاجتياز، ومتوسّطُ العلامة. */
+export function examResultStats(rows: { passed: boolean | null, total_score: number | null }[], maxTotal: number): StatItem[] {
+  const passed = rows.filter(r => r.passed === true).length
+  const failed = rows.filter(r => r.passed === false).length
+  const scores = rows.map(r => r.total_score).filter((s): s is number => s !== null)
+  const decided = passed + failed
+  return [
+    { key: 'all', icon: 'i-lucide-clipboard-list', value: rows.length, label: 'نتيجة اختبار' },
+    { key: 'passed', icon: 'i-lucide-award', tone: 'green', value: passed, label: decided ? `مجتازاً — ${Math.round((passed / decided) * 100)}٪` : 'مجتازاً' },
+    { key: 'failed', icon: 'i-lucide-rotate-ccw', tone: failed ? 'err' : 'neutral', value: failed, label: 'غيرَ مجتاز (يعيد)' },
+    { key: 'avg', icon: 'i-lucide-gauge', value: scores.length ? `${round1(scores.reduce((a, b) => a + b, 0) / scores.length)} / ${maxTotal}` : '—', label: 'متوسّطُ العلامة' }
+  ]
+}
+
+/** خطةُ الاختبارات: الدوراتُ، والمراحلُ، والأجزاءُ التي تغطّيها، وأطولُ دورة. */
+export function examPlanStats(cycles: { stage_number: number, parts_from: number, parts_to: number }[]): StatItem[] {
+  const covered = new Set<number>()
+  let longest = 0
+  for (const c of cycles) {
+    for (let j = c.parts_from; j <= c.parts_to; j++) covered.add(j)
+    longest = Math.max(longest, c.parts_to - c.parts_from + 1)
+  }
+  return [
+    { key: 'cycles', icon: 'i-lucide-list-ordered', value: cycles.length, label: 'دورةً مرحليّة' },
+    { key: 'stages', icon: 'i-lucide-layers', tone: 'neutral', value: new Set(cycles.map(c => c.stage_number)).size, label: 'مراحل' },
+    { key: 'parts', icon: 'i-lucide-book-open', tone: 'green', value: covered.size, label: 'جزءاً تغطّيه الخطة' },
+    { key: 'longest', icon: 'i-lucide-ruler', value: longest, label: 'أجزاءً في أطول دورة' }
+  ]
+}
+
 /** المحاضر: كلُّها، والمعتمَدة، والمسودّات، ومحاضرُ هذا الشهر. */
 export function minutesStats(rows: { status: string, meeting_date: string }[], today: string): StatItem[] {
   return [

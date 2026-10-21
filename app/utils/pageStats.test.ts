@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alertStats, minutesStats, studentStats, transportStats } from './pageStats'
+import { alertStats, examPlanStats, examResultStats, minutesStats, studentStats, transportStats } from './pageStats'
 
 const values = (items: { key: string, value: string | number }[]) => Object.fromEntries(items.map(i => [i.key, i.value]))
 const stripMarks = (v: string | number) => String(v).replace(/[⁦-⁩]/g, '')
@@ -36,6 +36,29 @@ describe('alertStats', () => {
       { status: 'acknowledged', severity: 'final_warning' },
       { status: 'new', severity: 'final_warning' }
     ]))).toEqual({ all: 3, new: 2, ack: 1, final: 2 })
+  })
+})
+
+describe('examResultStats', () => {
+  it('المجتازون ونسبتُهم من المحسوم وغيرُ المجتازين ومتوسّطُ العلامة', () => {
+    const items = examResultStats([
+      { passed: true, total_score: 90 },
+      { passed: false, total_score: 60 },
+      { passed: true, total_score: 85 },
+      { passed: null, total_score: null }
+    ], 99)
+    expect(values(items)).toEqual({ all: 4, passed: 2, failed: 1, avg: '78.3 / 99' })
+    expect(items.find(i => i.key === 'passed')?.label).toBe('مجتازاً — 67٪')
+  })
+})
+
+describe('examPlanStats', () => {
+  it('الدوراتُ والمراحلُ والأجزاءُ المغطّاة بلا تكرارٍ وأطولُ دورة', () => {
+    expect(values(examPlanStats([
+      { stage_number: 1, parts_from: 30, parts_to: 30 },
+      { stage_number: 1, parts_from: 29, parts_to: 30 },
+      { stage_number: 2, parts_from: 26, parts_to: 28 }
+    ]))).toEqual({ cycles: 3, stages: 2, parts: 5, longest: 3 })
   })
 })
 

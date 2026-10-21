@@ -89,6 +89,11 @@ describe('canEditMonth', () => {
     expect(canEditMonth({ ...base, status: 'submitted' })).toBe(true)
     expect(canEditMonth({ ...base, status: 'approved' })).toBe(false)
   })
+  it('المشرفُ الميدانيّ يعتمد ولا يكتب سجلّاً أيّاً كانت الحالة', () => {
+    const base = { readOnly: false, isTeacher: false, canApprove: true, isFieldSupervisor: true }
+    expect(canEditMonth({ ...base, status: 'draft' })).toBe(false)
+    expect(canEditMonth({ ...base, status: 'submitted' })).toBe(false)
+  })
   it('مشرف المشروع والمطّلعُ لا يكتبان', () => {
     expect(canEditMonth({ readOnly: true, isTeacher: false, canApprove: false, status: 'draft' })).toBe(false)
     expect(canEditMonth({ readOnly: false, isTeacher: false, canApprove: false, status: 'draft' })).toBe(false)

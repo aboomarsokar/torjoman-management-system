@@ -6,6 +6,7 @@
  * والمختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنسها. الحكم الأخير لحارس القاعدة.
  */
 import type { Database } from '~/types/database.types'
+import { SHOW_HALAQA_CLASSIFICATION } from '~/constants/halqat'
 import { halaqaDeleteErrorMessage } from '~/utils/exams/nomination'
 
 definePageMeta({ layout: 'dashboard' })
@@ -25,7 +26,10 @@ const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
 /** الإنشاء والتعديل للمديرَين (الإداري والفني)، والحذف للمدير الإداري — كما يسمح RLS. */
-const { isManager, isAdmin } = usePermissions()
+const { isManager, isAdmin, isFieldSupervisor, isWomenAdmin } = usePermissions()
+// المشرفُ يرى حلقاتِه المسندة وحدها وهي من جنسه، والمديرةُ حلقاتِ البنات وحدها (RLS) —
+// فلا معنى لقائمة «البنين والبنات» عندهما (طلب المستخدم 2026-10-21)
+const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
 // بحالة pending، والسكيلتون يغطّي الانتظار ريثما تصل البيانات. الاستعلامات
@@ -187,6 +191,7 @@ async function confirmDelete() {
     <div class="toolbar">
       <div class="filters">
         <UiSelect
+          v-if="showGenderFilter"
           v-model="genderF"
           :items="genderFilterItems"
           size="xl"
@@ -216,6 +221,10 @@ async function confirmDelete() {
     </div>
 
     <ClientOnly>
+      <HalqatSummary
+        v-if="!pending && filtered.length"
+        :rows="filtered"
+      />
       <UiSkeletonTable
         v-if="pending"
         :columns="columns"
@@ -480,7 +489,9 @@ async function confirmDelete() {
             </UFormField>
           </div>
           <div class="row">
+            <!-- التصنيفُ ملغًى حاليّاً (constants/halqat.ts): الإنشاءُ يحفظ «أ» افتراضاً والتعديلُ يُبقي القائم -->
             <UFormField
+              v-if="SHOW_HALAQA_CLASSIFICATION"
               label="التصنيف"
               name="classification"
               class="f"

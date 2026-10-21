@@ -8,6 +8,7 @@ import type { Database } from '~/types/database.types'
 import { toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
 import { examTargetText } from '~/utils/exams/nomination'
 import { EXAM_MAX_TOTAL } from '~/constants/exams'
+import { examResultStats } from '~/utils/pageStats'
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
@@ -101,6 +102,8 @@ const results = computed(() => allResults.value.filter(r =>
   && (fHalqa.value === 'all' || r.halqaId === fHalqa.value)))
 
 const { page: resPage, pageCount: resPageCount, total: resTotal, pageSize: resPageSize, paged: resPaged, resetPage: resetResPage } = usePagination(results, 12)
+// أرقامُ النتائج المعروضة (تتبع فلترَي المشرف والحلقة)
+const stats = computed(() => examResultStats(results.value, EXAM_MAX_TOTAL))
 watch([fSupervisor, fHalqa], resetResPage)
 function clearResFilters() {
   fSupervisor.value = 'all'
@@ -125,6 +128,11 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
     <h3 class="sec-title">
       نتائج الطلاب <span class="count">{{ resTotal }}</span>
     </h3>
+    <UiStatStrip
+      v-if="results.length"
+      :items="stats"
+      label="أرقام نتائج الاختبارات"
+    />
 
     <div class="res-filters">
       <UFormField

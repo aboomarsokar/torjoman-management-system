@@ -11,6 +11,8 @@ import type { Database } from '~/types/database.types'
 import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
 import { displayPhotoPath } from '~/constants/profilePhoto'
+import { studentStats } from '~/utils/pageStats'
+import { gazaToday } from '~/utils/reportWindow'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الطلاب — ترجمان' })
@@ -93,6 +95,8 @@ const filtered = computed(() => (students.value ?? []).filter(s =>
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
 watch([statusF, halqaF, query], resetPage)
+const stats = computed(() => studentStats(
+  (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday()))
 const columns = computed(() => {
   const base = [
     { key: 'num', label: '#' },
@@ -342,6 +346,12 @@ async function confirmDelete() {
     </div>
 
     <ClientOnly>
+      <!-- أرقامُ الطلاب في النطاق بحلقته المختارة (لا تتبع البحثَ ولا الحالةَ: تعرض الحالاتِ نفسَها) -->
+      <UiStatStrip
+        v-if="!pending && (students ?? []).length"
+        :items="stats"
+        label="أرقام الطلاب"
+      />
       <UiSkeletonTable
         v-if="pending"
         :columns="columns"

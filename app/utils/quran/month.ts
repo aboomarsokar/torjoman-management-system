@@ -132,13 +132,14 @@ export function summarizeOutcomes(rows: StudentMonthRow[]): Record<Outcome, numb
   return { ...summary, recordedPct }
 }
 
-/** مرآةٌ لـ `can_approve_report_in_halaqa` للواجهة وحدها (الحكمُ للقاعدة): الإداري، والمديرةُ للبنات، والمشرفُ الميدانيّ لحلقته. */
+/**
+ * مرآةٌ لـ `can_approve_report_in_halaqa` للواجهة وحدها (الحكمُ للقاعدة): المشرفُ الميدانيّ لحلقته وحده
+ * (قرار 2026-10-21 — لا الإداريُّ ولا المديرةُ احتياطاً). `gender` باقٍ في الشكل لمن يمرّره.
+ */
 export function canApproveReport(
   role: string | null,
   profileId: string | null,
-  halaqa: { gender: 'male' | 'female', supervisor_id: string | null }
+  halaqa: { gender?: 'male' | 'female', supervisor_id: string | null }
 ): boolean {
-  if (role === 'admin_manager') return true
-  if (role === 'women_admin') return halaqa.gender === 'female'
   return role === 'field_supervisor' && !!profileId && halaqa.supervisor_id === profileId
 }

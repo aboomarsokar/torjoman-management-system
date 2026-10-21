@@ -1,10 +1,12 @@
 <script setup lang="ts">
 /**
  * التنبيهات الإدارية (§4.21) — متابعة أداء المعلّمين.
- * المديران (الإداري والفني) والمشرف الميداني يُصدرون تنبيهاً لمعلّم (نوع المخالفة + درجة + وصف)،
+ * المديران (الإداري والفني) يُصدران تنبيهاً لمعلّم (نوع المخالفة + درجة + وصف)،
  * والمعلّم يستقبله ويؤكّد الاطّلاع. مشرف المشروع والمديرة الإدارية للاطّلاع. النطاق محكوم بـ RLS.
+ * والمشرفُ الميدانيّ خارجها (قرار 2026-10-21): لا قائمةَ ولا إصدار، ومن فتح الرابط رأى قفلاً.
  */
 import type { Database } from '~/types/database.types'
+import { alertStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'التنبيهات الإدارية — ترجمان' })
@@ -16,8 +18,8 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 
 const { role, isTeacher, isManager, isFieldSupervisor } = usePermissions()
-/** الإصدار كما يسمح RLS (alerts_insert): الإداري والفني والمشرف الميداني. */
-const canIssue = computed(() => isManager.value || isFieldSupervisor.value)
+/** الإصدار كما يسمح RLS (alerts_insert): الإداري والفني وحدهما — المشرفُ الميدانيّ أُخرج منها (قرار 2026-10-21). */
+const canIssue = computed(() => isManager.value)
 
 const SEVERITY: Record<Severity, { label: string, color: 'neutral' | 'warning' | 'error' }> = {
   note: { label: 'ملاحظة', color: 'neutral' },
@@ -43,7 +45,7 @@ type AlertRow = {
 // فلا يصل إلى متصفّحه. الإدارة ترى المُصدِر صراحةً. الدور شرطٌ للجلب، فيُنتظر (role) ثم يُعاد.
 const ISSUER_FOR_TEACHER = 'إدارة المشروع'
 const { data: alerts, refresh, pending } = useLazyAsyncData<AlertRow[]>('alerts-list', async () => {
-  if (!role.value) return []
+  if (!role.value || isFieldSupervisor.value) return []
   const cols = 'id, alert_date, violation_type, description, severity, status, acknowledged_at, teacher:teacher_id(full_name)'
   const { data } = await supabase
     .from('admin_alerts')
@@ -150,7 +152,13 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
       </template>
     </UiPageHeader>
 
-    <ClientOnly>
+    <UiEmptyState
+      v-if="isFieldSupervisor"
+      icon="i-lucide-lock"
+      title="التنبيهات الإدارية ليست من شاشات المشرف الميداني."
+    />
+
+    <ClientOnly v-else>
       <div
         v-if="pending"
         class="list"
@@ -168,6 +176,10 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
       />
 
       <template v-else>
+        <UiStatStrip
+          :items="alertStats(alerts ?? [])"
+          label="أرقام التنبيهات"
+        />
         <div
           v-if="isTeacher && newCount"
           class="hint"

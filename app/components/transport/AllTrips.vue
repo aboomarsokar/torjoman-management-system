@@ -7,6 +7,7 @@
  */
 import { periodLabel } from '~/utils/reportWindow'
 import { formatAmount, groupByEmployee, payAllText, sumAmount, tripsCount, unpaid, type Trip } from '~/utils/transport'
+import { transportStats } from '~/utils/pageStats'
 
 const props = defineProps<{ year: number, month: number }>()
 
@@ -54,6 +55,7 @@ const employeeItems = computed(() => [
 
 const label = computed(() => periodLabel(props.year, props.month))
 const visible = computed(() => selected.value === ALL ? (trips.value ?? []) : (trips.value ?? []).filter(t => t.profile_id === selected.value))
+const stats = computed(() => transportStats(visible.value))
 const groups = computed(() => groupByEmployee(visible.value, names.value))
 const unpaidVisible = computed(() => unpaid(visible.value))
 const total = computed(() => formatAmount(sumAmount(visible.value)))
@@ -164,6 +166,10 @@ async function refreshTrips() {
 
 <template>
   <div class="all">
+    <UiStatStrip
+      :items="stats"
+      label="أرقام رحلات الشهر"
+    />
     <div class="card top">
       <div class="controls">
         <div class="field">

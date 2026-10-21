@@ -3,6 +3,7 @@
  * طاقم الحلقة مكدَّساً (المعلم ثم المشرف ثم المختبِر، والطلاب اختياراً) — لعمود «الطاقم»
  * في الحاوية المتوسطة ولبطاقات الجوال. الخانة الشاغرة تُكتب بلونٍ أخفت لتُلحظ.
  * المسمّيات بجنس الحلقة: طاقم حلقة البنات من جنسها (حارس guard_halaqa_staff).
+ * `hideSupervisor`: لصفحة المشرف الميداني — حلقاتُه كلُّها مسندةٌ إليه فلا معنى لتكرار اسمه.
  */
 const props = defineProps<{
   teacher: string | null
@@ -10,13 +11,14 @@ const props = defineProps<{
   examiner: string | null
   students?: number
   gender?: 'male' | 'female' | null
+  hideSupervisor?: boolean
 }>()
 
 const rows = computed(() => {
   const f = props.gender === 'female'
   return [
     { label: f ? 'المعلّمة' : 'المعلّم', value: props.teacher ?? '—', empty: !props.teacher },
-    { label: f ? 'المشرفة' : 'المشرف', value: props.supervisor ?? (f ? 'بلا مشرفة' : 'بلا مشرف'), empty: !props.supervisor },
+    ...(props.hideSupervisor ? [] : [{ label: f ? 'المشرفة' : 'المشرف', value: props.supervisor ?? (f ? 'بلا مشرفة' : 'بلا مشرف'), empty: !props.supervisor }]),
     { label: f ? 'المختبِرة' : 'المختبِر', value: props.examiner ?? (f ? 'بلا مختبِرة' : 'بلا مختبِر'), empty: !props.examiner },
     ...(props.students === undefined ? [] : [{ label: f ? 'الطالبات' : 'الطلاب', value: String(props.students), empty: props.students === 0 }])
   ]

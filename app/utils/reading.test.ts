@@ -45,6 +45,11 @@ describe('مسار القراءة', () => {
     expect(j).toMatchObject({ canStart: false, retryOn: '2026-10-26' })
   })
 
+  it('علامةُ آخر محاولة للمستحقّ — الأحدثُ لا الأعلى', () => {
+    const j = readingJourney(units, [attempt(1, 70, 20), attempt(1, 40, 2)], opts)
+    expect(j.stations[0]).toMatchObject({ status: 'due', best: 70, last: 40, attempts: 2 })
+  })
+
   it('رسوبٌ قبل أكثر من أسبوع: يعيد', () => {
     expect(readingJourney(units, [attempt(1, 50, 8)], opts)).toMatchObject({ canStart: true, retryOn: null })
   })

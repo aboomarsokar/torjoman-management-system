@@ -30,6 +30,8 @@ export interface ReadingStation {
   status: StationStatus
   /** أعلى نسبةٍ في محاولاته المسلَّمة، أو null. */
   best: number | null
+  /** نسبةُ آخر محاولةٍ مسلَّمة، أو null. */
+  last: number | null
   attempts: number
 }
 
@@ -58,8 +60,9 @@ export function readingJourney(units: ReadingUnit[], attempts: ReadingAttempt[],
   const stations: ReadingStation[] = sorted.map((u) => {
     const mine = attempts.filter(a => a.unit_id === u.id && a.submitted_at)
     const best = mine.length ? Math.max(...mine.map(a => a.percent ?? 0)) : null
+    const latest = [...mine].sort((a, b) => b.submitted_at!.localeCompare(a.submitted_at!))[0]
     const status: StationStatus = passed.has(u.id) ? 'passed' : u.id === due?.id ? 'due' : 'locked'
-    return { unit: u, status, best, attempts: mine.length }
+    return { unit: u, status, best, last: latest?.percent ?? null, attempts: mine.length }
   })
 
   // محاولةٌ مفتوحةٌ ما زال وقتُها — تُستأنف لا تُبدأ

@@ -192,6 +192,54 @@ export type Database = {
           },
         ]
       }
+      booklet_deliveries: {
+        Row: {
+          booklet: number
+          copies: number
+          created_at: string
+          created_by: string | null
+          delivered_on: string
+          halaqa_id: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          booklet: number
+          copies: number
+          created_at?: string
+          created_by?: string | null
+          delivered_on?: string
+          halaqa_id: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          booklet?: number
+          copies?: number
+          created_at?: string
+          created_by?: string | null
+          delivered_on?: string
+          halaqa_id?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booklet_deliveries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booklet_deliveries_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_cycles: {
         Row: {
           created_at: string

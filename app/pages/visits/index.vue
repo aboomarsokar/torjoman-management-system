@@ -60,9 +60,25 @@ const supervisorItems = computed(() => {
   for (const v of visits.value ?? []) if (v.supervisor) map.set(v.supervisor_id, v.supervisor.full_name)
   return [{ label: 'كل المشرفين', value: 'all' }, ...[...map].map(([value, label]) => ({ label, value }))]
 })
+// الحلقة (طلب المستخدم 2026-10-21): حلقاتُ الزيارات الظاهرة للمشرف المختار، فلا تُعرض حلقةٌ لا زيارةَ لها
+const halqaF = ref<string>('all')
+const halqaItems = computed(() => {
+  const map = new Map<string, string>()
+  for (const v of visits.value ?? []) {
+    if (supervisorF.value !== 'all' && v.supervisor_id !== supervisorF.value) continue
+    map.set(v.halaqa_id, v.halaqa?.name ?? '—')
+  }
+  const list = [...map].map(([value, label]) => ({ label, value })).sort((a, b) => a.label.localeCompare(b.label, 'ar'))
+  return [{ label: 'كل الحلقات', value: 'all' }, ...list]
+})
+// تبديلُ المشرف يُسقط حلقةً ليست من حلقاته
+watch(halqaItems, (items) => {
+  if (!items.some(i => i.value === halqaF.value)) halqaF.value = 'all'
+})
 const scoped = computed(() => (visits.value ?? []).filter(v =>
   (period.value === 'all' || periodOf(v) === period.value)
-  && (supervisorF.value === 'all' || v.supervisor_id === supervisorF.value)))
+  && (supervisorF.value === 'all' || v.supervisor_id === supervisorF.value)
+  && (halqaF.value === 'all' || v.halaqa_id === halqaF.value)))
 
 const statusF = ref<VisitDisplayStatus | 'all'>('all')
 // الحالةُ قائمةٌ منسدلة في صفّ الفلاتر بعدد كلّ حالةٍ في الشهر والمشرف المختارَين (طلب المستخدم 2026-10-20)
@@ -175,6 +191,14 @@ async function confirmDelete() {
         size="xl"
         class="sel wide"
         aria-label="المشرف"
+        :ui="{ base: 'rounded-[12px] min-h-12' }"
+      />
+      <UiSelect
+        v-model="halqaF"
+        :items="halqaItems"
+        size="xl"
+        class="sel wide"
+        aria-label="الحلقة"
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect

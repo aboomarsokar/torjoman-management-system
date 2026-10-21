@@ -22,7 +22,7 @@ const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 const { exportXlsx } = useExport()
-const { isTeacher, isReadOnly } = usePermissions()
+const { isTeacher, isReadOnly, isFieldSupervisor } = usePermissions()
 const reference = useQuranReference()
 
 const today = gazaToday()
@@ -96,7 +96,10 @@ const status = computed<ReportStatus | null>(() => report.value?.status ?? null)
 const canApproveHere = computed(() => !!halaqa.value && canApproveReport(role.value, profile.value?.id ?? null, {
   gender: halaqa.value.gender ?? 'male', supervisor_id: halaqa.value.supervisor_id
 }))
-const canEdit = computed(() => canEditMonth({ readOnly: isReadOnly.value, isTeacher: isTeacher.value, canApprove: canApproveHere.value, status: status.value }))
+const canEdit = computed(() => canEditMonth({
+  readOnly: isReadOnly.value, isTeacher: isTeacher.value, canApprove: canApproveHere.value, status: status.value,
+  isFieldSupervisor: isFieldSupervisor.value
+}))
 
 // الترشيح: يُمسح مع تبديل الحلقة/الشهر، ويُرفع إن فرغت خانتُه
 const outcomeFilter = ref<Outcome | null>(null)

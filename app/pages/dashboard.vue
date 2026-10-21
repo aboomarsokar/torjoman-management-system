@@ -6,6 +6,7 @@
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
  */
 import type { Database } from '~/types/database.types'
+import { formatVisitMoment } from '~/utils/visitStatus'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'لوحة التحكم — ترجمان' })
@@ -139,10 +140,8 @@ watch(isSupervisor, (v) => {
   if (v) loadSupervisorData()
 }, { immediate: true })
 
-const fmtDateTime = (iso: string) => {
-  const d = new Date(iso)
-  return `${d.toLocaleDateString('ar', { weekday: 'short', day: 'numeric', month: 'short' })} · ${d.toTimeString().slice(0, 5)}`
-}
+// موعدُ الزيارة كشاشة الزيارات: `DD-MM-YYYY · HH:mm` بتوقيت غزة — الشهرُ بالرقم لا بالاسم (قرار المستخدم)
+const fmtDateTime = (iso: string) => formatVisitMoment(iso)
 
 // ── لوحة المدير الفني (كانت لوحة الجودة) — نطاقه القسمان، فكلّ المشرفين الميدانيين ──
 type QSup = { id: string, name: string, halqat: number }
@@ -376,7 +375,7 @@ const settingCards = [
                 >
                   <div class="row-main">
                     <span class="row-title">{{ v.halqa }}</span>
-                    <span class="row-sub">{{ fmtDateTime(v.scheduled_at) }}</span>
+                    <span class="row-sub"><bdi dir="ltr">{{ fmtDateTime(v.scheduled_at) }}</bdi></span>
                   </div>
                   <UBadge
                     label="مجدولة"

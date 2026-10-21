@@ -46,6 +46,8 @@ export function useReadingPlan(source: () => { studentId: string, enrollmentDate
   const s = computed(source)
 
   const { data: attempts, refresh } = useLazyAsyncData<ReadingAttempt[]>(() => `reading-attempts-${s.value.studentId}`, async () => {
+    // المعرّفُ قد يصل بعد التركيب (صفحةُ الاختبار تجلب صفَّ الطالب أوّلاً) — لا طلبَ بمعرّفٍ فارغ
+    if (!s.value.studentId) return []
     const { data, error } = await supabase.from('reading_attempts')
       .select('id, unit_id, started_at, deadline_at, submitted_at, score, total, percent, passed')
       .eq('student_id', s.value.studentId)

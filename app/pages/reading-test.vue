@@ -5,17 +5,29 @@
  * المنطقُ في `useReadingTest`، والتصحيحُ في القاعدة (لا تصل الإجاباتُ الصحيحة إلى الجهاز).
  * من ليس طالباً يُعاد إلى لوحته.
  */
+import type { Database } from '~/types/database.types'
 import { formatClock } from '~/composables/useReadingTest'
+import { unitScope } from '~/utils/reading'
+import { formatDay } from '~/utils/reportWindow'
+import { isolateLtr } from '~/utils/transport'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'اختبار القراءة — ترجمان' })
 
-const { role } = useProfile()
+const supabase = useSupabaseClient<Database>()
+const { role, profile } = useProfile()
 watch(role, (r) => {
   if (r && r !== 'student') void navigateTo('/dashboard', { replace: true })
 }, { immediate: true })
 
-const { settings } = useReadingUnits()
+// صفُّ الطالب ← مسارُه: المقرّرُ المطلوب وكتبُه في التمهيد، وتاريخُ الإعادة إن كان ينتظر
+const { data: me } = useLazyAsyncData('reading-test-student', async () => {
+  const id = profile.value?.id
+  if (!id) return null
+  const { data } = await supabase.from('students').select('id, enrollment_date').eq('user_id', id).maybeSingle()
+  return data
+}, { server: false, default: () => null, watch: [() => profile.value?.id] })
+const { journey, settings } = useReadingPlan(() => ({ studentId: me.value?.id ?? '', enrollmentDate: me.value?.enrollment_date ?? null }))
 const { phase, payload, answers, result, errorMessage, remaining, unanswered, start, choose, submit } = useReadingTest()
 
 const confirmOpen = ref(false)
@@ -52,17 +64,45 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
           class="size-7"
         /></span>
         <h2>اختبار مقرّر القراءة</h2>
+        <!-- المقرّرُ المطلوب: اسمُه وكتبُه وصفحاتُه -->
+        <div
+          v-if="journey.due"
+          class="unit"
+        >
+          <div class="unit-label">
+            المقرّر المطلوب
+          </div>
+          <div class="unit-title">
+            {{ journey.due.title }}
+          </div>
+          <div class="unit-scope">
+            {{ unitScope(journey.due) }}
+          </div>
+        </div>
+        <p
+          v-else-if="journey.total && !journey.due"
+          class="done"
+        >
+          أتممتَ مقرّرات القراءة كلّها 🎉
+        </p>
         <ul class="facts">
           <li><strong>{{ settings.reading_test_questions }}</strong> سؤالاً من بنك المقرّر، لكلّ سؤالٍ أربعة خيارات</li>
           <li><strong>{{ settings.reading_test_minutes }}</strong> دقيقة، ويُسلَّم الاختبار تلقائياً عند انتهائها</li>
           <li>النجاح من <strong>{{ settings.reading_pass_mark }}٪</strong> — وإن لم تنجح تعيد بعد {{ settings.reading_retry_days }} أيام</li>
         </ul>
+        <p
+          v-if="journey.retryOn && !journey.open"
+          class="wait"
+        >
+          تستطيع إعادة الاختبار ابتداءً من {{ isolateLtr(formatDay(journey.retryOn)) }}
+        </p>
         <UButton
-          label="ابدأ الاختبار"
+          :label="journey.open ? 'أكمل الاختبار' : 'ابدأ الاختبار'"
           icon="i-lucide-play"
           color="primary"
           size="xl"
           :loading="phase === 'loading'"
+          :disabled="!journey.canStart"
           :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center' }"
           @click="start"
         />
@@ -202,6 +242,12 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
 .pass .big-ico { background: var(--green-soft); color: var(--green-ink); }
 .fail .big-ico { background: var(--err-soft); color: var(--err); }
 .intro h2 { margin: 0; font-size: 21px; font-weight: 700; color: var(--ink); }
+.unit { width: 100%; padding: 14px 16px; border-radius: 16px; background: var(--blue-soft); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.unit-label { font-size: 13px; font-weight: 600; color: var(--blue-ink); }
+.unit-title { font-size: 18px; font-weight: 800; color: var(--ink); }
+.unit-scope { font-size: 15px; color: var(--ink-2); line-height: 1.7; }
+.done { margin: 0; font-size: 15px; font-weight: 700; color: var(--green-ink); }
+.wait { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--err); }
 .facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--ink-2); line-height: 1.7; }
 .facts strong { color: var(--ink); }
 .score { font-size: 54px; font-weight: 800; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums; }

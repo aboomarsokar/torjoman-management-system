@@ -102,16 +102,12 @@ export const MONTH_STATE_LABELS: Record<Exclude<RecordingState, 'none'>, string>
   approved: 'معتمَد'
 }
 
-/** خلاصةُ شهرٍ مرصود: صفحاتُه ومتوسّطُها لمن رُصد له، وتقييمُه بالخطة (أنجز/مقصّر/لا يُقاس/لم يُرصد) كشاشة الإنجاز. */
+/** خلاصةُ شهرٍ مرصود: تقييمُه بالخطة (أنجز/مقصّر/لا يُقاس/لم يُرصد) كشاشة الإنجاز — بلا عدد الصفحات (طلب المستخدم 2026-10-21). */
 export function monthSummary(report: DashReport, rows: StudentMonthRow[]) {
   const outcomes = summarizeOutcomes(rows)
-  const recorded = rows.filter(r => r.record)
-  const pages = recorded.reduce((sum, r) => sum + (r.record?.pagesMemorized ?? 0), 0)
   return {
     label: periodLabel(report.report_year, report.report_month),
     state: (report.status === 'draft' && report.return_note ? 'returned' : report.status) as Exclude<RecordingState, 'none'>,
-    pages,
-    perStudent: recorded.length ? Math.round((pages / recorded.length) * 10) / 10 : 0,
     done: outcomes.done,
     short: outcomes.short,
     unmeasured: outcomes.unmeasured,

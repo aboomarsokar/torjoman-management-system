@@ -76,6 +76,39 @@ export function examPlanStats(cycles: { stage_number: number, parts_from: number
   ]
 }
 
+/** المستخدمون (العاملون): النشطون، والمعطَّلون، والمعلّمون، والمشرفون الميدانيون — نشطين. */
+export function userStats(rows: { status: string, role: string }[]): StatItem[] {
+  const active = rows.filter(u => u.status === 'active')
+  return [
+    { key: 'active', icon: 'i-lucide-users', value: active.length, label: 'حساباً نشطاً' },
+    { key: 'disabled', icon: 'i-lucide-user-x', tone: 'neutral', value: rows.length - active.length, label: 'حساباً معطَّلاً' },
+    { key: 'teachers', icon: 'i-lucide-book-open', tone: 'green', value: active.filter(u => u.role === 'teacher').length, label: 'معلّماً' },
+    { key: 'supervisors', icon: 'i-lucide-clipboard-check', value: active.filter(u => u.role === 'field_supervisor').length, label: 'مشرفاً ميدانيّاً' }
+  ]
+}
+
+/** المشرفون: عددُهم، والحلقاتُ المسندة، ومن بلا حلقة، ومتوسّطُ الالتزام بالزيارات (لمن له زياراتٌ مستحقّة). */
+export function supervisorStats(rows: { halqat: number, commitment: number | null }[]): StatItem[] {
+  const rated = rows.map(r => r.commitment).filter((c): c is number => c !== null)
+  const idle = rows.filter(r => r.halqat === 0).length
+  return [
+    { key: 'sups', icon: 'i-lucide-users-round', value: rows.length, label: 'مشرفاً ميدانيّاً' },
+    { key: 'halqat', icon: 'i-lucide-book-open', tone: 'green', value: rows.reduce((s, r) => s + r.halqat, 0), label: 'حلقةً مسندة' },
+    { key: 'idle', icon: 'i-lucide-user-x', tone: idle ? 'err' : 'neutral', value: idle, label: 'بلا حلقة' },
+    { key: 'commit', icon: 'i-lucide-gauge', value: rated.length ? `${Math.round(rated.reduce((a, b) => a + b, 0) / rated.length)}٪` : '—', label: 'متوسّطُ الالتزام بالزيارات' }
+  ]
+}
+
+/** الأخبار: كلُّها، والمنشورة، والمسودّات، وأخبارُ هذا الشهر. */
+export function newsStats(rows: { published: boolean, news_date: string }[], today: string): StatItem[] {
+  return [
+    { key: 'all', icon: 'i-lucide-newspaper', value: rows.length, label: 'خبراً' },
+    { key: 'pub', icon: 'i-lucide-globe', tone: 'green', value: rows.filter(n => n.published).length, label: 'منشوراً' },
+    { key: 'draft', icon: 'i-lucide-file-pen', tone: 'neutral', value: rows.filter(n => !n.published).length, label: 'مسودّة' },
+    { key: 'month', icon: 'i-lucide-calendar', value: rows.filter(n => sameMonth(n.news_date, today)).length, label: 'خبراً هذا الشهر' }
+  ]
+}
+
 /** المحاضر: كلُّها، والمعتمَدة، والمسودّات، ومحاضرُ هذا الشهر. */
 export function minutesStats(rows: { status: string, meeting_date: string }[], today: string): StatItem[] {
   return [

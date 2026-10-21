@@ -5,6 +5,7 @@
  * الالتزام = الزيارات التي تمّت (ولو بعد موعدها) ÷ (تمّت + متأخرة لم تُنفَّذ) × 100 (`visitCommitment`).
  */
 import type { Database } from '~/types/database.types'
+import { supervisorStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'المشرفون — ترجمان' })
@@ -73,8 +74,13 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
         icon="i-lucide-users-round"
         title="لا مشرفين في نطاقك"
       />
-      <div
+      <UiStatStrip
         v-else
+        :items="supervisorStats(rows)"
+        label="أرقام المشرفين"
+      />
+      <div
+        v-if="!pending && rows?.length"
         class="grid"
       >
         <NuxtLink

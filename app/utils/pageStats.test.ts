@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { alertStats, examPlanStats, examResultStats, minutesStats, studentStats, transportStats } from './pageStats'
+import {
+  alertStats, examPlanStats, examResultStats, minutesStats, newsStats, studentStats, supervisorStats, transportStats, userStats
+} from './pageStats'
 
 const values = (items: { key: string, value: string | number }[]) => Object.fromEntries(items.map(i => [i.key, i.value]))
 const stripMarks = (v: string | number) => String(v).replace(/[⁦-⁩]/g, '')
@@ -59,6 +61,36 @@ describe('examPlanStats', () => {
       { stage_number: 1, parts_from: 29, parts_to: 30 },
       { stage_number: 2, parts_from: 26, parts_to: 28 }
     ]))).toEqual({ cycles: 3, stages: 2, parts: 5, longest: 3 })
+  })
+})
+
+describe('userStats', () => {
+  it('النشطُ والمعطَّلُ والمعلّمون والمشرفون النشطون', () => {
+    expect(values(userStats([
+      { status: 'active', role: 'teacher' },
+      { status: 'active', role: 'field_supervisor' },
+      { status: 'disabled', role: 'teacher' },
+      { status: 'active', role: 'admin_manager' }
+    ]))).toEqual({ active: 3, disabled: 1, teachers: 1, supervisors: 1 })
+  })
+})
+
+describe('supervisorStats', () => {
+  it('الحلقاتُ ومن بلا حلقةٍ ومتوسّطُ الالتزام لمن قِيس', () => {
+    expect(values(supervisorStats([
+      { halqat: 2, commitment: 80 },
+      { halqat: 0, commitment: null },
+      { halqat: 3, commitment: 61 }
+    ]))).toEqual({ sups: 3, halqat: 5, idle: 1, commit: '71٪' })
+  })
+})
+
+describe('newsStats', () => {
+  it('المنشورُ والمسودّاتُ وأخبارُ الشهر', () => {
+    expect(values(newsStats([
+      { published: true, news_date: '2026-10-02' },
+      { published: false, news_date: '2026-09-02' }
+    ], '2026-10-21'))).toEqual({ all: 2, pub: 1, draft: 1, month: 1 })
   })
 })
 

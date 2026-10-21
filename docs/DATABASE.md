@@ -1087,3 +1087,25 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **`teacher_quality_months`** (فريدٌ على الحلقة/السنة/الشهر): `meetings_score` 0–8، و`supervisor_notes`، و`admin_notes` (+ `_by`/`_at`)، و**`numbers jsonb`** لقطةُ الحساب عند الحفظ، و`quality`/`achievement`/`final`، و`locked_at`/`teacher_ack_at`. **RLS:** قراءةٌ لمن يرى الحلقة (`visible_halaqa_ids`) وللمعلم سجلَّه؛ **لا سياسةَ كتابة** — الكتابةُ بالدوالّ وحدها (وحارسُ النيابة مع التدقيق).
 - **`private.quality_month_compute(halaqa, y, m, meetings)`**: الزياراتُ بالنموذج في شهر موعدها (المتوسّط × 2 من 84؛ بلا زيارةٍ ← `incomplete` ولا جودة)، والتقاريرُ في وقتها (الإنجازُ القرآنيّ 5 + كشفُ الحوافز 3، إن أُرسل حتى `report_opening_day + 3`)، والجودةُ = (الزيارات + التقارير + الاجتماعات) ÷ 2، وإنجازُ الحلقة = 50 × أنجز ÷ (أنجز + مقصّر + لم يُرصد) بحساب شاشة الإنجاز نفسِه (التقسيطُ بالحضور من 2026-11)، والنهائيُّ = الجودة + الإنجاز.
 - **`quality_month_preview`** (لمن يرى الحلقة) · **`save_quality_month`** (مشرفُ الحلقة؛ ابتداءً من `report_opening_day + 4`؛ يثبّت ويُقفل ويُشعر المعلم `quality_month`) · **`unlock_quality_month`** (الإداري والفنيّ؛ يُشعر المشرف `quality_unlocked`) · **`acknowledge_quality_month`** (المعلم) · **`set_quality_admin_notes`** (المدير الفنيّ).
+
+---
+
+## 26. أرشيفُ تسليم الملازم: `booklet_deliveries` (2026-10-21)
+
+> هجرة `20261021132553_booklet_deliveries`. ملازمُ المشروع خمسَ عشرةَ ملزمةً بجزأين — الملزمة 1 = الجزء 29 + 30 … الملزمة 15 = 1 + 2 — والقائمةُ ثابتةٌ في الواجهة (`app/constants/booklets.ts`) لا جدول.
+
+| العمود | النوع | ملاحظة |
+|---|---|---|
+| `id` | uuid PK | |
+| `halaqa_id` | uuid → `halaqat` | حذفُ الحلقة يحذف تسليماتها |
+| `booklet` | smallint | رقمُ الملزمة 1..15 (قيد) |
+| `copies` | integer | 1..1000 (قيد) |
+| `delivered_on` | date | افتراضاً اليومُ بتوقيت غزّة |
+| `note` | text | اختياريّ، ≤ 300 حرف |
+| `created_by` | uuid → `profiles` | افتراضاً `auth.uid()` |
+| `created_at` | timestamptz | |
+
+- **التسليمُ يتكرّر:** كلُّ دفعةٍ صفّ، والمجموعُ يُحسب في الواجهة (`utils/booklets.ts`).
+- **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع (`booklet_deliveries_select`)، والكتابةُ والحذفُ للمدير الإداريّ وحده (`booklet_deliveries_write`). تحقّقٌ بجلسات الأدوار: المعلم لا يرى ولا يكتب، ومشرفُ المشروع يرى ولا يكتب.
+- **حارسُ النيابة** عليه (`guard_table_for_impersonation`).
+

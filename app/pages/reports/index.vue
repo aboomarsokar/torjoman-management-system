@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
  * الإنجاز القرآني — رصدُ حفظ الشهر لكلّ طالب بالسورة والآية، وإرسالُه، واعتمادُه.
- * المعلم يرصد حلقته ويُرسل الشهرَ ابتداءً من يوم فتحه؛ المشرفُ الميدانيّ للحلقة (والمديرُ الإداري، والمديرةُ
- * لحلقات البنات احتياطاً) يعتمد المُرسَل أو يُعيده بملاحظة، ويُعيد فتحَ المعتمَد؛ المديرُ الفنيّ ومشرفُ المشروع
- * يطّلعان. غيرُ المعلم يرى قائمةَ حلقاته بحالة الشهر حتى يختار حلقة. أعلامُ الواجهة تجربةٌ والحكمُ للقاعدة.
+ * المعلم يرصد حلقته ويُرسل الشهرَ ابتداءً من يوم فتحه إلى مشرفها؛ المشرفُ الميدانيّ للحلقة وحده (قرار 2026-10-21)
+ * يعتمد المُرسَل أو يُعيده بملاحظة، ويُعيد فتحَ المعتمَد، ولا يعدّل سجلَّ طالب؛ والبقيّةُ يطّلعون (والإداريُّ يحذف).
+ * غيرُ المعلم يرى قائمةَ حلقاته بحالة الشهر وإحصاءَها حتى يختار حلقة. أعلامُ الواجهة تجربةٌ والحكمُ للقاعدة.
  */
 import type { Database } from '~/types/database.types'
 import type { StudentMonthRow } from '~/utils/quran/month'
@@ -22,7 +22,7 @@ const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 const { exportXlsx } = useExport()
-const { isTeacher, isReadOnly } = usePermissions()
+const { isTeacher, isReadOnly, isFieldSupervisor } = usePermissions()
 const reference = useQuranReference()
 
 const today = gazaToday()
@@ -96,7 +96,10 @@ const status = computed<ReportStatus | null>(() => report.value?.status ?? null)
 const canApproveHere = computed(() => !!halaqa.value && canApproveReport(role.value, profile.value?.id ?? null, {
   gender: halaqa.value.gender ?? 'male', supervisor_id: halaqa.value.supervisor_id
 }))
-const canEdit = computed(() => canEditMonth({ readOnly: isReadOnly.value, isTeacher: isTeacher.value, canApprove: canApproveHere.value, status: status.value }))
+const canEdit = computed(() => canEditMonth({
+  readOnly: isReadOnly.value, isTeacher: isTeacher.value, canApprove: canApproveHere.value, status: status.value,
+  isFieldSupervisor: isFieldSupervisor.value
+}))
 
 // الترشيح: يُمسح مع تبديل الحلقة/الشهر، ويُرفع إن فرغت خانتُه
 const outcomeFilter = ref<Outcome | null>(null)

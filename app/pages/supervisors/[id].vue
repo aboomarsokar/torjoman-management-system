@@ -33,7 +33,7 @@ const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async
 
 useSeoMeta({ title: () => data.value?.sup ? `${data.value.sup.full_name} — ترجمان` : 'تفاصيل المشرف — ترجمان' })
 
-// الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (الفائتةُ مشتقّة)
+// الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (المتأخّرةُ مشتقّة)
 const fmtDate = (iso: string) => formatDay(gazaDayOf(iso))
 const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'success' : c >= 70 ? 'info' : 'error'
 </script>

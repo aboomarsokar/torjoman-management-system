@@ -6,6 +6,7 @@
  */
 import { formatDay, periodLabel } from '~/utils/reportWindow'
 import { canEditTrip, formatAmount, isolateLtr, numberTrips, sumAmount, unpaid, type Trip } from '~/utils/transport'
+import { transportStats } from '~/utils/pageStats'
 
 const props = defineProps<{ year: number, month: number }>()
 
@@ -49,6 +50,7 @@ const rows = computed<Row[]>(() => numberTrips(trips.value ?? []).map(t => ({
   trip: t
 })))
 
+const stats = computed(() => transportStats(trips.value ?? []))
 const total = computed(() => formatAmount(sumAmount(trips.value ?? [])))
 const unpaidTotal = computed(() => formatAmount(sumAmount(unpaid(trips.value ?? []))))
 const label = computed(() => periodLabel(props.year, props.month))
@@ -109,6 +111,10 @@ async function confirmDelete() {
 
 <template>
   <div class="mine">
+    <UiStatStrip
+      :items="stats"
+      label="أرقام رحلاتي في الشهر"
+    />
     <div class="bar">
       <p class="sums">
         <span>المجموع: <bdi

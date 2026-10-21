@@ -224,21 +224,14 @@ describe('summarizeOutcomes', () => {
 describe('canApproveReport', () => {
   const male = { gender: 'male' as const, supervisor_id: 'sup1' }
   const female = { gender: 'female' as const, supervisor_id: 'sup1' }
-  it('المديرُ الإداري يعتمد كلَّ الحلقات', () => {
-    expect(canApproveReport('admin_manager', 'a', male)).toBe(true)
-    expect(canApproveReport('admin_manager', 'a', female)).toBe(true)
-  })
-  it('المديرة الإدارية للبنات وحدهنّ', () => {
-    expect(canApproveReport('women_admin', 'w', female)).toBe(true)
-    expect(canApproveReport('women_admin', 'w', male)).toBe(false)
-  })
-  it('المشرفُ الميدانيّ لحلقته وحدها', () => {
+  it('المشرفُ الميدانيّ لحلقته وحدها (ذكراً وأنثى)', () => {
     expect(canApproveReport('field_supervisor', 'sup1', male)).toBe(true)
+    expect(canApproveReport('field_supervisor', 'sup1', female)).toBe(true)
     expect(canApproveReport('field_supervisor', 'sup2', male)).toBe(false)
     expect(canApproveReport('field_supervisor', null, { gender: 'male', supervisor_id: null })).toBe(false)
   })
-  it('المديرُ الفنيّ والمعلّم ومشرفُ المشروع والمجهول لا يعتمدون', () => {
-    for (const r of ['technical_manager', 'teacher', 'project_supervisor', 'examiner', 'student', null]) {
+  it('لا يعتمد غيرُه: الإداريُّ والمديرةُ (لا احتياطَ منذ 2026-10-21) والفنيُّ والمعلّمُ ومشرفُ المشروع والمجهول', () => {
+    for (const r of ['admin_manager', 'women_admin', 'technical_manager', 'teacher', 'project_supervisor', 'examiner', 'student', null]) {
       expect(canApproveReport(r, 'sup1', male)).toBe(false)
     }
   })

@@ -4,6 +4,7 @@
  * مشتركة بين جدول الحلقات وبطاقاتها على الجوال.
  */
 import type { Database } from '~/types/database.types'
+import { SHOW_HALAQA_CLASSIFICATION } from '~/constants/halqat'
 
 type Gender = Database['public']['Enums']['gender_type']
 type Classification = Database['public']['Enums']['halaqa_classification']
@@ -18,6 +19,7 @@ const props = defineProps<{
 
 const GENDER_LABEL: Record<Gender, string> = { male: 'بنين', female: 'بنات' }
 const CLASS_LABEL: Record<Classification, string> = { a: 'الفئة أ', b: 'الفئة ب' }
+// التصنيفُ ملغًى حاليّاً (constants/halqat.ts)
 const time = computed(() => (props.dailyTime ? props.dailyTime.slice(0, 5) : null))
 </script>
 
@@ -43,7 +45,7 @@ const time = computed(() => (props.dailyTime ? props.dailyTime.slice(0, 5) : nul
           class="g-tag"
           :class="gender"
         >{{ GENDER_LABEL[gender] }}</span>
-        <span v-if="classification">{{ CLASS_LABEL[classification] }}</span>
+        <span v-if="SHOW_HALAQA_CLASSIFICATION && classification">{{ CLASS_LABEL[classification] }}</span>
         <!-- الفاصل على الغلاف (يمين النص)، والوقت معزولٌ داخله — كان الفاصل يقع يساره لاتجاه الأرقام -->
         <span v-if="time"><bdi class="num">{{ time }}</bdi></span>
       </span>

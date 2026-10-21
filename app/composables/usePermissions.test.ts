@@ -5,9 +5,9 @@ import { canApproveReportsRole } from './usePermissions'
 describe('canApproveReportsRole', () => {
   const expected: Record<string, boolean> = {
     project_supervisor: false,
-    admin_manager: true,
+    admin_manager: false,
     technical_manager: false,
-    women_admin: true,
+    women_admin: false,
     field_supervisor: true,
     examiner: false,
     teacher: false,

@@ -8,6 +8,7 @@
 import type { Database } from '~/types/database.types'
 import { CYCLE_COLUMNS, CYCLE_LABELS, STAGE_LABELS, toExamCycle } from '~/utils/exams/cycles'
 import type { ExamCycle } from '~/utils/exams/cycles'
+import { examPlanStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'خطة الاختبارات — ترجمان' })
@@ -132,6 +133,11 @@ const editTitle = computed(() => editing.value
         <UiSkeletonTable :columns="[{ key: 'a', label: 'الدورات' }, { key: 'b', label: 'عدد الأجزاء' }, { key: 'c', label: 'وصف السور' }]" />
       </template>
       <template v-else-if="tab === 'plan'">
+        <UiStatStrip
+          v-if="cycles?.length"
+          :items="examPlanStats(cycles)"
+          label="أرقام خطة الاختبارات"
+        />
         <UiEmptyState
           v-if="!cycles?.length"
           icon="i-lucide-list-ordered"

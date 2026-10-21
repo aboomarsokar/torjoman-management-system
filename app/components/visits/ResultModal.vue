@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * نتيجةُ الزيارة: المشرفُ صاحبها يرفعها (يومُ التنفيذ الفعليّ والتقييم والملاحظات)، والإدارةُ تطّلع.
- * يومُ التنفيذ يُختار (كان لحظةَ الحفظ، فمن رفع نتيجته في الغد سُجّل متأخّراً)، والقاعدةُ تشتقّ الحالة:
- * في يوم الموعد أو قبله = في وقتها، وبعده = متأخّرة. ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع.
+ * يومُ التنفيذ يُختار (كان لحظةَ الحفظ)، والقاعدةُ تخزّن done/late بمقارنته بالموعد، والعرضُ يجمعهما «تمّت»
+ * (قرار 2026-10-21: التأخّرُ في زيارةٍ نُفّذت لا يعني المستخدم). ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع.
  */
 import type { Database } from '~/types/database.types'
 import type { VisitRow } from '~/types/visits'
@@ -46,12 +46,8 @@ watch(() => [props.open, props.visit?.id] as const, async ([open]) => {
 
 /** حقولُ النتيجة تظهر لصاحبها، ولغيره متى رُفعت. */
 const hasResult = computed(() => props.canEdit || !!props.visit?.executed_at)
-const scheduledDay = computed(() => (props.visit ? gazaDayOf(props.visit.scheduled_at) : ''))
-/** ما ستُسجَّل به الزيارة لو حُفظ اليومُ المختار — يراه المشرف قبل الحفظ. */
-const outcome = computed(() => {
-  if (!result.executed_day) return null
-  return result.executed_day <= scheduledDay.value ? VISIT_STATUS.done : VISIT_STATUS.late
-})
+/** ما ستُعرض به الزيارة متى حُفظ يومُ تنفيذها: «تمّت» في موعدها أو بعده (قرار 2026-10-21). */
+const outcome = computed(() => (result.executed_day ? VISIT_STATUS.done : null))
 
 async function save() {
   if (!props.visit) return
@@ -107,7 +103,7 @@ async function save() {
         <template v-else>
           <UFormField
             label="يوم التنفيذ الفعلي"
-            :help="canEdit ? 'في يوم الموعد أو قبله = في وقتها، وبعده = متأخّرة.' : undefined"
+            :help="canEdit ? 'متى رُفعت النتيجة صارت الزيارة «تمّت»، ولو بعد موعدها.' : undefined"
           >
             <div class="exec-day">
               <input

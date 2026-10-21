@@ -4,6 +4,8 @@
  * إنشاء/تعديل/حذف + نشر/إخفاء + فتح للقراءة. رفع الصورة إلى Storage (اختياري).
  */
 import type { Database } from '~/types/database.types'
+import { newsStats } from '~/utils/pageStats'
+import { gazaToday } from '~/utils/reportWindow'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الأخبار — ترجمان' })
@@ -195,8 +197,13 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
         description="أنشئ أول خبر ليظهر للزوّار."
       />
 
-      <div
+      <UiStatStrip
         v-else
+        :items="newsStats(news, gazaToday())"
+        label="أرقام الأخبار"
+      />
+      <div
+        v-if="!pending && news?.length"
         class="grid"
       >
         <article

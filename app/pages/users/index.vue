@@ -8,6 +8,7 @@ import type { Database } from '~/types/database.types'
 import { staffCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 import { MANAGER_ROLES, roleLabel, STAFF_ROLES, type Role } from '~/constants/roles'
 import { displayPhotoPath } from '~/constants/profilePhoto'
+import { userStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'إدارة المستخدمين — ترجمان' })
@@ -217,6 +218,11 @@ async function confirmReset() {
       </div>
 
       <ClientOnly>
+        <UiStatStrip
+          v-if="!pending && (users ?? []).length"
+          :items="userStats(users ?? [])"
+          label="أرقام الحسابات"
+        />
         <UiSkeletonTable
           v-if="pending"
           :columns="columns"

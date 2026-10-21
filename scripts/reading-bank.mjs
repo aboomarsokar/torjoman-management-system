@@ -2,11 +2,14 @@
 /**
  * إدخالُ بنك أسئلة القراءة من ملفّ Excel (.xlsx) أو CSV.
  *
- *   node scripts/reading-bank.mjs <ملف> [--apply] [--replace]
+ *   node scripts/reading-bank.mjs <ملف> [--apply] [--replace] [--unit=<رقم>]
  *
  * · بلا --apply: فحصٌ فقط — يطبع أخطاءَ كلّ سطرٍ وعددَ أسئلة كلّ مقرّر، ولا يكتب شيئاً.
  * · --apply: يُدخل الأسئلة إن صحّ الملفّ كلّه. يرفض مقرّراً له أسئلةٌ قائمة إلا مع --replace،
  *   وعندها تُعطَّل القديمةُ (active=false) لا تُحذف — فتبقى درجاتُ المحاولات السابقة صحيحة.
+ *
+ * · --unit=<رقم>: يُدخل الأسئلةَ كلَّها في هذا المقرّر متجاهلاً عمودَ «رقم المقرّر» — للملفّ المرقَّم داخل كتابه
+ *   (مثل بنك «البناء العقدي» المرقَّم 1 وهو المقرّر 4 في المنصّة).
  *
  * الأعمدة: المقرّر، السؤال، أ، ب، ج، د، الإجابة (المنطقُ والفحصُ في server/utils/readingBank.ts).
  * يقرأ SUPABASE_URL وNUXT_SUPABASE_SECRET_KEY من .env (مفتاحُ الخدمة لا يُطبع).
@@ -30,6 +33,12 @@ const args = process.argv.slice(2)
 const file = args.find(a => !a.startsWith('--'))
 const apply = args.includes('--apply')
 const replace = args.includes('--replace')
+const unitArg = args.find(a => a.startsWith('--unit='))
+const forcedUnit = unitArg ? Number(unitArg.slice('--unit='.length)) : null
+if (unitArg && !(Number.isInteger(forcedUnit) && forcedUnit > 0)) {
+  console.error('--unit يحتاج رقمَ مقرّرٍ صحيحاً، مثل --unit=4')
+  process.exit(1)
+}
 if (!file) {
   console.error('الاستعمال: node scripts/reading-bank.mjs <ملف.xlsx|csv> [--apply] [--replace]')
   process.exit(1)
@@ -64,7 +73,8 @@ if (unitsError) {
   process.exit(1)
 }
 
-const plan = planBank(bankRecords(await readTable(resolve(file))), units.map(u => u.sort_order))
+const records = bankRecords(await readTable(resolve(file)))
+const plan = planBank(forcedUnit ? records.map(r => ({ ...r, record: { ...r.record, unit: String(forcedUnit) } })) : records, units.map(u => u.sort_order))
 
 console.log(`\nالأسطر الصحيحة: ${plan.rows.length} · الأخطاء: ${plan.errors.length}`)
 for (const [order, count] of [...plan.perUnit].sort((a, b) => a[0] - b[0])) {

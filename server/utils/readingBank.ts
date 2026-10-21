@@ -1,6 +1,7 @@
 /**
  * إدخالُ بنك أسئلة القراءة من جدول (Excel أو CSV) — منطقٌ نقيٌّ بلا شبكة يستعمله `scripts/reading-bank.mjs`.
- * الأعمدة: المقرّر (رقمه 1، 2، …)، والسؤال، والخيارات الأربعة (أ، ب، ج، د)، والإجابة (أ/ب/ج/د أو 1–4 أو A–D).
+ * الأعمدة: المقرّر (رقمه 1، 2، …)، والسؤال، والخيارات الأربعة (أ، ب، ج، د — أو «الخيار 1…4»)، والإجابة
+ * (أ/ب/ج/د أو 1–4 أو A–D، أو نصُّ الخيار الصحيح نفسه كما في بنك المستخدم 2026-10-21). والعمودُ الزائد (المرجع) يُتجاهل.
  * يرفض السطرَ الناقص والمقرّرَ غيرَ الموجود والخياراتِ المكرّرة والإجابةَ المجهولة والسؤالَ المكرّرَ في مقرّره،
  * ويُحصي أسئلةَ كلّ مقرّر (الاختبارُ يحتاج 20 على الأقلّ، والمطلوبُ 100). لا يكتب شيئاً حتى يصحّ الملفّ كلّه.
  */
@@ -9,16 +10,19 @@ import type { LineError } from './bulkAccounts'
 export interface BankQuestion { line: number, unitOrder: number, body: string, options: [string, string, string, string], correct: number }
 export interface BankPlan { rows: BankQuestion[], errors: LineError[], perUnit: Map<number, number> }
 
+// العناوينُ تُطابَق بلا تشكيل («رقم المقرّر» = «رقم المقرر»)
 const HEADERS: Record<string, string[]> = {
-  unit: ['المقرر', 'المقرّر', 'رقم المقرر', 'unit'],
+  unit: ['المقرر', 'رقم المقرر', 'unit'],
   body: ['السؤال', 'question'],
-  a: ['أ', 'ا', 'الخيار أ', 'الخيار الأول', 'a'],
-  b: ['ب', 'الخيار ب', 'الخيار الثاني', 'b'],
-  c: ['ج', 'الخيار ج', 'الخيار الثالث', 'c'],
-  d: ['د', 'الخيار د', 'الخيار الرابع', 'd'],
+  a: ['أ', 'ا', 'الخيار أ', 'الخيار الأول', 'الخيار 1', 'a'],
+  b: ['ب', 'الخيار ب', 'الخيار الثاني', 'الخيار 2', 'b'],
+  c: ['ج', 'الخيار ج', 'الخيار الثالث', 'الخيار 3', 'c'],
+  d: ['د', 'الخيار د', 'الخيار الرابع', 'الخيار 4', 'd'],
   answer: ['الإجابة', 'الاجابة', 'الإجابة الصحيحة', 'الاجابة الصحيحة', 'answer']
 }
 const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase()
+/** للمطابقة: بلا تشكيلٍ ولا تطويل. */
+const bare = (s: string) => norm(s).replace(/[ً-ْٰـ]/g, '')
 const ANSWERS: Record<string, number> = { أ: 0, ا: 0, ب: 1, ج: 2, د: 3, 1: 0, 2: 1, 3: 2, 4: 3, a: 0, b: 1, c: 2, d: 3 }
 const ARABIC_DIGITS: Record<string, string> = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' }
 const latinDigits = (s: string) => s.replace(/[٠-٩]/g, d => ARABIC_DIGITS[d] ?? d)
@@ -27,7 +31,7 @@ const latinDigits = (s: string) => s.replace(/[٠-٩]/g, d => ARABIC_DIGITS[d] ?
 export function bankRecords(table: string[][]): { line: number, record: Record<string, string> }[] {
   const [head, ...body] = table
   if (!head) return []
-  const keys = head.map(h => Object.entries(HEADERS).find(([, names]) => names.some(x => norm(x) === norm(h)))?.[0] ?? null)
+  const keys = head.map(h => Object.entries(HEADERS).find(([, names]) => names.some(x => bare(x) === bare(latinDigits(h))))?.[0] ?? null)
   return body
     .map((cells, i) => {
       const record: Record<string, string> = {}
@@ -39,6 +43,14 @@ export function bankRecords(table: string[][]): { line: number, record: Record<s
     .filter(r => Object.values(r.record).some(v => v !== ''))
 }
 
+/** مفتاحُ الإجابة: حرفٌ (أ–د) أو رقمٌ (1–4) أو حرفٌ لاتينيّ — وإلا نصُّ أحد الخيارات نفسُه (بلا تشكيل). */
+function resolveAnswer(raw: string, options: string[]): number | undefined {
+  const byKey = ANSWERS[norm(latinDigits(raw))]
+  if (byKey !== undefined) return byKey
+  const i = options.findIndex(o => o && bare(o) === bare(raw))
+  return i >= 0 ? i : undefined
+}
+
 /** أوّلُ خطأٍ في السطر، أو null. */
 function lineProblem(l: { unitOrder: number, known: Set<number>, body: string, options: string[], correct: number | undefined, duplicate: boolean }): string | null {
   if (!Number.isInteger(l.unitOrder) || l.unitOrder < 1) return 'رقم المقرّر غير صحيح'
@@ -46,7 +58,7 @@ function lineProblem(l: { unitOrder: number, known: Set<number>, body: string, o
   if (!l.body) return 'السؤال فارغ'
   if (l.options.some(o => !o)) return 'أحد الخيارات الأربعة فارغ'
   if (new Set(l.options.map(norm)).size < 4) return 'خياران متطابقان'
-  if (l.correct === undefined) return 'الإجابة غير مفهومة — اكتب أ أو ب أو ج أو د'
+  if (l.correct === undefined) return 'الإجابة غير مفهومة — اكتب أ أو ب أو ج أو د، أو نصَّ الخيار الصحيح كما هو'
   if (l.duplicate) return 'السؤال مكرّر في المقرّر نفسه'
   return null
 }
@@ -61,7 +73,7 @@ export function planBank(records: { line: number, record: Record<string, string>
   for (const { line, record: r } of records) {
     const unitOrder = Number(latinDigits(r.unit ?? ''))
     const options = [r.a, r.b, r.c, r.d].map(o => (o ?? '').trim())
-    const correct = ANSWERS[norm(latinDigits(r.answer ?? ''))]
+    const correct = resolveAnswer(r.answer ?? '', options)
     const body = (r.body ?? '').trim()
 
     const problem = lineProblem({ unitOrder, known, body, options, correct, duplicate: seen.has(`${unitOrder}|${norm(body)}`) })

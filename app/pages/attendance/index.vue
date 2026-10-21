@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * الحضور اليوميّ — يومُ الحلقة وغياباتُها بضغطة.
- * المعلم حلقتُه تلقائياً، والمعتمِدون/المديران يختارون حلقة. الحضورُ هو الأصل: تفتح «انعقدت الحلقة»
- * فيصير الجميع حاضراً، وتسجّل الغياباتِ وحدَها (بعذر / بلا عذر) والحفظُ فوريّ.
+ * الحضور اليوميّ — غياباتُ اليوم ثم «حفظ الحضور».
+ * المعلم حلقتُه تلقائياً، والمعتمِدون/المديران يختارون حلقة. الحضورُ هو الأصل: الجميع حاضرٌ افتراضاً،
+ * وتُسجَّل الغياباتُ وحدَها (بعذر / بلا عذر) في مسوّدةٍ يكتبها «حفظ الحضور»؛ والحلقةُ «انعقدت» في اليوم إذا
+ * سُجّل حضورُه — لا زرَّ منفصلاً (طلب المستخدم 2026-10-21). والتعديلُ غيرُ المحفوظ يُنبَّه إليه قبل المغادرة.
  * شهرٌ رصدُه معتمَد يُقفل (قراءة)، ومشرف المشروع قراءةٌ فقط. الحكمُ الأخير لـRLS وحارسَي القاعدة.
  */
 import type { Database } from '~/types/database.types'
@@ -41,7 +42,9 @@ watch(halaqat, (list) => {
 // UiSelect لا يقبل null: الحلقةُ الفارغة نصٌّ فارغ في المحدِّد
 const halaqaPick = computed<string>({
   get: () => halaqaId.value ?? '',
-  set: (v) => { halaqaId.value = v || null }
+  set: (v) => {
+    if (!keepsEdits()) halaqaId.value = v || null
+  }
 })
 const halaqaItems = computed(() => halaqat.value.map(h => ({ label: h.name, value: h.id })))
 const halaqaName = computed(() => halaqat.value.find(h => h.id === halaqaId.value)?.name ?? '')
@@ -66,28 +69,36 @@ watch(halaqaId, async (hid) => {
 }, { immediate: true })
 const enrolled = computed(() => students.value.filter(s => !s.enrollment_date || s.enrollment_date <= day.value))
 
-const { held, absences, locked, loading, load, setHeld, setAbsence } = useAttendanceDay(halaqaId, day)
+const { held, draft, locked, loading, saving, load, setDraft, isDirty, save, cancelDay: cancelHeldDay } = useAttendanceDay(halaqaId, day)
 watch([halaqaId, day], load, { immediate: true })
 
 const canWrite = computed(() => !isReadOnly.value && (isTeacher.value || canApprove.value) && !locked.value)
-const summary = computed(() => summarizeDay(enrolled.value, absences.value))
+const enrolledIds = computed(() => enrolled.value.map(s => s.id))
+const summary = computed(() => summarizeDay(enrolled.value, draft.value))
 const summaryText = computed(() => `حضر ${summary.value.present} · بعذر ${summary.value.excused} · بلا عذر ${summary.value.unexcused}`)
 
-// فتحُ اليوم فوريّ، أمّا إلغاؤه فبعد تأكيد لأنّه يمحو غياباته
-const confirmCancel = ref(false)
-const cancelling = ref(false)
-const heldModel = computed({
-  get: () => held.value,
-  set: (on: boolean) => {
-    if (on) setHeld(true)
-    else confirmCancel.value = true
+// «حفظ الحضور» يسجّل اليومَ (فتنعقد الحلقة به) والغيابات معاً — متاحٌ ليومٍ لم يُسجَّل ولو بلا تعديل
+const dirty = computed(() => isDirty(enrolledIds.value))
+const canSave = computed(() => canWrite.value && enrolled.value.length > 0 && (!held.value || dirty.value))
+const toast = useToast()
+const saveAttendance = async () => (await save(enrolledIds.value)) && toast.add({ title: 'حُفظ الحضور.', color: 'success', icon: 'i-lucide-circle-check' })
+
+// تعديلٌ لم يُحفظ: تأكيدٌ قبل تبديل اليوم أو الحلقة أو مغادرة الشاشة
+const { keepsEdits } = useUnsavedGuard(dirty, 'لديك تعديلٌ في الحضور لم يُحفظ — هل تتركه؟')
+const dayModel = computed<string>({
+  get: () => day.value,
+  set: (v) => {
+    if (!keepsEdits()) day.value = v
   }
 })
+
+// إلغاءُ يومٍ سُجّل خطأً — بعد تأكيد لأنّه يمحو غياباته
+const confirmCancel = ref(false)
+const cancelling = ref(false)
 async function cancelDay() {
   cancelling.value = true
-  await setHeld(false)
-  cancelling.value = false
-  confirmCancel.value = false
+  await cancelHeldDay()
+  cancelling.value = confirmCancel.value = false
 }
 
 const pending = computed(() => !role.value || halaqatPending.value || studentsLoading.value || loading.value)
@@ -97,7 +108,7 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
   <div class="att">
     <UiPageHeader
       title="الحضور اليوميّ"
-      subtitle="افتح يومَ الحلقة فيصير الجميعُ حاضراً، ثم سجّل الغياباتِ وحدَها."
+      subtitle="الجميعُ حاضرٌ افتراضاً — سجّل الغياباتِ وحدَها ثم «حفظ الحضور»."
     />
 
     <UiEmptyState
@@ -135,7 +146,7 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
         <div class="pf">
           <label>اليوم</label>
           <AttendanceDayPicker
-            v-model="day"
+            v-model="dayModel"
             :max="today"
           />
         </div>
@@ -169,29 +180,35 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
       </div>
 
       <template v-else-if="halaqaId">
-        <div class="card held">
-          <div class="held-text">
-            <strong>انعقدت الحلقة في هذا اليوم</strong>
-            <span class="muted">{{ held ? 'الجميع حاضر ما لم يُسجَّل غيابه.' : 'اليومُ غيرُ مفتوح — لا حضور ولا غياب فيه.' }}</span>
-          </div>
-          <USwitch
-            v-model="heldModel"
-            size="lg"
-            aria-label="انعقدت الحلقة في هذا اليوم"
-            :disabled="!canWrite"
+        <!-- حالُ اليوم: الحلقةُ «انعقدت» إذا سُجّل حضورُها — لا زرَّ منفصلاً -->
+        <div
+          class="day-state"
+          :class="{ on: held }"
+        >
+          <UIcon
+            :name="held ? 'i-lucide-calendar-check' : 'i-lucide-calendar-clock'"
+            class="size-5"
           />
+          <span>{{ held ? 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' : canWrite ? 'لم يُسجَّل حضور هذا اليوم بعد — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' : 'لم يُسجَّل حضور هذا اليوم.' }}</span>
+          <button
+            v-if="held && canWrite"
+            type="button"
+            class="cancel-link"
+            @click="confirmCancel = true"
+          >
+            إلغاء حضور هذا اليوم
+          </button>
         </div>
 
         <UiEmptyState
-          v-if="!held"
-          icon="i-lucide-calendar-x"
-          title="لم تنعقد الحلقة في هذا اليوم"
-          :description="canWrite ? 'فعّل «انعقدت الحلقة» لتسجيل الحضور والغياب.' : undefined"
-        />
-        <UiEmptyState
-          v-else-if="!enrolled.length"
+          v-if="!enrolled.length"
           icon="i-lucide-users"
           title="لا طلاب نشطون ملتحقون في هذا اليوم"
+        />
+        <UiEmptyState
+          v-else-if="!held && !canWrite"
+          icon="i-lucide-calendar-x"
+          title="لم تنعقد الحلقة في هذا اليوم"
         />
         <template v-else>
           <p
@@ -208,22 +225,42 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
             >
               <span class="name">{{ s.full_name }}</span>
               <AttendanceStatusSegment
-                :model-value="absences[s.id] ?? 'present'"
+                :model-value="draft[s.id] ?? 'present'"
                 :name="s.full_name"
                 :disabled="!canWrite"
-                @update:model-value="setAbsence(s.id, $event)"
+                @update:model-value="setDraft(s.id, $event)"
               />
             </li>
           </ul>
+
+          <div
+            v-if="canWrite"
+            class="save-bar"
+          >
+            <span
+              class="save-note"
+              :class="{ warn: dirty }"
+            >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
+            <UButton
+              label="حفظ الحضور"
+              icon="i-lucide-save"
+              color="primary"
+              size="lg"
+              :loading="saving"
+              :disabled="!canSave"
+              :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
+              @click="saveAttendance"
+            />
+          </div>
         </template>
       </template>
     </template>
 
     <UiConfirmModal
       v-model:open="confirmCancel"
-      title="إلغاء يوم الحلقة؟"
-      message="سيُحذف هذا اليومُ وتُمحى الغياباتُ المسجّلة فيه، ولا رجوع عن ذلك."
-      confirm-label="إلغاء اليوم"
+      title="إلغاء حضور هذا اليوم؟"
+      message="يُعدّ اليومُ كأنّ الحلقةَ لم تنعقد فيه، وتُمحى الغياباتُ المسجّلة، ولا رجوع عن ذلك."
+      confirm-label="إلغاء الحضور"
       :loading="cancelling"
       @confirm="cancelDay"
     />
@@ -240,9 +277,14 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
 .locked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 
-.held { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.held-text { display: flex; flex-direction: column; gap: 4px; font-size: 16px; color: var(--ink); }
-.muted { font-size: 14px; font-weight: 300; color: var(--ink-2); }
+.day-state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--blue-soft); color: var(--blue-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
+.day-state.on { background: var(--green-soft); color: var(--green-ink); }
+.day-state > span { flex: 1 1 220px; }
+.cancel-link { border: none; background: none; padding: 0; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--err); text-decoration: underline; cursor: pointer; min-height: 44px; }
+
+.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; padding: 12px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
+.save-note { font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.save-note.warn { color: var(--err); }
 
 .summary { margin: 0 4px 12px; font-size: 15px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .list { list-style: none; margin: 0; padding: 6px 20px; }
@@ -250,5 +292,8 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
 .row + .row { border-top: 1px solid var(--line); }
 .name { font-size: 15.5px; font-weight: 600; color: var(--ink); min-width: 0; }
 
-@media (max-width: 520px) { .row { flex-direction: column; align-items: stretch; gap: 8px; } }
+@media (max-width: 520px) {
+  .row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .save-bar :deep(button) { flex: 1 1 100%; }
+}
 </style>

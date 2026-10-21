@@ -18,7 +18,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { heading: 'البرامج المصاحبة' })
-const { journey, settings } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
+const { journey, settings, coverUrls } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
 const { busy, download } = useReadingAdmin()
 
 const lastResult = computed(() => {
@@ -76,8 +76,32 @@ const PACE = {
         آخرُ محاولة: {{ lastResult }}٪ — النجاح من {{ settings.reading_pass_mark }}٪
       </div>
 
+      <!-- زرُّ التنزيل غلافُ المقرّر نفسُه (طلب المستخدم)؛ وبلا غلافٍ زرٌّ عاديّ -->
+      <button
+        v-if="journey.due.pdfPath && coverUrls[journey.due.id]"
+        type="button"
+        class="cover"
+        :disabled="busy"
+        :aria-label="`تنزيل ${journey.due.title} (PDF)`"
+        @click="download(journey.due)"
+      >
+        <img
+          :src="coverUrls[journey.due.id]"
+          alt=""
+          class="cover-img"
+          loading="lazy"
+        >
+        <span class="cover-cta">
+          <UIcon
+            :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-download'"
+            class="size-5"
+            :class="{ 'animate-spin': busy }"
+          />
+          تنزيل المقرّر (PDF)
+        </span>
+      </button>
       <div
-        v-if="journey.due.pdfPath"
+        v-else-if="journey.due.pdfPath"
         class="rc-btns"
       >
         <UButton
@@ -149,6 +173,12 @@ h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }
 .rc-unit { font-size: 19px; font-weight: 800; color: var(--ink); }
 .rc-scope { font-size: 14.5px; color: var(--ink-2); line-height: 1.7; }
 .rc-last { font-size: 13.5px; color: var(--ink-3); }
+.cover { position: relative; display: block; width: 100%; max-width: 280px; aspect-ratio: 612 / 792; margin-top: 12px; padding: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface-2); box-shadow: var(--shadow); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.cover:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.cover:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.cover:disabled { cursor: progress; }
+.cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-cta { position: absolute; inset-inline: 10px; bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; border-radius: 12px; background: var(--primary); color: var(--on-primary); font-size: 15px; font-weight: 700; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
 .rc-btns { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .rc-action { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .rc-wait { margin: 0; display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--err); }

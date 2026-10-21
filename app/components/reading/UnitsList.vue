@@ -11,23 +11,24 @@ interface Props {
 }
 
 defineProps<Props>()
-const { units, refreshUnits } = useReadingUnits()
-const { busy, download, uploadPdf } = useReadingAdmin()
+const { units, refreshUnits, coverUrls } = useReadingUnits()
+const { busy, download, uploadPdf, uploadCover } = useReadingAdmin()
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const coverInput = ref<HTMLInputElement | null>(null)
 const target = ref<number | null>(null)
 const addUnitOpen = ref(false)
 const addBookOpen = ref(false)
 
-function pickFor(unitId: number) {
+function pickFor(unitId: number, kind: 'pdf' | 'cover') {
   target.value = unitId
-  fileInput.value?.click()
+  ;(kind === 'pdf' ? fileInput : coverInput).value?.click()
 }
 
-async function onPick(event: Event) {
+async function onPick(event: Event, kind: 'pdf' | 'cover') {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (file && target.value !== null && await uploadPdf(target.value, file)) await refreshUnits()
+  if (file && target.value !== null && await (kind === 'pdf' ? uploadPdf : uploadCover)(target.value, file)) await refreshUnits()
   input.value = ''
 }
 
@@ -41,7 +42,14 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
       type="file"
       accept="application/pdf"
       class="hidden"
-      @change="onPick"
+      @change="onPick($event, 'pdf')"
+    >
+    <input
+      ref="coverInput"
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      class="hidden"
+      @change="onPick($event, 'cover')"
     >
     <p
       v-if="!units?.length"
@@ -55,7 +63,17 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
         :key="u.id"
         class="row"
       >
-        <span class="n">{{ u.sort_order }}</span>
+        <img
+          v-if="coverUrls[u.id]"
+          :src="coverUrls[u.id]"
+          alt=""
+          class="thumb"
+          loading="lazy"
+        >
+        <span
+          v-else
+          class="n"
+        >{{ u.sort_order }}</span>
         <div class="body">
           <div class="title">
             {{ u.title }}
@@ -89,7 +107,16 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
             :variant="u.pdfPath ? 'ghost' : 'solid'"
             :loading="busy && target === u.id"
             :ui="{ base: 'min-h-11 rounded-xl justify-center' }"
-            @click="pickFor(u.id)"
+            @click="pickFor(u.id, 'pdf')"
+          />
+          <UButton
+            v-if="manage"
+            :label="u.coverPath ? 'استبدال الغلاف' : 'رفع الغلاف'"
+            icon="i-lucide-image"
+            color="neutral"
+            variant="ghost"
+            :ui="{ base: 'min-h-11 rounded-xl justify-center' }"
+            @click="pickFor(u.id, 'cover')"
           />
         </div>
       </li>
@@ -115,7 +142,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
         @click="addBookOpen = true"
       />
       <p class="hint">
-        يُضاف المقرّر في آخر الخطّة، ثم يُرفع ملفّه. وبنكُ أسئلته يُدخل من ملفّ Excel.
+        يُضاف المقرّر في آخر الخطّة، ثم يُرفع ملفّه وغلافُه (صورةُ زرّ التنزيل). وبنكُ أسئلته يُدخل من ملفّ Excel.
       </p>
     </div>
 
@@ -138,6 +165,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
 ol { list-style: none; margin: 0; padding: 0; }
 .row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .row:last-child { border-bottom: none; }
+.thumb { flex: none; width: 46px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
 .n { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--blue-soft); color: var(--blue-ink); font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
 .body { flex: 1 1 220px; min-width: 0; }
 .title { font-weight: 700; color: var(--ink); font-size: 15.5px; }

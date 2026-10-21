@@ -2,18 +2,24 @@
 /**
  * رفعُ ملفّ PDF لمقرّرٍ من البرامج المصاحبة (بديلٌ من سطر الأوامر لصفحة المدير).
  *
- *   node scripts/reading-unit-pdf.mjs <رقم المقرّر> <ملف.pdf>
+ *   node scripts/reading-unit-pdf.mjs <رقم المقرّر> <ملف.pdf> [--cover-only]
  *
- * يرفع إلى المستودع الخاصّ `reading-books` باسم `units/<id>.pdf` (استبدالاً إن وُجد) ويثبّت `pdf_path`.
+ * يرفع إلى المستودع الخاصّ `reading-books` باسم `units/<id>.pdf` (استبدالاً إن وُجد) ويثبّت `pdf_path`،
+ * ويستخرج الصفحةَ الأولى غلافاً (`sips` على macOS، JPEG بعرض 600) فيرفعه `covers/<id>.jpg` ويثبّت `cover_path`.
+ * `--cover-only`: الغلافُ وحده بلا إعادة رفع الملفّ.
  * يقرأ SUPABASE_URL وNUXT_SUPABASE_SECRET_KEY من .env (مفتاحُ الخدمة لا يُطبع).
  */
-import { readFileSync, statSync } from 'node:fs'
+import { readFileSync, statSync, mkdtempSync, rmSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const [order, file] = process.argv.slice(2)
+const [order, file] = process.argv.slice(2).filter(a => !a.startsWith('--'))
+const coverOnly = process.argv.includes('--cover-only')
 if (!order || !file) {
   console.error('الاستعمال: node scripts/reading-unit-pdf.mjs <رقم المقرّر> <ملف.pdf>')
   process.exit(1)
@@ -36,15 +42,34 @@ if (error || !unit) {
   process.exit(1)
 }
 
-const path = `units/${unit.id}.pdf`
-const { error: upError } = await supabase.storage.from('reading-books').upload(path, bytes, { contentType: 'application/pdf', upsert: true })
-if (upError) {
-  console.error('فشل الرفع:', upError.message)
-  process.exit(1)
+/** يرفع إلى المستودع ويثبّت العمود، أو يخرج برسالة. */
+async function put(path, body, contentType, column) {
+  const { error: upError } = await supabase.storage.from('reading-books').upload(path, body, { contentType, upsert: true })
+  if (upError) {
+    console.error('فشل الرفع:', upError.message)
+    process.exit(1)
+  }
+  const { error: setError } = await supabase.from('reading_units').update({ [column]: path }).eq('id', unit.id)
+  if (setError) {
+    console.error('رُفع الملفّ وتعذّر تثبيت مساره:', setError.message)
+    process.exit(1)
+  }
 }
-const { error: setError } = await supabase.from('reading_units').update({ pdf_path: path }).eq('id', unit.id)
-if (setError) {
-  console.error('رُفع الملفّ وتعذّر تثبيت مساره:', setError.message)
-  process.exit(1)
+
+if (!coverOnly) {
+  await put(`units/${unit.id}.pdf`, bytes, 'application/pdf', 'pdf_path')
+  console.log(`رُفع ملفّ ${unit.title} (${(statSync(resolve(file)).size / 1048576).toFixed(1)} م.ب) ← units/${unit.id}.pdf`)
 }
-console.log(`رُفع ملفّ ${unit.title} (${(statSync(resolve(file)).size / 1048576).toFixed(1)} م.ب) ← ${path}`)
+
+// الغلاف: الصفحةُ الأولى بـsips (macOS) — JPEG بعرض 600
+const dir = mkdtempSync(join(tmpdir(), 'reading-cover-'))
+try {
+  const out = join(dir, 'cover.jpg')
+  execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '80', '--resampleWidth', '600', resolve(file), '--out', out], { stdio: 'ignore' })
+  await put(`covers/${unit.id}.jpg`, readFileSync(out), 'image/jpeg', 'cover_path')
+  console.log(`رُفع غلاف ${unit.title} ← covers/${unit.id}.jpg`)
+} catch (err) {
+  console.error('تعذّر استخراج الغلاف (يحتاج macOS):', err.message)
+} finally {
+  rmSync(dir, { recursive: true, force: true })
+}

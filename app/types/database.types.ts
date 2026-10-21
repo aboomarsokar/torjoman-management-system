@@ -1531,6 +1531,7 @@ export type Database = {
       }
       reading_units: {
         Row: {
+          cover_path: string | null
           created_at: string
           id: number
           pdf_path: string | null
@@ -1538,6 +1539,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          cover_path?: string | null
           created_at?: string
           id?: never
           pdf_path?: string | null
@@ -1545,6 +1547,7 @@ export type Database = {
           title: string
         }
         Update: {
+          cover_path?: string | null
           created_at?: string
           id?: never
           pdf_path?: string | null

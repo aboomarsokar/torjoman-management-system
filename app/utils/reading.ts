@@ -10,8 +10,8 @@ const MS_PER_DAY = 24 * 3600 * 1000
 const DAYS_PER_MONTH = 30.4
 
 export interface ReadingPart { book: string, author: string | null, page_from: number, page_to: number }
-/** `pdfPath`: ملفُّ المقرّر في المستودع الخاصّ (`units/<id>.pdf`) أو null إن لم يُرفع بعد. */
-export interface ReadingUnit { id: number, sort_order: number, title: string, parts: ReadingPart[], pdfPath?: string | null }
+/** `pdfPath`: ملفُّ المقرّر في المستودع الخاصّ (`units/<id>.pdf`)، و`coverPath` غلافُه (`covers/<id>.jpg`) — null ما لم يُرفعا. */
+export interface ReadingUnit { id: number, sort_order: number, title: string, parts: ReadingPart[], pdfPath?: string | null, coverPath?: string | null }
 export interface ReadingAttempt {
   id: string
   unit_id: number

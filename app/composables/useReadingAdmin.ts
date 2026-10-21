@@ -31,6 +31,18 @@ export function pdfFileError(file: { type: string, size: number, name: string })
   return null
 }
 
+/** حدُّ صورة الغلاف. */
+export const READING_COVER_MAX_BYTES = 3 * 1024 * 1024
+const COVER_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+
+/** امتدادُ الغلاف من نوعه، أو خطأٌ بالعربية. */
+export function coverFileCheck(file: { type: string, size: number }): { ext: string } | { error: string } {
+  const ext = COVER_TYPES[file.type]
+  if (!ext) return { error: 'الغلاف يجب أن يكون صورة JPG أو PNG أو WEBP.' }
+  if (file.size > READING_COVER_MAX_BYTES) return { error: 'صورة الغلاف أكبر من 3 م.ب.' }
+  return { ext }
+}
+
 export interface PartDraft { bookId: number | undefined, from: number | string, to: number | string }
 
 /** خطأُ أجزاء المقرّر الجديد، أو null: كتابٌ لكلّ جزء، وصفحاتٌ صحيحةٌ ضمن الكتاب. */
@@ -96,6 +108,25 @@ export function useReadingAdmin() {
     return !!ok
   }
 
+  /** يرفع غلافَ المقرّر (صورة) ويثبّت مساره — يظهر خلفيةً لزرّ التنزيل. */
+  async function uploadCover(unitId: number, file: File): Promise<boolean> {
+    const check = coverFileCheck(file)
+    if ('error' in check) {
+      toast.add({ title: check.error, color: 'error', icon: 'i-lucide-circle-alert' })
+      return false
+    }
+    const ok = await withBusy(async () => {
+      const path = `covers/${unitId}.${check.ext}`
+      const { error } = await supabase.storage.from(READING_BUCKET).upload(path, file, { contentType: file.type, upsert: true })
+      if (error) throw error
+      const { error: setError } = await supabase.from('reading_units').update({ cover_path: path }).eq('id', unitId)
+      if (setError) throw setError
+      return true
+    })
+    if (ok) toast.add({ title: 'رُفع الغلاف.', color: 'success', icon: 'i-lucide-circle-check' })
+    return !!ok
+  }
+
   /** يضيف مقرّراً في آخر الخطّة بأجزائه. */
   async function addUnit(nextOrder: number, parts: PartDraft[]): Promise<boolean> {
     const ok = await withBusy(async () => {
@@ -131,5 +162,5 @@ export function useReadingAdmin() {
     return !!ok
   }
 
-  return { busy, download, uploadPdf, addUnit, addBook }
+  return { busy, download, uploadPdf, uploadCover, addUnit, addBook }
 }

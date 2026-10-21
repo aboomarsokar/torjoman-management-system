@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { partsError, pdfFileError, unitPdfPath, unitTitle } from './useReadingAdmin'
+import { coverFileCheck, partsError, pdfFileError, unitPdfPath, unitTitle } from './useReadingAdmin'
 
 describe('إدارة البرامج المصاحبة', () => {
   it('تسميةُ المقرّر بالترتيب، وبالرقم بعد الثاني عشر', () => {
@@ -17,6 +17,13 @@ describe('إدارة البرامج المصاحبة', () => {
     expect(pdfFileError({ type: '', size: 1e6, name: 'B.PDF' })).toBeNull()
     expect(pdfFileError({ type: 'image/png', size: 1e6, name: 'a.png' })).toBe('الملفّ يجب أن يكون PDF.')
     expect(pdfFileError({ type: 'application/pdf', size: 60 * 1024 * 1024, name: 'a.pdf' })).toBe('الملفّ أكبر من 50 م.ب.')
+  })
+
+  it('الغلاف: صورةٌ بامتداد نوعها، وحتى 3 م.ب', () => {
+    expect(coverFileCheck({ type: 'image/jpeg', size: 1e6 })).toEqual({ ext: 'jpg' })
+    expect(coverFileCheck({ type: 'image/webp', size: 1e6 })).toEqual({ ext: 'webp' })
+    expect(coverFileCheck({ type: 'application/pdf', size: 1e6 })).toEqual({ error: 'الغلاف يجب أن يكون صورة JPG أو PNG أو WEBP.' })
+    expect(coverFileCheck({ type: 'image/png', size: 4 * 1024 * 1024 })).toEqual({ error: 'صورة الغلاف أكبر من 3 م.ب.' })
   })
 
   it('أجزاء المقرّر: كتابٌ وصفحاتٌ صحيحة ضمن الكتاب', () => {

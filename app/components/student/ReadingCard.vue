@@ -42,7 +42,7 @@ const PACE = {
         class="size-5"
       /></span>
       <h3 id="rc-title">
-        مقرّر القراءة
+        البرامج المصاحبة
       </h3>
       <span
         v-if="journey.pace"
@@ -56,7 +56,7 @@ const PACE = {
       v-if="!journey.total"
       class="muted"
     >
-      لم تُضبط مقرّرات القراءة بعد.
+      لم تُضبط مقرّرات البرامج المصاحبة بعد.
     </p>
 
     <template v-else-if="journey.due">
@@ -112,7 +112,7 @@ const PACE = {
       v-else
       class="rc-done"
     >
-      أتمّ مقرّرات القراءة كلّها 🎉
+      أتمّ مقرّرات البرامج المصاحبة كلّها 🎉
     </p>
   </section>
 </template>

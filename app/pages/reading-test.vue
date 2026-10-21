@@ -83,7 +83,7 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
           v-else-if="journey.total && !journey.due"
           class="done"
         >
-          أتممتَ مقرّرات القراءة كلّها 🎉
+          أتممتَ مقرّرات البرامج المصاحبة كلّها 🎉
         </p>
         <ul class="facts">
           <li><strong>{{ settings.reading_test_questions }}</strong> سؤالاً من بنك المقرّر، لكلّ سؤالٍ أربعة خيارات</li>

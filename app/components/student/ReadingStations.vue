@@ -24,13 +24,13 @@ const { journey } = useReadingPlan(() => ({ studentId: props.studentId, enrollme
         name="i-lucide-library"
         class="size-5"
       /></span>
-      مقرّرات القراءة
+      البرامج المصاحبة
     </h3>
     <p
       v-if="!journey.stations.length"
       class="none"
     >
-      لم تُضبط مقرّرات القراءة بعد.
+      لم تُضبط مقرّرات البرامج المصاحبة بعد.
     </p>
     <ol v-else>
       <li

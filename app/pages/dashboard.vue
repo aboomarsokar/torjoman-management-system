@@ -101,7 +101,6 @@ type SHalqa = { id: string, name: string, teacher: string, students: number }
 type SVisit = { id: string, halqa: string, scheduled_at: string }
 const supHalqat = ref<SHalqa[]>([])
 const supVisits = ref<SVisit[]>([])
-const supPendingExams = ref(0)
 
 async function loadSupervisorData() {
   try {
@@ -131,9 +130,6 @@ async function loadSupervisorData() {
       .order('scheduled_at', { ascending: true }).limit(8)
       .returns<{ id: string, scheduled_at: string, halaqa: { name: string } | null }[]>()
     supVisits.value = (visits ?? []).map(v => ({ id: v.id, halqa: v.halaqa?.name ?? '—', scheduled_at: v.scheduled_at }))
-
-    const { data: items } = await supabase.from('exam_list_items').select('id, exam_results(id)').returns<{ id: string, exam_results: { id: string }[] }[]>()
-    supPendingExams.value = (items ?? []).filter(i => !i.exam_results?.length).length
   } catch (err) {
     handle(err)
   }
@@ -291,7 +287,8 @@ const settingCards = [
       <template v-else-if="isSupervisor">
         <ClientOnly>
           <!-- بطاقات إحصائية -->
-          <div class="stats stats-3">
+          <!-- رصدُ الاختبارات للمختبِر لا للمشرف، فلا بطاقةَ له هنا (طلب المستخدم 2026-10-21) -->
+          <div class="stats stats-2">
             <UiStatCard
               icon="i-lucide-book-open"
               tone="blue"
@@ -304,13 +301,6 @@ const settingCards = [
               tone="green"
               :value="supVisits.length"
               label="زيارات قادمة"
-              stacked
-            />
-            <UiStatCard
-              icon="i-lucide-clipboard-check"
-              tone="neutral"
-              :value="supPendingExams"
-              label="اختبارات تنتظر الرصد"
               stacked
             />
           </div>
@@ -395,28 +385,6 @@ const settingCards = [
                 </li>
               </ul>
             </div>
-          </div>
-
-          <!-- تنبيه الرصد -->
-          <div
-            v-if="supPendingExams"
-            class="card cta"
-          >
-            <div class="cta-text">
-              <UIcon
-                name="i-lucide-clipboard-check"
-                class="size-5"
-              />
-              لديك <strong>{{ supPendingExams }}</strong> بند اختبار بانتظار الرصد.
-            </div>
-            <UButton
-              to="/exams"
-              label="رصد الاختبارات"
-              color="primary"
-              size="lg"
-              icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
-            />
           </div>
         </ClientOnly>
       </template>
@@ -572,7 +540,7 @@ const settingCards = [
 .placeholder { padding: 40px; text-align: center; color: var(--ink-2); }
 
 /* لوحة المشرف */
-.stats-3 { grid-template-columns: repeat(3, 1fr); }
+.stats-2 { grid-template-columns: repeat(2, 1fr); }
 .stats-4 { grid-template-columns: repeat(4, 1fr); }
 .sup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
 .sec { padding: 20px 22px; }
@@ -584,10 +552,7 @@ const settingCards = [
 .row-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .row-title { font-weight: 600; color: var(--ink); }
 .row-sub { font-size: 13px; color: var(--ink-3); }
-.cta { padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.cta-text { display: flex; align-items: center; gap: 9px; font-size: 15px; color: var(--ink-2); }
-.cta-text strong { color: var(--ink); }
 
-@media (max-width: 1024px) { .stats { grid-template-columns: repeat(2, 1fr); } .settings { grid-template-columns: 1fr; } .sup-grid { grid-template-columns: 1fr; } .stats-3 { grid-template-columns: 1fr; } .stats-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1024px) { .stats { grid-template-columns: repeat(2, 1fr); } .settings { grid-template-columns: 1fr; } .sup-grid { grid-template-columns: 1fr; } .stats-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 620px) { .stats { grid-template-columns: 1fr; } }
 </style>

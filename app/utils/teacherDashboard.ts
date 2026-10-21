@@ -1,17 +1,26 @@
 /**
  * لوحة المعلم — حساباتٌ نقيّة ومختبَرة: حضورُ الشهر، والأكثرُ غياباً، وحالُ رصد الشهر الذي ينتظره،
- * ومن لم يُرصد له، وآخرُ شهرٍ معتمد، ونتائجُ اختبارات الشهر، والمستحقّون للاختبار.
+ * ومن لم يُرصد له، وآخرُ شهرٍ رُصد وتقييمُه بالخطة، ونتائجُ اختبارات الشهر، والمستحقّون للاختبار.
  * شهرُ الرصد هو نفسه الذي تفتح عليه شاشة «الإنجاز القرآني» (`defaultPeriod`)، والاستحقاقُ هو نفسه
  * في شاشة الترشيح (`buildNomineeRows`) — فلا تقول اللوحة غيرَ ما تقوله الشاشتان.
  */
 import { countAttendance } from '~/utils/quran/attendanceCount'
+import { summarizeOutcomes, type StudentMonthRow } from '~/utils/quran/month'
 import { defaultPeriod, type Period, type ReportStatus } from '~/utils/quran/screen'
 import type { NomineeRow } from '~/utils/exams/nomination'
 import { openingDay, periodLabel, shiftMonth } from '~/utils/reportWindow'
 import { isolateLtr } from '~/utils/transport'
 
 export interface DashStudent { id: string, full_name: string, enrollment_date: string | null }
-export interface DashReport { id: string, report_year: number, report_month: number, status: ReportStatus, return_note: string | null }
+export interface DashReport {
+  id: string
+  report_year: number
+  report_month: number
+  status: ReportStatus
+  return_note: string | null
+  /** مطلوبُ الشهر المثبَّت في التقرير (يغلب إعدادَ اليوم). */
+  target_pages_snapshot?: number | null
+}
 export interface DashRecord { student_id: string, pages_memorized: number | null, report: { report_year: number, report_month: number, status: string } | null }
 
 /** حضورُ الحلقة في الشهر: مجموعُ الحضور على مجموع الأيام (كلُّ طالبٍ منذ التحاقه). */
@@ -72,21 +81,44 @@ export function unrecordedStudents(students: DashStudent[], records: DashRecord[
   return students.filter(s => !recorded.has(s.id)).map(s => ({ id: s.id, name: s.full_name }))
 }
 
-/** آخرُ شهرٍ معتمد: صفحاتُه ومتوسّطُها لمن رُصد له؛ null إن لم يُعتمد شيء. */
-export function lastApprovedMonth(records: DashRecord[]) {
-  const approved = records.filter(r => r.report?.status === 'approved')
-  if (!approved.length) return null
-  const key = (r: DashRecord) => r.report!.report_year * 12 + r.report!.report_month
-  const top = Math.max(...approved.map(key))
-  const rows = approved.filter(r => key(r) === top)
-  const pages = rows.reduce((sum, r) => sum + (r.pages_memorized ?? 0), 0)
-  const first = rows[0]!.report!
+const monthKey = (y: number, m: number) => y * 12 + m
+
+/**
+ * آخرُ شهرٍ رُصد للحلقة بأيّ حالة (قرار المستخدم 2026-10-21: «حفظ آخر شهر مع تقييمه» لا آخرُ معتمَدٍ وحده):
+ * أحدثُ تقريرٍ للحلقة فيه سجلٌّ لطالبٍ من طلابها؛ null إن لم يُرصد شيء.
+ */
+export function lastRecordedReport(reports: DashReport[], records: DashRecord[]): DashReport | null {
+  const recorded = new Set(records.filter(r => r.report).map(r => monthKey(r.report!.report_year, r.report!.report_month)))
+  return [...reports]
+    .sort((a, b) => monthKey(b.report_year, b.report_month) - monthKey(a.report_year, a.report_month))
+    .find(r => recorded.has(monthKey(r.report_year, r.report_month))) ?? null
+}
+
+/** حالُ الشهر المعروض: «أُعيد» = مسوّدةٌ عليها ملاحظةُ المعتمِد. */
+export const MONTH_STATE_LABELS: Record<Exclude<RecordingState, 'none'>, string> = {
+  draft: 'مسودّة',
+  returned: 'أُعيد إليك',
+  submitted: 'بانتظار الاعتماد',
+  approved: 'معتمَد'
+}
+
+/** خلاصةُ شهرٍ مرصود: صفحاتُه ومتوسّطُها لمن رُصد له، وتقييمُه بالخطة (أنجز/مقصّر/لا يُقاس/لم يُرصد) كشاشة الإنجاز. */
+export function monthSummary(report: DashReport, rows: StudentMonthRow[]) {
+  const outcomes = summarizeOutcomes(rows)
+  const recorded = rows.filter(r => r.record)
+  const pages = recorded.reduce((sum, r) => sum + (r.record?.pagesMemorized ?? 0), 0)
   return {
-    label: periodLabel(first.report_year, first.report_month),
+    label: periodLabel(report.report_year, report.report_month),
+    state: (report.status === 'draft' && report.return_note ? 'returned' : report.status) as Exclude<RecordingState, 'none'>,
     pages,
-    perStudent: Math.round((pages / rows.length) * 10) / 10
+    perStudent: recorded.length ? Math.round((pages / recorded.length) * 10) / 10 : 0,
+    done: outcomes.done,
+    short: outcomes.short,
+    unmeasured: outcomes.unmeasured,
+    unrecorded: outcomes.unrecorded
   }
 }
+export type MonthSummary = ReturnType<typeof monthSummary>
 
 /** نتائجُ اختبارات الشهر: ناجحٌ ويعيد. */
 export function examTally(results: { passed: boolean | null }[]) {
@@ -138,8 +170,8 @@ export function teacherActions(i: ActionsInput): TeacherAction[] {
   // حضور اليوم (الجمعة بلا حلقة)
   if (!i.todayAttendance.isFriday) {
     out.push(i.todayAttendance.held
-      ? { key: 'att', tone: 'done', icon: 'i-lucide-calendar-check', title: 'فُتح يوم اليوم', detail: i.todayAttendance.absent ? `غاب ${i.todayAttendance.absent}` : 'الجميع حاضر', to: '/attendance' }
-      : { key: 'att', tone: 'todo', icon: 'i-lucide-calendar-plus', title: 'لم تفتح يوم اليوم بعد', detail: 'افتحه فيصير الجميع حاضراً، ثم سجّل الغيابات وحدها.', to: '/attendance', cta: 'افتح اليوم' })
+      ? { key: 'att', tone: 'done', icon: 'i-lucide-calendar-check', title: 'سُجّل حضور اليوم', detail: i.todayAttendance.absent ? `غاب ${i.todayAttendance.absent}` : 'الجميع حاضر', to: '/attendance' }
+      : { key: 'att', tone: 'todo', icon: 'i-lucide-calendar-plus', title: 'لم تسجّل حضور اليوم بعد', detail: 'افتح اليوم فيصير الجميع حاضراً، ثم سجّل الغيابات وحدها.', to: '/attendance', cta: 'سجّل الحضور' })
   }
 
   // رصد الشهر

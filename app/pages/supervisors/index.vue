@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * دليل المشرفين (§4.14أ) — للمدير الإداري والمدير الفني (ومشرف المشروع اطّلاعاً).
- * يعرض المشرفين الميدانيين + عدد حلقاتهم + نسبة الالتزام بالزيارات.
- * الالتزام = الزيارات التي تمّت (ولو بعد موعدها) ÷ (تمّت + متأخرة لم تُنفَّذ) × 100 (`visitCommitment`).
+ * يعرض المشرفين الميدانيين + عدد حلقاتهم + «إنجاز الزيارات» لشهر اليوم.
+ * الإنجاز = الزيارات المنفّذة ÷ (الحلقات النشطة × 2) × 100، لا يتجاوز 100٪ (`visitCompletion`، قرار 2026-10-21).
  */
 import type { Database } from '~/types/database.types'
 import { supervisorStats } from '~/utils/pageStats'
@@ -25,19 +25,24 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
   if (!ids.length) return []
 
   const [{ data: halqat }, { data: visits }] = await Promise.all([
-    supabase.from('halaqat').select('supervisor_id').in('supervisor_id', ids),
+    supabase.from('halaqat').select('supervisor_id, status').in('supervisor_id', ids),
     supabase.from('supervision_visits').select('supervisor_id, status, scheduled_at').in('supervisor_id', ids)
   ])
   const halqaCount: Record<string, number> = {}
-  for (const h of halqat ?? []) if (h.supervisor_id) halqaCount[h.supervisor_id] = (halqaCount[h.supervisor_id] ?? 0) + 1
-  // الالتزام بحَكَمٍ واحد مع شاشة الزيارات («المتأخّرة» مشتقّةٌ من موعدٍ فات يومُه بلا تنفيذ — لا تُخزَّن)
+  const activeCount: Record<string, number> = {}
+  for (const h of halqat ?? []) {
+    if (!h.supervisor_id) continue
+    halqaCount[h.supervisor_id] = (halqaCount[h.supervisor_id] ?? 0) + 1
+    if (h.status === 'active') activeCount[h.supervisor_id] = (activeCount[h.supervisor_id] ?? 0) + 1
+  }
+  // «إنجازُ الزيارات» لشهر اليوم بحَكَم شاشة الزيارات: المنفّذةُ ÷ (الحلقاتُ النشطة × 2)
+  const month = gazaToday().slice(0, 7)
   const bySup: Record<string, { status: string, scheduled_at: string }[]> = {}
-  for (const v of visits ?? []) (bySup[v.supervisor_id] ??= []).push(v)
-  const today = gazaToday()
+  for (const v of visits ?? []) if (gazaDayOf(v.scheduled_at).slice(0, 7) === month) (bySup[v.supervisor_id] ??= []).push(v)
   return (sups ?? []).map(s => ({
     id: s.id, name: s.full_name, employeeNumber: s.employee_number,
     halqat: halqaCount[s.id] ?? 0,
-    commitment: visitCommitment(bySup[s.id] ?? [], today)
+    commitment: visitCompletion(bySup[s.id] ?? [], activeCount[s.id] ?? 0).pct
   }))
   // يُعاد الجلب حين يصل الدور: عند التحميل الكامل يُستدعى قبل الملف فيردّ [] (كانت الصفحة تقول «لا مشرفين»)
 }, { server: false, default: () => [], watch: [canView] })
@@ -107,7 +112,7 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
               <span class="ml">حلقة</span>
             </div>
             <UBadge
-              :label="s.commitment != null ? `الالتزام ${s.commitment}%` : 'لا زيارات مستحقّة'"
+              :label="s.commitment != null ? `إنجاز الزيارات ${s.commitment}%` : 'لا حلقات نشطة'"
               :color="commitColor(s.commitment)"
               variant="soft"
             />

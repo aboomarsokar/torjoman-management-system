@@ -13,7 +13,7 @@ const supabase = useSupabaseClient<Database>()
 const today = gazaToday()
 
 type Sup = { id: string, full_name: string, employee_number: string | null, role: string }
-type Halqa = { id: string, name: string, teacher: { full_name: string } | null }
+type Halqa = { id: string, name: string, status: string, teacher: { full_name: string } | null }
 type Visit = { id: string, scheduled_at: string, executed_at: string | null, status: string, halaqa: { name: string } | null }
 
 const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async () => {
@@ -21,12 +21,15 @@ const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async
   if (!sup) return null
 
   const [{ data: halqat }, { data: visits }] = await Promise.all([
-    supabase.from('halaqat').select('id, name, teacher:teacher_id(full_name)').eq('supervisor_id', id.value).order('name').returns<Halqa[]>(),
+    supabase.from('halaqat').select('id, name, status, teacher:teacher_id(full_name)').eq('supervisor_id', id.value).order('name').returns<Halqa[]>(),
     supabase.from('supervision_visits').select('id, scheduled_at, executed_at, status, halaqa:halaqa_id(name)').eq('supervisor_id', id.value).order('scheduled_at', { ascending: false }).returns<Visit[]>()
   ])
 
   const vs = visits ?? []
-  const commitment = visitCommitment(vs, today)
+  // «إنجازُ الزيارات» لشهر اليوم: المنفّذةُ ÷ (الحلقاتُ النشطة × 2)
+  const month = today.slice(0, 7)
+  const active = (halqat ?? []).filter(h => h.status === 'active').length
+  const commitment = visitCompletion(vs.filter(v => gazaDayOf(v.scheduled_at).slice(0, 7) === month), active).pct
 
   return { sup, halqat: halqat ?? [], visits: vs.slice(0, 8), commitment }
 }, { server: false, default: () => null })
@@ -124,7 +127,7 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
               {{ data.commitment != null ? `${data.commitment}%` : '—' }}
             </div>
             <div class="sl">
-              التزام الزيارات
+              إنجاز الزيارات هذا الشهر
             </div>
           </div>
         </div>

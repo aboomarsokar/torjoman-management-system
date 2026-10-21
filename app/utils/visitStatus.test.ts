@@ -2,7 +2,7 @@
  * «متأخّرة» تُشتقّ من موعدٍ فات يومُه بتوقيت غزة بلا تنفيذ، و«تمّت» كلُّ منفّذة، والالتزامُ ما تمّ ÷ المستحقّة.
  */
 import { describe, expect, it } from 'vitest'
-import { executedAtFromDay, formatVisitMoment, gazaDayOf, visitCommitment, visitDisplayStatus } from './visitStatus'
+import { executedAtFromDay, formatVisitMoment, gazaDayOf, visitCompletion, visitDisplayStatus } from './visitStatus'
 
 describe('gazaDayOf', () => {
   it('منتصف الليل بتوقيت غزة يسبق غرينتش بيوم', () => {
@@ -25,20 +25,23 @@ describe('visitDisplayStatus', () => {
   })
 })
 
-describe('visitCommitment', () => {
-  const today = '2026-10-19'
-  it('القادمةُ لا تدخل المقام', () => {
-    expect(visitCommitment([{ status: 'scheduled', scheduled_at: '2026-10-25T09:00:00Z' }], today)).toBeNull()
+describe('visitCompletion', () => {
+  const visits = [
+    { status: 'done', scheduled_at: '2026-10-02T09:00:00Z' },
+    { status: 'late', scheduled_at: '2026-10-08T09:00:00Z' }, // نُفّذت بعد موعدها = تمّت
+    { status: 'done', scheduled_at: '2026-10-12T09:00:00Z' },
+    { status: 'scheduled', scheduled_at: '2026-10-10T09:00:00Z' } // متأخّرةٌ لم تُنفَّذ لا تُحسب
+  ]
+  it('المنفّذةُ ÷ (الحلقات × 2)', () => {
+    expect(visitCompletion(visits, 2)).toEqual({ done: 3, required: 4, pct: 75 })
   })
-  it('ما تمّ بأيّ تأخير ÷ (تمّت + متأخّرة لم تُنفَّذ)', () => {
-    const visits = [
-      { status: 'done', scheduled_at: '2026-10-02T09:00:00Z' },
-      { status: 'done', scheduled_at: '2026-10-05T09:00:00Z' },
-      { status: 'late', scheduled_at: '2026-10-08T09:00:00Z' }, // نُفّذت بعد موعدها = تمّت
-      { status: 'scheduled', scheduled_at: '2026-10-10T09:00:00Z' }, // متأخّرة
-      { status: 'scheduled', scheduled_at: '2026-10-30T09:00:00Z' } // قادمة
-    ]
-    expect(visitCommitment(visits, today)).toBe(75)
+  it('من جدول قليلاً ونفّذه لا يبلغ الكمال، والزائدُ لا يتجاوز 100٪', () => {
+    expect(visitCompletion(visits.slice(0, 1), 2)).toEqual({ done: 1, required: 4, pct: 25 })
+    expect(visitCompletion(visits, 1)).toEqual({ done: 3, required: 2, pct: 100 })
+  })
+  it('أكثرُ من شهرٍ يضاعف المطلوب، وبلا حلقاتٍ لا نسبة', () => {
+    expect(visitCompletion(visits, 2, 3)).toEqual({ done: 3, required: 12, pct: 25 })
+    expect(visitCompletion(visits, 0).pct).toBeNull()
   })
 })
 

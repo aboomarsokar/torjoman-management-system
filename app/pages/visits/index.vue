@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * الزيارات الإشرافية (§4.9 — ROADMAP #15): كلُّ مشرفٍ ميدانيّ يجدول زياراته لحلقاته ويرفع نتائجها،
- * والإدارةُ (المديران والمديرة ومشرف المشروع) تتابع: الشهرُ والمشرفُ فلتران، ونسبةُ الالتزام بالمواعيد،
+ * والإدارةُ (المديران والمديرة ومشرف المشروع) تتابع: الشهرُ والمشرفُ فلتران، و«إنجازُ الزيارات» (المنفّذةُ ÷ زيارتين لكلّ حلقة في الشهر)،
  * وتفاصيلُ كلّ زيارةٍ بسجلّ تغييرات موعدها وأسبابه. ثلاثُ حالات (`visitDisplayStatus`، قرار 2026-10-21):
  * مجدولة، ومتأخّرة (فات موعدُها بلا تنفيذ)، وتمّت (كلُّ منفّذة). والمشرفُ الميدانيّ لا يرى «الزائر» — هو الزائر.
  * الحذفُ لصاحب الزيارة وللمدير الإداري (تنظيف خطأ).
@@ -10,6 +10,7 @@ import type { Database } from '~/types/database.types'
 import type { VisitHalqaOption, VisitRow } from '~/types/visits'
 import type { VisitDisplayStatus } from '~/utils/visitStatus'
 import { roleLabel } from '~/constants/roles'
+import { VISIT_MAX } from '~/utils/visitForm'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
@@ -18,8 +19,10 @@ const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isFieldSupervisor } = usePermissions()
+const { isAdmin, isFieldSupervisor, isTeacher } = usePermissions()
 const canSchedule = computed(() => isFieldSupervisor.value)
+/** التقييم: مجموعُ النموذج «35 / 42»، وللزيارة القديمة تقييمُها النصّيّ. */
+const ratingText = (v: VisitRow) => v.score != null ? `${v.score} / ${VISIT_MAX}` : v.flow_rating || '—'
 /** موعدُ الزيارة ونتيجتُها لصاحبها المشرف الميداني وحده (visits_update) — المديران يطّلعون. */
 const canEditVisit = (v: VisitRow) => isFieldSupervisor.value && v.supervisor_id === profile.value?.id
 
@@ -34,7 +37,7 @@ const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>('visits-
 }, { server: false, default: () => [] })
 const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>('visits-halqat', async () => {
   const { data } = await supabase.from('halaqat')
-    .select('id, name, daily_time, supervisor_id, teacher:teacher_id(full_name)').order('name')
+    .select('id, name, daily_time, supervisor_id, status, teacher:teacher_id(full_name)').order('name')
     .returns<VisitHalqaOption[]>()
   return data ?? []
 }, { server: false, default: () => [] })
@@ -93,14 +96,21 @@ const statusItems = computed(() => {
   ]
 })
 const filtered = computed(() => scoped.value.filter(v => statusF.value === 'all' || display(v) === statusF.value))
+// المطلوبُ للإنجاز: حلقاتُ النطاق النشطةُ ذاتُ المشرف (المشرفُ والحلقةُ المختاران) × 2 × أشهرُ العرض
+const requiredHalqat = computed(() => (halqat.value ?? []).filter(h =>
+  h.status === 'active' && !!h.supervisor_id
+  && (supervisorF.value === 'all' || h.supervisor_id === supervisorF.value)
+  && (halqaF.value === 'all' || h.id === halqaF.value)).length)
+const monthsShown = computed(() => period.value === 'all' ? new Set(scoped.value.map(periodOf)).size : 1)
 const stats = computed(() => {
   const list = scoped.value.map(display)
-  const commitment = visitCommitment(scoped.value, today)
+  const c = visitCompletion(scoped.value, requiredHalqat.value, monthsShown.value)
   return {
     scheduled: list.filter(s => s === 'scheduled').length,
     done: list.filter(s => s === 'done').length,
     overdue: list.filter(s => s === 'late').length,
-    commitment: commitment === null ? '—' : `${commitment}%`
+    completion: c.pct === null ? '—' : `${c.pct}%`,
+    completionSub: c.required ? `${c.done} من ${c.required}` : 'لا حلقات نشطة'
   }
 })
 // المشرفُ الميدانيّ يرى زياراته وحدها — هو الزائر فيها، فلا عمودَ «الزائر» له (طلب المستخدم 2026-10-21)
@@ -160,7 +170,7 @@ async function confirmDelete() {
   <div class="visits">
     <UiPageHeader
       title="الزيارات الإشرافية"
-      subtitle="جدولة الزيارات ومتابعة الالتزام بمواعيدها ونتائجها."
+      :subtitle="isTeacher ? 'زيارات حلقتك الإشرافية ونتائجها — افتح كلَّ نتيجةٍ وأقِرّ بالاطّلاع عليها.' : 'جدولة الزيارات ومتابعة إنجازها ونتائجها.'"
     >
       <template #actions>
         <UButton
@@ -184,8 +194,9 @@ async function confirmDelete() {
         aria-label="الشهر"
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
+      <!-- المعلم: حلقةٌ واحدة ومشرفُها — لا فلترَ للمشرف ولا للحلقة -->
       <UiSelect
-        v-if="!isFieldSupervisor"
+        v-if="!isFieldSupervisor && !isTeacher"
         v-model="supervisorF"
         :items="supervisorItems"
         size="xl"
@@ -194,6 +205,7 @@ async function confirmDelete() {
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect
+        v-if="!isTeacher"
         v-model="halqaF"
         :items="halqaItems"
         size="xl"
@@ -232,8 +244,9 @@ async function confirmDelete() {
       />
       <UiStatCard
         icon="i-lucide-gauge"
-        :value="stats.commitment"
-        label="الالتزام بالمواعيد"
+        :value="stats.completion"
+        label="إنجاز الزيارات"
+        :sub="stats.completionSub"
         tone="blue"
       />
     </div>
@@ -283,7 +296,14 @@ async function confirmDelete() {
           >{{ formatVisitMoment(row.scheduled_at) }}</span>
         </template>
         <template #rating="{ row }">
-          <span class="muted">{{ row.flow_rating || '—' }}</span>
+          <span
+            v-if="row.score != null"
+            class="strong"
+          >{{ ratingText(row) }}</span>
+          <span
+            v-else
+            class="muted"
+          >{{ ratingText(row) }}</span>
         </template>
         <template #status="{ row }">
           <UBadge
@@ -330,7 +350,8 @@ async function confirmDelete() {
             :fields="[
               { label: 'المعلّم', value: row.halaqa?.teacher?.full_name },
               ...(showVisitor ? [{ label: 'الزائر', value: row.supervisor?.full_name }] : []),
-              { label: 'التقييم', value: row.flow_rating, muted: !row.flow_rating }
+              { label: 'التقييم', value: ratingText(row), muted: row.score == null && !row.flow_rating },
+              ...(row.locked_at ? [{ label: 'اطّلاع المعلم', value: row.teacher_ack_at ? 'اطّلع' : 'لم يطّلع بعد', muted: !row.teacher_ack_at }] : [])
             ]"
           >
             <template #badge>

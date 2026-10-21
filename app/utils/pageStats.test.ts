@@ -49,8 +49,9 @@ describe('examResultStats', () => {
       { passed: true, total_score: 85 },
       { passed: null, total_score: null }
     ], 99)
-    expect(values(items)).toEqual({ all: 4, passed: 2, failed: 1, avg: '78.3 / 99' })
-    expect(items.find(i => i.key === 'passed')?.label).toBe('مجتازاً — 67٪')
+    expect(values(items)).toEqual({ all: 4, passed: 2, failed: 1, avg: '78.3' })
+    expect(items.find(i => i.key === 'avg')?.label).toBe('متوسّطُ العلامة من 99')
+    expect(items.find(i => i.key === 'passed')?.sub).toBe('67٪ من المحسوم')
   })
 })
 

@@ -4,3 +4,6 @@
  * `halaqat.classification` باقٍ في القاعدة بقيمته — يعود التصنيفُ بقلب هذه القيمة.
  */
 export const SHOW_HALAQA_CLASSIFICATION = false
+
+/** مدّةُ الحلقة اليومية بالدقائق — تُعرض «من … إلى …» بإضافتها إلى وقت البدء (`daily_time`). قرار المستخدم 2026-10-21. */
+export const HALAQA_DURATION_MINUTES = 120

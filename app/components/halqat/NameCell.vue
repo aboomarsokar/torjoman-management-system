@@ -20,7 +20,7 @@ const props = defineProps<{
 const GENDER_LABEL: Record<Gender, string> = { male: 'بنين', female: 'بنات' }
 const CLASS_LABEL: Record<Classification, string> = { a: 'الفئة أ', b: 'الفئة ب' }
 // التصنيفُ ملغًى حاليّاً (constants/halqat.ts)
-const time = computed(() => formatTime12(props.dailyTime) || null)
+const time = computed(() => formatHalaqaTime(props.dailyTime) || null)
 </script>
 
 <template>

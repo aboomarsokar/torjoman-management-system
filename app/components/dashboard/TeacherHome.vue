@@ -10,7 +10,7 @@ import { formatDay, gazaToday, periodLabel } from '~/utils/reportWindow'
 import { MONTH_STATE_LABELS, teacherActions, type MonthSummary } from '~/utils/teacherDashboard'
 import { OUTCOME_LABELS } from '~/utils/quran/plan'
 import { OUTCOME_COLORS } from '~/utils/quran/screen'
-import { formatTime12 } from '~/utils/time'
+import { formatHalaqaTime } from '~/utils/time'
 
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
 const day = (iso: string) => isolateLtr(formatDay(iso))
@@ -109,7 +109,7 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
           <h2>{{ d.halaqa.name }}</h2>
           <p>
             {{ d.studentCount }} طالب<template v-if="d.halaqa.daily_time">
-              · الموعد {{ formatTime12(d.halaqa.daily_time) }}
+              · الموعد {{ formatHalaqaTime(d.halaqa.daily_time) }}
             </template>
           </p>
         </div>

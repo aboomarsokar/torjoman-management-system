@@ -49,7 +49,7 @@ const fields = computed(() => {
   return [
     { label: 'الحلقة', value: dash(s.halaqa?.name) },
     { label: 'المعلّم', value: dash(s.halaqa?.teacher?.full_name) },
-    { label: 'الوقت اليومي', value: formatTime12(s.halaqa?.daily_time) || '—' },
+    { label: 'موعد الحلقة', value: formatHalaqaTime(s.halaqa?.daily_time) || '—' },
     { label: 'الأجزاء المثبتة', value: s.quran_parts != null ? `${s.quran_parts} جزء` : '—' },
     { label: 'الأحكام (التجويد)', value: dash(s.tajweed_level) }
   ]

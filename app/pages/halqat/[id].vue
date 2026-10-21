@@ -5,6 +5,7 @@
  * متاح للمدير والمشرف/الجودة ضمن نطاقهم (RLS).
  */
 import type { Database } from '~/types/database.types'
+import { SHOW_HALAQA_CLASSIFICATION } from '~/constants/halqat'
 import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { buildJourney, upcomingLabel, type CycleResultInput } from '~/utils/journey'
 
@@ -160,7 +161,7 @@ const today = gazaToday()
               variant="soft"
             />
             <UBadge
-              v-if="data.halqa.classification"
+              v-if="SHOW_HALAQA_CLASSIFICATION && data.halqa.classification"
               :label="CLASS_LABEL[data.halqa.classification]"
               color="neutral"
               variant="soft"

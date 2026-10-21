@@ -6,6 +6,7 @@
  * والمختبِر يُقترح تلقائياً حين يوجد مختبِرٌ نشطٌ واحدٌ من جنسها. الحكم الأخير لحارس القاعدة.
  */
 import type { Database } from '~/types/database.types'
+import { SHOW_HALAQA_CLASSIFICATION } from '~/constants/halqat'
 import { halaqaDeleteErrorMessage } from '~/utils/exams/nomination'
 
 definePageMeta({ layout: 'dashboard' })
@@ -488,7 +489,9 @@ async function confirmDelete() {
             </UFormField>
           </div>
           <div class="row">
+            <!-- التصنيفُ ملغًى حاليّاً (constants/halqat.ts): الإنشاءُ يحفظ «أ» افتراضاً والتعديلُ يُبقي القائم -->
             <UFormField
+              v-if="SHOW_HALAQA_CLASSIFICATION"
               label="التصنيف"
               name="classification"
               class="f"

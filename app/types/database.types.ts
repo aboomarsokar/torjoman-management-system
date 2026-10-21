@@ -817,6 +817,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           decisions: string | null
+          deferred_items: string | null
           id: string
           meeting_date: string
           status: Database["public"]["Enums"]["minutes_status"]
@@ -831,6 +832,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           decisions?: string | null
+          deferred_items?: string | null
           id?: string
           meeting_date: string
           status?: Database["public"]["Enums"]["minutes_status"]
@@ -845,6 +847,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           decisions?: string | null
+          deferred_items?: string | null
           id?: string
           meeting_date?: string
           status?: Database["public"]["Enums"]["minutes_status"]

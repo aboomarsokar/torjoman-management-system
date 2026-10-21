@@ -72,7 +72,8 @@ const mainNav: Item[] = [
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'] },
   { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'] },
-  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...SCOPED_STAFF, 'teacher'] }
+  // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
+  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'] }
 ]
 
 const managerNav: Item[] = [

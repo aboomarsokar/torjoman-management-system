@@ -12,9 +12,8 @@
 import { readFileSync, statSync, mkdtempSync, rmSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')

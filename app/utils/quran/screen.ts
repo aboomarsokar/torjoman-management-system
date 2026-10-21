@@ -75,10 +75,17 @@ export const NOTE_MAX = 500
 
 /**
  * هل يكتب صاحبُ الدور سجلّاتِ الشهر الآن؟ مرآةٌ لسياسات `quran_records`:
- * المعتمِدُ ما لم يُعتمد الشهر، والمعلمُ ما دام مسوّدةً (أو لم يبدأ)، ومشرفُ المشروع لا يكتب.
+ * المعتمِدُ ما لم يُعتمد الشهر، والمعلمُ ما دام مسوّدةً (أو لم يبدأ)، ومشرفُ المشروع لا يكتب،
+ * والمشرفُ الميدانيّ لا يكتب أيضاً — يعتمد ويعيد ولا يعدّل سجلَّ طالب (قرار 2026-10-21، `quran_records_supervisor_read_only_*`).
  */
-export function canEditMonth(input: { readOnly: boolean, isTeacher: boolean, canApprove: boolean, status: ReportStatus | null }): boolean {
-  if (input.readOnly) return false
+export function canEditMonth(input: {
+  readOnly: boolean
+  isTeacher: boolean
+  canApprove: boolean
+  status: ReportStatus | null
+  isFieldSupervisor?: boolean
+}): boolean {
+  if (input.readOnly || input.isFieldSupervisor) return false
   if (input.canApprove) return input.status !== 'approved'
   return input.isTeacher && (input.status === null || input.status === 'draft')
 }

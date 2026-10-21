@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { NomineeRow } from '~/utils/exams/nomination'
 import {
-  examEligible, examTally, frequentAbsentees, halaqaAttendance, lastApprovedMonth, recordingStatus, teacherActions, unrecordedStudents,
+  examEligible, examTally, frequentAbsentees, halaqaAttendance, lastRecordedReport, monthSummary, recordingStatus, teacherActions, unrecordedStudents,
   type DashRecord, type DashReport, type DashStudent
 } from './teacherDashboard'
+import type { StudentMonthRow } from '~/utils/quran/month'
 
 const students: DashStudent[] = [
   { id: 'a', full_name: 'أنس', enrollment_date: null },
@@ -101,14 +102,25 @@ describe('لوحة المعلم — المطلوب منك الآن', () => {
 })
 
 describe('لوحة المعلم — الحفظ والاختبارات', () => {
-  it('آخرُ شهرٍ معتمد: صفحاتُه ومتوسّطُها، والمسوّدةُ الأحدثُ لا تدخل', () => {
-    const records = [
-      rec('a', 2026, 8, 'approved', 10),
-      rec('a', 2026, 9, 'approved', 12), rec('c', 2026, 9, 'approved', 7),
-      rec('a', 2026, 10, 'draft', 30)
-    ]
-    expect(lastApprovedMonth(records)).toEqual({ label: '09-2026', pages: 19, perStudent: 9.5 })
-    expect(lastApprovedMonth([rec('a', 2026, 10, 'draft', 3)])).toBeNull()
+  it('آخرُ شهرٍ رُصد بأيّ حالة: المسوّدةُ الأحدثُ تغلب المعتمَدَ الأقدم، والتقريرُ الفارغ لا يُعدّ', () => {
+    const reports = [report(2026, 9, 'approved'), report(2026, 11, 'draft'), report(2026, 10, 'draft')]
+    const records = [rec('a', 2026, 9, 'approved', 12), rec('a', 2026, 10, 'draft', 30)]
+    expect(lastRecordedReport(reports, records)?.id).toBe('2026-10')
+    expect(lastRecordedReport(reports, [])).toBeNull()
+  })
+
+  it('خلاصةُ الشهر: الصفحاتُ ومتوسّطُها لمن رُصد له، والتقييمُ بالخطة، و«أُعيد» للمسوّدة المعادة', () => {
+    const plan = { required: 10, full: 10, basis: 'full' as const }
+    const row = (id: string, pages: number | null, outcome: StudentMonthRow['outcome']): StudentMonthRow => ({
+      studentId: id, name: id, recordedElsewhere: false, suggestedFrom: null, suggestedFromPrevious: false,
+      daysHeld: 20, daysAttended: 20, plan, outcome, juzDone: 0, khatm: false,
+      record: pages === null ? null : { id, from: null, to: null, pagesMemorized: pages, pagesReviewed: null, notes: null } as StudentMonthRow['record']
+    })
+    const rows = [row('a', 12, 'done'), row('b', 7, 'short'), row('c', null, 'unrecorded')]
+    expect(monthSummary(report(2026, 10, 'draft', 'راجع'), rows)).toEqual({
+      label: '10-2026', state: 'returned', pages: 19, perStudent: 9.5, done: 1, short: 1, unmeasured: 0, unrecorded: 1
+    })
+    expect(monthSummary(report(2026, 9, 'approved'), []).perStudent).toBe(0)
   })
 
   it('نتائجُ الشهر: ناجحٌ ويعيد', () => {

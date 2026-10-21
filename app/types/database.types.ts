@@ -1652,47 +1652,62 @@ export type Database = {
       supervision_visits: {
         Row: {
           created_at: string
+          criteria_scores: number[] | null
+          deductions: Json | null
           executed_at: string | null
           flow_rating: string | null
           halaqa_id: string
           id: string
           improvements: string | null
+          locked_at: string | null
           notes: string | null
           recommendations: string | null
           scheduled_at: string
+          score: number | null
           status: Database["public"]["Enums"]["visit_status"]
           strengths: string | null
           supervisor_id: string
+          teacher_ack_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          criteria_scores?: number[] | null
+          deductions?: Json | null
           executed_at?: string | null
           flow_rating?: string | null
           halaqa_id: string
           id?: string
           improvements?: string | null
+          locked_at?: string | null
           notes?: string | null
           recommendations?: string | null
           scheduled_at: string
+          score?: number | null
           status?: Database["public"]["Enums"]["visit_status"]
           strengths?: string | null
           supervisor_id: string
+          teacher_ack_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          criteria_scores?: number[] | null
+          deductions?: Json | null
           executed_at?: string | null
           flow_rating?: string | null
           halaqa_id?: string
           id?: string
           improvements?: string | null
+          locked_at?: string | null
           notes?: string | null
           recommendations?: string | null
           scheduled_at?: string
+          score?: number | null
           status?: Database["public"]["Enums"]["visit_status"]
           strengths?: string | null
           supervisor_id?: string
+          teacher_ack_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1729,6 +1744,101 @@ export type Database = {
           number?: number
         }
         Relationships: []
+      }
+      teacher_quality_months: {
+        Row: {
+          achievement: number | null
+          admin_notes: string | null
+          admin_notes_at: string | null
+          admin_notes_by: string | null
+          created_at: string
+          final: number | null
+          halaqa_id: string
+          id: string
+          locked_at: string | null
+          meetings_score: number
+          month: number
+          numbers: Json
+          quality: number | null
+          supervisor_id: string | null
+          supervisor_notes: string | null
+          teacher_ack_at: string | null
+          teacher_id: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          achievement?: number | null
+          admin_notes?: string | null
+          admin_notes_at?: string | null
+          admin_notes_by?: string | null
+          created_at?: string
+          final?: number | null
+          halaqa_id: string
+          id?: string
+          locked_at?: string | null
+          meetings_score: number
+          month: number
+          numbers: Json
+          quality?: number | null
+          supervisor_id?: string | null
+          supervisor_notes?: string | null
+          teacher_ack_at?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          achievement?: number | null
+          admin_notes?: string | null
+          admin_notes_at?: string | null
+          admin_notes_by?: string | null
+          created_at?: string
+          final?: number | null
+          halaqa_id?: string
+          id?: string
+          locked_at?: string | null
+          meetings_score?: number
+          month?: number
+          numbers?: Json
+          quality?: number | null
+          supervisor_id?: string | null
+          supervisor_notes?: string | null
+          teacher_ack_at?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_quality_months_admin_notes_by_fkey"
+            columns: ["admin_notes_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_quality_months_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_quality_months_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_quality_months_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transaction_attachments: {
         Row: {
@@ -1835,6 +1945,36 @@ export type Database = {
           },
         ]
       }
+      visit_deduction_items: {
+        Row: {
+          criterion: number
+          criterion_hint: string | null
+          criterion_label: string
+          key: string
+          label: string
+          per_time: number
+          sort_order: number
+        }
+        Insert: {
+          criterion: number
+          criterion_hint?: string | null
+          criterion_label: string
+          key: string
+          label: string
+          per_time: number
+          sort_order: number
+        }
+        Update: {
+          criterion?: number
+          criterion_hint?: string | null
+          criterion_label?: string
+          key?: string
+          label?: string
+          per_time?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       visit_reschedule_log: {
         Row: {
           changed_at: string
@@ -1875,6 +2015,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_quality_month: { Args: { p_id: string }; Returns: undefined }
+      acknowledge_visit: { Args: { p_visit: string }; Returns: undefined }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -1932,6 +2074,10 @@ export type Database = {
         }[]
       }
       my_student_id: { Args: never; Returns: string }
+      quality_month_preview: {
+        Args: { p_halaqa: string; p_month: number; p_year: number }
+        Returns: Json
+      }
       quran_page_of: {
         Args: { p_ayah: number; p_surah: number }
         Returns: number
@@ -1944,6 +2090,20 @@ export type Database = {
         Args: { p_note: string; p_statement: string }
         Returns: undefined
       }
+      save_quality_month: {
+        Args: {
+          p_halaqa: string
+          p_meetings: number
+          p_month: number
+          p_notes: string
+          p_year: number
+        }
+        Returns: string
+      }
+      set_quality_admin_notes: {
+        Args: { p_id: string; p_notes: string }
+        Returns: undefined
+      }
       set_transport_paid: {
         Args: { p_ids: string[]; p_paid: boolean }
         Returns: number
@@ -1953,6 +2113,8 @@ export type Database = {
         Args: { p_answers: Json; p_attempt: string }
         Returns: Json
       }
+      unlock_quality_month: { Args: { p_id: string }; Returns: undefined }
+      unlock_visit_result: { Args: { p_visit: string }; Returns: undefined }
       update_my_contact: {
         Args: {
           p_guardian_email: string

@@ -10,7 +10,13 @@ const props = defineProps<{
   label: string
   tone?: 'blue' | 'green' | 'neutral' | 'err'
   stacked?: boolean
+  /** سطرٌ ثانٍ تحت التسمية بخطٍّ أصغر، وأرقامُه بارزة. */
+  sub?: string
 }>()
+
+/** السطرُ الثاني قِطعاً: الأرقامُ (ومعها الكسر) تُميَّز عن الكلام. */
+const subParts = computed(() => (props.sub ?? '').split(/(\d+(?:[.,]\d+)?٪?%?)/).filter(Boolean)
+  .map(text => ({ text, num: /^\d/.test(text) })))
 
 const displayValue = ref(props.value)
 let rafId: number | null = null
@@ -55,12 +61,30 @@ onUnmounted(() => {
         class="size-6"
       />
     </div>
-    <div>
+    <div class="txt">
       <div class="num">
         {{ displayValue }}
       </div>
       <div class="lbl">
         {{ label }}
+      </div>
+      <!-- سطرٌ ثانٍ اختياريّ (مثل «4 من 4 مطلوبة»)، وأرقامُه بارزة -->
+      <div
+        v-if="sub"
+        class="sub"
+      >
+        <template
+          v-for="(p, i) in subParts"
+          :key="i"
+        >
+          <b
+            v-if="p.num"
+            class="sub-n"
+          >{{ p.text }}</b>
+          <template v-else>
+            {{ p.text }}
+          </template>
+        </template>
       </div>
     </div>
   </div>
@@ -77,6 +101,13 @@ onUnmounted(() => {
 .ico-err { background: var(--err-soft); color: var(--err); }
 .num { font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1; }
 .stat.stacked .num { font-size: 34px; }
+.txt { min-width: 0; }
 .lbl { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
 .stat.stacked .lbl { font-size: 15px; margin-top: 8px; }
+.sub { margin-top: 6px; font-size: 13px; color: var(--ink-2); line-height: 1.9; }
+/* الرقمُ في السطر الثاني على خلفيّةٍ مصمتة (طلب المستخدم 2026-10-21) */
+.sub-n {
+  display: inline-block; min-width: 22px; padding: 0 7px; border-radius: 7px; text-align: center;
+  background: var(--navy); color: var(--on-primary); font-weight: 700; line-height: 1.6; font-variant-numeric: tabular-nums;
+}
 </style>

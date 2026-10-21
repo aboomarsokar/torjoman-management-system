@@ -12,7 +12,7 @@ const props = defineProps<{ rows: SummaryHalaqa[] }>()
 const items = computed<StatItem[]>(() => {
   const s = halqatSummary(props.rows)
   return [
-    { key: 'halqat', icon: 'i-lucide-book-open', value: s.halqat, label: s.active === s.halqat ? 'حلقة — كلّها نشطة' : `حلقة — ${s.active} نشطة` },
+    { key: 'halqat', icon: 'i-lucide-book-open', value: s.halqat, label: 'حلقة', sub: s.active === s.halqat ? 'كلّها نشطة' : `${s.active} نشطة` },
     { key: 'students', icon: 'i-lucide-graduation-cap', tone: 'green', value: s.students, label: 'طالباً نشطاً' },
     { key: 'avg', icon: 'i-lucide-users', tone: 'neutral', value: String(s.perHalaqa), label: 'طالباً في الحلقة متوسّطاً' },
     // التصنيفُ ملغًى حاليّاً (constants/halqat.ts)

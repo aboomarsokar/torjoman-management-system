@@ -70,12 +70,22 @@ function tableViolations(file: string, sql: string): string[] {
 }
 
 /** دالّةُ security definer كاتبةٌ (في أيّ مخطّط، لا المشغّلات ولا اللبّ) بلا حارس الجلسة. */
+/** أهدافُ الكتابة في البدن (insert/update/delete/merge) — جدولاً جدولاً بلا المخطّط. */
+const WRITE_TARGET = /\b(?:insert\s+into|update\s+(?:only\s+)?|delete\s+from|merge\s+into)\s+(?:"?\w+"?\s*\.\s*)?"?(\w+)"?/gi
+function writesOnlyUnguarded(body: string): boolean {
+  const unguarded = new Set(UNGUARDED_TABLES.split('|'))
+  const targets = [...body.matchAll(WRITE_TARGET)].map(m => m[1]!.toLowerCase())
+  return targets.length > 0 && targets.every(t => unguarded.has(t))
+}
+
 function functionViolations(file: string, sql: string): string[] {
   const out: string[] = []
   for (const chunk of sql.split(/create\s+(?:or\s+replace\s+)?function\s+/i).slice(1)) {
     const fn = parseFunction(chunk)
     if (CORE.has(fn.name) || !/security\s+definer/i.test(fn.head) || /returns\s+(?:event_)?trigger\b/i.test(fn.head)) continue
-    if (WRITE.test(fn.body) && !GUARD.test(fn.body)) out.push(`${file}: ${fn.name} تكتب بلا حارس الجلسة`)
+    // كتابةٌ في جدولٍ مستثنى وحده (مثل `private.notify` تُدرج في notifications) لا تحتاج حارساً: الإشعارُ
+    // يصدر حتى في نيابة التعديل، ولا يُفتح ذلك الجدولُ للعميل أبداً (policyViolations تحرسه)
+    if (WRITE.test(fn.body) && !GUARD.test(fn.body) && !writesOnlyUnguarded(fn.body)) out.push(`${file}: ${fn.name} تكتب بلا حارس الجلسة`)
   }
   return out
 }

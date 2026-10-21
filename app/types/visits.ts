@@ -16,5 +16,7 @@ export type VisitHalqaOption = {
   name: string
   daily_time: string | null
   supervisor_id: string | null
+  /** للمطلوب في «إنجاز الزيارات» (النشطةُ وحدها) — اختياريٌّ لمن لا يجلبه. */
+  status?: string | null
   teacher: { full_name: string } | null
 }

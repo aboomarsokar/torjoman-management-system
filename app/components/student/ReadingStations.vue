@@ -13,7 +13,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { heading: 'البرامج المصاحبة' })
-const { journey } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
+const { journey, coverUrls } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
 // التنزيلُ للمجتاز والمستحقّ (القاعدةُ تقصر الطالبَ عليهما على كلّ حال)
 const { busy, download } = useReadingAdmin()
 </script>
@@ -56,8 +56,33 @@ const { busy, download } = useReadingAdmin()
             {{ unitScope(s.unit) }}
           </div>
         </div>
+        <!-- التنزيلُ غلافُ المقرّر باهتاً وفوقه «تنزيل» (طلب المستخدم)؛ وبلا غلافٍ زرٌّ عاديّ -->
+        <button
+          v-if="s.unit.pdfPath && s.status !== 'locked' && coverUrls[s.unit.id]"
+          type="button"
+          class="dl dl-cover"
+          :disabled="busy"
+          :aria-label="`تنزيل ${s.unit.title} (PDF)`"
+          @click="download(s.unit)"
+        >
+          <img
+            :src="coverUrls[s.unit.id]"
+            alt=""
+            width="612"
+            height="792"
+            loading="lazy"
+          >
+          <span class="dl-label">
+            <UIcon
+              :name="busy ? 'i-lucide-loader-circle' : 'i-lucide-download'"
+              class="size-5"
+              :class="{ 'animate-spin': busy }"
+            />
+            تنزيل
+          </span>
+        </button>
         <UButton
-          v-if="s.unit.pdfPath && s.status !== 'locked'"
+          v-else-if="s.unit.pdfPath && s.status !== 'locked'"
           icon="i-lucide-download"
           label="تنزيل"
           color="primary"
@@ -104,6 +129,15 @@ ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: col
 .tag.ok { background: var(--green-soft); color: var(--green-ink); }
 .tag.next { background: var(--blue-soft); color: var(--blue-ink); }
 .tag.soon { background: var(--surface-3); color: var(--ink-3); }
+/* زرُّ الغلاف: الصورةُ باهتة، والكلمةُ والإشارةُ فوقها */
+.dl-cover { position: relative; flex: none; width: 76px; aspect-ratio: 612 / 792; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface-2); cursor: pointer; transition: transform .2s cubic-bezier(.16, 1, .3, 1), box-shadow .2s cubic-bezier(.16, 1, .3, 1); }
+.dl-cover img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .4; filter: blur(.6px) saturate(.8); transition: opacity .2s; }
+.dl-label { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 8px; border-radius: 10px; background: color-mix(in oklab, var(--surface) 88%, transparent); color: var(--primary); font-size: 13px; font-weight: 800; box-shadow: var(--shadow); }
+.dl-cover:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.dl-cover:hover img { opacity: .55; }
+.dl-cover:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.dl-cover:disabled { cursor: progress; }
+
 @media (max-width: 640px) { .rs { padding: 18px; } }
 /* بطاقةٌ ضيّقة: الاسمُ ونطاقُه بعرض السطر، والشارةُ والتنزيلُ سطرٌ تحتهما (كانت تضيّق النطاقَ فينكسر) */
 @container (max-width: 440px) {

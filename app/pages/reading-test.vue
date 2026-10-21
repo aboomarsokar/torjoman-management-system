@@ -12,7 +12,7 @@ import { formatDay } from '~/utils/reportWindow'
 import { isolateLtr } from '~/utils/transport'
 
 definePageMeta({ layout: 'dashboard' })
-useSeoMeta({ title: 'اختبار القراءة — ترجمان' })
+useSeoMeta({ title: 'اختبار البرامج المصاحبة — ترجمان' })
 
 const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
@@ -63,7 +63,7 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
           name="i-lucide-clipboard-pen"
           class="size-7"
         /></span>
-        <h2>اختبار مقرّر القراءة</h2>
+        <h2>اختبار البرامج المصاحبة</h2>
         <!-- المقرّرُ المطلوب: اسمُه وكتبُه وصفحاتُه -->
         <div
           v-if="journey.due"

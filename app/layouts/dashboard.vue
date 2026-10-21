@@ -56,7 +56,7 @@ const mainNav: Item[] = [
   { key: 'me', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/me', tab: 'dashboard', roles: ['student'] },
   { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
-  { key: 'reading-test', label: 'اختبار القراءة', icon: 'i-lucide-clipboard-pen', to: '/reading-test', roles: ['student'] },
+  { key: 'reading-test', label: 'اختبار البرامج المصاحبة', icon: 'i-lucide-clipboard-pen', to: '/reading-test', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
   { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] },

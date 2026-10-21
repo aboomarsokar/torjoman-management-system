@@ -81,7 +81,9 @@ const summaryText = computed(() => `حضر ${summary.value.present} · بعذر 
 const dirty = computed(() => isDirty(enrolledIds.value))
 const canSave = computed(() => canWrite.value && enrolled.value.length > 0 && (!held.value || dirty.value))
 const toast = useToast()
-const saveAttendance = async () => (await save(enrolledIds.value)) && toast.add({ title: 'حُفظ الحضور.', color: 'success', icon: 'i-lucide-circle-check' })
+async function saveAttendance() {
+  if (await save(enrolledIds.value)) toast.add({ title: 'حُفظ الحضور.', color: 'success', icon: 'i-lucide-circle-check' })
+}
 
 // تعديلٌ لم يُحفظ: تأكيدٌ قبل تبديل اليوم أو الحلقة أو مغادرة الشاشة
 const { keepsEdits } = useUnsavedGuard(dirty, 'لديك تعديلٌ في الحضور لم يُحفظ — هل تتركه؟')

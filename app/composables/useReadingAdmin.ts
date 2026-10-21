@@ -43,7 +43,7 @@ export function coverFileCheck(file: { type: string, size: number }): { ext: str
   return { ext }
 }
 
-export interface PartDraft { bookId: number | undefined, from: number | string, to: number | string }
+export interface PartDraft { bookId: number | undefined, from: string, to: string }
 
 /** خطأُ أجزاء المقرّر الجديد، أو null: كتابٌ لكلّ جزء، وصفحاتٌ صحيحةٌ ضمن الكتاب. */
 export function partsError(parts: PartDraft[], books: { id: number, pages: number | null }[]): string | null {

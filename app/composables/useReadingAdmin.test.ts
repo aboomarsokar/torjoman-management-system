@@ -28,11 +28,11 @@ describe('إدارة البرامج المصاحبة', () => {
 
   it('أجزاء المقرّر: كتابٌ وصفحاتٌ صحيحة ضمن الكتاب', () => {
     const books = [{ id: 1, pages: 142 }, { id: 2, pages: null }]
-    expect(partsError([{ bookId: 1, from: 89, to: 142 }], books)).toBeNull()
+    expect(partsError([{ bookId: 1, from: '89', to: '142' }], books)).toBeNull()
     expect(partsError([], books)).toBe('أضف كتاباً واحداً على الأقلّ.')
-    expect(partsError([{ bookId: undefined, from: 1, to: 2 }], books)).toBe('اختر كتاب الجزء 1.')
-    expect(partsError([{ bookId: 1, from: 50, to: 10 }], books)).toBe('صفحات الجزء 1 غير صحيحة.')
-    expect(partsError([{ bookId: 1, from: 1, to: 150 }], books)).toBe('الجزء 1 يتجاوز صفحات الكتاب (142).')
-    expect(partsError([{ bookId: 2, from: 1, to: 999 }], books)).toBeNull()
+    expect(partsError([{ bookId: undefined, from: '1', to: '2' }], books)).toBe('اختر كتاب الجزء 1.')
+    expect(partsError([{ bookId: 1, from: '50', to: '10' }], books)).toBe('صفحات الجزء 1 غير صحيحة.')
+    expect(partsError([{ bookId: 1, from: '1', to: '150' }], books)).toBe('الجزء 1 يتجاوز صفحات الكتاب (142).')
+    expect(partsError([{ bookId: 2, from: '1', to: '999' }], books)).toBeNull()
   })
 })

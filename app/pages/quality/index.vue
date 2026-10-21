@@ -11,7 +11,7 @@ import { FINAL_MAX, QUALITY_STATE_META, fmtScore, qualityState } from '~/utils/q
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 
 definePageMeta({ layout: 'dashboard' })
-useSeoMeta({ title: 'سجلّ الجودة — ترجمان' })
+useSeoMeta({ title: 'تقييم المعلمين — ترجمان' })
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
@@ -84,7 +84,7 @@ async function onChanged() {
 <template>
   <div class="quality">
     <UiPageHeader
-      title="سجلّ الجودة"
+      :title="isTeacher ? 'تقييمي الشهري' : 'تقييم المعلمين'"
       :subtitle="isTeacher ? 'سجلّ تقييمك الشهريّ — اطّلع على تفاصيله وأقِرّ.' : 'تقييمُ المعلم الشهريّ: الزيارات والبنود الشهرية (الجودة من 50) وإنجاز الحلقة (من 50).'"
     />
 
@@ -106,7 +106,7 @@ async function onChanged() {
           { key: 'ack', icon: 'i-lucide-check-check', tone: 'green', value: counts.acknowledged, label: 'اطّلع المعلم' },
           { key: 'open', icon: 'i-lucide-lock-open', tone: counts.open ? 'err' : 'neutral', value: counts.open, label: 'مفتوحٌ للتعديل' }
         ]"
-        label="أرقام سجلّ الجودة"
+        label="أرقام تقييم المعلمين"
       />
 
       <div

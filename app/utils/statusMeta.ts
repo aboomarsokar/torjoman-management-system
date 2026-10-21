@@ -16,8 +16,8 @@ export const REPORT_STATUS: Record<string, StatusBadge> = {
 export const VISIT_STATUS: Record<string, StatusBadge> = {
   scheduled: { label: 'مجدولة', color: 'info' },
   done: { label: 'تمّت', color: 'success' },
-  late: { label: 'متأخّرة', color: 'warning' },
-  missed: { label: 'فائتة', color: 'error' }
+  // مجدولةٌ فات موعدُها بلا تنفيذ (`visitDisplayStatus`)؛ المنفّذةُ بعد موعدها «تمّت» (قرار 2026-10-21)
+  late: { label: 'متأخّرة', color: 'error' }
 }
 
 /** حالة كشف حوافز الحلقة (§4.25). */

@@ -75,7 +75,7 @@ const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, asy
 
 useSeoMeta({ title: () => data.value?.halqa ? `${data.value.halqa.name} — ترجمان` : 'تفاصيل الحلقة — ترجمان' })
 
-// الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (الفائتةُ مشتقّة)
+// الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (المتأخّرةُ مشتقّة)
 const fmtDate = (iso: string) => formatDay(gazaDayOf(iso))
 const today = gazaToday()
 </script>

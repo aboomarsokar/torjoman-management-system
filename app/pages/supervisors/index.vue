@@ -2,7 +2,7 @@
 /**
  * دليل المشرفين (§4.14أ) — للمدير الإداري والمدير الفني (ومشرف المشروع اطّلاعاً).
  * يعرض المشرفين الميدانيين + عدد حلقاتهم + نسبة الالتزام بالزيارات.
- * الالتزام = الزيارات في وقتها ÷ (في وقتها + متأخرة + لم تتم) × 100.
+ * الالتزام = الزيارات التي تمّت (ولو بعد موعدها) ÷ (تمّت + متأخرة لم تُنفَّذ) × 100 (`visitCommitment`).
  */
 import type { Database } from '~/types/database.types'
 
@@ -29,7 +29,7 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
   ])
   const halqaCount: Record<string, number> = {}
   for (const h of halqat ?? []) if (h.supervisor_id) halqaCount[h.supervisor_id] = (halqaCount[h.supervisor_id] ?? 0) + 1
-  // الالتزام بحَكَمٍ واحد مع شاشة الزيارات (الفائتةُ مشتقّةٌ من موعدٍ فات يومُه — لا تُخزَّن)
+  // الالتزام بحَكَمٍ واحد مع شاشة الزيارات («المتأخّرة» مشتقّةٌ من موعدٍ فات يومُه بلا تنفيذ — لا تُخزَّن)
   const bySup: Record<string, { status: string, scheduled_at: string }[]> = {}
   for (const v of visits ?? []) (bySup[v.supervisor_id] ??= []).push(v)
   const today = gazaToday()

@@ -1,10 +1,11 @@
 /**
- * حالةُ الزيارة كما تُعرض، والالتزامُ بالمواعيد (قرار 2026-10-19):
- * القاعدةُ تخزّن done (نُفّذت في يوم موعدها أو قبله) و late (بعده) و scheduled (بلا تنفيذ) —
- * و«فائتة» تُشتقّ هنا: مجدولةٌ فات يومُ موعدها بتوقيت غزة بلا نتيجة. لا مهمّةَ مجدولة تكتبها،
- * فتصحّ في كلّ لحظةٍ وتنقلب «متأخّرة» حين تُرفع نتيجتُها.
+ * حالةُ الزيارة كما تُعرض، والالتزامُ بالمواعيد (قرار المستخدم 2026-10-21، يحلّ محلّ قرار 2026-10-19):
+ * ثلاثُ حالاتٍ لا أربع — «مجدولة» (موعدُها اليوم أو بعده بلا تنفيذ)، و«متأخّرة» (مجدولةٌ فات يومُ موعدها
+ * بتوقيت غزة بلا تنفيذ)، و«تمّت» (نُفّذت، في موعدها أو بعده — التأخّرُ في زيارةٍ نُفّذت لا يعني المستخدم).
+ * القاعدةُ ما زالت تخزّن done/late للمنفّذة (يومُ التنفيذ مقابلَ الموعد)، والعرضُ يجمعهما «تمّت».
+ * «متأخّرة» تُشتقّ هنا بلا مهمّةٍ مجدولة تكتبها، فتصحّ في كلّ لحظةٍ وتنقلب «تمّت» حين تُرفع نتيجتُها.
  */
-export type VisitDisplayStatus = 'scheduled' | 'done' | 'late' | 'missed'
+export type VisitDisplayStatus = 'scheduled' | 'done' | 'late'
 export interface VisitDates { status: string, scheduled_at: string }
 
 const GAZA_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Gaza', year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -15,21 +16,21 @@ export function gazaDayOf(iso: string): string {
 }
 
 export function visitDisplayStatus(v: VisitDates, today: string): VisitDisplayStatus {
-  if (v.status === 'scheduled') return gazaDayOf(v.scheduled_at) < today ? 'missed' : 'scheduled'
-  return v.status as VisitDisplayStatus
+  if (v.status === 'scheduled') return gazaDayOf(v.scheduled_at) < today ? 'late' : 'scheduled'
+  return 'done'
 }
 
-/** نسبةُ الالتزام: في وقتها ÷ المستحقّة (تمّت + متأخّرة + فائتة)، و`null` إن لم تستحقّ زيارة. */
+/** نسبةُ الالتزام: ما تمّ (في موعده أو بعده) ÷ المستحقّ (تمّت + متأخّرة لم تُنفَّذ)، و`null` إن لم تستحقّ زيارة. */
 export function visitCommitment(visits: VisitDates[], today: string): number | null {
-  let onTime = 0
+  let done = 0
   let due = 0
   for (const v of visits) {
     const s = visitDisplayStatus(v, today)
     if (s === 'scheduled') continue
     due++
-    if (s === 'done') onTime++
+    if (s === 'done') done++
   }
-  return due ? Math.round(onTime / due * 100) : null
+  return due ? Math.round(done / due * 100) : null
 }
 
 const GAZA_TIME = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Gaza', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })

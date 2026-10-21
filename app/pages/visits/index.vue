@@ -2,8 +2,9 @@
 /**
  * الزيارات الإشرافية (§4.9 — ROADMAP #15): كلُّ مشرفٍ ميدانيّ يجدول زياراته لحلقاته ويرفع نتائجها،
  * والإدارةُ (المديران والمديرة ومشرف المشروع) تتابع: الشهرُ والمشرفُ فلتران، ونسبةُ الالتزام بالمواعيد،
- * وتفاصيلُ كلّ زيارةٍ بسجلّ تغييرات موعدها وأسبابه. الحالةُ من القاعدة (في وقتها / متأخّرة)،
- * و«فائتة» تُشتقّ عند العرض (`visitDisplayStatus`). الحذفُ لصاحب الزيارة وللمدير الإداري (تنظيف خطأ).
+ * وتفاصيلُ كلّ زيارةٍ بسجلّ تغييرات موعدها وأسبابه. ثلاثُ حالات (`visitDisplayStatus`، قرار 2026-10-21):
+ * مجدولة، ومتأخّرة (فات موعدُها بلا تنفيذ)، وتمّت (كلُّ منفّذة). والمشرفُ الميدانيّ لا يرى «الزائر» — هو الزائر.
+ * الحذفُ لصاحب الزيارة وللمدير الإداري (تنظيف خطأ).
  */
 import type { Database } from '~/types/database.types'
 import type { VisitHalqaOption, VisitRow } from '~/types/visits'
@@ -71,9 +72,8 @@ const statusItems = computed(() => {
   return [
     { value: 'all' as const, label: `كل الحالات (${list.length})` },
     { value: 'scheduled' as const, label: `مجدولة (${n('scheduled')})` },
-    { value: 'done' as const, label: `في وقتها (${n('done')})` },
-    { value: 'late' as const, label: `متأخّرة (${n('late')})` },
-    { value: 'missed' as const, label: `فائتة (${n('missed')})` }
+    { value: 'done' as const, label: `تمّت (${n('done')})` },
+    { value: 'late' as const, label: `متأخّرة (${n('late')})` }
   ]
 })
 const filtered = computed(() => scoped.value.filter(v => statusF.value === 'all' || display(v) === statusF.value))
@@ -83,20 +83,22 @@ const stats = computed(() => {
   return {
     scheduled: list.filter(s => s === 'scheduled').length,
     done: list.filter(s => s === 'done').length,
-    overdue: list.filter(s => s === 'late' || s === 'missed').length,
+    overdue: list.filter(s => s === 'late').length,
     commitment: commitment === null ? '—' : `${commitment}%`
   }
 })
-const columns = [
+// المشرفُ الميدانيّ يرى زياراته وحدها — هو الزائر فيها، فلا عمودَ «الزائر» له (طلب المستخدم 2026-10-21)
+const showVisitor = computed(() => !isFieldSupervisor.value)
+const columns = computed(() => [
   { key: 'num', label: '#' },
   { key: 'halqa', label: 'الحلقة' },
   { key: 'teacher', label: 'المعلّم' },
-  { key: 'visitor', label: 'الزائر' },
+  ...(showVisitor.value ? [{ key: 'visitor', label: 'الزائر' }] : []),
   { key: 'date', label: 'الموعد' },
   { key: 'rating', label: 'التقييم' },
   { key: 'status', label: 'الحالة' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
-]
+])
 /** زرُّ الزيارة الرئيسيّ: صاحبُها ينفّذها ما لم تُنفَّذ، وغيرُه يطّلع على نتيجتها أو تفاصيلها. */
 function mainAction(v: VisitRow) {
   if (canEditVisit(v) && !v.executed_at) return { label: 'تنفيذ', icon: 'i-lucide-clipboard-pen', color: 'primary' as const, variant: 'solid' as const }
@@ -195,13 +197,13 @@ async function confirmDelete() {
       <UiStatCard
         icon="i-lucide-circle-check-big"
         :value="stats.done"
-        label="تمّت في وقتها"
+        label="تمّت"
         tone="green"
       />
       <UiStatCard
         icon="i-lucide-circle-alert"
         :value="stats.overdue"
-        label="متأخّرة / فائتة"
+        label="متأخّرة"
         tone="err"
       />
       <UiStatCard
@@ -303,7 +305,7 @@ async function confirmDelete() {
             subtitle-dir="ltr"
             :fields="[
               { label: 'المعلّم', value: row.halaqa?.teacher?.full_name },
-              { label: 'الزائر', value: row.supervisor?.full_name },
+              ...(showVisitor ? [{ label: 'الزائر', value: row.supervisor?.full_name }] : []),
               { label: 'التقييم', value: row.flow_rating, muted: !row.flow_rating }
             ]"
           >

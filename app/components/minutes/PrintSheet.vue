@@ -126,17 +126,6 @@ onBeforeUnmount(() => {
         </ol>
       </section>
 
-      <div class="ps-sign">
-        <div>
-          <span>اعتماد المدير الإداري</span>
-          <i />
-        </div>
-        <div>
-          <span>التاريخ</span>
-          <i />
-        </div>
-      </div>
-
       <footer class="ps-foot">
         طُبع من منصّة ترجمان في {{ printedOn }}
       </footer>
@@ -185,10 +174,6 @@ onBeforeUnmount(() => {
     width: 5.6mm; height: 5.6mm; border-radius: 50%; background: var(--paper-soft); color: var(--paper-accent);
     font-size: 8.5pt; font-weight: 600; line-height: 5.6mm; text-align: center; font-variant-numeric: tabular-nums;
   }
-
-  .ps-sign { display: flex; gap: 14mm; margin-top: 14mm; break-inside: avoid; }
-  .ps-sign > div { flex: 1; display: flex; flex-direction: column; gap: 9mm; font-size: 9.5pt; color: var(--paper-ink-2); }
-  .ps-sign i { display: block; border-bottom: .75pt solid var(--paper-ink-3); }
 
   .ps-foot { margin-top: 10mm; padding-top: 2.5mm; border-top: .5pt solid var(--paper-line); font-size: 8.5pt; color: var(--paper-ink-3); text-align: center; }
 }

@@ -95,11 +95,20 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
   <UModal
     v-model:open="open"
     :title="`سجلّ تقييم الجودة — ${halaqa?.teacher?.full_name ?? 'بلا معلّم'}`"
-    :description="`${halaqa?.name ?? ''} · الشهر ${String(month).padStart(2, '0')}-${year} · المشرف ${halaqa?.supervisor?.full_name ?? '—'}`"
     :ui="{ content: 'max-w-4xl' }"
   >
     <template #body>
       <div class="qr">
+        <!-- بياناتُ السجلّ في الجسم لا تحت العنوان (كان السطرُ الطويل ينزل تحت زرّ الإغلاق) -->
+        <dl class="qr-meta">
+          <div><dt>الحلقة</dt><dd>{{ halaqa?.name ?? '—' }}</dd></div>
+          <div>
+            <dt>الشهر</dt><dd dir="ltr">
+              {{ String(month).padStart(2, '0') }}-{{ year }}
+            </dd>
+          </div>
+          <div><dt>المشرف</dt><dd>{{ halaqa?.supervisor?.full_name ?? '—' }}</dd></div>
+        </dl>
         <div class="qr-state">
           <UBadge
             :label="QUALITY_STATE_META[state].label"
@@ -211,7 +220,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
           v-if="canSave && notOpenYet"
           class="qr-warn"
         >
-          يُرصد سجلّ هذا الشهر ابتداءً من {{ opensOn!.split('-').reverse().join('-') }} — بعد مهلة تسليم التقارير.
+          يُرصد سجلّ هذا الشهر ابتداءً من <bdi dir="ltr">{{ opensOn!.split('-').reverse().join('-') }}</bdi> — بعد مهلة تسليم التقارير.
         </p>
 
         <div class="qr-actions">
@@ -283,6 +292,9 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
 
 <style scoped>
 .qr { display: flex; flex-direction: column; gap: 14px; }
+.qr-meta { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; padding: 10px 14px; border-radius: 13px; background: var(--surface-2); }
+.qr-meta dt { font-size: 12px; color: var(--ink-3); }
+.qr-meta dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink); text-align: start; }
 .qr-state { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .qr-live { font-size: 12.5px; color: var(--ink-3); }
 .qr-empty { margin: 0; padding: 22px; border-radius: 13px; background: var(--surface-2); color: var(--ink-2); text-align: center; font-size: 14px; }

@@ -10,6 +10,7 @@ import type { Database } from '~/types/database.types'
 import type { VisitHalqaOption, VisitRow } from '~/types/visits'
 import type { VisitDisplayStatus } from '~/utils/visitStatus'
 import { roleLabel } from '~/constants/roles'
+import { VISIT_MAX } from '~/utils/visitForm'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
@@ -18,8 +19,10 @@ const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isFieldSupervisor } = usePermissions()
+const { isAdmin, isFieldSupervisor, isTeacher } = usePermissions()
 const canSchedule = computed(() => isFieldSupervisor.value)
+/** التقييم: مجموعُ النموذج «35 / 42»، وللزيارة القديمة تقييمُها النصّيّ. */
+const ratingText = (v: VisitRow) => v.score != null ? `${v.score} / ${VISIT_MAX}` : v.flow_rating || '—'
 /** موعدُ الزيارة ونتيجتُها لصاحبها المشرف الميداني وحده (visits_update) — المديران يطّلعون. */
 const canEditVisit = (v: VisitRow) => isFieldSupervisor.value && v.supervisor_id === profile.value?.id
 
@@ -160,7 +163,7 @@ async function confirmDelete() {
   <div class="visits">
     <UiPageHeader
       title="الزيارات الإشرافية"
-      subtitle="جدولة الزيارات ومتابعة الالتزام بمواعيدها ونتائجها."
+      :subtitle="isTeacher ? 'زيارات حلقتك الإشرافية ونتائجها — افتح كلَّ نتيجةٍ وأقِرّ بالاطّلاع عليها.' : 'جدولة الزيارات ومتابعة الالتزام بمواعيدها ونتائجها.'"
     >
       <template #actions>
         <UButton
@@ -184,8 +187,9 @@ async function confirmDelete() {
         aria-label="الشهر"
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
+      <!-- المعلم: حلقةٌ واحدة ومشرفُها — لا فلترَ للمشرف ولا للحلقة -->
       <UiSelect
-        v-if="!isFieldSupervisor"
+        v-if="!isFieldSupervisor && !isTeacher"
         v-model="supervisorF"
         :items="supervisorItems"
         size="xl"
@@ -194,6 +198,7 @@ async function confirmDelete() {
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
       <UiSelect
+        v-if="!isTeacher"
         v-model="halqaF"
         :items="halqaItems"
         size="xl"
@@ -283,7 +288,14 @@ async function confirmDelete() {
           >{{ formatVisitMoment(row.scheduled_at) }}</span>
         </template>
         <template #rating="{ row }">
-          <span class="muted">{{ row.flow_rating || '—' }}</span>
+          <span
+            v-if="row.score != null"
+            class="strong"
+          >{{ ratingText(row) }}</span>
+          <span
+            v-else
+            class="muted"
+          >{{ ratingText(row) }}</span>
         </template>
         <template #status="{ row }">
           <UBadge
@@ -330,7 +342,8 @@ async function confirmDelete() {
             :fields="[
               { label: 'المعلّم', value: row.halaqa?.teacher?.full_name },
               ...(showVisitor ? [{ label: 'الزائر', value: row.supervisor?.full_name }] : []),
-              { label: 'التقييم', value: row.flow_rating, muted: !row.flow_rating }
+              { label: 'التقييم', value: ratingText(row), muted: row.score == null && !row.flow_rating },
+              ...(row.locked_at ? [{ label: 'اطّلاع المعلم', value: row.teacher_ack_at ? 'اطّلع' : 'لم يطّلع بعد', muted: !row.teacher_ack_at }] : [])
             ]"
           >
             <template #badge>

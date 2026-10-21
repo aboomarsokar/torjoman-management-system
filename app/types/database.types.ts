@@ -1652,47 +1652,62 @@ export type Database = {
       supervision_visits: {
         Row: {
           created_at: string
+          criteria_scores: number[] | null
+          deductions: Json | null
           executed_at: string | null
           flow_rating: string | null
           halaqa_id: string
           id: string
           improvements: string | null
+          locked_at: string | null
           notes: string | null
           recommendations: string | null
           scheduled_at: string
+          score: number | null
           status: Database["public"]["Enums"]["visit_status"]
           strengths: string | null
           supervisor_id: string
+          teacher_ack_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          criteria_scores?: number[] | null
+          deductions?: Json | null
           executed_at?: string | null
           flow_rating?: string | null
           halaqa_id: string
           id?: string
           improvements?: string | null
+          locked_at?: string | null
           notes?: string | null
           recommendations?: string | null
           scheduled_at: string
+          score?: number | null
           status?: Database["public"]["Enums"]["visit_status"]
           strengths?: string | null
           supervisor_id: string
+          teacher_ack_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          criteria_scores?: number[] | null
+          deductions?: Json | null
           executed_at?: string | null
           flow_rating?: string | null
           halaqa_id?: string
           id?: string
           improvements?: string | null
+          locked_at?: string | null
           notes?: string | null
           recommendations?: string | null
           scheduled_at?: string
+          score?: number | null
           status?: Database["public"]["Enums"]["visit_status"]
           strengths?: string | null
           supervisor_id?: string
+          teacher_ack_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1835,6 +1850,36 @@ export type Database = {
           },
         ]
       }
+      visit_deduction_items: {
+        Row: {
+          criterion: number
+          criterion_hint: string | null
+          criterion_label: string
+          key: string
+          label: string
+          per_time: number
+          sort_order: number
+        }
+        Insert: {
+          criterion: number
+          criterion_hint?: string | null
+          criterion_label: string
+          key: string
+          label: string
+          per_time: number
+          sort_order: number
+        }
+        Update: {
+          criterion?: number
+          criterion_hint?: string | null
+          criterion_label?: string
+          key?: string
+          label?: string
+          per_time?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       visit_reschedule_log: {
         Row: {
           changed_at: string
@@ -1875,6 +1920,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_visit: { Args: { p_visit: string }; Returns: undefined }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -1953,6 +1999,7 @@ export type Database = {
         Args: { p_answers: Json; p_attempt: string }
         Returns: Json
       }
+      unlock_visit_result: { Args: { p_visit: string }; Returns: undefined }
       update_my_contact: {
         Args: {
           p_guardian_email: string

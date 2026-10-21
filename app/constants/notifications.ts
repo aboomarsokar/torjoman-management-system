@@ -13,7 +13,10 @@ export const NOTIFICATION_KINDS = [
   'transport_paid',
   'impersonation_started',
   'impersonation_write',
-  'statement_returned'
+  'statement_returned',
+  'visit_result',
+  'visit_unlocked',
+  'visit_rescheduled'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -29,7 +32,10 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   transport_paid: 'i-lucide-wallet',
   impersonation_started: 'i-lucide-eye',
   impersonation_write: 'i-lucide-pencil',
-  statement_returned: 'i-lucide-undo-2'
+  statement_returned: 'i-lucide-undo-2',
+  visit_result: 'i-lucide-clipboard-check',
+  visit_unlocked: 'i-lucide-lock-open',
+  visit_rescheduled: 'i-lucide-calendar-sync'
 }
 
 /** آخرُ ما يُعرض في لوحة الجرس. */

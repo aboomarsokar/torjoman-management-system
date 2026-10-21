@@ -1,16 +1,22 @@
 <script setup lang="ts">
 /**
- * نتيجةُ الزيارة: المشرفُ صاحبها يرفعها (يومُ التنفيذ الفعليّ والتقييم والملاحظات)، والإدارةُ تطّلع.
- * يومُ التنفيذ يُختار (كان لحظةَ الحفظ)، والقاعدةُ تخزّن done/late بمقارنته بالموعد، والعرضُ يجمعهما «تمّت»
- * (قرار 2026-10-21: التأخّرُ في زيارةٍ نُفّذت لا يعني المستخدم). ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع.
+ * نتيجةُ الزيارة بنموذج الزيارة الإشرافية (قرارات المستخدم 2026-10-21):
+ * - المشرفُ صاحبها يختار يومَ التنفيذ ويعدّ مرّاتِ بنود الخصم (`VisitsEvaluationForm`) ويكتب ملاحظاتِه وتوجيهاتِه،
+ *   و**الحفظُ يُقفلها عليه** (القاعدة: `visit_score_and_lock`)؛ والمجموعُ من 42 تحسبه القاعدة.
+ * - المديرُ الإداري والفنيّ يفتحان المقفلةَ للتعديل (`unlock_visit_result`) فيصحّح المشرف ويحفظ فتُقفل ثانيةً.
+ * - المعلمُ يرى نتيجةَ حلقته ويُقرّ بالاطّلاع (`acknowledge_visit`) بدل التوقيع.
+ * - الزيارةُ القديمة (قبل النموذج، بلا `deductions`) تُعرض بحقولها القديمة للقراءة.
+ * ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع.
  */
 import type { Database } from '~/types/database.types'
 import type { VisitRow } from '~/types/visits'
+import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
+import { cleanCounts, groupCriteria, parseCounts } from '~/utils/visitForm'
 
 interface Props {
   open: boolean
   visit: VisitRow | null
-  /** المشرف الميداني صاحب الزيارة — يحفظ؛ غيره يطّلع. */
+  /** المشرف الميداني صاحب الزيارة — يحفظ ما دامت غيرَ مقفلة؛ غيره يطّلع. */
   canEdit: boolean
 }
 const props = defineProps<Props>()
@@ -19,24 +25,33 @@ const emit = defineEmits<{ 'update:open': [boolean], 'saved': [] }>()
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
+const { isAdmin, isTechnical, isTeacher } = usePermissions()
 
-const ratingItems = ['ممتاز', 'جيد جداً', 'جيد', 'يحتاج تحسين'].map(r => ({ label: r, value: r }))
-const result = reactive({ executed_day: '', flow_rating: '', strengths: '', improvements: '', recommendations: '', notes: '' })
+// البنودُ ثابتة: تُجلب مرّةً للجلسة
+const { data: items } = useLazyAsyncData<DeductionItem[]>('visit-deduction-items', async () => {
+  const { data, error } = await supabase.from('visit_deduction_items')
+    .select('key, criterion, criterion_label, criterion_hint, label, per_time, sort_order').order('sort_order')
+  if (error) handle(error)
+  return data ?? []
+}, { server: false, default: () => [] })
+const criteria = computed(() => groupCriteria(items.value ?? []))
+
+const executedDay = ref('')
+const counts = ref<DeductionCounts>({})
+const notes = ref('')
 const saving = ref(false)
+const busy = ref(false)
 type LogRow = { id: string, old_time: string | null, new_time: string | null, reason: string, changed_at: string }
 const log = ref<LogRow[]>([])
 const today = ref(gazaToday())
 
-watch(() => [props.open, props.visit?.id] as const, async ([open]) => {
+watch(() => [props.open, props.visit?.id, props.visit?.locked_at] as const, async ([open]) => {
   const v = props.visit
   if (!open || !v) return
   today.value = gazaToday()
-  result.executed_day = v.executed_at ? gazaDayOf(v.executed_at) : props.canEdit ? today.value : ''
-  result.flow_rating = v.flow_rating ?? 'ممتاز'
-  result.strengths = v.strengths ?? ''
-  result.improvements = v.improvements ?? ''
-  result.recommendations = v.recommendations ?? ''
-  result.notes = v.notes ?? ''
+  executedDay.value = v.executed_at ? gazaDayOf(v.executed_at) : props.canEdit ? today.value : ''
+  counts.value = parseCounts(v.deductions)
+  notes.value = v.notes ?? ''
   log.value = []
   const { data, error } = await supabase.from('visit_reschedule_log')
     .select('id, old_time, new_time, reason, changed_at').eq('visit_id', v.id).order('changed_at')
@@ -44,30 +59,32 @@ watch(() => [props.open, props.visit?.id] as const, async ([open]) => {
   else log.value = data ?? []
 }, { immediate: true })
 
-/** حقولُ النتيجة تظهر لصاحبها، ولغيره متى رُفعت. */
-const hasResult = computed(() => props.canEdit || !!props.visit?.executed_at)
-/** ما ستُعرض به الزيارة متى حُفظ يومُ تنفيذها: «تمّت» في موعدها أو بعده (قرار 2026-10-21). */
-const outcome = computed(() => (result.executed_day ? VISIT_STATUS.done : null))
+const locked = computed(() => !!props.visit?.locked_at)
+/** يكتب: صاحبُها وهي غيرُ مقفلة. */
+const editable = computed(() => props.canEdit && !locked.value)
+/** زيارةٌ نُفّذت قبل النموذج (بحقولها القديمة) ولا يكتبها أحدٌ الآن. */
+const legacy = computed(() => !!props.visit?.executed_at && props.visit.deductions == null && !editable.value)
+const hasResult = computed(() => editable.value || !!props.visit?.executed_at)
+const canUnlock = computed(() => locked.value && (isAdmin.value || isTechnical.value))
+const canAck = computed(() => locked.value && isTeacher.value && !props.visit?.teacher_ack_at)
 
 async function save() {
-  if (!props.visit) return
-  if (!result.executed_day || result.executed_day > today.value) {
+  const v = props.visit
+  if (!v) return
+  if (!executedDay.value || executedDay.value > today.value) {
     toast.add({ title: 'اختر يوم التنفيذ (لا يتجاوز اليوم).', color: 'warning', icon: 'i-lucide-info' })
     return
   }
   saving.value = true
   try {
     const { data, error } = await supabase.from('supervision_visits').update({
-      executed_at: executedAtFromDay(result.executed_day),
-      flow_rating: result.flow_rating || null,
-      strengths: result.strengths.trim() || null,
-      improvements: result.improvements.trim() || null,
-      recommendations: result.recommendations.trim() || null,
-      notes: result.notes.trim() || null
-    }).eq('id', props.visit.id).select('id')
+      executed_at: executedAtFromDay(executedDay.value),
+      deductions: cleanCounts(counts.value),
+      notes: notes.value.trim() || null
+    }).eq('id', v.id).select('id')
     if (error) throw error
     if (!data?.length) throw new Error('لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.')
-    toast.add({ title: 'تم رفع نتيجة الزيارة.', color: 'success', icon: 'i-lucide-circle-check' })
+    toast.add({ title: 'حُفظت نتيجة الزيارة وأُقفلت.', description: 'وصل المعلمَ إشعارٌ بها.', color: 'success', icon: 'i-lucide-lock' })
     emit('update:open', false)
     emit('saved')
   } catch (err) {
@@ -76,12 +93,30 @@ async function save() {
     saving.value = false
   }
 }
+
+async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: string) {
+  const v = props.visit
+  if (!v) return
+  busy.value = true
+  try {
+    const { error } = await supabase.rpc(fn, { p_visit: v.id })
+    if (error) throw error
+    toast.add({ title: done, color: 'success', icon: 'i-lucide-circle-check' })
+    emit('update:open', false)
+    emit('saved')
+  } catch (err) {
+    handle(err)
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
   <UModal
     :open="open"
     :title="`نتيجة زيارة ${visit?.halaqa?.name || ''}`"
+    :ui="{ content: 'max-w-3xl' }"
     @update:open="(v: boolean) => emit('update:open', v)"
   >
     <template #body>
@@ -91,7 +126,25 @@ async function save() {
           class="when"
         >
           <span>الموعد المجدول <b dir="ltr">{{ formatVisitMoment(visit.scheduled_at) }}</b></span>
+          <span v-if="visit.halaqa?.teacher">المعلّم <b>{{ visit.halaqa.teacher.full_name }}</b></span>
           <span v-if="visit.supervisor">الزائر <b>{{ visit.supervisor.full_name }}</b></span>
+        </div>
+
+        <div
+          v-if="locked"
+          class="lockbar"
+          role="status"
+        >
+          <UIcon
+            name="i-lucide-lock"
+            class="size-[18px] shrink-0"
+          />
+          <span v-if="canEdit">حُفظت النتيجة وأُقفلت — يفتحها المدير الإداري أو الفنيّ إن احتجت تصحيحاً.</span>
+          <span v-else>النتيجة محفوظة ومقفلة.</span>
+          <span
+            class="ack"
+            :class="{ yes: !!visit?.teacher_ack_at }"
+          >{{ visit?.teacher_ack_at ? `اطّلع المعلم ${gazaDayOf(visit.teacher_ack_at).split('-').reverse().join('-')}` : 'لم يطّلع المعلم بعد' }}</span>
         </div>
 
         <p
@@ -100,50 +153,55 @@ async function save() {
         >
           لم تُرفع نتيجة هذه الزيارة بعد.
         </p>
+
+        <!-- زيارةٌ قبل النموذج: حقولُها القديمة للقراءة -->
+        <dl
+          v-else-if="legacy"
+          class="legacy"
+        >
+          <div v-if="visit?.flow_rating">
+            <dt>تقييم سير الحلقة</dt><dd>{{ visit.flow_rating }}</dd>
+          </div>
+          <div
+            v-for="f in ([['strengths', 'نقاط القوة'], ['improvements', 'جوانب التحسين'], ['recommendations', 'التوصيات'], ['notes', 'ملاحظات']] as const)"
+            v-show="visit?.[f[0]]"
+            :key="f[0]"
+          >
+            <dt>{{ f[1] }}</dt><dd>{{ visit?.[f[0]] }}</dd>
+          </div>
+        </dl>
+
         <template v-else>
           <UFormField
             label="يوم التنفيذ الفعلي"
-            :help="canEdit ? 'متى رُفعت النتيجة صارت الزيارة «تمّت»، ولو بعد موعدها.' : undefined"
+            :help="editable ? 'متى رُفعت النتيجة صارت الزيارة «تمّت»، ولو بعد موعدها.' : undefined"
           >
-            <div class="exec-day">
-              <input
-                v-model="result.executed_day"
-                type="date"
-                :max="today"
-                :disabled="!canEdit"
-                class="date-input"
-                dir="ltr"
-              >
-              <UBadge
-                v-if="outcome && (canEdit || visit?.executed_at)"
-                :label="outcome.label"
-                :color="outcome.color"
-                variant="soft"
-              />
-            </div>
+            <input
+              v-model="executedDay"
+              type="date"
+              :max="today"
+              :disabled="!editable"
+              class="date-input"
+              dir="ltr"
+            >
           </UFormField>
-          <UFormField label="تقييم سير الحلقة">
-            <USelect
-              v-model="result.flow_rating"
-              :items="ratingItems"
-              :disabled="!canEdit"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
-            />
-          </UFormField>
-          <UFormField
-            v-for="f in ([['strengths', 'نقاط القوة'], ['improvements', 'جوانب التحسين'], ['recommendations', 'التوصيات'], ['notes', 'ملاحظات إضافية']] as const)"
-            :key="f[0]"
-            :label="f[1]"
-          >
+
+          <VisitsEvaluationForm
+            v-model:counts="counts"
+            :criteria="criteria"
+            :read-only="!editable"
+          />
+
+          <UFormField label="ملاحظات المشرف وتوجيهاته">
             <UTextarea
-              v-model="result[f[0]]"
-              :rows="2"
-              :disabled="!canEdit"
+              v-model="notes"
+              autoresize
+              :rows="3"
+              :maxrows="10"
+              :disabled="!editable"
               size="lg"
               class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
+              :ui="{ base: 'rounded-[13px] leading-[1.9]' }"
             />
           </UFormField>
         </template>
@@ -177,16 +235,44 @@ async function save() {
             @click="emit('update:open', false)"
           />
           <UButton
-            v-if="canEdit"
-            label="حفظ النتيجة"
+            v-if="canUnlock"
+            label="فتح التعديل للمشرف"
+            color="neutral"
+            variant="outline"
+            size="lg"
+            icon="i-lucide-lock-open"
+            :loading="busy"
+            :ui="{ base: 'rounded-[13px]' }"
+            @click="runRpc('unlock_visit_result', 'فُتحت الزيارة للتعديل — وصل المشرفَ إشعار.')"
+          />
+          <UButton
+            v-if="canAck"
+            label="اطّلعت على النتيجة"
             color="primary"
             size="lg"
-            icon="i-lucide-check"
+            icon="i-lucide-check-check"
+            :loading="busy"
+            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            @click="runRpc('acknowledge_visit', 'سُجّل اطّلاعك على نتيجة الزيارة.')"
+          />
+          <UButton
+            v-if="editable"
+            label="حفظ وإقفال"
+            color="primary"
+            size="lg"
+            icon="i-lucide-lock"
             :loading="saving"
+            :disabled="!criteria.length"
             :ui="{ base: 'rounded-[13px] font-semibold' }"
             @click="save"
           />
         </div>
+        <p
+          v-if="editable"
+          class="save-hint"
+        >
+          بعد الحفظ تُقفل النتيجة ولا تُعدَّل إلا إن فتحها المدير الإداري أو الفنيّ.
+        </p>
       </div>
     </template>
   </UModal>
@@ -194,14 +280,20 @@ async function save() {
 
 <style scoped>
 .form { display: flex; flex-direction: column; gap: 14px; }
-.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.save-hint { margin: -4px 0 0; text-align: end; font-size: 12.5px; color: var(--ink-3); }
 .when { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 12px 14px; border-radius: 13px; background: var(--surface-2); color: var(--ink-3); font-size: 13.5px; }
 .when b { color: var(--ink); font-weight: 600; margin-inline-start: 4px; }
-.exec-day { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lockbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 10px 14px; border-radius: 13px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; font-weight: 600; }
+.lockbar .ack { margin-inline-start: auto; padding: 2px 10px; border-radius: 999px; background: var(--surface); color: var(--ink-2); font-weight: 600; }
+.lockbar .ack.yes { color: var(--green-ink); }
 .date-input { height: 44px; padding: 0 12px; border-radius: 13px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink); font-size: 15px; outline: none; }
 .date-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
 .date-input:disabled { opacity: .7; }
 .pending { margin: 0; padding: 14px; border-radius: 13px; background: var(--surface-2); color: var(--ink-2); font-size: 14px; text-align: center; }
+.legacy { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.legacy dt { font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+.legacy dd { margin: 3px 0 0; font-size: 14.5px; color: var(--ink); line-height: 1.8; white-space: pre-wrap; }
 .log h3 { margin: 4px 0 8px; font-size: 14.5px; font-weight: 700; color: var(--ink); }
 .log ul { list-style: none; margin: 0; padding: 0; }
 .log li { display: flex; flex-direction: column; gap: 3px; padding: 10px 0; }

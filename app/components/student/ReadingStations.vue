@@ -59,14 +59,14 @@ const { busy, download } = useReadingAdmin()
         <UButton
           v-if="s.unit.pdfPath && s.status !== 'locked'"
           icon="i-lucide-download"
-          color="neutral"
-          variant="ghost"
+          label="تنزيل"
+          color="primary"
+          variant="solid"
           size="md"
           :loading="busy"
-          :aria-label="`تنزيل ${s.unit.title}`"
-          :title="`تنزيل ${s.unit.title}`"
+          :aria-label="`تنزيل ${s.unit.title} (PDF)`"
           class="dl"
-          :ui="{ base: 'min-h-11 min-w-11 rounded-xl justify-center' }"
+          :ui="{ base: 'min-h-11 rounded-xl justify-center font-semibold px-4' }"
           @click="download(s.unit)"
         />
         <span

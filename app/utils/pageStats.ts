@@ -56,7 +56,8 @@ export function examResultStats(rows: { passed: boolean | null, total_score: num
     { key: 'all', icon: 'i-lucide-clipboard-list', value: rows.length, label: 'نتيجة اختبار' },
     { key: 'passed', icon: 'i-lucide-award', tone: 'green', value: passed, label: decided ? `مجتازاً — ${Math.round((passed / decided) * 100)}٪` : 'مجتازاً' },
     { key: 'failed', icon: 'i-lucide-rotate-ccw', tone: failed ? 'err' : 'neutral', value: failed, label: 'غيرَ مجتاز (يعيد)' },
-    { key: 'avg', icon: 'i-lucide-gauge', value: scores.length ? `${round1(scores.reduce((a, b) => a + b, 0) / scores.length)} / ${maxTotal}` : '—', label: 'متوسّطُ العلامة' }
+    // الرقمُ وحده (كان «87.5 / 99» ينكسر سطرين على الجوال)، والحدُّ في التسمية
+    { key: 'avg', icon: 'i-lucide-gauge', value: scores.length ? String(round1(scores.reduce((a, b) => a + b, 0) / scores.length)) : '—', label: `متوسّطُ العلامة من ${maxTotal}` }
   ]
 }
 

@@ -67,6 +67,16 @@ const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results',
 
 defineExpose({ refresh })
 
+// حلقاتُ النطاق كلُّها (RLS) لقائمتي الفلتر — كانت القائمةُ من النتائج وحدها فتغيب حلقةٌ لم يُختبر طلابُها بعد
+type ScopeHalaqa = { id: string, name: string, supervisor: { id: string, full_name: string } | null }
+const { data: scopeHalqat } = useLazyAsyncData<ScopeHalaqa[]>('exams-results-halqat', async () => {
+  const { data, error } = await supabase.from('halaqat')
+    .select('id, name, supervisor:supervisor_id(id, full_name)').eq('status', 'active').order('name')
+    .returns<ScopeHalaqa[]>()
+  if (error) handle(error)
+  return data ?? []
+}, { server: false, default: () => [] })
+
 const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).filter(r => r.exam_list_item?.exam_cycle).map((r) => {
   const h = r.student?.halaqa
   const sup = h?.supervisor
@@ -89,10 +99,20 @@ const uniq = (arr: { id: string, label: string }[]) => {
   for (const x of arr) if (x.id) m.set(x.id, x.label)
   return [{ value: 'all', label: 'الكل' }, ...[...m].map(([value, label]) => ({ value, label }))]
 }
-const supervisorOpts = computed(() => uniq(allResults.value.map(r => ({ id: r.supId, label: r.sup }))))
-const halqaOpts = computed(() => uniq(allResults.value
+// الخياراتُ من حلقات النطاق ومن النتائج معاً (حلقةٌ موقوفة لها نتائجُ قديمة تبقى)، وبجانب الحلقة عددُ نتائجها
+const resultsPerHalqa = computed(() => {
+  const m = new Map<string, number>()
+  for (const r of allResults.value) m.set(r.halqaId, (m.get(r.halqaId) ?? 0) + 1)
+  return m
+})
+const scopeRows = computed(() => [
+  ...(scopeHalqat.value ?? []).map(h => ({ halqaId: h.id, halqa: h.name, supId: h.supervisor?.id ?? '', sup: h.supervisor?.full_name ?? '—' })),
+  ...allResults.value
+])
+const supervisorOpts = computed(() => uniq(scopeRows.value.map(r => ({ id: r.supId, label: r.sup }))))
+const halqaOpts = computed(() => uniq(scopeRows.value
   .filter(r => fSupervisor.value === 'all' || r.supId === fSupervisor.value)
-  .map(r => ({ id: r.halqaId, label: r.halqa }))))
+  .map(r => ({ id: r.halqaId, label: `${r.halqa} (${resultsPerHalqa.value.get(r.halqaId) ?? 0})` }))))
 watch(fSupervisor, () => {
   fHalqa.value = 'all'
 })

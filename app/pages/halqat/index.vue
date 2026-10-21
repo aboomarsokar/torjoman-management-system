@@ -79,7 +79,7 @@ function studentsOf(h: HalaqaRow) {
 // الجنس والفئة والوقت في خانة الحلقة نفسها. الطاقم ثلاثة أعمدة في الحاوية الواسعة،
 // وعمودٌ واحد مكدَّس فيما دونها (col-wide / col-narrow — الاستعلام في أنماط الصفحة)
 // عمود الإجراءات للجميع: «تفاصيل» لكل من يرى الحلقة (ومنهم مشرف المشروع)، والتعديل والحذف مقيّدان داخله
-const columns = [
+const allColumns = [
   { key: 'num', label: '#' },
   { key: 'name', label: 'الحلقة' },
   { key: 'teacher', label: 'المعلّم', class: 'col-wide' },
@@ -90,6 +90,8 @@ const columns = [
   { key: 'status', label: 'الحالة' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
+// المشرف الميدانيّ يرى حلقاتِه المسندة إليه وحدها، فعمودُ «المشرف» تكرارٌ لاسمه
+const columns = computed(() => isFieldSupervisor.value ? allColumns.filter(c => c.key !== 'supervisorName') : allColumns)
 // ── إنشاء/تعديل ──
 const modalOpen = ref(false)
 const saving = ref(false)
@@ -272,6 +274,7 @@ async function confirmDelete() {
           <HalqatStaffList
             :teacher="row.teacher?.full_name ?? null"
             :supervisor="row.supervisor?.full_name ?? null"
+            :hide-supervisor="isFieldSupervisor"
             :examiner="row.examiner?.full_name ?? null"
             :gender="row.gender"
           />
@@ -352,6 +355,7 @@ async function confirmDelete() {
           <HalqatStaffList
             :teacher="row.teacher?.full_name ?? null"
             :supervisor="row.supervisor?.full_name ?? null"
+            :hide-supervisor="isFieldSupervisor"
             :examiner="row.examiner?.full_name ?? null"
             :gender="row.gender"
             :students="studentsOf(row)"

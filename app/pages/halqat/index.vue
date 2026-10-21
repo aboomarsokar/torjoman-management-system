@@ -220,6 +220,10 @@ async function confirmDelete() {
     </div>
 
     <ClientOnly>
+      <HalqatSummary
+        v-if="!pending && filtered.length"
+        :rows="filtered"
+      />
       <UiSkeletonTable
         v-if="pending"
         :columns="columns"

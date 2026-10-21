@@ -310,9 +310,10 @@ const settingCards = [
             <div class="card sec">
               <div class="sec-head">
                 <h3>حلقاتي</h3>
+                <!-- إلى الحلقات بعددها (طلب المستخدم 2026-10-21) — كان إلى الزيارات -->
                 <UButton
-                  to="/visits"
-                  label="الزيارات"
+                  to="/halqat"
+                  :label="`الحلقات (${supHalqat.length})`"
                   color="neutral"
                   variant="ghost"
                   size="sm"

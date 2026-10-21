@@ -56,7 +56,7 @@ const mainNav: Item[] = [
   { key: 'me', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/me', tab: 'dashboard', roles: ['student'] },
   { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
-  { key: 'reading-test', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/reading-test', roles: ['student'] },
+  { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
   { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] },
@@ -66,6 +66,7 @@ const mainNav: Item[] = [
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: SCOPED_STAFF },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
+  { key: 'programs-staff', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: [...SCOPED_STAFF, 'teacher'] },
   { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'] },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'] },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً

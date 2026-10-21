@@ -13,6 +13,11 @@ describe('صفوف مقرّرات القراءة', () => {
     expect(units.map(u => u.id)).toEqual([1, 3])
     expect(units[1]!.parts.map(p => p.book)).toEqual(['صفقات رابحة', 'اليوم النبوي'])
     expect(units[1]!.parts[1]!.author).toBe('الطريري')
+    expect(units[0]!.pdfPath).toBeNull()
+  })
+
+  it('مسارُ ملفّ المقرّر يُنقل كما هو', () => {
+    expect(toReadingUnits([{ id: 1, sort_order: 1, title: 'أ', pdf_path: 'units/1.pdf', parts: [] }])[0]!.pdfPath).toBe('units/1.pdf')
   })
 
   it('كتابٌ غائب (حُذف) يُعرض شرطة', () => {

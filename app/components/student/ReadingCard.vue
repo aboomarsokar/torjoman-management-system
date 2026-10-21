@@ -13,10 +13,13 @@ interface Props {
   enrollmentDate: string | null
   /** الطالبُ نفسه (يرى زرّ الاختبار). */
   self: boolean
+  /** العنوان — «مقرّرك الحالي» في صفحة البرامج المصاحبة نفسها. */
+  heading?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { heading: 'البرامج المصاحبة' })
 const { journey, settings } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
+const { busy, download } = useReadingAdmin()
 
 const lastResult = computed(() => {
   const due = journey.value.due
@@ -42,7 +45,7 @@ const PACE = {
         class="size-5"
       /></span>
       <h3 id="rc-title">
-        البرامج المصاحبة
+        {{ heading }}
       </h3>
       <span
         v-if="journey.pace"
@@ -71,6 +74,22 @@ const PACE = {
         class="rc-last"
       >
         آخرُ محاولة: {{ lastResult }}٪ — النجاح من {{ settings.reading_pass_mark }}٪
+      </div>
+
+      <div
+        v-if="journey.due.pdfPath"
+        class="rc-btns"
+      >
+        <UButton
+          label="تنزيل المقرّر (PDF)"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="outline"
+          size="lg"
+          :loading="busy"
+          :ui="{ base: 'min-h-11 rounded-xl font-semibold justify-center' }"
+          @click="download(journey.due)"
+        />
       </div>
 
       <div
@@ -130,6 +149,7 @@ h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }
 .rc-unit { font-size: 19px; font-weight: 800; color: var(--ink); }
 .rc-scope { font-size: 14.5px; color: var(--ink-2); line-height: 1.7; }
 .rc-last { font-size: 13.5px; color: var(--ink-3); }
+.rc-btns { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .rc-action { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .rc-wait { margin: 0; display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--err); }
 .rc-hint { margin: 0; font-size: 13px; color: var(--ink-3); }
@@ -139,5 +159,6 @@ h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }
 @media (max-width: 560px) {
   .rc { padding: 16px; }
   .rc-action { align-items: stretch; }
+  .rc-btns > * { flex: 1 1 100%; }
 }
 </style>

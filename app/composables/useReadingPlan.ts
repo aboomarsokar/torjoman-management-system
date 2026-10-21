@@ -6,7 +6,7 @@
 import type { Database } from '~/types/database.types'
 import { readingJourney, type ReadingAttempt, type ReadingUnit } from '~/utils/reading'
 
-type UnitRow = { id: number, sort_order: number, title: string, parts: { page_from: number, page_to: number, sort_order: number, book: { title: string, author: string | null } | null }[] }
+type UnitRow = { id: number, sort_order: number, title: string, pdf_path?: string | null, parts: { page_from: number, page_to: number, sort_order: number, book: { title: string, author: string | null } | null }[] }
 
 /** صفوفُ المقرّرات بتضمين أجزائها وكتبها ← مقرّراتٌ مرتّبة. نقيّ. */
 export function toReadingUnits(rows: UnitRow[]): ReadingUnit[] {
@@ -15,6 +15,7 @@ export function toReadingUnits(rows: UnitRow[]): ReadingUnit[] {
       id: r.id,
       sort_order: r.sort_order,
       title: r.title,
+      pdfPath: r.pdf_path ?? null,
       parts: [...r.parts].sort((a, b) => a.sort_order - b.sort_order)
         .map(p => ({ book: p.book?.title ?? '—', author: p.book?.author ?? null, page_from: p.page_from, page_to: p.page_to }))
     }))
@@ -23,9 +24,9 @@ export function toReadingUnits(rows: UnitRow[]): ReadingUnit[] {
 
 export function useReadingUnits() {
   const supabase = useSupabaseClient<Database>()
-  const { data: units } = useLazyAsyncData<ReadingUnit[]>('reading-units', async () => {
+  const { data: units, refresh: refreshUnits } = useLazyAsyncData<ReadingUnit[]>('reading-units', async () => {
     const { data, error } = await supabase.from('reading_units')
-      .select('id, sort_order, title, parts:reading_unit_parts(page_from, page_to, sort_order, book:reading_books(title, author))')
+      .select('id, sort_order, title, pdf_path, parts:reading_unit_parts(page_from, page_to, sort_order, book:reading_books(title, author))')
       .returns<UnitRow[]>()
     if (error) console.error('[reading] فشل جلب المقرّرات:', error.message)
     return toReadingUnits(data ?? [])
@@ -37,7 +38,20 @@ export function useReadingUnits() {
     return data ?? { reading_pass_mark: 80, reading_test_questions: 20, reading_test_minutes: 20, reading_retry_days: 7 }
   }, { server: false, default: () => ({ reading_pass_mark: 80, reading_test_questions: 20, reading_test_minutes: 20, reading_retry_days: 7 }) })
 
-  return { units, settings }
+  return { units, settings, refreshUnits }
+}
+
+/** صفُّ الطالب صاحب الجلسة (معرّفُه وتاريخُ التحاقه) — لصفحتَي البرامج المصاحبة واختبارها. */
+export function useMyReadingStudent() {
+  const supabase = useSupabaseClient<Database>()
+  const { profile } = useProfile()
+  const { data } = useLazyAsyncData('reading-my-student', async () => {
+    const id = profile.value?.id
+    if (!id) return null
+    const { data: row } = await supabase.from('students').select('id, enrollment_date').eq('user_id', id).maybeSingle()
+    return row
+  }, { server: false, default: () => null, watch: [() => profile.value?.id] })
+  return data
 }
 
 export function useReadingPlan(source: () => { studentId: string, enrollmentDate: string | null }) {

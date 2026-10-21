@@ -1,17 +1,21 @@
 <script setup lang="ts">
 /**
  * محطّاتُ مقرّرات القراءة في تبويب الرحلة (للطالب ولملفّه عند العاملين): لكلّ مقرّرٍ كتبُه وصفحاتُه وحالُه
- * (اجتاز بأعلى نسبة / المستحقّ / لم يُبلغ) وعددُ محاولاته. البياناتُ من `useReadingPlan`.
+ * (اجتاز بأعلى نسبة / المستحقّ / لم يُبلغ) وعددُ محاولاته، وتنزيلُ ملفّ المجتاز والمستحقّ. البياناتُ من `useReadingPlan`.
  */
 import { unitScope } from '~/utils/reading'
 
 interface Props {
   studentId: string
   enrollmentDate: string | null
+  /** العنوان — «كلّ المقرّرات» في صفحة البرامج المصاحبة نفسها. */
+  heading?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { heading: 'البرامج المصاحبة' })
 const { journey } = useReadingPlan(() => ({ studentId: props.studentId, enrollmentDate: props.enrollmentDate }))
+// التنزيلُ للمجتاز والمستحقّ (القاعدةُ تقصر الطالبَ عليهما على كلّ حال)
+const { busy, download } = useReadingAdmin()
 </script>
 
 <template>
@@ -24,7 +28,7 @@ const { journey } = useReadingPlan(() => ({ studentId: props.studentId, enrollme
         name="i-lucide-library"
         class="size-5"
       /></span>
-      البرامج المصاحبة
+      {{ heading }}
     </h3>
     <p
       v-if="!journey.stations.length"
@@ -52,6 +56,19 @@ const { journey } = useReadingPlan(() => ({ studentId: props.studentId, enrollme
             {{ unitScope(s.unit) }}
           </div>
         </div>
+        <UButton
+          v-if="s.unit.pdfPath && s.status !== 'locked'"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="ghost"
+          size="md"
+          :loading="busy"
+          :aria-label="`تنزيل ${s.unit.title}`"
+          :title="`تنزيل ${s.unit.title}`"
+          class="dl"
+          :ui="{ base: 'min-h-11 min-w-11 rounded-xl justify-center' }"
+          @click="download(s.unit)"
+        />
         <span
           v-if="s.status === 'passed'"
           class="tag ok"

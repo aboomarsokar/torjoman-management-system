@@ -5,7 +5,6 @@
  * المنطقُ في `useReadingTest`، والتصحيحُ في القاعدة (لا تصل الإجاباتُ الصحيحة إلى الجهاز).
  * من ليس طالباً يُعاد إلى لوحته.
  */
-import type { Database } from '~/types/database.types'
 import { formatClock } from '~/composables/useReadingTest'
 import { unitScope } from '~/utils/reading'
 import { formatDay } from '~/utils/reportWindow'
@@ -14,19 +13,13 @@ import { isolateLtr } from '~/utils/transport'
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'اختبار البرامج المصاحبة — ترجمان' })
 
-const supabase = useSupabaseClient<Database>()
-const { role, profile } = useProfile()
+const { role } = useProfile()
 watch(role, (r) => {
   if (r && r !== 'student') void navigateTo('/dashboard', { replace: true })
 }, { immediate: true })
 
 // صفُّ الطالب ← مسارُه: المقرّرُ المطلوب وكتبُه في التمهيد، وتاريخُ الإعادة إن كان ينتظر
-const { data: me } = useLazyAsyncData('reading-test-student', async () => {
-  const id = profile.value?.id
-  if (!id) return null
-  const { data } = await supabase.from('students').select('id, enrollment_date').eq('user_id', id).maybeSingle()
-  return data
-}, { server: false, default: () => null, watch: [() => profile.value?.id] })
+const me = useMyReadingStudent()
 const { journey, settings } = useReadingPlan(() => ({ studentId: me.value?.id ?? '', enrollmentDate: me.value?.enrollment_date ?? null }))
 const { phase, payload, answers, result, errorMessage, remaining, unanswered, start, choose, submit } = useReadingTest()
 
@@ -43,14 +36,14 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
 <template>
   <div class="rt">
     <NuxtLink
-      to="/me"
+      to="/programs"
       class="back"
     >
       <UIcon
         name="i-lucide-chevron-right"
         class="size-[18px]"
       />
-      <span>عودة إلى صفحتي</span>
+      <span>عودة إلى البرامج المصاحبة</span>
     </NuxtLink>
 
     <ClientOnly>
@@ -210,8 +203,8 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
           {{ result.passed ? 'انتقلتَ إلى المقرّر التالي.' : `راجع المقرّر، وتستطيع الإعادة بعد ${settings.reading_retry_days} أيام.` }}
         </p>
         <UButton
-          to="/me"
-          label="العودة إلى صفحتي"
+          to="/programs"
+          label="العودة إلى البرامج المصاحبة"
           color="neutral"
           variant="outline"
           size="lg"

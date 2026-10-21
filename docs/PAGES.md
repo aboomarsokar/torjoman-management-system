@@ -118,7 +118,7 @@
 
 | الشاشة | المسار | الحالة | البريف |
 |---|---|---|---|
-| محاضر الاجتماعات | `pages/minutes/index.vue` | ✅ | §4.19 |
+| محاضر الاجتماعات | `pages/minutes/index.vue` (+ `components/minutes/FormModal.vue` و`Reader.vue`) | ✅ — الأمور المؤجّلة وحقولٌ تتمدّد وزرّا الحالة (2026-10-21) | §4.19 |
 | الملف المالي (نظرة عامة + حركات + رواتب + حوافز) | `pages/finance/index.vue` | ✅ (مستنداتُ الحركات وفلتر «بلا مستند» — `FinanceTransactionDocsModal`، 2026-10-19) | §4.20 |
 | التنبيهات الإدارية | `pages/alerts/index.vue` | ✅ | §4.21 |
 | الأخبار (إدارة + رفع صور + عرض على Landing) | `pages/news/index.vue` | ✅ | §4.26 |

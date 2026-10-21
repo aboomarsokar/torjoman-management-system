@@ -207,6 +207,12 @@ const pace = computed(() => {
       </section>
     </div>
 
+    <StudentReadingCard
+      :student-id="studentId"
+      :enrollment-date="enrollmentDate"
+      :self="self"
+    />
+
     <!-- حلقتي -->
     <section class="halaqa">
       <div class="hq-item">

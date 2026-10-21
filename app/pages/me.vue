@@ -143,14 +143,19 @@ const mustChangePassword = computed(() => profile.value?.must_change_password ==
             :halaqa="halaqa"
             :gender="me.gender"
           />
-          <StudentJourneyCard
-            v-else-if="tab === 'journey'"
-            :student-id="me.id"
-            :quran-parts="me.quran_parts"
-            :enrollment-date="me.enrollment_date"
-            own-records
-            bare
-          />
+          <template v-else-if="tab === 'journey'">
+            <StudentJourneyCard
+              :student-id="me.id"
+              :quran-parts="me.quran_parts"
+              :enrollment-date="me.enrollment_date"
+              own-records
+              bare
+            />
+            <StudentReadingStations
+              :student-id="me.id"
+              :enrollment-date="me.enrollment_date"
+            />
+          </template>
           <template v-else>
             <div class="edit-bar">
               <p>

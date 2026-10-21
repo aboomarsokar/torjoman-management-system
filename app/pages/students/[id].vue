@@ -190,13 +190,18 @@ const tab = useStudentTab()
             :self="false"
             :gender="student.gender"
           />
-          <StudentJourneyCard
-            v-else-if="tab === 'journey'"
-            :student-id="student.id"
-            :quran-parts="student.quran_parts"
-            :enrollment-date="student.enrollment_date"
-            bare
-          />
+          <template v-else-if="tab === 'journey'">
+            <StudentJourneyCard
+              :student-id="student.id"
+              :quran-parts="student.quran_parts"
+              :enrollment-date="student.enrollment_date"
+              bare
+            />
+            <StudentReadingStations
+              :student-id="student.id"
+              :enrollment-date="student.enrollment_date"
+            />
+          </template>
           <template v-else>
             <!-- حساب الدخول (المدير الإداري): إعادة تعيين الكلمة وتعطيل الدخول -->
             <StudentAccountActions

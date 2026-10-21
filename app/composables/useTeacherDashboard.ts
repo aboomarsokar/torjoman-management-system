@@ -10,6 +10,7 @@ import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { approvedJuzReached, buildNomineeRows, type CycleItemRow } from '~/utils/exams/nomination'
 import { HISTORY_MONTHS, monthRange, type HistoryRow } from '~/utils/quran/monthHistory'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { behindStudents } from '~/utils/reading'
 import {
   examEligible, examTally, frequentAbsentees, halaqaAttendance, lastApprovedMonth, recordingStatus, unrecordedStudents,
   type DashRecord, type DashReport
@@ -39,7 +40,7 @@ export function useTeacherDashboard() {
     const range = monthRange(year, month)
     const lowerYear = shiftMonth(year, month, -HISTORY_MONTHS).year
 
-    const [students, days, absences, reports, cycles, items, records, results, alerts, alloc, statement] = await Promise.all([
+    const [students, days, absences, reports, cycles, items, records, results, alerts, alloc, statement, readingUnits, readingPassed] = await Promise.all([
       supabase.from('students').select('id, full_name, quran_parts, enrollment_date, halaqa_id').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
       supabase.from('attendance_days').select('day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
       supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
@@ -56,10 +57,12 @@ export function useTeacherDashboard() {
       supabase.from('admin_alerts').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('halaqa_incentives').select('allocated_amount').eq('halaqa_id', hid).eq('incentive_month', month).eq('incentive_year', year).maybeSingle(),
       supabase.from('incentive_statements').select('status, return_note').eq('halaqa_id', hid).eq('statement_month', month).eq('statement_year', year).maybeSingle(),
+      supabase.from('reading_units').select('id', { count: 'exact', head: true }),
+      supabase.from('reading_attempts').select('student_id, unit_id, student:student_id!inner(halaqa_id)').eq('student.halaqa_id', hid).eq('passed', true),
       quran.load()
     ])
     const failure = students.error ?? days.error ?? absences.error ?? reports.error ?? cycles.error ?? items.error
-      ?? records.error ?? results.error ?? alerts.error ?? alloc.error ?? statement.error
+      ?? records.error ?? results.error ?? alerts.error ?? alloc.error ?? statement.error ?? readingUnits.error ?? readingPassed.error
     if (failure) throw failure
 
     const studs = students.data ?? []
@@ -71,6 +74,14 @@ export function useTeacherDashboard() {
       approvedJuzReached(studs, recordRows, quran.juz.value))
     const todayHeld = dayList.includes(today)
     const unrecorded = unrecordedStudents(studs, recordRows, recording.period)
+    // مقرّراتُ القراءة المجتازة لكلّ طالب (مقرّرٌ مكرّرُ النجاح يُعدّ مرّة)
+    const passedUnits = new Map<string, Set<number>>()
+    for (const a of readingPassed.data ?? []) {
+      const set = passedUnits.get(a.student_id) ?? new Set<number>()
+      set.add(a.unit_id)
+      passedUnits.set(a.student_id, set)
+    }
+    const readingBehind = behindStudents(studs, new Map([...passedUnits].map(([k, v]) => [k, v.size])), readingUnits.count ?? 0, Date.now())
 
     return {
       halaqa,
@@ -88,6 +99,7 @@ export function useTeacherDashboard() {
       lastMonth: lastApprovedMonth(recordRows),
       exams: examTally(results.data ?? []),
       eligible: examEligible(nominees),
+      readingBehind,
       newAlerts: alerts.count ?? 0,
       incentive: {
         allocated: alloc.data?.allocated_amount ?? 0,

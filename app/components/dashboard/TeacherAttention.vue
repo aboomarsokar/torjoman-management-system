@@ -14,6 +14,8 @@ interface Props {
   showUnrecorded: boolean
   recordingLabel: string
   eligible: Person[]
+  /** المتأخّرون عن مقرّر القراءة (`count` = عددُ المقرّرات المتأخّرة). */
+  readingBehind: Person[]
 }
 
 const props = defineProps<Props>()
@@ -21,7 +23,8 @@ const props = defineProps<Props>()
 const groups = computed(() => [
   { key: 'abs', icon: 'i-lucide-user-x', tone: 'err', title: `غاب ${ABSENCE_ATTENTION_DAYS} أيام فأكثر هذا الشهر`, people: props.absentees, to: '/attendance', cta: 'الحضور' },
   ...(props.showUnrecorded ? [{ key: 'rec', icon: 'i-lucide-book-dashed', tone: 'blue', title: `لم يُرصد له في شهر ${isolateLtr(props.recordingLabel)}`, people: props.unrecorded, to: '/reports', cta: 'الرصد' }] : []),
-  { key: 'exam', icon: 'i-lucide-clipboard-check', tone: 'green', title: 'مستحقّون للاختبار ولم يُرشَّحوا', people: props.eligible, to: '/exams', cta: 'رشّح' }
+  { key: 'exam', icon: 'i-lucide-clipboard-check', tone: 'green', title: 'مستحقّون للاختبار ولم يُرشَّحوا', people: props.eligible, to: '/exams', cta: 'رشّح' },
+  { key: 'read', icon: 'i-lucide-book-open-text', tone: 'blue', title: 'متأخّرون في مقرّر القراءة', people: props.readingBehind, to: '/students', cta: 'الطلاب' }
 ].filter(g => g.people.length))
 
 const shown = (people: Person[]) => people.slice(0, ATTENTION_LIST_MAX)

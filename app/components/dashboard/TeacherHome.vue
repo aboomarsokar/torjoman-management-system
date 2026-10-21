@@ -117,6 +117,7 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
         :show-unrecorded="showUnrecorded"
         :recording-label="d.recording.label"
         :eligible="d.eligible"
+        :reading-behind="d.readingBehind"
       />
     </template>
   </div>

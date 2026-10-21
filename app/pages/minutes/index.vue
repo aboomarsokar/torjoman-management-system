@@ -10,6 +10,8 @@ import type { Database } from '~/types/database.types'
 import type { Role } from '~/constants/roles'
 import type { MinuteForm, MinuteRow, MinuteStaff, MinuteStatus } from '~/utils/minutes'
 import { minuteDate, minutePayload } from '~/utils/minutes'
+import { minutesStats } from '~/utils/pageStats'
+import { gazaToday } from '~/utils/reportWindow'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'محاضر الاجتماعات — ترجمان' })
@@ -154,8 +156,13 @@ async function confirmDelete() {
         description="أنشئ أول محضر لاجتماع إداري."
       />
 
-      <div
+      <UiStatStrip
         v-else
+        :items="minutesStats(minutes, gazaToday())"
+        label="أرقام المحاضر"
+      />
+      <div
+        v-if="!pending && minutes?.length"
         class="list"
       >
         <article

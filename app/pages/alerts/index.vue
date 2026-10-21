@@ -6,6 +6,7 @@
  * والمشرفُ الميدانيّ خارجها (قرار 2026-10-21): لا قائمةَ ولا إصدار، ومن فتح الرابط رأى قفلاً.
  */
 import type { Database } from '~/types/database.types'
+import { alertStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'التنبيهات الإدارية — ترجمان' })
@@ -175,6 +176,10 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
       />
 
       <template v-else>
+        <UiStatStrip
+          :items="alertStats(alerts ?? [])"
+          label="أرقام التنبيهات"
+        />
         <div
           v-if="isTeacher && newCount"
           class="hint"

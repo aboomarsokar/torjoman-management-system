@@ -1,0 +1,57 @@
+/**
+ * أرقامُ رأس الشاشات (طلب المستخدم 2026-10-21: «في كلّ تبويب أرقامُ إحصائياتٍ عامّة بحسب عنوانه»).
+ * كلُّ دالّةٍ تأخذ صفوفَ الشاشة المحمّلةَ أصلاً (فتتبع نطاقَ RLS وتصفيتَها، بلا طلباتٍ جديدة) وتُرجع
+ * بنودَ `UiStatStrip` جاهزة. مختبَرةٌ في pageStats.test.ts.
+ */
+import type { StatItem } from '~/components/ui/StatStrip.vue'
+import { formatAmount, isolateLtr } from '~/utils/transport'
+
+const round1 = (n: number) => Math.round(n * 10) / 10
+/** شهرُ تاريخٍ `YYYY-MM-DD` = شهرُ اليوم؟ */
+const sameMonth = (iso: string | null | undefined, today: string) => !!iso && iso.slice(0, 7) === today.slice(0, 7)
+
+/** الطلاب: النشطون، وغيرُ النشطين (منقطع/متخرّج/منقول)، والملتحقون هذا الشهر، ومتوسّطُ المحفوظ عند الالتحاق. */
+export function studentStats(rows: { status: string, enrollment_date: string | null, quran_parts: number | null }[], today: string): StatItem[] {
+  const active = rows.filter(s => s.status === 'active')
+  const parts = active.map(s => s.quran_parts).filter((p): p is number => p !== null)
+  return [
+    { key: 'active', icon: 'i-lucide-graduation-cap', value: active.length, label: 'طالباً نشطاً' },
+    { key: 'inactive', icon: 'i-lucide-user-minus', tone: 'neutral', value: rows.length - active.length, label: 'غيرُ نشط (منقطع/متخرّج/منقول)' },
+    { key: 'new', icon: 'i-lucide-user-plus', tone: 'green', value: active.filter(s => sameMonth(s.enrollment_date, today)).length, label: 'التحق هذا الشهر' },
+    { key: 'parts', icon: 'i-lucide-book-open-check', value: parts.length ? String(round1(parts.reduce((a, b) => a + b, 0) / parts.length)) : '—', label: 'جزءاً محفوظاً متوسّطاً عند الالتحاق' }
+  ]
+}
+
+/** المواصلات: رحلاتُ الشهر، ومجموعُها، والمسدَّدُ منه، وغيرُ المسدَّد. */
+export function transportStats(trips: { amount: number | string, paid: boolean }[]): StatItem[] {
+  const sum = (list: typeof trips) => Math.round(list.reduce((s, t) => s + Number(t.amount), 0) * 100) / 100
+  const money = (n: number) => isolateLtr(formatAmount(n))
+  const unpaid = trips.filter(t => !t.paid)
+  return [
+    { key: 'trips', icon: 'i-lucide-bus', value: trips.length, label: 'رحلة في الشهر' },
+    { key: 'total', icon: 'i-lucide-wallet', tone: 'neutral', value: money(sum(trips)), label: 'المجموع' },
+    { key: 'paid', icon: 'i-lucide-circle-check', tone: 'green', value: money(sum(trips.filter(t => t.paid))), label: 'المسدَّد' },
+    { key: 'unpaid', icon: 'i-lucide-clock', tone: unpaid.length ? 'err' : 'neutral', value: money(sum(unpaid)), label: 'غيرُ المسدَّد' }
+  ]
+}
+
+/** التنبيهات: كلُّها، والجديدةُ بلا إقرار، والمُقَرُّ بها، والإنذاراتُ النهائية. */
+export function alertStats(rows: { status: string, severity: string }[]): StatItem[] {
+  const fresh = rows.filter(a => a.status === 'new').length
+  return [
+    { key: 'all', icon: 'i-lucide-bell', value: rows.length, label: 'تنبيهاً' },
+    { key: 'new', icon: 'i-lucide-bell-ring', tone: fresh ? 'err' : 'neutral', value: fresh, label: 'بانتظار الإقرار' },
+    { key: 'ack', icon: 'i-lucide-check-check', tone: 'green', value: rows.filter(a => a.status === 'acknowledged').length, label: 'أُقِرّ بها' },
+    { key: 'final', icon: 'i-lucide-triangle-alert', tone: 'neutral', value: rows.filter(a => a.severity === 'final_warning').length, label: 'إنذاراً نهائيّاً' }
+  ]
+}
+
+/** المحاضر: كلُّها، والمعتمَدة، والمسودّات، ومحاضرُ هذا الشهر. */
+export function minutesStats(rows: { status: string, meeting_date: string }[], today: string): StatItem[] {
+  return [
+    { key: 'all', icon: 'i-lucide-notebook-pen', value: rows.length, label: 'محضراً' },
+    { key: 'final', icon: 'i-lucide-check-check', tone: 'green', value: rows.filter(m => m.status === 'final').length, label: 'معتمَداً' },
+    { key: 'draft', icon: 'i-lucide-file-pen', tone: 'neutral', value: rows.filter(m => m.status === 'draft').length, label: 'مسودّة' },
+    { key: 'month', icon: 'i-lucide-calendar', value: rows.filter(m => sameMonth(m.meeting_date, today)).length, label: 'اجتماعاً هذا الشهر' }
+  ]
+}

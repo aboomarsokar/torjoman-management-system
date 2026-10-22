@@ -11,7 +11,6 @@ import { displayPhotoPath } from '~/constants/profilePhoto'
 import { userStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
-useSeoMeta({ title: 'إدارة المستخدمين — ترجمان' })
 
 type Gender = Database['public']['Enums']['gender_type']
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
@@ -21,8 +20,10 @@ const supabase = useSupabaseClient<Database>()
 const { role: myRole } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isReadOnly, isTechnical } = usePermissions()
-const canView = computed(() => isAdmin.value || isReadOnly.value || isTechnical.value)
+const { isAdmin, isReadOnly, isTechnical, isWomenAdmin: fem } = usePermissions()
+// والمديرةُ الإدارية اطّلاعاً على عاملات قسمها، ومنها «ادخلي بحسابها» (طلب المستخدم 2026-10-22)
+const canView = computed(() => isAdmin.value || isReadOnly.value || isTechnical.value || fem.value)
+useSeoMeta({ title: () => fem.value ? 'عاملات القسم — ترجمان' : 'إدارة المستخدمين — ترجمان' })
 
 const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'neutral' | 'error'> = {
   project_supervisor: 'neutral',
@@ -36,14 +37,20 @@ const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'w
 }
 // المدير الفني لا يرى حساباتِ الإدارة هنا: مشرفَ المشروع والمديرَين (ولا نفسَه ولا زملاءه) والمديرةَ الإدارية (طلب المستخدم 2026-10-22)
 const HIDDEN_FROM_TECHNICAL: readonly Role[] = ['project_supervisor', 'admin_manager', 'technical_manager', 'women_admin']
-const visibleRoles = computed(() => isTechnical.value ? STAFF_ROLES.filter(r => !HIDDEN_FROM_TECHNICAL.includes(r)) : STAFF_ROLES)
+// والمديرةُ ما تحتها وحده: المشرفاتُ والمختبِراتُ والمعلّمات — والإناثُ بالجنس صراحةً، فملفّاتُ العاملين كلُّها ظاهرةٌ لها
+const UNDER_WOMEN_ADMIN: readonly Role[] = ['field_supervisor', 'examiner', 'teacher']
+const visibleRoles = computed(() => fem.value
+  ? STAFF_ROLES.filter(r => UNDER_WOMEN_ADMIN.includes(r))
+  : isTechnical.value ? STAFF_ROLES.filter(r => !HIDDEN_FROM_TECHNICAL.includes(r)) : STAFF_ROLES)
 const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
   'users-list',
   async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from('profiles')
       .select('*, assigner:assigned_by(full_name)')
       .in('role', visibleRoles.value)
+    if (fem.value) q = q.eq('gender', 'female')
+    const { data, error } = await q
       .order('created_at', { ascending: false })
       .returns<UserRow[]>()
     if (error) {
@@ -63,7 +70,7 @@ function countFor(key: Role | 'all') {
 // قائمةٌ منسدلة بعدد كلّ دور (كانت ثمانيةَ أزرارٍ تأخذ ثلاثة أسطر على الجوال — طلب المستخدم 2026-10-20)
 const roleFilterItems = computed(() => ([
   { value: 'all' as const, label: 'كل الأدوار' },
-  ...visibleRoles.value.map(r => ({ value: r, label: roleLabel(r, null) }))
+  ...visibleRoles.value.map(r => ({ value: r, label: roleLabel(r, fem.value ? 'female' : null) }))
 ]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
 // البحث بالاسم أو الرقم الوظيفي (يقبل الأرقام العربية) — فوق تصفية الدور
 const query = ref('')
@@ -186,8 +193,8 @@ async function confirmReset() {
 
     <template v-else>
       <UiPageHeader
-        title="إدارة المستخدمين"
-        :subtitle="pending ? 'الحسابات يُنشئها المدير الإداري وحده.' : `${(users || []).length} مستخدم في المنظومة — الحسابات يُنشئها المدير الإداري وحده.`"
+        :title="fem ? 'عاملات القسم' : 'إدارة المستخدمين'"
+        :subtitle="pending ? 'الحسابات يُنشئها المدير الإداري وحده.' : `${(users || []).length} ${fem ? ((users || []).length >= 3 && (users || []).length <= 10 ? 'عاملات في قسمك' : 'عاملةً في قسمك') : 'مستخدم في المنظومة'} — الحسابات يُنشئها المدير الإداري وحده.`"
       >
         <template
           v-if="isAdmin"
@@ -225,7 +232,7 @@ async function confirmReset() {
       <ClientOnly>
         <UiStatStrip
           v-if="!pending && (users ?? []).length"
-          :items="userStats(users ?? [])"
+          :items="userStats(users ?? [], fem)"
           label="أرقام الحسابات"
         />
         <UiSkeletonTable

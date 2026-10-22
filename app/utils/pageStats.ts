@@ -79,13 +79,14 @@ export function examPlanStats(cycles: { stage_number: number, parts_from: number
 }
 
 /** المستخدمون (العاملون): النشطون، والمعطَّلون، والمعلّمون، والمشرفون الميدانيون — نشطين. */
-export function userStats(rows: { status: string, role: string }[]): StatItem[] {
+/** `female`: عاملاتُ قسم البنات (المديرة الإدارية — 2026-10-22). */
+export function userStats(rows: { status: string, role: string }[], female = false): StatItem[] {
   const active = rows.filter(u => u.status === 'active')
   return [
     { key: 'active', icon: 'i-lucide-users', value: active.length, label: 'حساباً نشطاً' },
     { key: 'disabled', icon: 'i-lucide-user-x', tone: 'neutral', value: rows.length - active.length, label: 'حساباً معطَّلاً' },
-    { key: 'teachers', icon: 'i-lucide-book-open', tone: 'green', value: active.filter(u => u.role === 'teacher').length, label: 'معلّماً' },
-    { key: 'supervisors', icon: 'i-lucide-clipboard-check', value: active.filter(u => u.role === 'field_supervisor').length, label: 'مشرفاً ميدانيّاً' }
+    { key: 'teachers', icon: 'i-lucide-book-open', tone: 'green', value: active.filter(u => u.role === 'teacher').length, label: female ? 'معلّمةً' : 'معلّماً' },
+    { key: 'supervisors', icon: 'i-lucide-clipboard-check', value: active.filter(u => u.role === 'field_supervisor').length, label: female ? 'مشرفةً ميدانيّة' : 'مشرفاً ميدانيّاً' }
   ]
 }
 

@@ -74,7 +74,7 @@ const mainNav: Item[] = [
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'teacher', 'examiner'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
+  { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },
   // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)

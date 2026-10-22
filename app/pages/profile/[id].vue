@@ -228,8 +228,21 @@ const pwOpen = ref(false)
         <!-- الترويسة -->
         <div class="band">
           <div class="band-id">
-            <div class="av">
+            <div
+              class="av"
+              :class="{ 'av-btn': showPhotoField }"
+            >
+              <!-- الحرفُ نفسُه زرُّ رفع الصورة وتبديلها (طلب المستخدم 2026-10-22 بدل بطاقتها المنفصلة) -->
+              <ProfilePhotoButton
+                v-if="showPhotoField"
+                :profile-id="data.p.id"
+                :name="data.p.full_name"
+                :photo-path="photoPath"
+                :gender="data.p.gender"
+                @changed="onPhotoChanged"
+              />
               <ProfileAvatar
+                v-else
                 :name="data.p.full_name"
                 :photo-url="photoUrl"
               />
@@ -284,20 +297,6 @@ const pwOpen = ref(false)
           v-if="isSelf && notImpersonating && data.p.must_change_password"
           @change="pwOpen = true"
         />
-
-        <!-- الصورة الشخصية (اختيارية؛ لا تُعرض لحساب أنثى) -->
-        <section
-          v-if="showPhotoField"
-          class="card photo-card"
-        >
-          <ProfilePhotoField
-            :profile-id="data.p.id"
-            :name="data.p.full_name"
-            :photo-path="photoPath"
-            :gender="data.p.gender"
-            @changed="onPhotoChanged"
-          />
-        </section>
 
         <!-- النطاق -->
         <div
@@ -620,7 +619,7 @@ const pwOpen = ref(false)
 .band-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .av { width: 64px; height: 64px; border-radius: 18px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex: none; overflow: hidden; }
-.photo-card { padding: 18px 22px; margin-bottom: 18px; }
+.av.av-btn { overflow: visible; } /* شارةُ الكاميرا تخرج عن الحافة */
 .band h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; color: var(--ink); }
 .band-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .band-sub span { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-2); }

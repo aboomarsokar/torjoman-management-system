@@ -242,6 +242,7 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
           <div
             v-if="canWrite"
             class="save-bar"
+            data-float-above
           >
             <span
               class="save-note"

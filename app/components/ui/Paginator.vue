@@ -6,8 +6,27 @@ const emit = defineEmits<{ 'update:page': [number] }>()
 const from = computed(() => props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1)
 const to = computed(() => Math.min(props.page * props.pageSize, props.total))
 
+const root = ref<HTMLElement>()
+/**
+ * الصفحةُ الجديدة تُعرض من أوّلها (طلب المستخدم 2026-10-22): يصعد أقربُ سلفٍ يُمرَّر — `.content` في لوحة التحكم
+ * لا النافذة، أو جسمُ نافذةٍ منبثقة — وإلا فالنافذة. بلا حركةٍ لمن طلب تقليلها.
+ */
+function scrollToStart() {
+  const behavior: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+  for (let el = root.value?.parentElement; el && el !== document.body; el = el.parentElement) {
+    const overflow = getComputedStyle(el).overflowY
+    if ((overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight) {
+      el.scrollTo({ top: 0, behavior })
+      return
+    }
+  }
+  window.scrollTo({ top: 0, behavior })
+}
+
 function go(p: number) {
-  if (p >= 1 && p <= props.pageCount) emit('update:page', p)
+  if (p < 1 || p > props.pageCount || p === props.page) return
+  emit('update:page', p)
+  scrollToStart()
 }
 // أرقام صفحات مختصرة حول الصفحة الحالية
 const pages = computed(() => {
@@ -22,6 +41,7 @@ const pages = computed(() => {
 <template>
   <div
     v-if="pageCount > 1"
+    ref="root"
     class="pg"
   >
     <span class="pg-info">عرض {{ from }}–{{ to }} من {{ total }}</span>

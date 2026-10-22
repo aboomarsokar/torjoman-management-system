@@ -29,6 +29,8 @@ watch(status, async (s) => {
 }, { immediate: true })
 
 const drawerOpen = ref(false)
+/** حاويةُ المحتوى — يقرؤها زرُّ «إلى الأعلى» حين تكون هي المُمرَّرة لا النافذة. */
+const contentEl = ref<HTMLElement | null>(null)
 function comingSoon() {
   drawerOpen.value = false
   toast.add({ title: 'هذه الشاشة قيد الإنشاء — قريباً.', icon: 'i-lucide-hammer', color: 'info' })
@@ -335,9 +337,13 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
         </header>
       </div>
 
-      <main class="content">
+      <main
+        ref="contentEl"
+        class="content"
+      >
         <slot />
       </main>
+      <UiBackToTop :container="contentEl" />
     </div>
   </div>
 </template>
@@ -393,7 +399,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .tu-role { font-size: 12.5px; color: var(--ink-3); }
 .top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; overflow: hidden; }
 /* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
-.content { --content-pad: 24px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
+/* القاعُ أوسع بقدر زرّ «إلى الأعلى» (44 + هامشه) كي يُمرَّر آخرُ عنصرٍ — كأزرار الترقيم يساراً — فوقه لا تحته */
+.content { --content-pad: 24px; flex: 1; overflow-y: auto; padding: var(--content-pad); padding-bottom: calc(var(--content-pad) + 60px); background: var(--bg); position: relative; }
 
 /* RESPONSIVE */
 .overlay { display: none; }

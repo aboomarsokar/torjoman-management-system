@@ -6,6 +6,7 @@
  * أو «فات بلا رصد» وزرٌّ إلى صفحة الحضور على ذلك اليوم)، وعددُ أيام الشهر المرصودة، وشارةُ الرصد الشهريّ،
  * والانتقالُ والتواصلُ مع المعلم. البياناتُ من `halaqat_recording_status` (طلبٌ واحد)، وتفصيلُ اليوم عند طلبه.
  * صفحتُه `/follow-up`: `page` يُخفي عنوانَه الداخليّ لأنّ رأسَ الصفحة يحمله.
+ * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها؛ وفلترٌ لحلقةٍ بعينها.
  */
 import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
@@ -32,7 +33,25 @@ const { data, pending } = useLazyAsyncData<RecordingRow[]>('halaqat-recording-st
 const all = computed(() => sortByLag(data.value ?? []))
 const summary = computed(() => recordingSummary(data.value ?? []))
 const view = ref<'all' | 'lag'>('all')
-const shown = computed(() => view.value === 'lag' ? all.value.filter(isLagging) : all.value)
+const halqaF = ref('all')
+const halqaItems = computed(() => [{ label: 'كل الحلقات', value: 'all' }, ...all.value.map(r => ({ label: r.halaqa_name, value: r.halaqa_id }))])
+const shown = computed(() => all.value
+  .filter(r => halqaF.value === 'all' || r.halaqa_id === halqaF.value)
+  .filter(r => view.value === 'all' || isLagging(r)))
+
+// السطورُ مطويّةٌ افتراضاً، وحلقةٌ مختارةٌ بالفلتر تنفتح وحدها
+const expanded = ref(new Set<string>())
+const isExpanded = (id: string) => expanded.value.has(id) || halqaF.value === id
+function toggleRow(id: string) {
+  const next = new Set(expanded.value)
+  if (isExpanded(id)) {
+    next.delete(id)
+    if (halqaF.value === id) halqaF.value = 'all'
+  } else next.add(id)
+  expanded.value = next
+}
+/** نبرةُ العدد: كاملٌ أخضر، وما فاته يومٌ أحمر. */
+const countTone = (r: RecordingRow) => r.missed_days.length ? 'bad' : r.recorded_days >= r.expected_days && r.expected_days > 0 ? 'ok' : ''
 const filterOptions = computed(() => [
   { value: 'all' as const, label: `الكل (${summary.value.halqat})` },
   { value: 'lag' as const, label: `المقصّرة (${summary.value.lagging})` }
@@ -112,10 +131,20 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
       <h3 v-if="!page">
         متابعة الرصد
       </h3>
-      <UiFilterChips
-        v-model="view"
-        :options="filterOptions"
-      />
+      <div class="rf-filters">
+        <UiSelect
+          v-model="halqaF"
+          :items="halqaItems"
+          size="lg"
+          class="rf-halqa"
+          aria-label="الحلقة"
+          :ui="{ base: 'rounded-[12px] min-h-11' }"
+        />
+        <UiFilterChips
+          v-model="view"
+          :options="filterOptions"
+        />
+      </div>
     </div>
 
     <UiSkeletonLines
@@ -165,168 +194,190 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
           v-for="r in shown"
           :key="r.halaqa_id"
           class="rf-row"
+          :class="{ open: isExpanded(r.halaqa_id) }"
         >
-          <div class="rf-top">
-            <div class="rf-who">
+          <!-- السطرُ المطويّ: الاسمُ والمعلّم وعددُ أيام الشهر المرصودة؛ والضغطُ يفتح التفاصيل -->
+          <button
+            type="button"
+            class="rf-sumrow"
+            :aria-expanded="isExpanded(r.halaqa_id)"
+            :aria-controls="`rf-body-${r.halaqa_id}`"
+            @click="toggleRow(r.halaqa_id)"
+          >
+            <span class="rf-who">
               <span class="rf-name">{{ r.halaqa_name }}</span>
               <span class="rf-teacher">{{ teacherWord }}: {{ r.teacher_name ?? '—' }}</span>
+            </span>
+            <span
+              class="rf-count"
+              :class="countTone(r)"
+            >
+              <span class="rf-count-n">رُصد <b>{{ r.recorded_days }}</b> من <b>{{ r.expected_days }}</b></span>
+              <span class="rf-count-s">{{ r.missed_days.length ? `فات ${r.missed_days.length}` : 'هذا الشهر' }}</span>
+            </span>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-5 rf-chev"
+            />
+          </button>
+
+          <div
+            v-show="isExpanded(r.halaqa_id)"
+            :id="`rf-body-${r.halaqa_id}`"
+            class="rf-body"
+          >
+            <div class="rf-top">
+              <UBadge
+                :label="`رصد ${r.report_month}/${r.report_year}: ${REPORT_META[reportState(r)].text(r)}`"
+                :color="REPORT_META[reportState(r)].color"
+                variant="soft"
+              />
+              <div class="rf-acts">
+                <UButton
+                  :to="`/attendance?h=${r.halaqa_id}`"
+                  label="الحضور"
+                  icon="i-lucide-calendar-check"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  class="rf-btn"
+                  :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
+                />
+                <UButton
+                  :to="`/reports?h=${r.halaqa_id}&y=${r.report_year}&m=${r.report_month}`"
+                  label="رصد الشهر"
+                  icon="i-lucide-book-marked"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  class="rf-btn"
+                  :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
+                />
+                <UButton
+                  v-if="whatsappLink(r.teacher_whatsapp || r.teacher_phone)"
+                  :to="whatsappLink(r.teacher_whatsapp || r.teacher_phone)!"
+                  target="_blank"
+                  rel="noopener"
+                  icon="i-simple-icons-whatsapp"
+                  color="success"
+                  variant="soft"
+                  size="xs"
+                  class="rf-btn"
+                  :aria-label="`واتس أب ${teacherWord} ${r.teacher_name ?? ''}`"
+                  :ui="{ base: 'rounded-[9px] justify-center', leadingIcon: 'size-3.5' }"
+                />
+              </div>
             </div>
-            <div class="rf-acts">
+
+            <ol
+              class="rf-days"
+              :aria-label="`رصد الحضور في آخر أيام الدوام — ${r.halaqa_name}`"
+            >
+              <li
+                v-for="d in parseRecent(r.recent)"
+                :key="d.day"
+              >
+                <button
+                  type="button"
+                  class="rf-day"
+                  :class="[`s-${d.state}`, { on: open?.hid === r.halaqa_id && open.day === d.day }]"
+                  :aria-label="`${dayFull(d.day)}: ${DAY_META[d.state].word}`"
+                  :aria-pressed="open?.hid === r.halaqa_id && open.day === d.day"
+                  :aria-controls="`rf-day-${r.halaqa_id}`"
+                  @click="toggleDay(r.halaqa_id, d.day, d.state)"
+                >
+                  <span class="rf-dl">{{ weekdayShort(d.day) }}</span>
+                  <span class="rf-dn">{{ dayNum(d.day) }}</span>
+                  <UIcon
+                    v-if="DAY_META[d.state].icon"
+                    :name="DAY_META[d.state].icon!"
+                    class="rf-di"
+                  />
+                </button>
+              </li>
+            </ol>
+
+            <!-- حالُ اليوم المختار تحت حلقته — لا نافذة -->
+            <div
+              v-if="open?.hid === r.halaqa_id"
+              :id="`rf-day-${r.halaqa_id}`"
+              class="rf-detail"
+              :class="`d-${open.state}`"
+              role="region"
+              :aria-label="`حال ${dayFull(open.day)}`"
+            >
+              <div class="rf-d-head">
+                <b>{{ dayFull(open.day) }}</b>
+                <span class="rf-d-state">{{ DAY_META[open.state].word }}</span>
+                <button
+                  type="button"
+                  class="rf-d-close"
+                  aria-label="إغلاق تفصيل اليوم"
+                  @click="open = null"
+                >
+                  <UIcon
+                    name="i-lucide-x"
+                    class="size-4"
+                  />
+                </button>
+              </div>
+
+              <template v-if="open.state === 'held'">
+                <UiSkeletonLines
+                  v-if="detailLoading"
+                  :fields="1"
+                />
+                <template v-else-if="detail">
+                  <div class="rf-d-counts">
+                    <span class="c-ok">حضور <b>{{ present }}</b></span>
+                    <span class="c-ex">غياب بعذر <b>{{ excused }}</b></span>
+                    <span class="c-un">غياب بلا عذر <b>{{ unexcused }}</b></span>
+                  </div>
+                  <ul
+                    v-if="detail.absentees.length"
+                    class="rf-d-list"
+                  >
+                    <li
+                      v-for="a in detail.absentees"
+                      :key="a.name"
+                    >
+                      <span>{{ a.name }}</span>
+                      <UBadge
+                        :label="a.kind === 'excused' ? 'بعذر' : 'بلا عذر'"
+                        :color="a.kind === 'excused' ? 'info' : 'error'"
+                        variant="soft"
+                        size="sm"
+                      />
+                    </li>
+                  </ul>
+                  <p
+                    v-else
+                    class="rf-d-note"
+                  >
+                    {{ fem ? 'حضرت الطالباتُ كلُّهنّ.' : 'حضر الطلابُ كلُّهم.' }}
+                  </p>
+                </template>
+              </template>
+              <p
+                v-else
+                class="rf-d-note"
+              >
+                {{ open.state === 'missed'
+                  ? `لم يُرصد حضورُ هذا اليوم — ${fem ? 'تواصلي مع المعلّمة أو افتحي اليوم' : 'تواصل مع المعلّم أو افتح اليوم'} في صفحة الحضور.`
+                  : open.state === 'today' ? 'اليومُ قائم ولم يُرصد بعد.' : 'قبل بدء الحلقة — لا رصدَ مطلوب.' }}
+              </p>
               <UButton
-                :to="`/attendance?h=${r.halaqa_id}`"
-                label="الحضور"
+                v-if="open.state !== 'before'"
+                :to="`/attendance?h=${r.halaqa_id}&d=${open.day}`"
+                :label="fem ? 'افتحي اليوم في صفحة الحضور' : 'افتح اليوم في صفحة الحضور'"
                 icon="i-lucide-calendar-check"
                 color="neutral"
                 variant="outline"
                 size="xs"
-                class="rf-btn"
+                class="rf-d-go rf-btn"
                 :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
               />
-              <UButton
-                :to="`/reports?h=${r.halaqa_id}&y=${r.report_year}&m=${r.report_month}`"
-                label="رصد الشهر"
-                icon="i-lucide-book-marked"
-                color="neutral"
-                variant="outline"
-                size="xs"
-                class="rf-btn"
-                :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
-              />
-              <UButton
-                v-if="whatsappLink(r.teacher_whatsapp || r.teacher_phone)"
-                :to="whatsappLink(r.teacher_whatsapp || r.teacher_phone)!"
-                target="_blank"
-                rel="noopener"
-                icon="i-simple-icons-whatsapp"
-                color="success"
-                variant="soft"
-                size="sm"
-                :aria-label="`واتس أب ${teacherWord} ${r.teacher_name ?? ''}`"
-                :ui="{ base: 'rounded-[10px] min-h-9 min-w-9 justify-center' }"
-              />
             </div>
-          </div>
-
-          <div class="rf-facts">
-            <span
-              class="rf-month"
-              :class="{ bad: r.missed_days.length }"
-            >رُصد <b>{{ r.recorded_days }}</b> من <b>{{ r.expected_days }}</b> {{ r.expected_days > 2 && r.expected_days <= 10 ? 'أيام' : 'يوماً' }} هذا الشهر</span>
-            <UBadge
-              :label="`رصد ${r.report_month}/${r.report_year}: ${REPORT_META[reportState(r)].text(r)}`"
-              :color="REPORT_META[reportState(r)].color"
-              variant="soft"
-            />
-          </div>
-
-          <ol
-            class="rf-days"
-            :aria-label="`رصد الحضور في آخر أيام الدوام — ${r.halaqa_name}`"
-          >
-            <li
-              v-for="d in parseRecent(r.recent)"
-              :key="d.day"
-            >
-              <button
-                type="button"
-                class="rf-day"
-                :class="[`s-${d.state}`, { on: open?.hid === r.halaqa_id && open.day === d.day }]"
-                :aria-label="`${dayFull(d.day)}: ${DAY_META[d.state].word}`"
-                :aria-pressed="open?.hid === r.halaqa_id && open.day === d.day"
-                :aria-controls="`rf-day-${r.halaqa_id}`"
-                @click="toggleDay(r.halaqa_id, d.day, d.state)"
-              >
-                <span class="rf-dl">{{ weekdayShort(d.day) }}</span>
-                <span class="rf-dn">{{ dayNum(d.day) }}</span>
-                <UIcon
-                  v-if="DAY_META[d.state].icon"
-                  :name="DAY_META[d.state].icon!"
-                  class="rf-di"
-                />
-              </button>
-            </li>
-          </ol>
-
-          <!-- حالُ اليوم المختار تحت حلقته — لا نافذة -->
-          <div
-            v-if="open?.hid === r.halaqa_id"
-            :id="`rf-day-${r.halaqa_id}`"
-            class="rf-detail"
-            :class="`d-${open.state}`"
-            role="region"
-            :aria-label="`حال ${dayFull(open.day)}`"
-          >
-            <div class="rf-d-head">
-              <b>{{ dayFull(open.day) }}</b>
-              <span class="rf-d-state">{{ DAY_META[open.state].word }}</span>
-              <button
-                type="button"
-                class="rf-d-close"
-                aria-label="إغلاق تفصيل اليوم"
-                @click="open = null"
-              >
-                <UIcon
-                  name="i-lucide-x"
-                  class="size-4"
-                />
-              </button>
-            </div>
-
-            <template v-if="open.state === 'held'">
-              <UiSkeletonLines
-                v-if="detailLoading"
-                :fields="1"
-              />
-              <template v-else-if="detail">
-                <div class="rf-d-counts">
-                  <span class="c-ok">حضور <b>{{ present }}</b></span>
-                  <span class="c-ex">غياب بعذر <b>{{ excused }}</b></span>
-                  <span class="c-un">غياب بلا عذر <b>{{ unexcused }}</b></span>
-                </div>
-                <ul
-                  v-if="detail.absentees.length"
-                  class="rf-d-list"
-                >
-                  <li
-                    v-for="a in detail.absentees"
-                    :key="a.name"
-                  >
-                    <span>{{ a.name }}</span>
-                    <UBadge
-                      :label="a.kind === 'excused' ? 'بعذر' : 'بلا عذر'"
-                      :color="a.kind === 'excused' ? 'info' : 'error'"
-                      variant="soft"
-                      size="sm"
-                    />
-                  </li>
-                </ul>
-                <p
-                  v-else
-                  class="rf-d-note"
-                >
-                  {{ fem ? 'حضرت الطالباتُ كلُّهنّ.' : 'حضر الطلابُ كلُّهم.' }}
-                </p>
-              </template>
-            </template>
-            <p
-              v-else
-              class="rf-d-note"
-            >
-              {{ open.state === 'missed'
-                ? `لم يُرصد حضورُ هذا اليوم — ${fem ? 'تواصلي مع المعلّمة أو افتحي اليوم' : 'تواصل مع المعلّم أو افتح اليوم'} في صفحة الحضور.`
-                : open.state === 'today' ? 'اليومُ قائم ولم يُرصد بعد.' : 'قبل بدء الحلقة — لا رصدَ مطلوب.' }}
-            </p>
-            <UButton
-              v-if="open.state !== 'before'"
-              :to="`/attendance?h=${r.halaqa_id}&d=${open.day}`"
-              :label="fem ? 'افتحي اليوم في صفحة الحضور' : 'افتح اليوم في صفحة الحضور'"
-              icon="i-lucide-calendar-check"
-              color="neutral"
-              variant="outline"
-              size="xs"
-              class="rf-d-go rf-btn"
-              :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
-            />
           </div>
         </li>
       </ul>
@@ -353,8 +404,24 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 .rf-clean { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 14px; border-radius: 13px; background: var(--green-soft); color: var(--green-ink); font-size: 14px; font-weight: 600; }
 
 .rf-rows { list-style: none; margin: 0; padding: 0; }
-.rf-row { display: flex; flex-direction: column; gap: 10px; padding: 16px 4px; border-top: 1px solid var(--line); }
-.rf-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
+.rf-filters { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.rf-halqa { width: 240px; max-width: 100%; }
+.rf-row { border-top: 1px solid var(--line); }
+.rf-sumrow { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 6px; background: none; border: 0; border-radius: 12px; font: inherit; color: inherit; text-align: start; cursor: pointer; }
+.rf-sumrow:hover { background: var(--surface-2); }
+.rf-sumrow:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.rf-sumrow .rf-who { flex: 1; }
+.rf-count { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
+.rf-count-n { font-size: 14px; color: var(--ink-2); }
+.rf-count-n b { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rf-count-s { font-size: 12px; color: var(--ink-3); }
+.rf-count.bad .rf-count-n b:first-child, .rf-count.bad .rf-count-s { color: var(--err); }
+.rf-count.ok .rf-count-n b { color: var(--green-ink); }
+.rf-chev { color: var(--ink-3); flex: none; transition: transform .18s ease-out; }
+.rf-row.open .rf-chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .rf-chev { transition: none; } }
+.rf-body { display: flex; flex-direction: column; gap: 10px; padding: 2px 6px 16px; }
+.rf-top { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
 .rf-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rf-name { font-size: 15.5px; font-weight: 600; color: var(--ink); }
 .rf-teacher { font-size: 12.5px; color: var(--ink-3); overflow-wrap: anywhere; }
@@ -362,10 +429,6 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 /* أزرارُ الانتقال مدمجة (طلب المستخدم 2026-10-22) — وعلى الجوال 36 كي يبقى اللمسُ مريحاً */
 .rf-btn { min-height: 30px; padding-inline: 10px; font-size: 12.5px; gap: 5px; }
 @media (max-width: 560px) { .rf-btn { min-height: 36px; } }
-.rf-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
-.rf-month { font-size: 13px; color: var(--ink-2); }
-.rf-month b { color: var(--ink); font-variant-numeric: tabular-nums; }
-.rf-month.bad b:first-child { color: var(--err); }
 
 /* شبكةُ الأيام: 15 خانةً في سطرٍ على الواسع، وخمسٌ في السطر على الجوال */
 .rf-days { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 6px; list-style: none; margin: 0; padding: 0; }

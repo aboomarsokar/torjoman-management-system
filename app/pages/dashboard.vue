@@ -31,16 +31,26 @@ watch(role, (r) => {
   if (r === 'student') navigateTo('/me', { replace: true })
 }, { immediate: true })
 
-// ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) ──
-const counts = reactive({ students: 0, teachers: 0, supervisors: 0, examiners: 0, halqat: 0 })
+// ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) — قسمُ البنين وقسمُ البنات منفصلَين (طلب المستخدم 2026-10-22) ──
+// النشطون وحدهم: كان «إجمالي الطلاب» يعدّ المنقطعين والمتخرّجين، و«الحلقات النشطة» يعدّ الموقوفة
+type Sex = Database['public']['Enums']['gender_type']
+type SectionCounts = { students: number, teachers: number, supervisors: number, examiners: number, halqat: number }
+const emptyCounts = (): SectionCounts => ({ students: 0, teachers: 0, supervisors: 0, examiners: 0, halqat: 0 })
+const counts = reactive<Record<Sex, SectionCounts>>({ male: emptyCounts(), female: emptyCounts() })
 
-async function countOf(table: 'students' | 'halaqat') {
-  const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
+async function countActive(table: 'students' | 'halaqat', g: Sex) {
+  const { count } = await supabase.from(table).select('*', { count: 'exact', head: true }).eq('gender', g).eq('status', 'active')
   return count ?? 0
 }
-async function countRole(r: Database['public']['Enums']['user_role']) {
-  const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', r)
+async function countRole(r: Database['public']['Enums']['user_role'], g: Sex) {
+  const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', r).eq('gender', g).eq('status', 'active')
   return count ?? 0
+}
+async function loadSection(g: Sex): Promise<SectionCounts> {
+  const [students, teachers, supervisors, examiners, halqat] = await Promise.all([
+    countActive('students', g), countRole('teacher', g), countRole('field_supervisor', g), countRole('examiner', g), countActive('halaqat', g)
+  ])
+  return { students, teachers, supervisors, examiners, halqat }
 }
 
 // ── إعدادات المدير (app_settings) ──
@@ -82,14 +92,9 @@ async function saveSetting(key: SettingKey, unit: string) {
 }
 
 async function loadManagerData() {
-  const [st, te, su, ex, ha] = await Promise.all([
-    countOf('students'), countRole('teacher'), countRole('field_supervisor'), countRole('examiner'), countOf('halaqat')
-  ])
-  counts.students = st
-  counts.teachers = te
-  counts.supervisors = su
-  counts.examiners = ex
-  counts.halqat = ha
+  const [m, f] = await Promise.all([loadSection('male'), loadSection('female')])
+  counts.male = m
+  counts.female = f
   await loadSettings()
 }
 
@@ -193,12 +198,16 @@ watch(isSectionHead, (v) => {
 }, { immediate: true })
 
 type Tone = 'blue' | 'green' | 'neutral' | 'err'
-const statCards = computed(() => [
-  { icon: 'i-lucide-graduation-cap', tone: 'blue' as Tone, value: counts.students, label: 'إجمالي الطلاب' },
-  { icon: 'i-lucide-users', tone: 'green' as Tone, value: counts.teachers, label: 'المعلمون' },
-  { icon: 'i-lucide-shield-check', tone: 'blue' as Tone, value: counts.supervisors, label: 'المشرفون الميدانيون' },
-  { icon: 'i-lucide-award', tone: 'green' as Tone, value: counts.examiners, label: 'المختبِرون' },
-  { icon: 'i-lucide-book-open', tone: 'neutral' as Tone, value: counts.halqat, label: 'الحلقات النشطة' }
+const sectionCards = (c: SectionCounts, f: boolean) => [
+  { icon: 'i-lucide-graduation-cap', tone: 'blue' as Tone, value: c.students, label: f ? 'الطالبات' : 'الطلاب' },
+  { icon: 'i-lucide-users', tone: 'green' as Tone, value: c.teachers, label: f ? 'المعلّمات' : 'المعلّمون' },
+  { icon: 'i-lucide-shield-check', tone: 'blue' as Tone, value: c.supervisors, label: f ? 'المشرفات الميدانيات' : 'المشرفون الميدانيون' },
+  { icon: 'i-lucide-award', tone: 'green' as Tone, value: c.examiners, label: f ? 'المختبِرات' : 'المختبِرون' },
+  { icon: 'i-lucide-book-open', tone: 'neutral' as Tone, value: c.halqat, label: 'الحلقات النشطة' }
+]
+const statSections = computed(() => [
+  { key: 'male', title: 'قسم البنين', cards: sectionCards(counts.male, false) },
+  { key: 'female', title: 'قسم البنات', cards: sectionCards(counts.female, true) }
 ])
 
 const settingCards = [
@@ -226,18 +235,28 @@ const settingCards = [
         </div>
       </template>
       <template v-else-if="showOverview">
-        <!-- بطاقات إحصائية -->
-        <div class="stats">
-          <UiStatCard
-            v-for="c in statCards"
-            :key="c.label"
-            :icon="c.icon"
-            :tone="c.tone"
-            :value="c.value"
-            :label="c.label"
-            stacked
-          />
-        </div>
+        <!-- بطاقات إحصائية: قسمُ البنين ثم قسمُ البنات (طلب المستخدم 2026-10-22) -->
+        <section
+          v-for="sec in statSections"
+          :key="sec.key"
+          class="sex-sec"
+          :aria-label="sec.title"
+        >
+          <h3 class="sex-head">
+            {{ sec.title }}
+          </h3>
+          <div class="stats">
+            <UiStatCard
+              v-for="c in sec.cards"
+              :key="c.label"
+              :icon="c.icon"
+              :tone="c.tone"
+              :value="c.value"
+              :label="c.label"
+              stacked
+            />
+          </div>
+        </section>
 
         <!-- بطاقات الإعدادات -->
         <div class="settings">
@@ -541,6 +560,8 @@ const settingCards = [
 
 /* الإحصائيات */
 .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-bottom: 24px; }
+.sex-head { margin: 4px 4px 12px; font-size: 16px; font-weight: 700; color: var(--ink); }
+.sex-sec + .sex-sec .sex-head { margin-top: 8px; }
 
 /* الإعدادات */
 .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }

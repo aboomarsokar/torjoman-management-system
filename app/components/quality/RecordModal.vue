@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * نافذةُ سجلّ تقييم الجودة الشهريّ لمعلّمٍ (قرارات المستخدم 2026-10-21):
- * - **مشرفُ الحلقة** يرى الأرقام الحيّة (`quality_month_preview`)، ويكتب درجة الاجتماعات (0–8) وملاحظاته،
- *   و«حفظ وإقفال» (`save_quality_month`) يثبّت الأرقام ويُقفل ويُشعر المعلم — ابتداءً من يوم الفتح + 4.
+ * - **المدير الإداري** يرى الأرقام الحيّة (`quality_month_preview`)، ويكتب البنودَ العامة: درجة الاجتماعات (0–8)
+ *   والملاحظات، و«حفظ وإقفال» (`save_quality_month`) يثبّت الأرقام ويُقفل ويُشعر المعلم — ابتداءً من يوم الفتح + 4.
+ *   (قرار 2026-10-22: كانت للمشرف؛ والمشرفُ اليومَ يرصد نتيجةَ زيارتيه وحدها في نموذج الزيارة، ويطّلع هنا.)
  * - **المدير الإداري والفنيّ** يفتحان المقفل (`unlock_quality_month`)، و**الفنيّ** يكتب «ملاحظات الإدارة» (`set_quality_admin_notes`).
  * - **المعلم** يرى سجلّه المقفل ويُقرّ بالاطّلاع (`acknowledge_quality_month`).
  */
@@ -17,8 +18,7 @@ const emit = defineEmits<{ changed: [] }>()
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { profile } = useProfile()
-const { isAdmin, isTechnical, isTeacher, isFieldSupervisor } = usePermissions()
+const { isAdmin, isTechnical, isTeacher } = usePermissions()
 
 // أسماءُ المعايير الستّة من بنود النموذج (مُخبّأةٌ مع نافذة الزيارة)
 const { data: items } = useLazyAsyncData('visit-deduction-items', async () => {
@@ -43,8 +43,7 @@ const adminNotes = ref('')
 
 const state = computed(() => qualityState(props.record))
 const locked = computed(() => !!props.record?.locked_at)
-const isSupervisorHere = computed(() => isFieldSupervisor.value && !!props.halaqa && props.halaqa.supervisor_id === profile.value?.id)
-const canSave = computed(() => isSupervisorHere.value && !locked.value)
+const canSave = computed(() => isAdmin.value && !!props.halaqa && !locked.value)
 const opensOn = computed(() => preview.value?.opens_on ?? null)
 const notOpenYet = computed(() => !!opensOn.value && gazaToday() < opensOn.value)
 /** الأرقامُ المعروضة: المثبّتةُ إن أُقفل السجلّ، وإلا الحيّة. */
@@ -86,7 +85,7 @@ async function run(fn: () => PromiseLike<{ error: unknown }>, done: string, clos
 const save = () => run(() => supabase.rpc('save_quality_month', {
   p_halaqa: props.halaqa!.id, p_year: props.year, p_month: props.month, p_meetings: meetings.value, p_notes: supNotes.value
 }), 'حُفظ السجلّ وأُقفل — وصل المعلمَ إشعار.')
-const unlock = () => run(() => supabase.rpc('unlock_quality_month', { p_id: props.record!.id }), 'فُتح السجلّ للتعديل — وصل المشرفَ إشعار.')
+const unlock = () => run(() => supabase.rpc('unlock_quality_month', { p_id: props.record!.id }), 'فُتح السجلّ للتعديل.')
 const ack = () => run(() => supabase.rpc('acknowledge_quality_month', { p_id: props.record!.id }), 'سُجّل اطّلاعك على سجلّك الشهريّ.')
 const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', { p_id: props.record!.id, p_notes: adminNotes.value }), 'حُفظت ملاحظات الإدارة.', false)
 </script>
@@ -132,7 +131,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
           v-else-if="!numbers"
           class="qr-empty"
         >
-          {{ isTeacher ? 'لم يرصد المشرف سجلّ هذا الشهر بعد.' : 'تعذّر حساب الأرقام.' }}
+          {{ isTeacher ? 'لم يُرصد سجلّ هذا الشهر بعد.' : 'تعذّر حساب الأرقام.' }}
         </p>
         <QualitySheet
           v-else
@@ -141,7 +140,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
           :meetings="shownMeetings"
         />
 
-        <!-- مدخلاتُ المشرف -->
+        <!-- البنودُ العامة: يرصدها المدير الإداري -->
         <div
           v-if="canSave"
           class="qr-inputs"
@@ -158,7 +157,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
               class="w-40"
             />
           </UFormField>
-          <UFormField label="ملاحظات المشرف">
+          <UFormField label="الملاحظات">
             <UTextarea
               v-model="supNotes"
               autoresize
@@ -175,7 +174,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
           v-else-if="record?.supervisor_notes"
           class="qr-notes"
         >
-          <h4>ملاحظات المشرف</h4>
+          <h4>الملاحظات</h4>
           <p>{{ record.supervisor_notes }}</p>
         </section>
 
@@ -244,7 +243,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
           />
           <UButton
             v-if="locked && (isAdmin || isTechnical)"
-            label="فتح التعديل للمشرف"
+            label="فتح التعديل"
             color="neutral"
             variant="outline"
             size="lg"

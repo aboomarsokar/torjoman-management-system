@@ -9,7 +9,7 @@ import type { Database } from '~/types/database.types'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { isSessionLive, readSessionClaims, SESSION_ENDED_MESSAGE } from '../../utils/caller'
 import { parseWriteModeInput } from '../../utils/impersonationScope'
-import { isImpersonatorRole, mayImpersonateRole, WRITE_WINDOW_MINUTES } from '~/constants/impersonation'
+import { isImpersonatorRole, mayImpersonate, WRITE_WINDOW_MINUTES } from '~/constants/impersonation'
 
 export default defineEventHandler(async (event): Promise<{ writeUntil: string | null }> => {
   const claims = await readSessionClaims(event)
@@ -43,13 +43,13 @@ export default defineEventHandler(async (event): Promise<{ writeUntil: string | 
         ? admin.from('profiles').select('role, status').eq('id', row.actor_profile_id).maybeSingle()
         : Promise.resolve({ data: null }),
       row.target_profile_id
-        ? admin.from('profiles').select('role, status').eq('id', row.target_profile_id).maybeSingle()
+        ? admin.from('profiles').select('role, status, gender').eq('id', row.target_profile_id).maybeSingle()
         : Promise.resolve({ data: null })
     ])
     if (!actor || actor.status !== 'active' || !isImpersonatorRole(actor.role)) {
       throw createError({ statusCode: 403, statusMessage: 'وضعُ التعديل للمدير الإداري والمدير الفني وحدهما.' })
     }
-    if (!target || target.status !== 'active' || !mayImpersonateRole(actor.role, target.role)) {
+    if (!target || target.status !== 'active' || !mayImpersonate(actor.role, target)) {
       throw createError({ statusCode: 403, statusMessage: 'لم يعد لك الدخولُ بحساب هذا الموظف — أنهِ النيابة.' })
     }
   }

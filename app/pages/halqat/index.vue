@@ -25,11 +25,12 @@ type HalaqaRow = Database['public']['Tables']['halaqat']['Row'] & {
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-/** الإنشاء والتعديل للمديرَين (الإداري والفني)، والحذف للمدير الإداري — كما يسمح RLS. */
-const { isManager, isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer } = usePermissions()
+/** الإنشاءُ والتعديلُ والحذفُ للمدير الإداري وحده — كما يسمح RLS (والفنيُّ يطّلع — قرار 2026-10-22). */
+const { isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer, isTechnical } = usePermissions()
 // المشرفُ والمختبِرُ يريان حلقاتِهما المسندة وحدها وهي من جنسهما، والمديرةُ حلقاتِ البنات وحدها (RLS) —
 // فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
-const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value)
+// والمديرُ الفنيّ لقسم البنين وحده (قرار 2026-10-22)
+const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value && !isTechnical.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
 // بحالة pending، والسكيلتون يغطّي الانتظار ريثما تصل البيانات. الاستعلامات
@@ -55,6 +56,14 @@ const { data: halqat, refresh, pending } = useLazyAsyncData<HalaqaRow[]>(
 const NO_SUP = NO_STAFF
 
 const genderF = ref<Gender | 'all'>('all')
+// «عرض الكل» من صفحة المشرف يفتح حلقاتِه وحدها (?supervisor=) — وتُزال بزرّها (طلب المستخدم 2026-10-22)
+const route = useRoute()
+const supervisorF = ref(typeof route.query.supervisor === 'string' ? route.query.supervisor : '')
+const supervisorFName = computed(() => (halqat.value ?? []).find(h => h.supervisor_id === supervisorF.value)?.supervisor?.full_name ?? '')
+function clearSupervisorF() {
+  supervisorF.value = ''
+  navigateTo({ query: { ...route.query, supervisor: undefined } }, { replace: true })
+}
 const statusF = ref<Status | 'all'>('all')
 // قائمتان منسدلتان كصفحة الطلاب (طلب المستخدم 2026-10-20) — العددُ بجانب كلّ خيار
 const genderFilterItems = computed(() => {
@@ -69,9 +78,10 @@ const genderFilterItems = computed(() => {
 const filtered = computed(() => (halqat.value ?? []).filter(h =>
   (genderF.value === 'all' || h.gender === genderF.value)
   && (statusF.value === 'all' || h.status === statusF.value)
+  && (!supervisorF.value || h.supervisor_id === supervisorF.value)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
-watch([genderF, statusF], resetPage)
+watch([genderF, statusF, supervisorF], resetPage)
 function studentsOf(h: HalaqaRow) {
   return h.student_count?.[0]?.count ?? 0
 }
@@ -209,9 +219,19 @@ async function confirmDelete() {
           aria-label="الحالة"
           :ui="{ base: 'rounded-[12px] min-h-12' }"
         />
+        <UButton
+          v-if="supervisorF"
+          :label="`المشرف: ${supervisorFName || '…'}`"
+          color="neutral"
+          variant="soft"
+          trailing-icon="i-lucide-x"
+          aria-label="إزالة تصفية المشرف"
+          :ui="{ base: 'rounded-[12px] min-h-12 font-semibold' }"
+          @click="clearSupervisorF"
+        />
       </div>
       <UButton
-        v-if="isManager"
+        v-if="isAdmin"
         label="إنشاء حلقة"
         color="primary"
         size="md"
@@ -235,7 +255,7 @@ async function confirmDelete() {
         v-else-if="filtered.length === 0"
         icon="i-lucide-book-open"
         title="لا حلقات بعد"
-        :description="isManager ? 'أنشئ أول حلقة وعيّن لها معلّماً لتظهر هنا.' : 'لا حلقات ضمن نطاقك بعد.'"
+        :description="isAdmin ? 'أنشئ أول حلقة وعيّن لها معلّماً لتظهر هنا.' : 'لا حلقات ضمن نطاقك بعد.'"
       />
       <UiDataTable
         v-else
@@ -305,7 +325,7 @@ async function confirmDelete() {
               aria-label="تفاصيل"
             />
             <UButton
-              v-if="isManager"
+              v-if="isAdmin"
               color="neutral"
               variant="outline"
               size="sm"
@@ -361,7 +381,7 @@ async function confirmDelete() {
             :students="studentsOf(row)"
           />
           <div
-            v-if="isManager"
+            v-if="isAdmin"
             class="hcard-actions"
           >
             <UButton

@@ -11,6 +11,7 @@ import type { Database } from '~/types/database.types'
 import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
 import { displayPhotoPath } from '~/constants/profilePhoto'
+import { choiceItems, RESIDENCE_AREAS } from '~/constants/profileChoices'
 import { studentStats } from '~/utils/pageStats'
 import { gazaToday } from '~/utils/reportWindow'
 
@@ -128,6 +129,8 @@ watch([paged, studentPhotoPaths], ([rows]) => void primePhotos(rows.map(studentP
 const modalOpen = ref(false)
 const saving = ref(false)
 const editingId = ref<string | null>(null)
+// المنطقةُ قائمةٌ منسدلة (طلب المستخدم 2026-10-22)، والقيمةُ القديمة المكتوبة يدوياً تبقى خياراً
+const residenceOptions = computed(() => choiceItems(RESIDENCE_AREAS, form.residence))
 const TAJWEED_NONE = 'none'
 // الجنس بلا قيمة افتراضية (يحدّد حلقات الإسناد — فلا يُنسى فتصير الطالبة «ذكراً»)، والالتحاق اليومَ افتراضاً:
 // الحضور يُحسب على الطالب من تاريخ التحاقه، فلا يبقى فارغاً
@@ -702,8 +705,10 @@ async function confirmDelete() {
               name="residence"
               class="f"
             >
-              <UInput
+              <USelect
                 v-model="form.residence"
+                :items="residenceOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

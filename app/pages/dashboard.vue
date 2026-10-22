@@ -409,7 +409,7 @@ const settingCards = [
               icon="i-lucide-book-open"
               tone="green"
               :value="qHalqatCount"
-              label="الحلقات في نطاقي"
+              label="الحلقات"
               stacked
             />
             <UiStatCard

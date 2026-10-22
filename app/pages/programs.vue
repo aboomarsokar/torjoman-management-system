@@ -2,8 +2,9 @@
 /**
  * «البرامج المصاحبة» (طلب المستخدم 2026-10-21) — مركزُ المقرّرات الشهرية:
  * · الطالب: بطاقةُ مقرّره المستحقّ (تنزيلُ ملفّه وزرُّ الاختبار) ثم محطّاتُ المقرّرات (وتنزيلُ المجتاز).
- * · العاملون: «إنجاز الطلاب» لحلقاتهم اطّلاعاً (المشرفُ حلقاتُه، والمعلمُ حلقتُه)، ثم كلُّ المقرّرات بكتبها وملفّاتها.
- * · المديرُ الإداريّ والمديرُ الفنيّ: ومعها رفعُ الملفّات وإضافةُ المقرّرات والكتب.
+ * · العاملون: تبويبان (طلب المستخدم 2026-10-22) — «إنجاز الطلاب» لحلقاتهم اطّلاعاً (المشرفُ حلقاتُه، والمعلمُ حلقتُه)،
+ *   و«المقرّرات» بكتبها وملفّاتها؛ والتبويبُ في الرابط (`?tab=units`) كي يبقى عند التحديث والرجوع.
+ * · المديرُ الإداريّ وحده: ومعها رفعُ الملفّات وإضافةُ المقرّرات والكتب (والفنيُّ يطّلع — قرار 2026-10-22).
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'البرامج المصاحبة — ترجمان' })
@@ -13,6 +14,17 @@ const isStudent = computed(() => role.value === 'student')
 // رفعُ الملفّات وإضافةُ المقرّرات للمدير الإداري وحده؛ والفنيُّ يطّلع (قرار 2026-10-22)
 const canManage = computed(() => role.value === 'admin_manager')
 const me = useMyReadingStudent()
+
+const route = useRoute()
+type Tab = 'progress' | 'units'
+const tabs = [
+  { value: 'progress' as const, label: 'إنجاز الطلاب' },
+  { value: 'units' as const, label: 'المقرّرات' }
+]
+const tab = computed<Tab>({
+  get: () => route.query.tab === 'units' ? 'units' : 'progress',
+  set: v => navigateTo({ query: { ...route.query, tab: v === 'units' ? 'units' : undefined } }, { replace: true })
+})
 </script>
 
 <template>
@@ -42,11 +54,16 @@ const me = useMyReadingStudent()
         />
       </template>
       <template v-else-if="role">
-        <ReadingProgressList />
-        <h2 class="sec">
-          المقرّرات
-        </h2>
-        <ReadingUnitsList :manage="canManage" />
+        <UiFilterChips
+          v-model="tab"
+          :options="tabs"
+          class="tabs"
+        />
+        <ReadingProgressList v-if="tab === 'progress'" />
+        <ReadingUnitsList
+          v-else
+          :manage="canManage"
+        />
       </template>
     </ClientOnly>
   </div>
@@ -54,5 +71,5 @@ const me = useMyReadingStudent()
 
 <style scoped>
 .pg { max-width: 860px; }
-.sec { margin: 22px 4px 10px; font-size: 17px; font-weight: 700; color: var(--ink); }
+.tabs { margin-bottom: 16px; }
 </style>

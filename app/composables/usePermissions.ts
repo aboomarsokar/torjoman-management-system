@@ -22,7 +22,8 @@ export function usePermissions() {
     isTechnical: is('technical_manager'),
     isWomenAdmin: is('women_admin'),
     isManager: isIn(['admin_manager', 'technical_manager']),
-    canAssign: isIn(['admin_manager', 'technical_manager', 'women_admin', 'field_supervisor']),
+    // تعديلُ الطالب وإسنادُه — لا المدير الفنيّ (قرار 2026-10-22)
+    canAssign: isIn(['admin_manager', 'women_admin', 'field_supervisor']),
     canApprove: isIn(['admin_manager', 'technical_manager', 'women_admin']),
     canApproveReports: computed(() => canApproveReportsRole(role.value)),
     isTeacher: is('teacher'),

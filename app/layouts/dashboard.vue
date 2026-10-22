@@ -91,6 +91,8 @@ const mainNav: Item[] = [
   { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
   { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
   { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
+  // متابعةُ رصد الحضور والشهر القرآنيّ لمعرفة المقصّر (طلب المستخدم 2026-10-22)
+  { key: 'follow-up', label: 'متابعة الرصد', icon: 'i-lucide-list-checks', to: '/follow-up', roles: [TECH, WOMEN], group: 'quran' },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'], group: 'quran' },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },

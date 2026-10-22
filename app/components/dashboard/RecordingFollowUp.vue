@@ -4,11 +4,15 @@
  * وأيُّها فاتها، وحالُ رصد الشهر القرآنيّ المستحقّ — لمعرفة المقصّر من المنجز بنظرة. سطرٌ كثيفٌ لكلّ حلقة:
  * شريطُ أيام الدوام الستة الأخيرة (بياناتٌ يوماً بيوم)، وعددُ أيام الشهر المرصودة، وشارةُ الرصد الشهريّ،
  * ثم الانتقالُ إلى الحضور أو الرصد والتواصلُ مع المعلم بواتس أب. البياناتُ من `halaqat_recording_status` (طلبٌ واحد).
+ * صار صفحةً مستقلّة `/follow-up` (طلب المستخدم 2026-10-22): `page` يُخفي عنوانَه الداخليّ لأنّ رأسَ الصفحة يحمله.
  */
 import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
 import type { DayState, RecordingRow, ReportState } from '~/utils/recordingStatus'
 import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort } from '~/utils/recordingStatus'
+
+/** في صفحته: رأسُ الصفحة يحمل العنوان. الغيابُ false (لوحةٌ أو غيرُها يُظهر العنوان). */
+defineProps<{ page?: boolean }>()
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
@@ -50,14 +54,16 @@ const REPORT_META: Record<ReportState, { color: 'success' | 'info' | 'error' | '
 }
 const dayNum = (d: string) => Number(d.slice(8, 10))
 const teacherWord = computed(() => fem.value ? 'المعلّمة' : 'المعلّم')
-/** تمييزُ العدد بعد «من»: حلقةٍ · حلقتين · حلقات · حلقة. */
-const halqatWord = (n: number) => n === 1 ? 'حلقة' : n === 2 ? 'حلقتين' : n <= 10 ? 'حلقات' : 'حلقة'
+/** تمييزُ العدد بعد «من»: الواحدةُ والاثنتان بلفظهما بلا رقم («حلقةٍ واحدة» · «حلقتين»)، ثم حلقات · حلقة. */
+const halqatWord = (n: number) => n === 1 ? 'حلقةٍ واحدة' : n === 2 ? 'حلقتين' : n <= 10 ? 'حلقات' : 'حلقة'
 </script>
 
 <template>
   <section class="card rf">
     <div class="rf-head">
-      <h3>متابعة الرصد</h3>
+      <h3 v-if="!page">
+        متابعة الرصد
+      </h3>
       <UiFilterChips
         v-model="view"
         :options="filterOptions"
@@ -75,7 +81,9 @@ const halqatWord = (n: number) => n === 1 ? 'حلقة' : n === 2 ? 'حلقتين
     />
     <template v-else>
       <p class="rf-sum">
-        اليوم رُصد حضورُ <b>{{ summary.today }}</b> من <b>{{ summary.halqat }}</b> {{ halqatWord(summary.halqat) }}
+        اليوم رُصد حضورُ <b>{{ summary.today }}</b> من <template v-if="summary.halqat > 2">
+          <b>{{ summary.halqat }}</b>
+        </template> {{ halqatWord(summary.halqat) }}
         <span class="dot">·</span>
         <b :class="{ bad: summary.lagging }">{{ summary.lagging }}</b> مقصّرة
         <span class="dot">·</span>

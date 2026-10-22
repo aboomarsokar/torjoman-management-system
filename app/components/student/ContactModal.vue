@@ -6,6 +6,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { CONTACT_TEXT_MAX } from '~/constants/studentContact'
+import { choiceItems, RESIDENCE_AREAS } from '~/constants/profileChoices'
 import { normalizeMyContact, type MyContactInput } from '~/composables/useMyContact'
 
 type StudentRow = Database['public']['Tables']['students']['Row']
@@ -24,6 +25,8 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 
 const form = reactive<MyContactInput>({ phone: '', guardian_email: '', residence: '', nearest_mosque: '' })
+// المنطقةُ قائمةٌ منسدلة (طلب المستخدم 2026-10-22)، والقيمةُ القديمة المكتوبة يدوياً تبقى خياراً
+const residenceOptions = computed(() => choiceItems(RESIDENCE_AREAS, form.residence))
 
 // كلُّ فتحٍ يبدأ بالقيم المحفوظة
 watch(open, (isOpen) => {
@@ -89,9 +92,10 @@ async function save() {
           />
         </UFormField>
         <UFormField label="المنطقة / المدينة">
-          <UInput
+          <USelect
             v-model="form.residence"
-            :maxlength="CONTACT_TEXT_MAX"
+            :items="residenceOptions"
+            placeholder="اختر"
             size="lg"
             class="w-full"
             :ui="{ base: 'rounded-[13px]' }"

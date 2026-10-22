@@ -4,6 +4,10 @@
  * ترويسة المشرف + حلقاته (ومعلّموها) + التزام الزيارات + آخر الزيارات.
  */
 import type { Database } from '~/types/database.types'
+import type { VisitRow } from '~/types/visits'
+
+/** ما يُعرض هنا من كلٍّ، والباقي بـ«عرض الكل» (طلب المستخدم 2026-10-22). */
+const PREVIEW = 5
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -14,7 +18,6 @@ const today = gazaToday()
 
 type Sup = { id: string, full_name: string, employee_number: string | null, role: string }
 type Halqa = { id: string, name: string, status: string, teacher: { full_name: string } | null }
-type Visit = { id: string, scheduled_at: string, executed_at: string | null, status: string, halaqa: { name: string } | null }
 
 const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async () => {
   const { data: sup } = await supabase.from('profiles').select('id, full_name, employee_number, role').eq('id', id.value).maybeSingle<Sup>()
@@ -22,7 +25,9 @@ const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async
 
   const [{ data: halqat }, { data: visits }] = await Promise.all([
     supabase.from('halaqat').select('id, name, status, teacher:teacher_id(full_name)').eq('supervisor_id', id.value).order('name').returns<Halqa[]>(),
-    supabase.from('supervision_visits').select('id, scheduled_at, executed_at, status, halaqa:halaqa_id(name)').eq('supervisor_id', id.value).order('scheduled_at', { ascending: false }).returns<Visit[]>()
+    supabase.from('supervision_visits')
+      .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
+      .eq('supervisor_id', id.value).order('scheduled_at', { ascending: false }).returns<VisitRow[]>()
   ])
 
   const vs = visits ?? []
@@ -31,7 +36,7 @@ const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async
   const active = (halqat ?? []).filter(h => h.status === 'active').length
   const commitment = visitCompletion(vs.filter(v => gazaDayOf(v.scheduled_at).slice(0, 7) === month), active).pct
 
-  return { sup, halqat: halqat ?? [], visits: vs.slice(0, 8), commitment }
+  return { sup, halqat: halqat ?? [], visits: vs, commitment }
 }, { server: false, default: () => null })
 
 useSeoMeta({ title: () => data.value?.sup ? `${data.value.sup.full_name} — ترجمان` : 'تفاصيل المشرف — ترجمان' })
@@ -39,6 +44,14 @@ useSeoMeta({ title: () => data.value?.sup ? `${data.value.sup.full_name} — ت�
 // الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (المتأخّرةُ مشتقّة)
 const fmtDate = (iso: string) => formatDay(gazaDayOf(iso))
 const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'success' : c >= 70 ? 'info' : 'error'
+
+// نتيجةُ الزيارة للاطّلاع (والفتحُ للمديرَين داخل النافذة نفسها)
+const resultOpen = ref(false)
+const resultVisit = ref<VisitRow | null>(null)
+function openResult(v: VisitRow) {
+  resultVisit.value = v
+  resultOpen.value = true
+}
 </script>
 
 <template>
@@ -136,7 +149,15 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
           <!-- الحلقات -->
           <div class="card sec">
             <div class="sec-head">
-              <h3>حلقاته</h3>
+              <h3>حلقاته <span class="count">{{ data.halqat.length }}</span></h3>
+              <UButton
+                :to="`/halqat?supervisor=${data.sup.id}`"
+                label="عرض الكل"
+                color="neutral"
+                variant="outline"
+                trailing-icon="i-lucide-chevron-left"
+                :ui="{ base: 'rounded-[12px] font-semibold min-h-11' }"
+              />
             </div>
             <UiEmptyState
               v-if="!data.halqat.length"
@@ -148,7 +169,7 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
               class="rows"
             >
               <li
-                v-for="h in data.halqat"
+                v-for="h in data.halqat.slice(0, PREVIEW)"
                 :key="h.id"
                 class="row"
               >
@@ -170,14 +191,14 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
           <!-- آخر الزيارات -->
           <div class="card sec">
             <div class="sec-head">
-              <h3>آخر الزيارات</h3>
+              <h3>الزيارات <span class="count">{{ data.visits.length }}</span></h3>
               <UButton
-                to="/visits"
-                label="الكل"
+                :to="`/visits?supervisor=${data.sup.id}`"
+                label="عرض الكل"
                 color="neutral"
-                variant="ghost"
-                size="sm"
-                trailing-icon="i-lucide-arrow-left"
+                variant="outline"
+                trailing-icon="i-lucide-chevron-left"
+                :ui="{ base: 'rounded-[12px] font-semibold min-h-11' }"
               />
             </div>
             <UiEmptyState
@@ -190,26 +211,42 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
               class="rows"
             >
               <li
-                v-for="v in data.visits"
+                v-for="v in data.visits.slice(0, PREVIEW)"
                 :key="v.id"
                 class="row"
               >
-                <div class="row-main">
-                  <span class="row-title">{{ v.halaqa?.name || '—' }}</span>
-                  <span class="row-sub">{{ fmtDate(v.executed_at || v.scheduled_at) }}</span>
-                </div>
-                <UBadge
-                  :label="VISIT_STATUS[visitDisplayStatus(v, today)]?.label"
-                  :color="VISIT_STATUS[visitDisplayStatus(v, today)]?.color"
-                  variant="soft"
-                  size="sm"
-                />
+                <button
+                  type="button"
+                  class="row-btn"
+                  @click="openResult(v)"
+                >
+                  <span class="row-main">
+                    <span class="row-title">{{ v.halaqa?.name || '—' }}</span>
+                    <span class="row-sub">{{ fmtDate(v.executed_at || v.scheduled_at) }}<template v-if="v.score != null"> · النتيجة <b>{{ v.score }}</b>/{{ VISIT_MAX }}</template></span>
+                  </span>
+                  <UBadge
+                    :label="VISIT_STATUS[visitDisplayStatus(v, today)]?.label"
+                    :color="VISIT_STATUS[visitDisplayStatus(v, today)]?.color"
+                    variant="soft"
+                    size="sm"
+                  />
+                  <UIcon
+                    name="i-lucide-chevron-left"
+                    class="size-4 chev"
+                  />
+                </button>
               </li>
             </ul>
           </div>
         </div>
       </template>
     </ClientOnly>
+
+    <VisitsResultModal
+      v-model:open="resultOpen"
+      :visit="resultVisit"
+      :can-edit="false"
+    />
   </div>
 </template>
 
@@ -234,8 +271,14 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
 
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .sec { padding: 20px 22px; }
-.sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.sec-head h3 { margin: 0; font-size: 16.5px; font-weight: 700; color: var(--ink); }
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.sec-head h3 { margin: 0; font-size: 16.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.row-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; background: none; border: 0; font: inherit; color: inherit; text-align: start; cursor: pointer; min-height: 44px; }
+.row-btn .row-main { flex: 1; }
+.row-btn:hover .row-title { color: var(--blue-ink); }
+.row-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 8px; }
+.row-sub b { color: var(--ink); }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
 .row:first-child { border-top: none; }

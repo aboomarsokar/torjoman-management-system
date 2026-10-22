@@ -40,8 +40,22 @@ function comingSoon() {
   toast.add({ title: 'هذه الشاشة قيد الإنشاء — قريباً.', icon: 'i-lucide-hammer', color: 'info' })
 }
 
-/** `tab`: تبويبُ صفحة الطالب (`/me?tab=`) — عناصرُ الطالب تقابل تبويباتِ صفحته (طلب المستخدم 2026-10-21). */
-type Item = { key: string, label: string, icon: string, to?: string, tab?: StudentTab, roles: Role[] }
+/** `tab`: تبويبُ صفحة الطالب (`/me?tab=`) — عناصرُ الطالب تقابل تبويباتِ صفحته (طلب المستخدم 2026-10-21).
+ * `group`: مجموعتُه في القائمة (طلب المستخدم 2026-10-22: مجموعاتٌ بعناوين تُطوى)؛ وبلا مجموعةٍ يبقى في الأعلى ظاهراً.
+ * `qtab`: تبويبُ صفحةٍ للعاملين في الرابط (`?tab=`) — `null` للتبويب الافتراضيّ؛ و`title` عنوانُ الشريط إن خالف التسمية. */
+type GroupKey = 'people' | 'supervision' | 'quran' | 'programs' | 'exams' | 'sheets' | 'project' | 'account'
+type Item = { key: string, label: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey }
+
+const GROUPS: { key: GroupKey, label: string, icon: string }[] = [
+  { key: 'people', label: 'الحلقات والأفراد', icon: 'i-lucide-users-round' },
+  { key: 'supervision', label: 'الإشراف والتقييم', icon: 'i-lucide-shield-check' },
+  { key: 'quran', label: 'المتابعة القرآنية', icon: 'i-lucide-book-open-text' },
+  { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library' },
+  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-award' },
+  { key: 'sheets', label: 'الكشوف', icon: 'i-lucide-receipt-text' },
+  { key: 'project', label: 'إدارة المشروع', icon: 'i-lucide-briefcase' },
+  { key: 'account', label: 'الحساب', icon: 'i-lucide-user-cog' }
+]
 
 // مجموعات الأدوار — مشرف المشروع (PS) يرى كل شاشة قراءة، والكتابة تُحجب داخل الشاشات (isReadOnly)
 const PS: Role = 'project_supervisor'
@@ -59,70 +73,98 @@ const mainNav: Item[] = [
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher', 'examiner'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] },
-  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS },
-  { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF },
+  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
+  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS, group: 'people' },
+  { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },
   // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)
-  { key: 'exam-students', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/exams/students', roles: ['examiner'] },
-  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'] },
+  { key: 'exam-students', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/exams/students', roles: ['examiner'], group: 'people' },
+  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'], group: 'people' },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
-  { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'] },
+  { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ
-  { key: 'quality', label: 'تقييم المعلمين', icon: 'i-lucide-badge-check', to: '/quality', roles: SCOPED_STAFF },
-  { key: 'quality-mine', label: 'تقييمي الشهري', icon: 'i-lucide-badge-check', to: '/quality', roles: ['teacher'] },
-  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
-  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] },
-  { key: 'programs-staff', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: [...SCOPED_STAFF, 'teacher'] },
-  { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'] },
-  { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'] },
+  { key: 'quality', label: 'تقييم المعلمين', icon: 'i-lucide-badge-check', to: '/quality', roles: SCOPED_STAFF, group: 'supervision' },
+  { key: 'quality-mine', label: 'تقييمي الشهري', icon: 'i-lucide-badge-check', to: '/quality', roles: ['teacher'], group: 'supervision' },
+  { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
+  { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
+  // البرامجُ المصاحبة عنوانٌ مستقلّ تحته تبويبا صفحتها (طلب المستخدم 2026-10-22)
+  { key: 'programs-progress', label: 'إنجاز الطلاب', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
+  { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
+  { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
+  { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'], group: 'quran' },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
-  { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'] },
-  { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'] },
+  { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },
+  { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'], group: 'sheets' },
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
-  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'] }
+  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' }
 ]
 
 const managerNav: Item[] = [
-  { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: [PS, ADMIN] },
-  { key: 'booklets', label: 'أرشيف الملازم', icon: 'i-lucide-book-copy', to: '/booklets', roles: [PS, ADMIN] },
-  { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN] },
-  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN] }
+  { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: [PS, ADMIN], group: 'project' },
+  { key: 'booklets', label: 'أرشيف الملازم', icon: 'i-lucide-book-copy', to: '/booklets', roles: [PS, ADMIN], group: 'project' },
+  { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN], group: 'project' },
+  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN], group: 'project' }
 ]
 
-const metricsItem: Item = { key: 'metrics', label: 'دليل المؤشرات', icon: 'i-lucide-gauge', to: '/metrics', roles: LEADERS }
 // الطالب بلا «ملف شخصي» وظيفيّ: بياناته وكلمة مروره وصورته في «صفحتي» (/me)
-const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'] }
+const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'account' }
 
-const visible = (items: Item[]) => computed(() => items.filter(i => role.value && i.roles.includes(role.value)))
-const mainItems = visible(mainNav)
-const managerItems = visible(managerNav)
-const showMetrics = computed(() => role.value && metricsItem.roles.includes(role.value))
-const showProfile = computed(() => role.value && profileItem.roles.includes(role.value))
+const allItems = [...mainNav, ...managerNav, profileItem]
+const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.includes(role.value)))
+/** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
+const topItems = computed(() => visibleItems.value.filter(i => !i.group))
+const navGroups = computed(() => GROUPS
+  .map(g => ({ ...g, items: visibleItems.value.filter(i => i.group === g.key) }))
+  .filter(g => g.items.length))
+
+// الطيُّ لكلّ متصفّحٍ وحده (تفضيلٌ لا بيانات)؛ ومجموعةُ الصفحة الحاليّة تبقى مفتوحةً كي لا يختفي البارز
+const COLLAPSE_KEY = 'torjoman-nav-collapsed'
+const collapsed = ref<Set<GroupKey>>(new Set())
+onMounted(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? '[]') as GroupKey[]
+    collapsed.value = new Set(saved)
+  } catch { /* تخزينٌ محجوب: كلُّ المجموعات مفتوحة */ }
+})
+const isOpen = (g: GroupKey) => !collapsed.value.has(g) || activeItem.value?.group === g
+function toggleGroup(g: GroupKey) {
+  const next = new Set(collapsed.value)
+  if (isOpen(g)) next.add(g)
+  else next.delete(g)
+  collapsed.value = next
+  try {
+    localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]))
+  } catch { /* لا يُحفظ — يبقى للجلسة */ }
+}
 
 // المسار أو ما تحته: صفحات التفاصيل (/halqat/<id>، /students/<id>…) تحمل عنوان قسمها وتُبرزه في القائمة
 // (الملف الشخصي استثناء: /profile/<id> ملفّ غيرك، فلا يُبرز «الملف الشخصي» إلا لـ/profile/me)
 // (وعناصرُ تبويبات الطالب تُطابَق بالتبويب أيضاً: «رحلتي» لا تُبرز «لوحة التحكم» على /me نفسها)
+const routeTab = () => (typeof route.query.tab === 'string' ? route.query.tab : null)
 const matches = (item: Item) => !!item.to
   && (item.tab
     ? route.path === item.to && tabFromQuery(route.query.tab) === item.tab
-    : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
-const activeItem = computed(() => [...mainNav, ...managerNav, metricsItem, profileItem]
-  .filter(i => role.value && i.roles.includes(role.value) && matches(i))
+    : item.qtab !== undefined
+      ? route.path === item.to && routeTab() === item.qtab
+      : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
+const activeItem = computed(() => visibleItems.value
+  .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const navTitle = computed(() => {
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
-  return activeItem.value?.label ?? 'لوحة التحكم'
+  return activeItem.value?.title ?? activeItem.value?.label ?? 'لوحة التحكم'
 })
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
 function go(item: Item) {
   drawerOpen.value = false
-  if (item.to) navigateTo(item.tab ? { path: item.to, query: { tab: queryFromTab(item.tab) } } : item.to)
+  if (item.to && item.tab) navigateTo({ path: item.to, query: { tab: queryFromTab(item.tab) } })
+  else if (item.to && item.qtab) navigateTo({ path: item.to, query: { tab: item.qtab } })
+  else if (item.to) navigateTo(item.to)
   else comingSoon()
 }
 // البارزُ واحد: إن طابق المسارَ بندان (/exams و/exams/students) فالأطولُ رابطاً — الأدقّ — وحده
-const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === activeItem.value?.to)
+const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== undefined || item.to === activeItem.value?.to)
 </script>
 
 <template>
@@ -157,11 +199,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === act
             />
           </template>
           <template v-else>
-            <div class="nav-group">
-              القائمة الرئيسية
-            </div>
             <button
-              v-for="item in mainItems"
+              v-for="item in topItems"
               :key="item.key"
               class="nav-item"
               :class="{ active: isActive(item) }"
@@ -174,55 +213,50 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === act
               <span>{{ item.label }}</span>
             </button>
 
-            <template v-if="managerItems.length">
-              <div class="nav-group">
-                إدارة المشروع
+            <section
+              v-for="g in navGroups"
+              :key="g.key"
+              class="nav-sec"
+            >
+              <button
+                type="button"
+                class="nav-group"
+                :aria-expanded="isOpen(g.key)"
+                :aria-controls="`nav-${g.key}`"
+                @click="toggleGroup(g.key)"
+              >
+                <span class="nav-g-label">
+                  <UIcon
+                    :name="g.icon"
+                    class="size-5"
+                  />
+                  {{ g.label }}
+                </span>
+                <UIcon
+                  name="i-lucide-chevron-down"
+                  class="size-4 nav-chev"
+                  :class="{ shut: !isOpen(g.key) }"
+                />
+              </button>
+              <div
+                v-show="isOpen(g.key)"
+                :id="`nav-${g.key}`"
+              >
+                <button
+                  v-for="item in g.items"
+                  :key="item.key"
+                  class="nav-item"
+                  :class="{ active: isActive(item) }"
+                  @click="go(item)"
+                >
+                  <UIcon
+                    :name="item.icon"
+                    class="size-5"
+                  />
+                  <span>{{ item.label }}</span>
+                </button>
               </div>
-              <button
-                v-for="item in managerItems"
-                :key="item.key"
-                class="nav-item"
-                :class="{ active: isActive(item) }"
-                @click="go(item)"
-              >
-                <UIcon
-                  :name="item.icon"
-                  class="size-5"
-                />
-                <span>{{ item.label }}</span>
-              </button>
-            </template>
-
-            <template v-if="showMetrics">
-              <button
-                class="nav-item"
-                :class="{ active: isActive(metricsItem) }"
-                @click="go(metricsItem)"
-              >
-                <UIcon
-                  :name="metricsItem.icon"
-                  class="size-5"
-                />
-                <span>{{ metricsItem.label }}</span>
-              </button>
-            </template>
-
-            <template v-if="showProfile">
-              <div class="nav-group">
-                الحساب
-              </div>
-              <button
-                class="nav-item"
-                :class="{ active: isActive(profileItem) }"
-                @click="go(profileItem)"
-              >
-                <UIcon
-                  :name="profileItem.icon"
-                  class="size-5"
-                />
-                <span>{{ profileItem.label }}</span>
-              </button>
-            </template>
+            </section>
           </template>
         </ClientOnly>
       </nav>
@@ -330,8 +364,13 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === act
 .side-nav > * { flex-shrink: 0; }
 .side-nav::-webkit-scrollbar { width: 6px; }
 .side-nav::-webkit-scrollbar-thumb { background: var(--side-line); border-radius: 6px; }
-.nav-group { font-size: 11.5px; font-weight: 600; color: var(--side-ink); padding: 16px 12px 6px; opacity: .75; }
-.nav-group:first-child { padding-top: 6px; }
+.nav-group { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; margin-top: 8px; font-size: 15px; font-weight: 600; color: var(--side-strong); padding: 4px 14px; background: none; border: 0; border-radius: 11px; font-family: inherit; cursor: pointer; text-align: start; }
+.nav-group:hover { background: var(--side-hover); }
+.nav-group:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.nav-g-label { display: inline-flex; align-items: center; gap: 12px; }
+.nav-chev { transition: transform .18s; }
+.nav-chev.shut { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .nav-chev { transition: none; } }
 .nav-item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 14px; border-radius: 11px; background: transparent; border: none; color: var(--side-ink); font-size: 15px; font-weight: 500; font-family: inherit; cursor: pointer; width: 100%; text-align: start; transition: background .15s, color .15s; }
 .nav-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item > :first-child { flex-shrink: 0; }
@@ -372,7 +411,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === act
   .side-head { padding: 14px 20px 12px; }
   .side-logo { height: 42px; }
   .nav-item { min-height: 40px; font-size: 14.5px; }
-  .nav-group { padding: 12px 12px 4px; }
+  .nav-group { margin-top: 6px; }
   .side-foot { padding: 10px 12px; }
   .side-foot .nav-item { min-height: 38px; }
   .user-card { padding: 6px 8px; }

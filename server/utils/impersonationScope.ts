@@ -5,7 +5,7 @@
  * — وبلا هذا الفحص تبدأ نيابةً ثانية لا يقول سجلُّها من بدأ (ثغرةُ الصحابة).
  */
 import type { Role } from '~/constants/roles'
-import { isImpersonatorRole, mayImpersonateRole } from '~/constants/impersonation'
+import { isImpersonatorRole, mayImpersonate } from '~/constants/impersonation'
 import { parseRecordId, type Parsed } from './accountInput'
 
 export type Decision = { ok: true } | { ok: false, statusCode: 400 | 403, message: string }
@@ -14,7 +14,7 @@ export const NESTED_IMPERSONATION_MESSAGE = 'لا نيابةَ داخل نياب
 
 export function assertMayImpersonate(
   actor: { id: string, role: Role, isImpersonating: boolean },
-  target: { id: string, role: Role, status: string }
+  target: { id: string, role: Role, status: string, gender: string | null }
 ): Decision {
   if (actor.isImpersonating) return { ok: false, statusCode: 403, message: NESTED_IMPERSONATION_MESSAGE }
   if (!isImpersonatorRole(actor.role)) {
@@ -22,7 +22,7 @@ export function assertMayImpersonate(
   }
   if (actor.id === target.id) return { ok: false, statusCode: 400, message: 'أنت في حسابك أصلاً.' }
   if (target.status !== 'active') return { ok: false, statusCode: 400, message: 'هذا الحساب غير مُفعَّل — لا يُناب عنه.' }
-  if (!mayImpersonateRole(actor.role, target.role)) {
+  if (!mayImpersonate(actor.role, target)) {
     return { ok: false, statusCode: 403, message: 'لا تملك الدخولَ بحساب صاحب هذا الدور.' }
   }
   return { ok: true }

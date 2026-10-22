@@ -23,7 +23,6 @@ export default defineEventHandler((event) => {
     'Disallow: /minutes',
     'Disallow: /alerts',
     'Disallow: /news$',
-    'Disallow: /metrics',
     'Disallow: /supervisors',
     'Disallow: /profile',
     'Disallow: /exam-plan',

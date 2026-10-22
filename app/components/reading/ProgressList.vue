@@ -36,7 +36,11 @@ const counts = computed(() => ({
     aria-labelledby="pl-title"
   >
     <div class="pl-head">
-      <h2 id="pl-title">
+      <!-- العنوانُ للقارئ الآليّ وحده: التبويبُ فوقه يحمله ظاهراً (2026-10-22) -->
+      <h2
+        id="pl-title"
+        class="sr-only"
+      >
         إنجاز الطلاب
       </h2>
       <UiSelect

@@ -82,7 +82,7 @@ export function fmtScore(n: number | null | undefined): string {
   return String(Math.round(n * 100) / 100)
 }
 
-/** تقييمُ الجودة بدرجة اجتماعاتٍ يكتبها المشرف الآن (المعاينةُ تحسبها صفراً): (الزيارات + التقارير + الاجتماعات) ÷ 2. */
+/** تقييمُ الجودة بدرجة اجتماعاتٍ يكتبها المدير الإداري الآن (المعاينةُ تحسبها صفراً): (الزيارات + التقارير + الاجتماعات) ÷ 2. */
 export function qualityWith(n: QualityNumbers, meetings: number): number | null {
   if (n.visits_part === null) return null
   return Math.round(((n.visits_part + n.reports_quran + n.reports_statement + meetings) / 2) * 100) / 100

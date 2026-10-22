@@ -41,13 +41,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const [{ data: target }, { data: actor }] = await Promise.all([
-    admin.from('profiles').select('id, full_name, role, status').eq('id', profileId).maybeSingle(),
+    admin.from('profiles').select('id, full_name, role, status, gender').eq('id', profileId).maybeSingle(),
     admin.from('profiles').select('full_name').eq('id', caller.id).maybeSingle()
   ])
   if (!target) throw createError({ statusCode: 404, statusMessage: 'لا حسابَ بهذا المعرّف.' })
   const decision = assertMayImpersonate(
     { id: caller.id, role: caller.role, isImpersonating: caller.isImpersonating },
-    { id: target.id, role: target.role, status: target.status }
+    { id: target.id, role: target.role, status: target.status, gender: target.gender }
   )
   if (!decision.ok) throw createError({ statusCode: decision.statusCode, statusMessage: decision.message })
 

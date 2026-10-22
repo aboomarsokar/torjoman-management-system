@@ -149,6 +149,8 @@ const qSupervisors = ref<QSup[]>([])
 const qHalqatCount = ref(0)
 const qVisitsCount = ref(0)
 const qReports = ref<QReport[]>([])
+// العددُ الكلّيّ للمُرسَلة — القائمةُ تكتفي بأحدث 8
+const qReportsCount = ref(0)
 
 async function loadTechnicalData() {
   try {
@@ -168,13 +170,14 @@ async function loadTechnicalData() {
     const { data: visits } = await supabase.from('supervision_visits').select('id').eq('status', 'scheduled').gte('scheduled_at', today)
     qVisitsCount.value = (visits ?? []).length
 
-    const { data: reps } = await supabase
+    const { data: reps, count: repsCount } = await supabase
       .from('monthly_reports')
-      .select('id, report_month, report_year, halaqa:halaqa_id(name)')
+      .select('id, report_month, report_year, halaqa:halaqa_id(name)', { count: 'exact' })
       .eq('status', 'submitted')
       .order('report_year', { ascending: false }).order('report_month', { ascending: false }).limit(8)
       .returns<{ id: string, report_month: number, report_year: number, halaqa: { name: string } | null }[]>()
     qReports.value = (reps ?? []).map(r => ({ id: r.id, halqa: r.halaqa?.name ?? '—', label: periodLabel(r.report_year, r.report_month) }))
+    qReportsCount.value = repsCount ?? qReports.value.length
   } catch (err) {
     handle(err)
   }
@@ -406,7 +409,7 @@ const settingCards = [
               icon="i-lucide-book-open"
               tone="green"
               :value="qHalqatCount"
-              label="الحلقات في نطاقي"
+              label="الحلقات"
               stacked
             />
             <UiStatCard
@@ -419,24 +422,28 @@ const settingCards = [
             <UiStatCard
               icon="i-lucide-file-text"
               tone="blue"
-              :value="qReports.length"
+              :value="qReportsCount"
               label="تقارير مُرسلة (للاطّلاع)"
               stacked
             />
           </div>
 
+          <!-- الإنجازُ القرآنيّ للحلقات للوهلة الأولى، وتفصيلُ كلٍّ للتواصل مع معلّمها (طلب المستخدم 2026-10-22) -->
+          <DashboardHalaqatAchievement />
+
           <div class="sup-grid">
             <!-- المشرفون الميدانيون -->
             <div class="card sec">
               <div class="sec-head">
-                <h3>المشرفون الميدانيون</h3>
+                <!-- العددُ بارزاً والرابطُ زرٌّ ظاهر (طلب المستخدم 2026-10-22) -->
+                <h3>المشرفون الميدانيون <span class="count">{{ qSupervisors.length }}</span></h3>
                 <UButton
                   to="/supervisors"
                   label="المشرفون"
                   color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  trailing-icon="i-lucide-arrow-left"
+                  variant="outline"
+                  trailing-icon="i-lucide-chevron-left"
+                  :ui="{ base: 'rounded-[12px] font-semibold min-h-11' }"
                 />
               </div>
               <UiEmptyState
@@ -466,14 +473,14 @@ const settingCards = [
             <!-- تقارير مُرسلة للاطّلاع -->
             <div class="card sec">
               <div class="sec-head">
-                <h3>تقارير مُرسلة — يعتمدها المشرفون الميدانيون</h3>
+                <h3>تقارير مُرسلة — يعتمدها المشرفون الميدانيون <span class="count">{{ qReportsCount }}</span></h3>
                 <UButton
                   to="/reports"
                   label="التقارير"
                   color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  trailing-icon="i-lucide-arrow-left"
+                  variant="outline"
+                  trailing-icon="i-lucide-chevron-left"
+                  :ui="{ base: 'rounded-[12px] font-semibold min-h-11' }"
                 />
               </div>
               <UiEmptyState
@@ -547,8 +554,9 @@ const settingCards = [
 .stats-4 { grid-template-columns: repeat(4, 1fr); }
 .sup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
 .sec { padding: 20px 22px; }
-.sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .row:first-child { border-top: none; }
@@ -557,5 +565,6 @@ const settingCards = [
 .row-sub { font-size: 13px; color: var(--ink-3); }
 
 @media (max-width: 1024px) { .stats { grid-template-columns: repeat(2, 1fr); } .settings { grid-template-columns: 1fr; } .sup-grid { grid-template-columns: 1fr; } .stats-4 { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 620px) { .stats { grid-template-columns: 1fr; } }
+/* بطاقتان في السطر على الجوال (طلب المستخدم 2026-10-22) */
+@media (max-width: 620px) { .stats, .stats-4 { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
 </style>

@@ -39,8 +39,11 @@ describe('ثوابت النيابة', () => {
     }
   })
 
-  it('المدير الفني لا ينوب عن نفسه (نظيرُه = هو، فالدورُ فريد)', () => {
-    expect(IMPERSONATION_TARGETS.technical_manager).not.toContain('technical_manager')
+  it('المدير الفني ينوب عن الميدان وحده: المشرف والمختبِر والمعلم (قرار 2026-10-22)', () => {
+    expect([...IMPERSONATION_TARGETS.technical_manager].sort()).toEqual(['examiner', 'field_supervisor', 'teacher'])
+    for (const r of ['project_supervisor', 'admin_manager', 'technical_manager', 'women_admin'] as const) {
+      expect(mayImpersonateRole('technical_manager', r), r).toBe(false)
+    }
   })
 
   it('mayImpersonateRole تطابق القائمة البيضاء لكلّ زوج', () => {

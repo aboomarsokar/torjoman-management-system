@@ -17,7 +17,8 @@ export type ImpersonatorRole = typeof IMPERSONATOR_ROLES[number]
 /** قائمةٌ بيضاء لكلّ فاعل — لا «كلُّ دورٍ إلا…» (تنكسر صامتةً مع كلّ دورٍ جديد). */
 export const IMPERSONATION_TARGETS: Record<ImpersonatorRole, readonly Role[]> = {
   admin_manager: ['project_supervisor', 'technical_manager', 'women_admin', 'field_supervisor', 'examiner', 'teacher'],
-  technical_manager: ['project_supervisor', 'women_admin', 'field_supervisor', 'examiner', 'teacher']
+  // المدير الفني لا يدخل على الإدارة (مشرف المشروع والمديرَين والمديرة) — قرار المستخدم 2026-10-22
+  technical_manager: ['field_supervisor', 'examiner', 'teacher']
 }
 
 /** النصُّ نفسُه في private.assert_session_writable (يحرسه اختبار). */
@@ -36,6 +37,11 @@ export interface ImpersonationStatus {
 
 export function isImpersonatorRole(role: Role | null | undefined): role is ImpersonatorRole {
   return role != null && (IMPERSONATOR_ROLES as readonly Role[]).includes(role)
+}
+
+/** المدير الفنيّ لقسم البنين وحده (قرار 2026-10-22): لا ينوب عن أنثى ولو كان دورُها في قائمته. */
+export function mayImpersonate(actorRole: Role | null | undefined, target: { role: Role, gender: string | null }): boolean {
+  return mayImpersonateRole(actorRole, target.role) && !(actorRole === 'technical_manager' && target.gender === 'female')
 }
 
 /** هل لصاحب هذا الدور أن ينوب عن صاحب ذاك؟ (الدورُ وحده — النشاطُ والنفسُ في الخادم.) */

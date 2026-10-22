@@ -16,14 +16,13 @@ const { role, fullName, profile, pending: profilePending } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { isAdmin, isReadOnly, isTeacher, isFieldSupervisor: isSupervisor, isTechnical } = usePermissions()
+const { isAdmin, isReadOnly, isTeacher, isExaminer, isFieldSupervisor: isSupervisor, isTechnical } = usePermissions()
 /** لوحة النظرة العامة والإعدادات: المدير الإداري، ومشرف المشروع عرضاً. */
 const showOverview = computed(() => isAdmin.value || isReadOnly.value)
 
-// المختبِر لا لوحة له — عمله كلّه في الاختبارات؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)؛
+// للمختبِر لوحتُه منذ 2026-10-22 (`DashboardExaminerHome`)؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)؛
 // والمديرة الإدارية لا لوحة لها في قائمتها — تبدأ من حلقات قسمها
 watch(role, (r) => {
-  if (r === 'examiner') navigateTo('/exams', { replace: true })
   if (r === 'student') navigateTo('/me', { replace: true })
   if (r === 'women_admin') navigateTo('/halqat', { replace: true })
 }, { immediate: true })
@@ -204,7 +203,7 @@ const settingCards = [
   <div class="dash">
     <div class="welcome">
       <h2>أهلاً، {{ fullName }} 👋</h2>
-      <p>{{ isTeacher ? 'ما ينتظرك اليوم، وأرقام حلقتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}</p>
+      <p>{{ isTeacher ? 'ما ينتظرك اليوم، وأرقام حلقتك هذا الشهر.' : isExaminer ? 'ما ينتظر رصدَك، وأرقام اختباراتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}</p>
     </div>
 
     <ClientOnly>
@@ -281,6 +280,10 @@ const settingCards = [
 
       <template v-else-if="isTeacher">
         <DashboardTeacherHome />
+      </template>
+
+      <template v-else-if="isExaminer">
+        <DashboardExaminerHome />
       </template>
 
       <template v-else-if="isSupervisor">

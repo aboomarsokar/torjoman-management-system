@@ -313,7 +313,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
           </div>
           <div class="top-end">
             <!-- الوضعُ بجانب الجرس (كان في أسفل القائمة الجانبية — 2026-10-22) -->
-            <UiThemeMenu />
+            <UiThemeToggle />
             <NotificationsBell />
             <div class="top-user">
               <div class="top-usertext">

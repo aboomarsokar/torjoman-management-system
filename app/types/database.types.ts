@@ -2089,6 +2089,34 @@ export type Database = {
         Args: { p_session_ids: string[] }
         Returns: number
       }
+      halaqa_achievement_students: {
+        Args: { p_halaqa: string; p_month: number; p_year: number }
+        Returns: {
+          full_name: string
+          pages: number
+          required: number
+          state: string
+          student_id: string
+        }[]
+      }
+      halaqat_achievement: {
+        Args: { p_month: number; p_year: number }
+        Returns: {
+          done: number
+          gender: string
+          halaqa_id: string
+          halaqa_name: string
+          report_status: string
+          short: number
+          students: number
+          teacher_id: string
+          teacher_name: string
+          teacher_phone: string
+          teacher_whatsapp: string
+          unmeasured: number
+          unrecorded: number
+        }[]
+      }
       in_admin_scope: {
         Args: { g: Database["public"]["Enums"]["gender_type"] }
         Returns: boolean

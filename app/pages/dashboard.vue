@@ -428,6 +428,9 @@ const settingCards = [
             />
           </div>
 
+          <!-- إنجازُ الحلقات للوهلة الأولى، وتفصيلُ كلٍّ للتواصل مع معلّمها (طلب المستخدم 2026-10-22) -->
+          <DashboardHalaqatAchievement />
+
           <div class="sup-grid">
             <!-- المشرفون الميدانيون -->
             <div class="card sec">

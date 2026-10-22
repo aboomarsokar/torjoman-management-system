@@ -4,18 +4,21 @@
  *
  *   node scripts/bulk-accounts.mjs staff    موظفون.csv            ← فحصٌ فقط (لا يكتب شيئاً)
  *   node scripts/bulk-accounts.mjs students طلاب.csv --apply      ← يُنشئ الحسابات
+ *   … --out=<مجلّد>                                                 ← ملفّات الكلمات في هذا المجلّد بدل جذر المشروع
  *
  * الأعمدة (عناوين عربية أو إنجليزية، أيُّ ترتيب):
  *   الموظفون: الاسم، الدور (معلم/معلمة/مشرف ميداني/مختبر…)، الجنس (ذكر/أنثى)، الهاتف (اختياري)
- *   الطلاب:   الاسم، الجنس، رقم الهوية، الحلقة (اسمها كما في المنصّة — اختياري)، تاريخ الميلاد، هاتف وليّ الأمر
+ *   الطلاب:   الاسم، الجنس، رقم الهوية، الحلقة (اسمها كما في المنصّة — اختياري)، تاريخ الميلاد، هاتف وليّ الأمر،
+ *             ودورة الأحكام والسكن وأقرب مسجد (اختيارية)
  *
  * يتّبع خطوات مسارَي الخادم نفسها (server/api/users.post.ts و students.post.ts) بعميل الخدمة: حسابُ Auth ببريدٍ داخليّ
  * مؤكَّد، وكلمةٌ مؤقّتة يولّدها `generateTempPassword`، و`must_change_password`، والتراجعُ إن فشلت خطوة.
  * `assigned_by`/`created_by` = المدير الإداري صاحب الرقم 1001.
  * ⚠️ الكلماتُ المؤقّتة لا تُطبع: تُكتب في ملفٍّ `*.local` (مستثنى من git، صلاحيته 600) ليوزّعها المدير ثم يحذفه.
+ *    وللطلاب أيضاً ملفُّ Excel لكلّ حلقة (الاسم والهوية والكلمة) في مجلّدٍ `*.local` بجانبه، يُرسَل لمعلّمها.
  * ⚠️ لا يُشغَّل والمنصّة في بيانات تجريبية ستُحذف — أدخِل البيانات الحقيقية بعد حذفها.
  */
-import { readFileSync, writeFileSync, chmodSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, chmodSync, existsSync, mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, resolve, basename } from 'node:path'
@@ -32,12 +35,23 @@ const { generateTempPassword } = await jiti.import('../server/utils/tempPassword
 const { staffEmailFromNumber, studentEmailFromIdentity } = await jiti.import('../app/constants/accounts.ts')
 const { roleLabel } = await jiti.import('../app/constants/roles.ts')
 
-const [kind, file, flag] = process.argv.slice(2)
+const [kind, file] = process.argv.slice(2).filter(a => !a.startsWith('--'))
+/** `--out=<مجلّد>`: مكانُ ملفّات الكلمات (الافتراضيّ جذرُ المشروع). */
+const outArg = process.argv.find(a => a.startsWith('--out='))
+const outDir = outArg ? resolve(outArg.slice('--out='.length)) : root
+/** توحيد كتابة الدورة اليدوية: «التأهيلية/تاهيلية/تأهلية/تأهيلة» ← «تأهيلية»، «العليا» ← «عليا»، «تاهيل سند» ← «تأهيل سند». */
+const tajweedSpelling = (v) => {
+  const t = v.trim().replace(/\.$/, '').replace(/^ال(?=تأهيل|تاهيل|عليا|تمهيد)/, '')
+  if (/^(تأهيلية|تاهيلية|تأهلية|تأهيلة|تاهلية)$/.test(t)) return 'تأهيلية'
+  return t.replace(/^تاهيل/, 'تأهيل')
+}
+/** نصٌّ اختياريّ بلا نقطةٍ في آخره (كشوفٌ تُنهي كلّ خانةٍ بنقطة). */
+const optionalText = v => (v ?? '').trim().replace(/\.$/, '').trim() || null
 if (!['staff', 'students'].includes(kind) || !file) {
   console.error('الاستعمال: node scripts/bulk-accounts.mjs staff|students <ملف> [--apply]')
   process.exit(1)
 }
-const apply = flag === '--apply'
+const apply = process.argv.includes('--apply')
 
 // المتغيّرات من .env (بلا مكتبة)
 const env = Object.fromEntries(readFileSync(resolve(root, '.env'), 'utf8').split('\n')
@@ -86,7 +100,7 @@ if (!apply) {
   process.exit(0)
 }
 
-const outFile = resolve(root, `bulk-credentials-${kind}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.local`)
+const outFile = resolve(outDir, `bulk-credentials-${kind}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.local`)
 if (existsSync(outFile)) {
   console.error('ملفّ الكلمات موجودٌ سلفاً — انتظر ثانيةً وأعد.')
   process.exit(1)
@@ -129,17 +143,23 @@ async function createStudent(r) {
   }
   const { error: stuErr } = await admin.from('students').insert({
     full_name: r.fullName, gender: r.gender, national_id: r.nationalId, user_id: uid, halaqa_id: r.halaqaId,
-    birth_date: r.birthDate, guardian_phone: r.guardianPhone, created_by: owner.id, status: 'active'
+    birth_date: r.birthDate, guardian_phone: r.guardianPhone, created_by: owner.id, status: 'active',
+    tajweed_level: optionalText(tajweedSpelling(r.extra.tajweed_level ?? '')), residence: optionalText(r.extra.residence),
+    nearest_mosque: optionalText(r.extra.nearest_mosque)
   })
   if (stuErr) {
     await admin.from('profiles').delete().eq('id', uid)
     await admin.auth.admin.deleteUser(uid)
     throw new Error(stuErr.message)
   }
+  credentialsByHalaqa.set(r.halaqaId, [...(credentialsByHalaqa.get(r.halaqaId) ?? []), [r.fullName, r.nationalId, password]])
   return [r.line, r.fullName, r.nationalId, password]
 }
 
+const credentialsByHalaqa = new Map()
+const recordByLine = new Map(records.map(x => [x.line, x.record]))
 for (const r of plan.rows) {
+  if (kind === 'students') r.extra = recordByLine.get(r.line) ?? {}
   try {
     out.push((await (kind === 'staff' ? createStaff(r) : createStudent(r))).join(','))
     process.stdout.write('.')
@@ -153,4 +173,25 @@ writeFileSync(outFile, '\uFEFF' + out.join('\n') + '\n', { mode: 0o600 })
 chmodSync(outFile, 0o600)
 console.log(`\n\nأُنشئ ${out.length - 1} حساباً من ${plan.rows.length}. الكلماتُ المؤقّتة في: ${basename(outFile)} (يُفتح في Excel)`)
 for (const f of failures) console.log(`  ✗ السطر ${f.line}: ${f.message}`)
+if (kind === 'students' && credentialsByHalaqa.size) {
+  const ExcelJS = (await import('exceljs')).default
+  const { data: names } = await admin.from('halaqat').select('id, name')
+  const nameOf = new Map((names ?? []).map(h => [h.id, h.name]))
+  const dir = outFile.replace(/\.local$/, '-halaqat.local')
+  mkdirSync(dir, { mode: 0o700 })
+  for (const [hid, rows] of credentialsByHalaqa) {
+    const title = nameOf.get(hid) ?? 'بلا حلقة'
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('الطلاب', { views: [{ rightToLeft: true }] })
+    ws.columns = [{ header: '#', width: 5 }, { header: 'الاسم', width: 34 }, { header: 'رقم الهوية (اسم الدخول)', width: 22 }, { header: 'كلمة المرور المؤقّتة', width: 22 }]
+    rows.forEach((row, i) => ws.addRow([i + 1, ...row]))
+    ws.getRow(1).font = { bold: true }
+    ws.addRow([])
+    ws.addRow(['', 'الدخول من torjoman.org برقم الهوية والكلمة المؤقّتة، ثم تُغيَّر الكلمة عند أوّل دخول.'])
+    const path = resolve(dir, `${title.replace(/[\\/:*?"<>|]/g, '-')}.xlsx`)
+    await wb.xlsx.writeFile(path)
+    chmodSync(path, 0o600)
+  }
+  console.log(`ملفّات الحلقات (${credentialsByHalaqa.size}) في: ${basename(dir)}`)
+}
 console.log('وزّع الكلمات ثم احذف الملفّ. كلٌّ يغيّر كلمته عند أوّل دخول.')

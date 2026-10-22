@@ -59,7 +59,11 @@ const HEADERS: Record<string, string[]> = {
   national_id: ['national_id', 'الهوية', 'رقم الهوية'],
   halaqa: ['halaqa', 'الحلقة', 'اسم الحلقة'],
   birth_date: ['birth_date', 'تاريخ الميلاد', 'الميلاد'],
-  guardian_phone: ['guardian_phone', 'هاتف ولي الأمر', 'هاتف وليّ الأمر', 'جوال ولي الأمر']
+  guardian_phone: ['guardian_phone', 'هاتف ولي الأمر', 'هاتف وليّ الأمر', 'جوال ولي الأمر'],
+  // حقولٌ اختياريّةٌ للطالب يقرؤها سكربت الإدخال الجماعيّ مباشرةً من السجلّ
+  tajweed_level: ['tajweed_level', 'دورة الأحكام', 'آخر دورة أحكام'],
+  residence: ['residence', 'السكن', 'السكن الحالي'],
+  nearest_mosque: ['nearest_mosque', 'أقرب مسجد']
 }
 const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase()
 

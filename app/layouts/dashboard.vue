@@ -263,6 +263,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
       </nav>
 
       <div class="side-foot">
+        <!-- ثابتٌ ما دام التطبيقُ غيرَ مثبَّت (طلب المستخدم 2026-10-22) — يختفي في التطبيق المثبَّت -->
+        <PwaInstallButton variant="side" />
         <div class="user-card">
           <div class="user-av">
             <ProfileAvatar

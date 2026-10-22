@@ -155,6 +155,11 @@ async function onSubmit() {
           </li>
         </ul>
 
+        <!-- أوّلُ ما يراه كلُّ عاملٍ — فالتثبيتُ من هنا أسهل (طلب المستخدم 2026-10-22) -->
+        <div class="install">
+          <PwaInstallButton />
+        </div>
+
         <NuxtLink
           to="/"
           class="back-link"
@@ -193,6 +198,8 @@ async function onSubmit() {
 .brand-head p { margin: 10px 0 0; font-size: 16px; color: var(--ink-2); font-weight: 300; }
 .form { display: flex; flex-direction: column; gap: 20px; }
 .submit { margin-top: 6px; }
+.install { margin-top: 14px; }
+.install:empty { display: none; }
 .notes { list-style: none; margin: 22px 0 0; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
 .notes li { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
 .notes li :deep(svg), .notes li .iconify { flex: none; margin-top: 4px; color: var(--ink-3); }

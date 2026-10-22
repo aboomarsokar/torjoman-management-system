@@ -6,7 +6,7 @@
  * أو «فات بلا رصد» وزرٌّ إلى صفحة الحضور على ذلك اليوم)، وعددُ أيام الشهر المرصودة، وشارةُ الرصد الشهريّ،
  * والانتقالُ والتواصلُ مع المعلم. البياناتُ من `halaqat_recording_status` (طلبٌ واحد)، وتفصيلُ اليوم عند طلبه.
  * صفحتُه `/follow-up`: `page` يُخفي عنوانَه الداخليّ لأنّ رأسَ الصفحة يحمله.
- * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها؛ وفلترٌ لحلقةٍ بعينها.
+ * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها.
  */
 import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
@@ -33,21 +33,15 @@ const { data, pending } = useLazyAsyncData<RecordingRow[]>('halaqat-recording-st
 const all = computed(() => sortByLag(data.value ?? []))
 const summary = computed(() => recordingSummary(data.value ?? []))
 const view = ref<'all' | 'lag'>('all')
-const halqaF = ref('all')
-const halqaItems = computed(() => [{ label: 'كل الحلقات', value: 'all' }, ...all.value.map(r => ({ label: r.halaqa_name, value: r.halaqa_id }))])
-const shown = computed(() => all.value
-  .filter(r => halqaF.value === 'all' || r.halaqa_id === halqaF.value)
-  .filter(r => view.value === 'all' || isLagging(r)))
+const shown = computed(() => view.value === 'all' ? all.value : all.value.filter(isLagging))
 
-// السطورُ مطويّةٌ افتراضاً، وحلقةٌ مختارةٌ بالفلتر تنفتح وحدها
+// السطورُ مطويّةٌ افتراضاً
 const expanded = ref(new Set<string>())
-const isExpanded = (id: string) => expanded.value.has(id) || halqaF.value === id
+const isExpanded = (id: string) => expanded.value.has(id)
 function toggleRow(id: string) {
   const next = new Set(expanded.value)
-  if (isExpanded(id)) {
-    next.delete(id)
-    if (halqaF.value === id) halqaF.value = 'all'
-  } else next.add(id)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
   expanded.value = next
 }
 /** نبرةُ العدد: كاملٌ أخضر، وما فاته يومٌ أحمر. */
@@ -132,14 +126,6 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
         متابعة الرصد
       </h3>
       <div class="rf-filters">
-        <UiSelect
-          v-model="halqaF"
-          :items="halqaItems"
-          size="lg"
-          class="rf-halqa"
-          aria-label="الحلقة"
-          :ui="{ base: 'rounded-[12px] min-h-11' }"
-        />
         <UiFilterChips
           v-model="view"
           :options="filterOptions"
@@ -191,7 +177,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 
       <ul class="rf-rows">
         <li
-          v-for="r in shown"
+          v-for="(r, i) in shown"
           :key="r.halaqa_id"
           class="rf-row"
           :class="{ open: isExpanded(r.halaqa_id) }"
@@ -204,6 +190,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
             :aria-controls="`rf-body-${r.halaqa_id}`"
             @click="toggleRow(r.halaqa_id)"
           >
+            <span class="rf-seq">{{ i + 1 }}</span>
             <span class="rf-who">
               <span class="rf-name">{{ r.halaqa_name }}</span>
               <span class="rf-teacher">{{ teacherWord }}: {{ r.teacher_name ?? '—' }}</span>
@@ -405,12 +392,13 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 
 .rf-rows { list-style: none; margin: 0; padding: 0; }
 .rf-filters { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
-.rf-halqa { width: 240px; max-width: 100%; }
 .rf-row { border-top: 1px solid var(--line); }
 .rf-sumrow { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 6px; background: none; border: 0; border-radius: 12px; font: inherit; color: inherit; text-align: start; cursor: pointer; }
 .rf-sumrow:hover { background: var(--surface-2); }
 .rf-sumrow:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .rf-sumrow .rf-who { flex: 1; }
+/* الرقمُ المتسلسل كبطاقات العاملين والطلاب (2026-10-22) */
+.rf-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--navy); color: #fff; font-size: 13.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .rf-count { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
 .rf-count-n { font-size: 14px; color: var(--ink-2); }
 .rf-count-n b { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }

@@ -13,7 +13,7 @@ import {
 import type { Role } from '~/constants/roles'
 
 const actor = (role: Role, over: Partial<{ id: string, isImpersonating: boolean }> = {}) => ({ id: 'a', role, isImpersonating: false, ...over })
-const target = (role: Role, over: Partial<{ id: string, status: string }> = {}) => ({ id: 't', role, status: 'active', ...over })
+const target = (role: Role, over: Partial<{ id: string, status: string, gender: string | null }> = {}) => ({ id: 't', role, status: 'active', gender: 'male' as string | null, ...over })
 const ok = (d: ReturnType<typeof assertMayImpersonate>) => d.ok
 
 describe('assertMayImpersonate', () => {
@@ -25,6 +25,9 @@ describe('assertMayImpersonate', () => {
   it('المدير الفني عن الميدان وحده، لا عن الإدارة (قرار 2026-10-22)', () => {
     expect(ok(assertMayImpersonate(actor('technical_manager'), target('teacher')))).toBe(true)
     expect(ok(assertMayImpersonate(actor('technical_manager'), target('field_supervisor')))).toBe(true)
+    // ولا عن أنثى: قسمُ البنات للمديرة الإدارية
+    expect(assertMayImpersonate(actor('technical_manager'), target('teacher', { gender: 'female' }))).toMatchObject({ ok: false, statusCode: 403 })
+    expect(ok(assertMayImpersonate(actor('admin_manager'), target('teacher', { gender: 'female' })))).toBe(true)
     for (const r of ['project_supervisor', 'admin_manager', 'women_admin'] as const) {
       expect(assertMayImpersonate(actor('technical_manager'), target(r)), r).toMatchObject({ ok: false, statusCode: 403 })
     }

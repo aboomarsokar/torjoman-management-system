@@ -39,6 +39,11 @@ export function isImpersonatorRole(role: Role | null | undefined): role is Imper
   return role != null && (IMPERSONATOR_ROLES as readonly Role[]).includes(role)
 }
 
+/** المدير الفنيّ لقسم البنين وحده (قرار 2026-10-22): لا ينوب عن أنثى ولو كان دورُها في قائمته. */
+export function mayImpersonate(actorRole: Role | null | undefined, target: { role: Role, gender: string | null }): boolean {
+  return mayImpersonateRole(actorRole, target.role) && !(actorRole === 'technical_manager' && target.gender === 'female')
+}
+
 /** هل لصاحب هذا الدور أن ينوب عن صاحب ذاك؟ (الدورُ وحده — النشاطُ والنفسُ في الخادم.) */
 export function mayImpersonateRole(actorRole: Role | null | undefined, targetRole: Role): boolean {
   return isImpersonatorRole(actorRole) && IMPERSONATION_TARGETS[actorRole].includes(targetRole)

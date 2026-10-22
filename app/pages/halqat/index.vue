@@ -297,13 +297,19 @@ async function confirmDelete() {
             :hide-supervisor="isFieldSupervisor"
             :examiner="row.examiner?.full_name ?? null"
             :gender="row.gender"
+            card
+            dense
           />
         </template>
+        <!-- العددُ شارةٌ بتمييزه وجنس الحلقة («6 طالبات») كبطاقة الجوال (2026-10-22) -->
         <template #students="{ row }">
           <span
-            class="num count"
+            class="stud"
             :class="{ zero: !studentsOf(row) }"
-          >{{ studentsOf(row) }}</span>
+          ><UIcon
+            name="i-lucide-users"
+            class="size-3.5"
+          />{{ studentsCountText(studentsOf(row), row.gender === 'female') }}</span>
         </template>
         <template #status="{ row }">
           <UBadge
@@ -590,8 +596,8 @@ async function confirmDelete() {
 .idx { color: var(--ink-3); font-size: 13px; }
 .person { color: var(--ink-2); }
 .person.orphan { color: var(--ink-3); }
-.count { font-weight: 600; color: var(--ink); }
-.count.zero { color: var(--ink-3); font-weight: 500; }
+.stud { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stud.zero { background: var(--surface-2); color: var(--ink-3); }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
 .halqat :deep(.col-narrow) { display: none; }

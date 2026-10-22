@@ -48,6 +48,14 @@ export function studentStatusLabel(status: string, gender: string | null | undef
   return (gender === 'female' ? STUDENT_STATUS_F[status] : undefined) ?? STUDENT_STATUS[status]?.label ?? status
 }
 
+/** «6 طالبات» / «طالبٌ واحد» / «طالبتان» / «12 طالباً» — عددُ طلاب الحلقة بتمييزه وجنسها. */
+export function studentsCountText(n: number, female: boolean): string {
+  if (n === 0) return female ? 'لا طالبات' : 'لا طلاب'
+  if (n === 1) return female ? 'طالبةٌ واحدة' : 'طالبٌ واحد'
+  if (n === 2) return female ? 'طالبتان' : 'طالبان'
+  return `${n} ${female ? (n <= 10 ? 'طالبات' : 'طالبة') : (n <= 10 ? 'طلاب' : 'طالباً')}`
+}
+
 /** «3 أجزاء» / «جزءٌ واحد» / «15 جزءاً» — عددُ الأجزاء المحفوظة بتمييزه. */
 export function juzCountText(n: number | null | undefined): string {
   if (n == null) return '—'

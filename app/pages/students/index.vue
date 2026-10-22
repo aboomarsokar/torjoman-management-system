@@ -29,7 +29,7 @@ const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { isAdmin, canAssign, isTeacher, isReadOnly } = usePermissions()
+const { isAdmin, canAssign, isTeacher, isReadOnly, isWomenAdmin } = usePermissions()
 /** التعديل: من يملك الإسناد في نطاقه أو معلّم الحلقة — لا مشرف المشروع. */
 const canManage = computed(() => !isReadOnly.value && (canAssign.value || isTeacher.value))
 const canCreate = isAdmin
@@ -95,9 +95,11 @@ const filtered = computed(() => (students.value ?? []).filter(s =>
   && matchesSearch(query.value, s.full_name, s.national_id)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
+/** الرقمُ المتسلسل عبر الصفحات لا داخلَ الصفحة وحدها (طلب المستخدم 2026-10-22). */
+const seq = (index: number) => (page.value - 1) * pageSize + index + 1
 watch([statusF, halqaF, query], resetPage)
 const stats = computed(() => studentStats(
-  (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday()))
+  (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday(), isWomenAdmin.value))
 const columns = computed(() => {
   const base = [
     { key: 'num', label: '#' },
@@ -372,7 +374,7 @@ async function confirmDelete() {
         row-key="id"
       >
         <template #num="{ index }">
-          <span class="muted">{{ index + 1 }}</span>
+          <span class="muted">{{ seq(index) }}</span>
         </template>
         <template #student="{ row }">
           <div class="user-cell">
@@ -407,7 +409,7 @@ async function confirmDelete() {
         </template>
         <template #status="{ row }">
           <UBadge
-            :label="STUDENT_STATUS[row.status]?.label"
+            :label="studentStatusLabel(row.status, row.gender)"
             :color="STUDENT_STATUS[row.status]?.color"
             variant="soft"
           />
@@ -452,7 +454,7 @@ async function confirmDelete() {
         class="scards"
       >
         <li
-          v-for="row in paged"
+          v-for="(row, i) in paged"
           :key="row.id"
           class="scard"
         >
@@ -460,6 +462,7 @@ async function confirmDelete() {
             :to="`/students/${row.id}`"
             class="scard-head"
           >
+            <span class="scard-seq">{{ seq(i) }}</span>
             <span class="av">
               <ProfileAvatar
                 :name="row.full_name"
@@ -475,20 +478,37 @@ async function confirmDelete() {
               >{{ row.national_id }}</span>
             </span>
             <UBadge
-              :label="STUDENT_STATUS[row.status]?.label"
+              :label="studentStatusLabel(row.status, row.gender)"
               :color="STUDENT_STATUS[row.status]?.color"
               variant="soft"
               class="scard-status"
             />
           </NuxtLink>
-          <dl class="scard-meta">
-            <template v-if="!isTeacher">
-              <dt>الحلقة</dt>
-              <dd>{{ row.halaqa?.name || '—' }}</dd>
-            </template>
-            <dt>المحفوظ</dt>
-            <dd>{{ row.quran_parts != null ? `${row.quran_parts} جزء` : '—' }}</dd>
-          </dl>
+          <!-- سطرٌ لكلٍّ بأيقونته وتسميةٍ بعرضٍ ثابت واسمٍ أوضح — كبطاقة الحلقة (2026-10-22) -->
+          <ul class="scard-meta">
+            <li v-if="!isTeacher">
+              <span class="sm-ico"><UIcon
+                name="i-lucide-book-open"
+                class="size-4"
+              /></span>
+              <span class="sm-label">الحلقة</span>
+              <span
+                class="sm-val"
+                :class="{ empty: !row.halaqa }"
+              >{{ row.halaqa?.name || 'بلا حلقة' }}</span>
+            </li>
+            <li>
+              <span class="sm-ico"><UIcon
+                name="i-lucide-book-marked"
+                class="size-4"
+              /></span>
+              <span class="sm-label">المحفوظ</span>
+              <span
+                class="sm-val"
+                :class="{ empty: !row.quran_parts }"
+              >{{ juzCountText(row.quran_parts) }}</span>
+            </li>
+          </ul>
           <div class="scard-actions">
             <UButton
               label="الملف"
@@ -824,9 +844,14 @@ async function confirmDelete() {
 .scard-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .scard .u-sub { display: block; } /* الهوية تظهر في البطاقة (يُخفيها الجدول تحت 640) */
 .scard-status { flex: none; }
-.scard-meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; }
-.scard-meta dt { color: var(--ink-3); font-size: 12.5px; }
-.scard-meta dd { margin: 0; color: var(--ink); }
+.scard-seq { min-width: 26px; height: 26px; padding: 0 6px; flex: none; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.scard-meta { list-style: none; margin: 12px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); }
+.scard-meta li { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.scard-meta li + li { border-top: 1px dashed var(--line); }
+.sm-ico { width: 28px; height: 28px; flex: none; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--ink-2); }
+.sm-label { width: 64px; flex: none; font-size: 12.5px; color: var(--ink-3); }
+.sm-val { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.sm-val.empty { font-weight: 500; color: var(--ink-3); }
 .scard-actions { display: flex; gap: 8px; margin-top: 14px; }
 .scard-actions > :not([aria-label]) { flex: 1; justify-content: center; }
 .filters { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; margin-bottom: 20px; container: filters / inline-size; }

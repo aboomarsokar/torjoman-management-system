@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * دليل المشرفين (§4.14أ) — للمدير الإداري والمدير الفني (ومشرف المشروع اطّلاعاً).
+ * دليل المشرفين (§4.14أ) — للمدير الإداري والمدير الفني (ومشرف المشروع اطّلاعاً)، وللمديرة الإدارية مشرفاتِ قسمها
+ * بالمؤنّث (2026-10-22): ملفّاتُ العاملين كلُّها ظاهرةٌ لها فيُصفّى الجنسُ صراحةً، والفنيُّ تحجب عنه RLS العاملات.
  * يعرض المشرفين الميدانيين + عدد حلقاتهم + «إنجاز الزيارات» لشهر اليوم.
  * الإنجاز = الزيارات المنفّذة ÷ (الحلقات النشطة × 2) × 100، لا يتجاوز 100٪ (`visitCompletion`، قرار 2026-10-21).
  */
@@ -8,19 +9,21 @@ import type { Database } from '~/types/database.types'
 import { supervisorStats } from '~/utils/pageStats'
 
 definePageMeta({ layout: 'dashboard' })
-useSeoMeta({ title: 'المشرفون — ترجمان' })
 
 const supabase = useSupabaseClient<Database>()
 // role: ما دام فارغاً لا قفل ولا محتوى (كان القفل يومض للمدير عند التحميل الكامل)
-const { role, isManager, isReadOnly } = usePermissions()
-const canView = computed(() => isManager.value || isReadOnly.value)
+const { role, isManager, isReadOnly, isWomenAdmin: fem } = usePermissions()
+const canView = computed(() => isManager.value || isReadOnly.value || fem.value)
+useSeoMeta({ title: () => fem.value ? 'المشرفات — ترجمان' : 'المشرفون — ترجمان' })
 
 type Row = { id: string, name: string, employeeNumber: string | null, halqat: number, commitment: number | null }
 
 const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async () => {
   if (!canView.value) return []
-  const { data: sups } = await supabase.from('profiles').select('id, full_name, employee_number')
-    .eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
+  let supsQ = supabase.from('profiles').select('id, full_name, employee_number')
+    .eq('role', 'field_supervisor').eq('status', 'active')
+  if (fem.value) supsQ = supsQ.eq('gender', 'female')
+  const { data: sups } = await supsQ.order('full_name')
   const ids = (sups ?? []).map(s => s.id)
   if (!ids.length) return []
 
@@ -53,14 +56,14 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
 <template>
   <div class="sups">
     <UiPageHeader
-      title="المشرفون"
-      subtitle="المشرفون الميدانيون وحلقاتهم ومدى التزامهم بالزيارات."
+      :title="fem ? 'المشرفات' : 'المشرفون'"
+      :subtitle="fem ? 'المشرفاتُ الميدانيات وحلقاتهنّ ومدى التزامهنّ بالزيارات.' : 'المشرفون الميدانيون وحلقاتهم ومدى التزامهم بالزيارات.'"
     />
 
     <UiEmptyState
       v-if="role && !canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير الإداري والمدير الفني."
+      title="هذه الصفحة للإدارة."
     />
 
     <ClientOnly v-else-if="canView">
@@ -77,11 +80,11 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
       <UiEmptyState
         v-else-if="!rows || !rows.length"
         icon="i-lucide-users-round"
-        title="لا مشرفين في نطاقك"
+        :title="fem ? 'لا مشرفاتٍ في قسمك' : 'لا مشرفين في نطاقك'"
       />
       <UiStatStrip
         v-else
-        :items="supervisorStats(rows)"
+        :items="supervisorStats(rows, fem)"
         label="أرقام المشرفين"
       />
       <div

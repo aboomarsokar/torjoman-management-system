@@ -17,6 +17,11 @@ const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = us
 const showSupervisorFilter = computed(() => isManager.value || isReadOnly.value || isWomenAdmin.value)
 /** عمود المشرف لمن يرى أكثر من مشرف (لا المعلّم ولا المشرف الميداني). */
 const showSupervisorColumn = computed(() => !isTeacher.value && !isFieldSupervisor.value)
+// قسمُ المديرة الإدارية إناثٌ كلُّه: التسمياتُ بالمؤنّث (2026-10-22)
+const fem = isWomenAdmin
+const W = computed(() => fem.value
+  ? { results: 'نتائج الطالبات', student: 'الطالبة', sup: 'المشرفة', allSups: 'كل المشرفات', emptyHint: 'تظهر هنا حين ترصد المختبِرةُ نتائجَ طالبات قسمك.' }
+  : { results: 'نتائج الطلاب', student: 'الطالب', sup: 'المشرف', allSups: 'كل المشرفين', emptyHint: 'تظهر هنا حين يرصد المختبِرُ نتائجَ طلاب نطاقك.' })
 
 /** أعلى مجموعٍ ممكن: تسعةُ أسئلةٍ من 10 + التجويد حتى 9. */
 const MAX_TOTAL = EXAM_MAX_TOTAL
@@ -53,7 +58,7 @@ type FlatResult = {
 }
 
 // بلا await قبل defineExpose (قاعدة vue/no-expose-after-await) — الجلب عميل فقط أصلاً
-const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results', async () => {
+const { data: rawResults, refresh, pending } = useAsyncData<RawResult[]>('exams-results', async () => {
   const { data, error } = await supabase
     .from('exam_results')
     .select('id, exam_date, total_score, passed, student:student_id(id, full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order))')
@@ -97,10 +102,11 @@ const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).filter(
 // فلاتر هرمية
 const fSupervisor = ref('all')
 const fHalqa = ref('all')
-const uniq = (arr: { id: string, label: string }[]) => {
+/** «الكل» يُسمّى بما يجمعه («كل الحلقات») — تقرأ القائمةُ نفسَها بلا تسمية. */
+const uniq = (arr: { id: string, label: string }[], allLabel: string) => {
   const m = new Map<string, string>()
   for (const x of arr) if (x.id) m.set(x.id, x.label)
-  return [{ value: 'all', label: 'الكل' }, ...[...m].map(([value, label]) => ({ value, label }))]
+  return [{ value: 'all', label: allLabel }, ...[...m].map(([value, label]) => ({ value, label }))]
 }
 // الخياراتُ من حلقات النطاق ومن النتائج معاً (حلقةٌ موقوفة لها نتائجُ قديمة تبقى)، وبجانب الحلقة عددُ نتائجها
 const resultsPerHalqa = computed(() => {
@@ -112,10 +118,10 @@ const scopeRows = computed(() => [
   ...(scopeHalqat.value ?? []).map(h => ({ halqaId: h.id, halqa: h.name, supId: h.supervisor?.id ?? '', sup: h.supervisor?.full_name ?? '—' })),
   ...allResults.value
 ])
-const supervisorOpts = computed(() => uniq(scopeRows.value.map(r => ({ id: r.supId, label: r.sup }))))
+const supervisorOpts = computed(() => uniq(scopeRows.value.map(r => ({ id: r.supId, label: r.sup })), W.value.allSups))
 const halqaOpts = computed(() => uniq(scopeRows.value
   .filter(r => fSupervisor.value === 'all' || r.supId === fSupervisor.value)
-  .map(r => ({ id: r.halqaId, label: `${r.halqa} (${resultsPerHalqa.value.get(r.halqaId) ?? 0})` }))))
+  .map(r => ({ id: r.halqaId, label: `${r.halqa} (${resultsPerHalqa.value.get(r.halqaId) ?? 0})` })), 'كل الحلقات'))
 watch(fSupervisor, () => {
   fHalqa.value = 'all'
 })
@@ -141,9 +147,9 @@ function clearResFilters() {
 }
 
 const columns = computed(() => [
-  { key: 'student', label: 'الطالب' },
+  { key: 'student', label: W.value.student },
   { key: 'halqa', label: 'الحلقة' },
-  ...(showSupervisorColumn.value ? [{ key: 'sup', label: 'المشرف' }] : []),
+  ...(showSupervisorColumn.value ? [{ key: 'sup', label: W.value.sup }] : []),
   { key: 'cycle', label: 'الدورة' },
   { key: 'exam_date', label: 'التاريخ' },
   { key: 'total_score', label: 'العلامة' },
@@ -156,7 +162,7 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
 <template>
   <div>
     <h3 class="sec-title">
-      نتائج الطلاب <span class="count">{{ resTotal }}</span>
+      {{ W.results }} <span class="count">{{ resTotal }}</span>
     </h3>
     <UiStatStrip
       v-if="results.length"
@@ -164,10 +170,14 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
       label="أرقام نتائج الاختبارات"
     />
 
-    <div class="res-filters">
+    <!-- الفلاترُ حين توجد نتائجُ تُصفّى — بلا نتائج أصلاً كانت توحي بأنّ الفلتر هو السبب -->
+    <div
+      v-if="allResults.length"
+      class="res-filters"
+    >
       <UFormField
         v-if="showSupervisorFilter"
-        label="المشرف"
+        :label="W.sup"
         :ui="{ label: 'rf-label' }"
       >
         <UiSelect
@@ -202,11 +212,32 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
       />
     </div>
 
-    <UiEmptyState
-      v-if="!results.length"
-      icon="i-lucide-file-text"
-      title="لا نتائج مطابقة"
+    <UiSkeletonTable
+      v-if="pending && !allResults.length"
+      :columns="columns"
     />
+    <!-- فراغان مختلفان: لا نتائجَ بعدُ (متى تظهر)، أو لا نتائجَ لهذا الاختيار (والمخرجُ مسحُ الفلاتر) -->
+    <UiEmptyState
+      v-else-if="!allResults.length"
+      icon="i-lucide-clipboard-list"
+      title="لا نتائجَ اختباراتٍ بعد"
+      :description="W.emptyHint"
+    />
+    <UiEmptyState
+      v-else-if="!results.length"
+      icon="i-lucide-filter-x"
+      title="لا نتائجَ لهذا الاختيار"
+      description="جرّب حلقةً أخرى، أو اعرض النتائج كلَّها."
+    >
+      <UButton
+        label="مسح الفلاتر"
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-x"
+        :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+        @click="clearResFilters"
+      />
+    </UiEmptyState>
     <UiDataTable
       v-else
       :columns="columns"
@@ -309,7 +340,8 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
 
 <style scoped>
 .sec-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
-.count { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; }
+/* شارةُ العدد الكحليّة نفسُها في اللوحات وصفحة المشرف (2026-10-22) */
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .res-filters { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
 /* مثلُ فلترَي «اختبارات الطلاب» (الحلقة والشهر — طلب المستخدم 2026-10-22) */
 .rf { width: 280px; max-width: 100%; }

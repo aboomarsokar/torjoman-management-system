@@ -28,6 +28,15 @@ describe('assertMayImpersonate', () => {
     // ولا عن أنثى: قسمُ البنات للمديرة الإدارية
     expect(assertMayImpersonate(actor('technical_manager'), target('teacher', { gender: 'female' }))).toMatchObject({ ok: false, statusCode: 403 })
     expect(ok(assertMayImpersonate(actor('admin_manager'), target('teacher', { gender: 'female' })))).toBe(true)
+  })
+  it('المديرةُ الإدارية عن إناث قسمها وحدهنّ: مشرفةٌ ومختبِرةٌ ومعلّمة (2026-10-22)', () => {
+    for (const r of ['field_supervisor', 'examiner', 'teacher'] as const) {
+      expect(ok(assertMayImpersonate(actor('women_admin'), target(r, { gender: 'female' }))), r).toBe(true)
+    }
+    expect(assertMayImpersonate(actor('women_admin'), target('teacher', { gender: 'male' }))).toMatchObject({ ok: false, statusCode: 403 })
+    for (const r of ['project_supervisor', 'admin_manager', 'technical_manager'] as const) {
+      expect(assertMayImpersonate(actor('women_admin'), target(r, { gender: 'female' })), r).toMatchObject({ ok: false, statusCode: 403 })
+    }
     for (const r of ['project_supervisor', 'admin_manager', 'women_admin'] as const) {
       expect(assertMayImpersonate(actor('technical_manager'), target(r)), r).toMatchObject({ ok: false, statusCode: 403 })
     }

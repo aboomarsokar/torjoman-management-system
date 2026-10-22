@@ -47,7 +47,7 @@ export default defineEventHandler(async (event): Promise<{ writeUntil: string | 
         : Promise.resolve({ data: null })
     ])
     if (!actor || actor.status !== 'active' || !isImpersonatorRole(actor.role)) {
-      throw createError({ statusCode: 403, statusMessage: 'وضعُ التعديل للمدير الإداري والمدير الفني وحدهما.' })
+      throw createError({ statusCode: 403, statusMessage: 'وضعُ التعديل للمدير الإداري والمدير الفني والمديرة الإدارية وحدهم.' })
     }
     if (!target || target.status !== 'active' || !mayImpersonate(actor.role, target)) {
       throw createError({ statusCode: 403, statusMessage: 'لم يعد لك الدخولُ بحساب هذا الموظف — أنهِ النيابة.' })

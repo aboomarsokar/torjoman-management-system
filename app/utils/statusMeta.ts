@@ -41,3 +41,18 @@ export const STUDENT_STATUS: Record<string, StatusBadge> = {
   graduated: { label: 'متخرّج', color: 'info' },
   transferred: { label: 'منقول', color: 'neutral' }
 }
+
+/** حالةُ الطالبة بالمؤنّث (2026-10-22) — الألوانُ نفسُها. */
+const STUDENT_STATUS_F: Record<string, string> = { active: 'نشطة', withdrawn: 'منقطعة', graduated: 'متخرّجة', transferred: 'منقولة' }
+export function studentStatusLabel(status: string, gender: string | null | undefined): string {
+  return (gender === 'female' ? STUDENT_STATUS_F[status] : undefined) ?? STUDENT_STATUS[status]?.label ?? status
+}
+
+/** «3 أجزاء» / «جزءٌ واحد» / «15 جزءاً» — عددُ الأجزاء المحفوظة بتمييزه. */
+export function juzCountText(n: number | null | undefined): string {
+  if (n == null) return '—'
+  if (n === 0) return 'لا أجزاء'
+  if (n === 1) return 'جزءٌ واحد'
+  if (n === 2) return 'جزآن'
+  return `${n} ${n <= 10 ? 'أجزاء' : 'جزءاً'}`
+}

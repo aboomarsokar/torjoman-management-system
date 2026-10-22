@@ -16,11 +16,11 @@ const id = computed(() => String(route.params.id))
 const supabase = useSupabaseClient<Database>()
 const today = gazaToday()
 
-type Sup = { id: string, full_name: string, employee_number: string | null, role: string }
+type Sup = { id: string, full_name: string, employee_number: string | null, role: string, gender: string | null }
 type Halqa = { id: string, name: string, status: string, teacher: { full_name: string } | null }
 
 const { data, pending } = useLazyAsyncData(() => `supervisor-${id.value}`, async () => {
-  const { data: sup } = await supabase.from('profiles').select('id, full_name, employee_number, role').eq('id', id.value).maybeSingle<Sup>()
+  const { data: sup } = await supabase.from('profiles').select('id, full_name, employee_number, role, gender').eq('id', id.value).maybeSingle<Sup>()
   if (!sup) return null
 
   const [{ data: halqat }, { data: visits }] = await Promise.all([
@@ -43,6 +43,8 @@ useSeoMeta({ title: () => data.value?.sup ? `${data.value.sup.full_name} — ت�
 
 // الشهرُ بالرقم (قرار المستخدم) والحالةُ بحَكَم شاشة الزيارات (المتأخّرةُ مشتقّة)
 const fmtDate = (iso: string) => formatDay(gazaDayOf(iso))
+// المشرفةُ بالمؤنّث (قسمُ البنات — 2026-10-22)
+const female = computed(() => data.value?.sup?.gender === 'female')
 const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'success' : c >= 70 ? 'info' : 'error'
 
 // نتيجةُ الزيارة للاطّلاع (والفتحُ للمديرَين داخل النافذة نفسها)
@@ -58,7 +60,7 @@ function openResult(v: VisitRow) {
   <div class="sd">
     <UButton
       to="/supervisors"
-      label="المشرفون"
+      :label="female ? 'المشرفات' : 'المشرفون'"
       color="neutral"
       variant="ghost"
       size="sm"
@@ -87,7 +89,7 @@ function openResult(v: VisitRow) {
       <UiEmptyState
         v-else-if="!data?.sup"
         icon="i-lucide-user-x"
-        title="المشرف غير موجود"
+        :title="'المشرف غير موجود'"
       />
 
       <template v-else>
@@ -100,7 +102,7 @@ function openResult(v: VisitRow) {
               <h1>{{ data.sup.full_name }}</h1>
               <div class="band-sub">
                 <UBadge
-                  label="المشرف"
+                  :label="female ? 'المشرفة' : 'المشرف'"
                   color="info"
                   variant="soft"
                 />
@@ -149,7 +151,7 @@ function openResult(v: VisitRow) {
           <!-- الحلقات -->
           <div class="card sec">
             <div class="sec-head">
-              <h3>حلقاته <span class="count">{{ data.halqat.length }}</span></h3>
+              <h3>{{ female ? 'حلقاتها' : 'حلقاته' }} <span class="count">{{ data.halqat.length }}</span></h3>
               <UButton
                 :to="`/halqat?supervisor=${data.sup.id}`"
                 label="عرض الكل"
@@ -178,7 +180,7 @@ function openResult(v: VisitRow) {
                   class="row-link"
                 >
                   <span class="row-title">{{ h.name }}</span>
-                  <span class="row-sub">المعلّم: {{ h.teacher?.full_name || '—' }}</span>
+                  <span class="row-sub">{{ female ? 'المعلّمة' : 'المعلّم' }}: {{ h.teacher?.full_name || '—' }}</span>
                 </NuxtLink>
                 <UIcon
                   name="i-lucide-chevron-left"

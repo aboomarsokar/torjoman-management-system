@@ -2117,6 +2117,27 @@ export type Database = {
           unrecorded: number
         }[]
       }
+      halaqat_recording_status: {
+        Args: never
+        Returns: {
+          expected_days: number
+          gender: string
+          halaqa_id: string
+          halaqa_name: string
+          missed_days: string[]
+          recent: Json
+          recorded_days: number
+          recorded_today: boolean
+          report_deadline: string
+          report_month: number
+          report_status: string
+          report_year: number
+          teacher_name: string
+          teacher_phone: string
+          teacher_whatsapp: string
+          today: string
+        }[]
+      }
       in_admin_scope: {
         Args: { g: Database["public"]["Enums"]["gender_type"] }
         Returns: boolean

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 /**
  * زرّ «ادخل بحسابه» بنافذة تأكيد — في قائمة المستخدمين وملفّ الموظف.
- * يظهر بالقائمة البيضاء نفسها التي يحكم بها الخادم (`mayImpersonateRole` من الثوابت المشتركة):
+ * يظهر بالقائمة البيضاء وشرطِ القسم اللذين يحكم بهما الخادم (`mayImpersonate` من الثوابت المشتركة):
  * فاعلٌ مخوَّل، وهدفٌ نشطٌ يُناب عن دوره، وليس نفسَه، **ولا نيابةَ جارية** (لا نيابة داخل نيابة).
- * الخادمُ هو الحَكَم — هذا إظهارٌ فقط.
+ * الخادمُ هو الحَكَم — هذا إظهارٌ فقط. والجنسُ إلزاميّ: لو غاب لظهر الزرُّ للمدير الفنيّ عند أنثى (يرفضه الخادم بعدها).
+ * والنصُّ بصيغة الفاعل والهدف: «ادخلي بحسابها» للمديرة الإدارية (قرار المستخدم 2026-10-22 — المؤنّث في قسمها).
  */
 import type { Role } from '~/constants/roles'
-import { isImpersonatorRole, mayImpersonateRole } from '~/constants/impersonation'
+import { isImpersonatorRole, mayImpersonate } from '~/constants/impersonation'
 import { impersonateConfirmText } from '~/utils/impersonation'
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   name: string
   role: Role
   status: string
+  /** جنسُ الهدف — شرطُ القسم (`mayImpersonate`). */
+  gender: string | null
   size?: 'sm' | 'lg'
 }
 const props = withDefaults(defineProps<Props>(), { size: 'lg' })
@@ -26,11 +29,13 @@ const visible = computed(() => {
   const me = profile.value
   // قبل اكتمال فحص النيابة مجهول ← لا يظهر (لا يومض داخل نيابة)
   return !!me && notImpersonating.value
-    && isImpersonatorRole(me.role) && mayImpersonateRole(me.role, props.role)
+    && isImpersonatorRole(me.role) && mayImpersonate(me.role, { role: props.role, gender: props.gender })
     && props.status === 'active' && props.profileId !== me.id
 })
 
-const confirmText = computed(() => impersonateConfirmText(props.name))
+const confirmText = computed(() => impersonateConfirmText(props.name, props.gender === 'female'))
+const actorFemale = computed(() => profile.value?.role === 'women_admin')
+const buttonLabel = computed(() => `${actorFemale.value ? 'ادخلي' : 'ادخل'} ${props.gender === 'female' ? 'بحسابها' : 'بحسابه'}`)
 const open = ref(false)
 const starting = ref(false)
 
@@ -49,7 +54,7 @@ async function confirmStart() {
 <template>
   <template v-if="visible">
     <UButton
-      label="ادخل بحسابه"
+      :label="buttonLabel"
       color="neutral"
       variant="outline"
       :size="size"
@@ -60,7 +65,7 @@ async function confirmStart() {
     <UiConfirmModal
       v-model:open="open"
       :title="confirmText.title"
-      confirm-label="ادخل"
+      :confirm-label="actorFemale ? 'ادخلي' : 'ادخل'"
       confirm-color="primary"
       confirm-icon="i-lucide-eye"
       :loading="starting"

@@ -42,14 +42,16 @@ function comingSoon() {
 
 /** `tab`: تبويبُ صفحة الطالب (`/me?tab=`) — عناصرُ الطالب تقابل تبويباتِ صفحته (طلب المستخدم 2026-10-21).
  * `group`: مجموعتُه في القائمة (طلب المستخدم 2026-10-22: مجموعاتٌ بعناوين تُطوى)؛ وبلا مجموعةٍ يبقى في الأعلى ظاهراً.
- * `qtab`: تبويبُ صفحةٍ للعاملين في الرابط (`?tab=`) — `null` للتبويب الافتراضيّ؛ و`title` عنوانُ الشريط إن خالف التسمية. */
+ * `qtab`: تبويبُ صفحةٍ للعاملين في الرابط (`?tab=`) — `null` للتبويب الافتراضيّ؛ و`title` عنوانُ الشريط إن خالف التسمية.
+ * `labelF`: التسميةُ بالمؤنّث للمديرة الإدارية — قسمُها كلُّه إناث (قرار المستخدم 2026-10-22). */
 type GroupKey = 'people' | 'supervision' | 'quran' | 'programs' | 'exams' | 'sheets' | 'project' | 'account'
-type Item = { key: string, label: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey }
+type Item = { key: string, label: string, labelF?: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey }
 
 const GROUPS: { key: GroupKey, label: string, icon: string }[] = [
   { key: 'people', label: 'الحلقات والأفراد', icon: 'i-lucide-users-round' },
   { key: 'supervision', label: 'الإشراف والتقييم', icon: 'i-lucide-shield-check' },
-  { key: 'quran', label: 'المتابعة القرآنية', icon: 'i-lucide-book-open-text' },
+  // كان «المتابعة القرآنية» — تحته الحضورُ ومتابعةُ الرصد كذلك (طلب المستخدم 2026-10-22)
+  { key: 'quran', label: 'المتابعة والرصد', icon: 'i-lucide-book-open-text' },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library' },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-award' },
   { key: 'sheets', label: 'الكشوف', icon: 'i-lucide-receipt-text' },
@@ -71,25 +73,27 @@ const mainNav: Item[] = [
   { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
-  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher', 'examiner'] },
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'teacher', 'examiner'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
-  { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS, group: 'people' },
+  { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
+  { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },
   // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)
   { key: 'exam-students', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/exams/students', roles: ['examiner'], group: 'people' },
-  { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'], group: 'people' },
+  { key: 'students', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'], group: 'people' },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ
-  { key: 'quality', label: 'تقييم المعلمين', icon: 'i-lucide-badge-check', to: '/quality', roles: SCOPED_STAFF, group: 'supervision' },
+  { key: 'quality', label: 'تقييم المعلمين', labelF: 'تقييم المعلمات', icon: 'i-lucide-badge-check', to: '/quality', roles: SCOPED_STAFF, group: 'supervision' },
   { key: 'quality-mine', label: 'تقييمي الشهري', icon: 'i-lucide-badge-check', to: '/quality', roles: ['teacher'], group: 'supervision' },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   // البرامجُ المصاحبة عنوانٌ مستقلّ تحته تبويبا صفحتها (طلب المستخدم 2026-10-22)
-  { key: 'programs-progress', label: 'إنجاز الطلاب', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
+  { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
   { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
   { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
+  // متابعةُ رصد الحضور والشهر القرآنيّ لمعرفة المقصّر (طلب المستخدم 2026-10-22)
+  { key: 'follow-up', label: 'متابعة الرصد', icon: 'i-lucide-list-checks', to: '/follow-up', roles: [ADMIN, TECH, WOMEN], group: 'quran' },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'], group: 'quran' },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },
@@ -109,6 +113,7 @@ const managerNav: Item[] = [
 const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'account' }
 
 const allItems = [...mainNav, ...managerNav, profileItem]
+const labelOf = (i: Item) => (role.value === 'women_admin' && i.labelF) || i.label
 const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.includes(role.value)))
 /** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
 const topItems = computed(() => visibleItems.value.filter(i => !i.group))
@@ -151,7 +156,7 @@ const activeItem = computed(() => visibleItems.value
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const navTitle = computed(() => {
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
-  return activeItem.value?.title ?? activeItem.value?.label ?? 'لوحة التحكم'
+  return activeItem.value?.title ?? (activeItem.value ? labelOf(activeItem.value) : 'لوحة التحكم')
 })
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
@@ -210,7 +215,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                 :name="item.icon"
                 class="size-5"
               />
-              <span>{{ item.label }}</span>
+              <span>{{ labelOf(item) }}</span>
             </button>
 
             <section
@@ -253,7 +258,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     :name="item.icon"
                     class="size-5"
                   />
-                  <span>{{ item.label }}</span>
+                  <span>{{ labelOf(item) }}</span>
                 </button>
               </div>
             </section>

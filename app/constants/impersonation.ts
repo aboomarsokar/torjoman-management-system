@@ -11,14 +11,16 @@ export const WRITE_WINDOW_MINUTES = 10
 /** مدى كنس نيابات الفاعل السابقة عند بدء نيابةٍ جديدة. */
 export const STALE_SWEEP_HOURS = 24
 
-export const IMPERSONATOR_ROLES = ['admin_manager', 'technical_manager'] as const
+export const IMPERSONATOR_ROLES = ['admin_manager', 'technical_manager', 'women_admin'] as const
 export type ImpersonatorRole = typeof IMPERSONATOR_ROLES[number]
 
 /** قائمةٌ بيضاء لكلّ فاعل — لا «كلُّ دورٍ إلا…» (تنكسر صامتةً مع كلّ دورٍ جديد). */
 export const IMPERSONATION_TARGETS: Record<ImpersonatorRole, readonly Role[]> = {
   admin_manager: ['project_supervisor', 'technical_manager', 'women_admin', 'field_supervisor', 'examiner', 'teacher'],
   // المدير الفني لا يدخل على الإدارة (مشرف المشروع والمديرَين والمديرة) — قرار المستخدم 2026-10-22
-  technical_manager: ['field_supervisor', 'examiner', 'teacher']
+  technical_manager: ['field_supervisor', 'examiner', 'teacher'],
+  // المديرةُ الإدارية على قسمها (قرار 2026-10-22) — والأنثى شرطٌ في `mayImpersonate`
+  women_admin: ['field_supervisor', 'examiner', 'teacher']
 }
 
 /** النصُّ نفسُه في private.assert_session_writable (يحرسه اختبار). */
@@ -39,9 +41,12 @@ export function isImpersonatorRole(role: Role | null | undefined): role is Imper
   return role != null && (IMPERSONATOR_ROLES as readonly Role[]).includes(role)
 }
 
-/** المدير الفنيّ لقسم البنين وحده (قرار 2026-10-22): لا ينوب عن أنثى ولو كان دورُها في قائمته. */
+/** القسمُ شرطٌ مع الدور (قرار 2026-10-22): المدير الفنيّ للبنين فلا ينوب عن أنثى، والمديرةُ الإدارية للبنات فلا تنوب إلا عن أنثى. */
 export function mayImpersonate(actorRole: Role | null | undefined, target: { role: Role, gender: string | null }): boolean {
-  return mayImpersonateRole(actorRole, target.role) && !(actorRole === 'technical_manager' && target.gender === 'female')
+  if (!mayImpersonateRole(actorRole, target.role)) return false
+  if (actorRole === 'technical_manager') return target.gender !== 'female'
+  if (actorRole === 'women_admin') return target.gender === 'female'
+  return true
 }
 
 /** هل لصاحب هذا الدور أن ينوب عن صاحب ذاك؟ (الدورُ وحده — النشاطُ والنفسُ في الخادم.) */

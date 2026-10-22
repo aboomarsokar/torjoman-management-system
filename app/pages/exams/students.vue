@@ -28,7 +28,8 @@ const { data: halqat, pending: hPending } = useLazyAsyncData<Halaqa[]>('exam-stu
 
 const halaqaId = ref<string>(typeof route.query.h === 'string' ? route.query.h : '')
 watch(halqat, (list) => {
-  if (!list.some(h => h.id === halaqaId.value)) halaqaId.value = list[0]?.id ?? ''
+  // القائمةُ فارغةٌ قبل وصولها: لا يُمسح اختيارُ ?h= القادمُ من لوحة المختبِر
+  if (list.length && !list.some(h => h.id === halaqaId.value)) halaqaId.value = list[0]?.id ?? ''
 }, { immediate: true })
 watch(halaqaId, (h) => {
   if (h && route.query.h !== h) router.replace({ query: { ...route.query, h } })

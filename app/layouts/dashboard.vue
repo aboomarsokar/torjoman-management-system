@@ -106,10 +106,12 @@ const matches = (item: Item) => !!item.to
   && (item.tab
     ? route.path === item.to && tabFromQuery(route.query.tab) === item.tab
     : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
+const activeItem = computed(() => [...mainNav, ...managerNav, metricsItem, profileItem]
+  .filter(i => role.value && i.roles.includes(role.value) && matches(i))
+  .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const navTitle = computed(() => {
-  const all = [...mainNav, ...managerNav, metricsItem, profileItem]
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
-  return all.find(matches)?.label ?? 'لوحة التحكم'
+  return activeItem.value?.label ?? 'لوحة التحكم'
 })
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
@@ -119,7 +121,8 @@ function go(item: Item) {
   if (item.to) navigateTo(item.tab ? { path: item.to, query: { tab: queryFromTab(item.tab) } } : item.to)
   else comingSoon()
 }
-const isActive = matches
+// البارزُ واحد: إن طابق المسارَ بندان (/exams و/exams/students) فالأطولُ رابطاً — الأدقّ — وحده
+const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === activeItem.value?.to)
 </script>
 
 <template>

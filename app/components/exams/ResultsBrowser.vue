@@ -27,6 +27,7 @@ type RawResult = {
   total_score: number | null
   passed: boolean | null
   student: {
+    id: string
     full_name: string
     halaqa: {
       id: string
@@ -41,6 +42,7 @@ type FlatResult = {
   exam_date: string
   total_score: number | null
   passed: boolean | null
+  studentId: string
   student: string
   title: string
   detail: string
@@ -54,7 +56,7 @@ type FlatResult = {
 const { data: rawResults, refresh } = useAsyncData<RawResult[]>('exams-results', async () => {
   const { data, error } = await supabase
     .from('exam_results')
-    .select('id, exam_date, total_score, passed, student:student_id(full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order))')
+    .select('id, exam_date, total_score, passed, student:student_id(id, full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order))')
     .order('exam_date', { ascending: false })
     .limit(500)
     .returns<RawResult[]>()
@@ -84,6 +86,7 @@ const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).filter(
   const t = examTargetText(item?.exam_cycle ? toExamCycle(item.exam_cycle) : null)
   return {
     id: r.id, exam_date: r.exam_date, total_score: r.total_score, passed: r.passed,
+    studentId: r.student?.id ?? '',
     student: r.student?.full_name ?? '—',
     title: t.title, detail: t.detail,
     halqaId: h?.id ?? '', halqa: h?.name ?? '—',
@@ -125,6 +128,13 @@ const { page: resPage, pageCount: resPageCount, total: resTotal, pageSize: resPa
 // أرقامُ النتائج المعروضة (تتبع فلترَي المشرف والحلقة)
 const stats = computed(() => examResultStats(results.value, EXAM_MAX_TOTAL))
 watch([fSupervisor, fHalqa], resetResPage)
+// تفصيلُ العلامة واختباراتُ الطالب السابقة (طلبا المستخدم 2026-10-22)
+const detailOpen = ref(false)
+const detail = ref<{ studentId: string, student: string, resultId: string } | null>(null)
+function openDetail(r: FlatResult) {
+  detail.value = { studentId: r.studentId, student: r.student, resultId: r.id }
+  detailOpen.value = true
+}
 function clearResFilters() {
   fSupervisor.value = 'all'
   fHalqa.value = 'all'
@@ -223,7 +233,18 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
         >{{ row.exam_date }}</span>
       </template>
       <template #total_score="{ row }">
-        <strong>{{ row.total_score ?? '—' }}</strong> / {{ MAX_TOTAL }}
+        <button
+          type="button"
+          class="score-btn"
+          :aria-label="`تفصيل علامة ${row.student}`"
+          @click="openDetail(row)"
+        >
+          <strong>{{ row.total_score ?? '—' }}</strong> / {{ MAX_TOTAL }}
+          <UIcon
+            name="i-lucide-chevron-left"
+            class="size-4"
+          />
+        </button>
       </template>
       <template #passed="{ row }">
         <UBadge
@@ -251,6 +272,18 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
               variant="soft"
             />
           </template>
+          <template #actions>
+            <UButton
+              label="تفصيل العلامة واختباراته"
+              color="neutral"
+              variant="outline"
+              size="md"
+              icon="i-lucide-list-checks"
+              class="w-full justify-center"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="openDetail(row)"
+            />
+          </template>
         </UiCardRow>
       </template>
     </UiDataTable>
@@ -262,6 +295,13 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
       :page-size="resPageSize"
       @update:page="resPage = $event"
     />
+
+    <ExamsResultDetailModal
+      v-model:open="detailOpen"
+      :student-id="detail?.studentId ?? null"
+      :student-name="detail?.student ?? ''"
+      :result-id="detail?.resultId ?? null"
+    />
   </div>
 </template>
 
@@ -271,6 +311,9 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
 .res-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
 .rf { width: 200px; max-width: 100%; }
 .strong { font-weight: 600; color: var(--ink); }
+.score-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; margin: -4px -8px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); font: inherit; cursor: pointer; }
+.score-btn:hover { background: var(--blue-soft); color: var(--blue-ink); }
+.score-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .muted { color: var(--ink-2); }
 .sm { font-size: 13px; }
 .cyc { display: flex; flex-direction: column; gap: 2px; }

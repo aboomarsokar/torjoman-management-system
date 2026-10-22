@@ -15,6 +15,16 @@ const route = useRoute()
 const id = computed(() => String(route.params.id))
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
+// المختبِرُ يصل إلى حلقاته من القائمة (طلب المستخدم 2026-10-22) ولا شاشةَ «طلاب» له: اختباراتُ الطالب بدل ملفّه
+const { isExaminer } = usePermissions()
+
+// اختباراتُ الطالب بتفصيلها (ExamsResultDetailModal) — لكلّ ناظرٍ في الحلقة
+const examsOpen = ref(false)
+const examsOf = ref<{ id: string, name: string } | null>(null)
+function openExams(s: { id: string, full_name: string }) {
+  examsOf.value = { id: s.id, name: s.full_name }
+  examsOpen.value = true
+}
 
 const GENDER_LABEL: Record<string, string> = { male: 'بنين', female: 'بنات' }
 const CLASS_LABEL: Record<string, string> = { excellent: 'متميّزة', good: 'جيّدة', normal: 'عادية', weak: 'ضعيفة' }
@@ -30,7 +40,7 @@ type Halqa = {
   supervisor: { full_name: string } | null
   examiner: { full_name: string } | null
 }
-type StudentRow = { id: string, full_name: string, quran_parts: number | null, next: string, done: boolean }
+type StudentRow = { id: string, full_name: string, quran_parts: number | null, next: string, done: boolean, exams: number, passed: number }
 type ReportRow = { id: string, report_month: number, report_year: number, status: string } | null
 type VisitRow = { id: string, scheduled_at: string, executed_at: string | null, status: string }
 type ExamResultRow = { student_id: string, passed: boolean | null, total_score: number | null, exam_list_item: { exam_cycle_id: number | null } | null }
@@ -61,13 +71,16 @@ const { data, pending } = useLazyAsyncData(() => `halqa-detail-${id.value}`, asy
     resultsByStudent.set(r.student_id, arr)
   }
   const students: StudentRow[] = (studs ?? []).map((s) => {
-    const j = buildJourney(s.quran_parts, cycles, resultsByStudent.get(s.id) ?? [])
+    const mine = resultsByStudent.get(s.id) ?? []
+    const j = buildJourney(s.quran_parts, cycles, mine)
     return {
       id: s.id,
       full_name: s.full_name,
       quran_parts: s.quran_parts,
       next: upcomingLabel(j),
-      done: !j.upcomingStation && j.totalStations > 0
+      done: !j.upcomingStation && j.totalStations > 0,
+      exams: mine.length,
+      passed: mine.filter(r => r.passed === true).length
     }
   })
 
@@ -202,6 +215,7 @@ const today = gazaToday()
                     <th class="ta-start">
                       المحطة القادمة
                     </th>
+                    <th>الاختبارات</th>
                     <th class="ta-end">
                       —
                     </th>
@@ -226,8 +240,26 @@ const today = gazaToday()
                       {{ s.next }}
                     </td>
                     <td>
+                      <span v-if="s.exams">{{ s.exams }} <span class="muted">· اجتاز {{ s.passed }}</span></span>
+                      <span
+                        v-else
+                        class="muted"
+                      >—</span>
+                    </td>
+                    <td>
                       <div class="ta-end">
                         <UButton
+                          label="الاختبارات"
+                          color="neutral"
+                          variant="outline"
+                          size="sm"
+                          icon="i-lucide-list-checks"
+                          :disabled="!s.exams"
+                          :ui="{ base: 'rounded-[10px]' }"
+                          @click="openExams(s)"
+                        />
+                        <UButton
+                          v-if="!isExaminer"
                           :to="`/students/${s.id}`"
                           label="الملف"
                           color="neutral"
@@ -253,12 +285,29 @@ const today = gazaToday()
               >
                 <UiCardRow
                   :title="s.full_name"
-                  :to="`/students/${s.id}`"
+                  :to="isExaminer ? undefined : `/students/${s.id}`"
                   :fields="[
                     { label: 'الأجزاء', value: s.quran_parts != null ? `${s.quran_parts} / 30` : null },
-                    { label: 'المحطة القادمة', value: s.next }
+                    { label: 'المحطة القادمة', value: s.next },
+                    { label: 'الاختبارات', value: s.exams ? `${s.exams} · اجتاز ${s.passed}` : null }
                   ]"
-                />
+                >
+                  <template
+                    v-if="s.exams"
+                    #actions
+                  >
+                    <UButton
+                      label="تفاصيل اختباراته"
+                      color="neutral"
+                      variant="outline"
+                      size="md"
+                      icon="i-lucide-list-checks"
+                      class="w-full justify-center"
+                      :ui="{ base: 'rounded-[12px] min-h-11' }"
+                      @click.prevent.stop="openExams(s)"
+                    />
+                  </template>
+                </UiCardRow>
               </li>
             </ul>
           </div>
@@ -337,6 +386,13 @@ const today = gazaToday()
         </div>
       </template>
     </ClientOnly>
+
+    <ExamsResultDetailModal
+      v-model:open="examsOpen"
+      :student-id="examsOf?.id ?? null"
+      :student-name="examsOf?.name ?? ''"
+      :result-id="null"
+    />
   </div>
 </template>
 
@@ -376,7 +432,7 @@ const today = gazaToday()
 .table-wrap th { padding: 12px 12px; font-weight: 600; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; text-align: center; }
 .table-wrap td { padding: 11px 12px; vertical-align: middle; text-align: center; border-top: 1px solid var(--line); }
 .ta-start { text-align: start; }
-.ta-end { display: flex; justify-content: flex-end; }
+.ta-end { display: flex; justify-content: flex-end; gap: 6px; }
 .strong { font-weight: 600; color: var(--ink); }
 .muted { color: var(--ink-2); }
 .done { color: var(--green-ink); font-weight: 600; }

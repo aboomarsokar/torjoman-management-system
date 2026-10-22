@@ -1189,6 +1189,7 @@ export type Database = {
           status: Database["public"]["Enums"]["profile_status"]
           tajweed_level: string | null
           updated_at: string
+          whatsapp: string | null
           years_experience: number | null
         }
         Insert: {
@@ -1219,6 +1220,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["profile_status"]
           tajweed_level?: string | null
           updated_at?: string
+          whatsapp?: string | null
           years_experience?: number | null
         }
         Update: {
@@ -1249,6 +1251,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["profile_status"]
           tajweed_level?: string | null
           updated_at?: string
+          whatsapp?: string | null
           years_experience?: number | null
         }
         Relationships: [

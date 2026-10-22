@@ -4,7 +4,7 @@
  */
 import type { Database } from '~/types/database.types'
 import type { ExaminerHalaqa, ExaminerItem } from '~/utils/examinerDashboard'
-import { halaqaBreakdown, monthGrading, pendingQueue } from '~/utils/examinerDashboard'
+import { halaqaBreakdown, monthGrading, examinerQueue } from '~/utils/examinerDashboard'
 import { gazaToday } from '~/utils/reportWindow'
 
 /** حدُّ البنود المقروءة — طابورُ الرصد نفسُه يقف عند 500. */
@@ -48,7 +48,7 @@ export function useExaminerDashboard() {
     const tripRows = trips.data ?? []
     return {
       halqat: hs,
-      queue: pendingQueue(its, today),
+      queue: examinerQueue(its, today),
       month: monthGrading(its, ym),
       byHalaqa: halaqaBreakdown(hs, its, ym),
       trips: { count: tripRows.length, unpaid: tripRows.filter(t => !t.paid).length },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { halaqaBreakdown, monthGrading, pendingQueue, type ExaminerItem } from './examinerDashboard'
+import { halaqaBreakdown, monthGrading, examinerQueue, type ExaminerItem } from './examinerDashboard'
 
 const item = (id: string, halaqa: string, created: string, result: ExaminerItem['result'] = null): ExaminerItem =>
   ({ id, created_at: created, halaqa_id: halaqa, result })
@@ -11,10 +11,10 @@ const items: ExaminerItem[] = [
   item('5', 'h2', '2026-09-02T08:00:00Z', { passed: true, total_score: 99, exam_date: '2026-09-10' })
 ]
 
-describe('pendingQueue', () => {
+describe('examinerQueue', () => {
   it('العددُ وأقدمُ ما ينتظر بالأيام', () => {
-    expect(pendingQueue(items, '2026-10-22')).toEqual({ count: 2, oldestDays: 7 })
-    expect(pendingQueue([], '2026-10-22')).toEqual({ count: 0, oldestDays: 0 })
+    expect(examinerQueue(items, '2026-10-22')).toEqual({ count: 2, oldestDays: 7 })
+    expect(examinerQueue([], '2026-10-22')).toEqual({ count: 0, oldestDays: 0 })
   })
 })
 

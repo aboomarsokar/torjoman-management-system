@@ -34,13 +34,16 @@ const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'w
   teacher: 'success',
   student: 'neutral'
 }
+// المدير الفني لا يرى حساباتِ الإدارة هنا: مشرفَ المشروع والمديرَ الإداري والمديرةَ الإدارية (طلب المستخدم 2026-10-22)
+const HIDDEN_FROM_TECHNICAL: readonly Role[] = ['project_supervisor', 'admin_manager', 'women_admin']
+const visibleRoles = computed(() => isTechnical.value ? STAFF_ROLES.filter(r => !HIDDEN_FROM_TECHNICAL.includes(r)) : STAFF_ROLES)
 const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
   'users-list',
   async () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*, assigner:assigned_by(full_name)')
-      .in('role', STAFF_ROLES)
+      .in('role', visibleRoles.value)
       .order('created_at', { ascending: false })
       .returns<UserRow[]>()
     if (error) {
@@ -49,7 +52,7 @@ const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
     }
     return data ?? []
   },
-  { server: false, default: () => [] }
+  { server: false, default: () => [], watch: [visibleRoles] }
 )
 
 const filter = ref<Role | 'all'>('all')
@@ -60,7 +63,7 @@ function countFor(key: Role | 'all') {
 // قائمةٌ منسدلة بعدد كلّ دور (كانت ثمانيةَ أزرارٍ تأخذ ثلاثة أسطر على الجوال — طلب المستخدم 2026-10-20)
 const roleFilterItems = computed(() => ([
   { value: 'all' as const, label: 'كل الأدوار' },
-  ...STAFF_ROLES.map(r => ({ value: r, label: roleLabel(r, null) }))
+  ...visibleRoles.value.map(r => ({ value: r, label: roleLabel(r, null) }))
 ]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
 // البحث بالاسم أو الرقم الوظيفي (يقبل الأرقام العربية) — فوق تصفية الدور
 const query = ref('')

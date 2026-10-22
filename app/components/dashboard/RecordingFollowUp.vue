@@ -6,11 +6,13 @@
  * أو «فات بلا رصد» وزرٌّ إلى صفحة الحضور على ذلك اليوم)، وعددُ أيام الشهر المرصودة، وشارةُ الرصد الشهريّ،
  * والانتقالُ والتواصلُ مع المعلم. البياناتُ من `halaqat_recording_status` (طلبٌ واحد)، وتفصيلُ اليوم عند طلبه.
  * صفحتُه `/follow-up`: `page` يُخفي عنوانَه الداخليّ لأنّ رأسَ الصفحة يحمله.
- * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها.
+ * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها. وفلترُ الشهر
+ * (الجاري افتراضاً، وآخرُ ستة أشهر). «المعلّم/المعلّمة» بجنس الحلقة، والمخاطبةُ بجنس القارئ (والمشرفُ الميدانيّ حلقاتُه).
  */
 import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
 import type { DayState, RecordingRow, ReportState } from '~/utils/recordingStatus'
+import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort } from '~/utils/recordingStatus'
 
 /** في صفحته: رأسُ الصفحة يحمل العنوان. الغيابُ false (يُظهر العنوان). */
@@ -19,16 +21,32 @@ defineProps<{ page?: boolean }>()
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 // قسمُ المديرة الإدارية إناثٌ كلُّه: التسمياتُ بالمؤنّث
-const { isWomenAdmin: fem } = usePermissions()
+const { profile } = useProfile()
+/** المخاطَبُ أنثى (المديرة الإدارية والمشرفة الميدانية): «افتحي» و«تواصلي». */
+const fem = computed(() => profile.value?.gender === 'female')
 
-const { data, pending } = useLazyAsyncData<RecordingRow[]>('halaqat-recording-status', async () => {
-  const { data: rows, error } = await supabase.rpc('halaqat_recording_status')
+// الشهر: الجاري افتراضاً (بلا معاملٍ في الدالّة)، وآخرُ ستة أشهر بالأرقام
+const MONTHS_BACK = 6
+const nowMonth = (() => {
+  const [y, m] = gazaToday().split('-').map(Number)
+  return { year: y!, month: m! }
+})()
+const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => {
+  const m = shiftMonth(nowMonth.year, nowMonth.month, -i)
+  return { label: i === 0 ? `${m.month}/${m.year} — الجاري` : `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }
+})
+const monthKey = ref(monthItems[0]!.value)
+const isCurrent = computed(() => monthKey.value === monthItems[0]!.value)
+
+const { data, pending } = useLazyAsyncData<RecordingRow[]>(() => `halaqat-recording-status-${monthKey.value}`, async () => {
+  const [y, m] = monthKey.value.split('-').map(Number)
+  const { data: rows, error } = await supabase.rpc('halaqat_recording_status', isCurrent.value ? {} : { p_year: y, p_month: m })
   if (error) {
     handle(error)
     return []
   }
   return rows ?? []
-}, { server: false, default: () => [] })
+}, { server: false, default: () => [], watch: [monthKey] })
 
 const all = computed(() => sortByLag(data.value ?? []))
 const summary = computed(() => recordingSummary(data.value ?? []))
@@ -69,24 +87,25 @@ const REPORT_META: Record<ReportState, { color: 'success' | 'info' | 'error' | '
 }
 const dayNum = (d: string) => Number(d.slice(8, 10))
 const dayFull = (d: string) => `${weekdayName(d)} ${d.split('-').reverse().join('-')}`
-const teacherWord = computed(() => fem.value ? 'المعلّمة' : 'المعلّم')
+/** «المعلّم/المعلّمة» بجنس الحلقة لا بالقارئ. */
+const teacherWord = (r: { gender: string }) => r.gender === 'female' ? 'المعلّمة' : 'المعلّم'
 /** تمييزُ العدد بعد «من»: الواحدةُ والاثنتان بلفظهما بلا رقم («حلقةٍ واحدة» · «حلقتين»)، ثم حلقات · حلقة. */
 const halqatWord = (n: number) => n === 1 ? 'حلقةٍ واحدة' : n === 2 ? 'حلقتين' : n <= 10 ? 'حلقات' : 'حلقة'
 
 // ── اليومُ المفتوح تحت حلقته (واحدٌ في الصفحة) ──
 type Absentee = { name: string, kind: string }
 type DayDetail = { roster: number, absentees: Absentee[] }
-const open = ref<{ hid: string, day: string, state: DayState } | null>(null)
+const open = ref<{ hid: string, day: string, state: DayState, female: boolean } | null>(null)
 const detail = ref<DayDetail | null>(null)
 const detailLoading = ref(false)
 const cache = new Map<string, DayDetail>()
 
-async function toggleDay(hid: string, day: string, state: DayState) {
+async function toggleDay(hid: string, day: string, state: DayState, female: boolean) {
   if (open.value?.hid === hid && open.value.day === day) {
     open.value = null
     return
   }
-  open.value = { hid, day, state }
+  open.value = { hid, day, state, female }
   detail.value = null
   if (state !== 'held') return
   const key = `${hid}|${day}`
@@ -126,6 +145,14 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
         متابعة الرصد
       </h3>
       <div class="rf-filters">
+        <UiSelect
+          v-model="monthKey"
+          :items="monthItems"
+          size="lg"
+          class="rf-month-sel"
+          aria-label="الشهر"
+          :ui="{ base: 'rounded-[12px] min-h-11' }"
+        />
         <UiFilterChips
           v-model="view"
           :options="filterOptions"
@@ -144,7 +171,11 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
     />
     <template v-else>
       <p class="rf-sum">
-        اليوم رُصد حضورُ <b>{{ summary.today }}</b> من <template v-if="summary.halqat > 2">
+        <template v-if="isCurrent">
+          اليوم رُصد حضورُ <b>{{ summary.today }}</b> من
+        </template><template v-else>
+          في هذا الشهر رصدت كلَّ أيامها <b>{{ summary.halqat - summary.lagging }}</b> من
+        </template> <template v-if="summary.halqat > 2">
           <b>{{ summary.halqat }}</b>
         </template> {{ halqatWord(summary.halqat) }}
         <span class="dot">·</span>
@@ -193,7 +224,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
             <span class="rf-seq">{{ i + 1 }}</span>
             <span class="rf-who">
               <span class="rf-name">{{ r.halaqa_name }}</span>
-              <span class="rf-teacher">{{ teacherWord }}: {{ r.teacher_name ?? '—' }}</span>
+              <span class="rf-teacher">{{ teacherWord(r) }}: {{ r.teacher_name ?? '—' }}</span>
             </span>
             <span
               class="rf-count"
@@ -250,7 +281,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                   variant="soft"
                   size="xs"
                   class="rf-btn"
-                  :aria-label="`واتس أب ${teacherWord} ${r.teacher_name ?? ''}`"
+                  :aria-label="`واتس أب ${teacherWord(r)} ${r.teacher_name ?? ''}`"
                   :ui="{ base: 'rounded-[9px] justify-center', leadingIcon: 'size-3.5' }"
                 />
               </div>
@@ -271,7 +302,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                   :aria-label="`${dayFull(d.day)}: ${DAY_META[d.state].word}`"
                   :aria-pressed="open?.hid === r.halaqa_id && open.day === d.day"
                   :aria-controls="`rf-day-${r.halaqa_id}`"
-                  @click="toggleDay(r.halaqa_id, d.day, d.state)"
+                  @click="toggleDay(r.halaqa_id, d.day, d.state, r.gender === 'female')"
                 >
                   <span class="rf-dl">{{ weekdayShort(d.day) }}</span>
                   <span class="rf-dn">{{ dayNum(d.day) }}</span>
@@ -341,7 +372,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                     v-else
                     class="rf-d-note"
                   >
-                    {{ fem ? 'حضرت الطالباتُ كلُّهنّ.' : 'حضر الطلابُ كلُّهم.' }}
+                    {{ open.female ? 'حضرت الطالباتُ كلُّهنّ.' : 'حضر الطلابُ كلُّهم.' }}
                   </p>
                 </template>
               </template>
@@ -350,7 +381,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                 class="rf-d-note"
               >
                 {{ open.state === 'missed'
-                  ? `لم يُرصد حضورُ هذا اليوم — ${fem ? 'تواصلي مع المعلّمة أو افتحي اليوم' : 'تواصل مع المعلّم أو افتح اليوم'} في صفحة الحضور.`
+                  ? `لم يُرصد حضورُ هذا اليوم — ${fem ? 'تواصلي' : 'تواصل'} مع ${open.female ? 'المعلّمة' : 'المعلّم'} أو ${fem ? 'افتحي' : 'افتح'} اليوم في صفحة الحضور.`
                   : open.state === 'today' ? 'اليومُ قائم ولم يُرصد بعد.' : 'قبل بدء الحلقة — لا رصدَ مطلوب.' }}
               </p>
               <UButton
@@ -392,6 +423,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 
 .rf-rows { list-style: none; margin: 0; padding: 0; }
 .rf-filters { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.rf-month-sel { width: 170px; }
 .rf-row { border-top: 1px solid var(--line); }
 .rf-sumrow { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 6px; background: none; border: 0; border-radius: 12px; font: inherit; color: inherit; text-align: start; cursor: pointer; }
 .rf-sumrow:hover { background: var(--surface-2); }

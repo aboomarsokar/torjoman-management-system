@@ -7,9 +7,12 @@
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'متابعة الرصد — ترجمان' })
 
-const { role, isAdmin, isTechnical, isReadOnly, isWomenAdmin: fem } = usePermissions()
-// isReadOnly = مشرف المشروع: يطّلع على القسمين (صفحتا الحضور والرصد قراءةٌ له)
-const canView = computed(() => isAdmin.value || isTechnical.value || isReadOnly.value || fem.value)
+const { role, isAdmin, isTechnical, isReadOnly, isWomenAdmin, isFieldSupervisor } = usePermissions()
+// isReadOnly = مشرف المشروع: يطّلع على القسمين؛ والمشرفُ الميدانيّ حلقاتِه المكلَّف بها (2026-10-22) — وصفحتا الحضور والرصد قراءةٌ لهما
+const canView = computed(() => isAdmin.value || isTechnical.value || isReadOnly.value || isWomenAdmin.value || isFieldSupervisor.value)
+// المخاطبةُ بجنس القارئ (المديرة والمشرفة)
+const { profile } = useProfile()
+const fem = computed(() => profile.value?.gender === 'female')
 </script>
 
 <template>
@@ -17,8 +20,8 @@ const canView = computed(() => isAdmin.value || isTechnical.value || isReadOnly.
     <UiPageHeader
       title="متابعة الرصد"
       :subtitle="fem
-        ? 'رصدُ الحضور في أيام الدوام ورصدُ الشهر القرآنيّ لحلقات قسمك — الأشدُّ تقصيراً أولاً، وتواصلي مع المعلّمة من سطرها.'
-        : 'رصدُ الحضور في أيام الدوام ورصدُ الشهر القرآنيّ لحلقات قسمك — الأشدُّ تقصيراً أولاً، وتواصل مع المعلّم من سطره.'"
+        ? 'رصدُ الحضور في أيام الدوام ورصدُ الشهر القرآنيّ لحلقاتك — الأشدُّ تقصيراً أولاً، وتواصلي مع المعلّمة من سطرها.'
+        : 'رصدُ الحضور في أيام الدوام ورصدُ الشهر القرآنيّ لحلقاتك — الأشدُّ تقصيراً أولاً، وتواصل مع المعلّم من سطره.'"
     />
     <UiEmptyState
       v-if="role && !canView"

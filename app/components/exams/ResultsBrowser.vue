@@ -355,8 +355,9 @@ const fmtDate = (iso: string) => iso.split('-').reverse().join('-')
 @media (max-width: 560px) { .rf { width: 100%; } .res-filters > * { width: 100%; } }
 .strong { font-weight: 600; color: var(--ink); }
 .nowrap { white-space: nowrap; }
-.score-btn { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; padding: 4px 8px; margin: -4px -8px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); font: inherit; cursor: pointer; }
-.score-btn:hover { background: var(--blue-soft); color: var(--blue-ink); }
+/* زرٌّ ظاهرٌ دائماً — لا عند المرور وحده (طلب المستخدم 2026-10-22) */
+.score-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 36px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgb(9 64 100 / 0.06); color: var(--ink); font: inherit; cursor: pointer; transition: background .15s, border-color .15s; }
+.score-btn:hover { background: var(--blue-soft); border-color: var(--blue); color: var(--blue-ink); }
 .score-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .muted { color: var(--ink-2); }
 .sm { font-size: 13px; }

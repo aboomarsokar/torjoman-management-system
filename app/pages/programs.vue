@@ -10,7 +10,8 @@ useSeoMeta({ title: 'البرامج المصاحبة — ترجمان' })
 
 const { role } = useProfile()
 const isStudent = computed(() => role.value === 'student')
-const canManage = computed(() => role.value === 'admin_manager' || role.value === 'technical_manager')
+// رفعُ الملفّات وإضافةُ المقرّرات للمدير الإداري وحده؛ والفنيُّ يطّلع (قرار 2026-10-22)
+const canManage = computed(() => role.value === 'admin_manager')
 const me = useMyReadingStudent()
 </script>
 

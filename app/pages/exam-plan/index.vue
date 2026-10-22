@@ -2,13 +2,14 @@
 /**
  * خطة الاختبارات المرحلية — تبويبان: «الخطة» (ثلاث مراحل × خمس دورات من `exam_cycles`، وحدودُ كلّ دورةٍ
  * من تقسيمة البرنامج) و«تقسيمة الأجزاء» (`program_juz`، 30 ← 1).
- * التعديل (من جزء، إلى جزء، وصف السور) للمديرَين الإداري والفني بتحديثٍ واحد؛ والحكمُ الأخير لقاعدة
+ * التعديل (من جزء، إلى جزء، وصف السور) وتعديلُ تقسيمة الأجزاء للمدير الإداري وحده (قرار 2026-10-22)؛ والحكمُ الأخير لقاعدة
  * البيانات: قيدُ الاحتواء (دورة 2 ⊇ 1، 4 ⊇ 3، 5 ⊇ 1–4 داخل المرحلة) تردّ رسالتَه العربيّة فتُعرض كما هي.
  */
 import type { Database } from '~/types/database.types'
 import { CYCLE_COLUMNS, CYCLE_LABELS, STAGE_LABELS, toExamCycle } from '~/utils/exams/cycles'
 import type { ExamCycle } from '~/utils/exams/cycles'
 import { examPlanStats } from '~/utils/pageStats'
+import type { ProgramJuz } from '~/utils/quran/position'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'خطة الاختبارات — ترجمان' })
@@ -16,8 +17,8 @@ useSeoMeta({ title: 'خطة الاختبارات — ترجمان' })
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-/** التعديل للمديرَين كما يسمح RLS ومنحُ الأعمدة؛ مشرف المشروع وغيره للاطّلاع. */
-const { isManager } = usePermissions()
+/** التعديل للمدير الإداري وحده كما يسمح RLS؛ وغيرُه للاطّلاع (قرار 2026-10-22). */
+const { isAdmin } = usePermissions()
 const quran = useQuranReference()
 
 const tab = ref<'plan' | 'juz'>('plan')
@@ -54,6 +55,14 @@ onMounted(async () => {
 
 const byStage = (n: number) => (cycles.value ?? []).filter(c => c.stage_number === n)
 const loading = computed(() => pending.value || (!quran.ready.value && !quranTried.value))
+
+// ── تعديل جزءٍ من التقسيمة ──
+const juzOpen = ref(false)
+const juzEditing = ref<ProgramJuz | null>(null)
+function openJuz(j: ProgramJuz) {
+  juzEditing.value = j
+  juzOpen.value = true
+}
 
 // ── تعديل دورة ──
 const modalOpen = ref(false)
@@ -152,14 +161,14 @@ const editTitle = computed(() => editing.value
             :cycles="byStage(n)"
             :juz="quran.juz.value"
             :surah-name="quran.surahName"
-            :can-edit="isManager"
+            :can-edit="isAdmin"
             @edit="openEdit"
           />
           <p
-            v-if="!isManager"
+            v-if="!isAdmin"
             class="note"
           >
-            الخطةُ للاطّلاع؛ تعديلُها للمديرَين الإداري والفني.
+            الخطةُ للاطّلاع؛ تعديلُها للمدير الإداري.
           </p>
         </template>
       </template>
@@ -173,8 +182,17 @@ const editTitle = computed(() => editing.value
         v-else
         :juz="quran.juz.value"
         :surah-name="quran.surahName"
+        :can-edit="isAdmin"
+        @edit="openJuz"
       />
     </ClientOnly>
+
+    <ExamsJuzEditModal
+      v-model:open="juzOpen"
+      :juz="juzEditing"
+      :surahs="quran.surahs.value"
+      @saved="quran.reload"
+    />
 
     <UModal
       v-model:open="modalOpen"

@@ -46,6 +46,12 @@ export function useQuranReference() {
     await inflight
   }
 
+  /** إعادةُ الجلب بعد تعديل التقسيمة (المدير الإداري) — كي تُحسب الحدودُ بالجديد في الجلسة نفسها. */
+  async function reload(): Promise<void> {
+    ready.value = false
+    await load()
+  }
+
   /** عددُ آيات السورة؛ 0 إن لم تُحمَّل المراجع بعد. */
   function ayahCountOf(n: number): number {
     return surahs.value.find(s => s.number === n)?.ayahCount ?? 0
@@ -56,5 +62,5 @@ export function useQuranReference() {
     return surahs.value.find(s => s.number === n)?.name ?? ''
   }
 
-  return { surahs, pages, juz, ready, load, ayahCountOf, surahName }
+  return { surahs, pages, juz, ready, load, reload, ayahCountOf, surahName }
 }

@@ -26,10 +26,11 @@ const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
 /** الإنشاءُ والتعديلُ والحذفُ للمدير الإداري وحده — كما يسمح RLS (والفنيُّ يطّلع — قرار 2026-10-22). */
-const { isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer, isTechnical } = usePermissions()
+const { isAdmin, isReadOnly, isFieldSupervisor, isWomenAdmin, isExaminer, isTechnical } = usePermissions()
 // المشرفُ والمختبِرُ يريان حلقاتِهما المسندة وحدها وهي من جنسهما، والمديرةُ حلقاتِ البنات وحدها (RLS) —
 // فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
 // والمديرُ الفنيّ لقسم البنين وحده (قرار 2026-10-22)
+const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
 const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value && !isTechnical.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
@@ -243,8 +244,13 @@ async function confirmDelete() {
     </div>
 
     <ClientOnly>
+      <!-- من يرى القسمين ولم يُصفِّ بالجنس: مفصولةً بين البنين والبنات (2026-10-22)؛ وإلا خلاصةُ القسم -->
+      <DashboardGenderSplit
+        v-if="!pending && filtered.length && seesBoth && genderF === 'all'"
+        :items="halqatSplitStats(filtered)"
+      />
       <HalqatSummary
-        v-if="!pending && filtered.length"
+        v-else-if="!pending && filtered.length"
         :rows="filtered"
       />
       <UiSkeletonTable

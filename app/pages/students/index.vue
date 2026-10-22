@@ -12,7 +12,7 @@ import { studentCredentials, type AccountCredentials } from '~/composables/useAc
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
 import { displayPhotoPath } from '~/constants/profilePhoto'
 import { choiceItems, RESIDENCE_AREAS } from '~/constants/profileChoices'
-import { studentStats } from '~/utils/pageStats'
+import { studentSplitStats, studentStats } from '~/utils/pageStats'
 import { gazaToday } from '~/utils/reportWindow'
 
 definePageMeta({ layout: 'dashboard' })
@@ -98,6 +98,9 @@ const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(fil
 /** الرقمُ المتسلسل عبر الصفحات لا داخلَ الصفحة وحدها (طلب المستخدم 2026-10-22). */
 const seq = (index: number) => (page.value - 1) * pageSize + index + 1
 watch([statusF, halqaF, query], resetPage)
+const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
+const splitStats = computed(() => studentSplitStats(
+  (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday()))
 const stats = computed(() => studentStats(
   (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday(), isWomenAdmin.value))
 const columns = computed(() => {
@@ -352,8 +355,13 @@ async function confirmDelete() {
 
     <ClientOnly>
       <!-- أرقامُ الطلاب في النطاق بحلقته المختارة (لا تتبع البحثَ ولا الحالةَ: تعرض الحالاتِ نفسَها) -->
+      <!-- من يرى القسمين (الإداري ومشرف المشروع): مفصولةً بين البنين والبنات (2026-10-22) -->
+      <DashboardGenderSplit
+        v-if="!pending && (students ?? []).length && seesBoth"
+        :items="splitStats"
+      />
       <UiStatStrip
-        v-if="!pending && (students ?? []).length"
+        v-else-if="!pending && (students ?? []).length"
         :items="stats"
         label="أرقام الطلاب"
       />

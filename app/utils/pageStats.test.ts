@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  alertStats, examPlanStats, examResultStats, minutesStats, newsStats, studentStats, supervisorStats, transportStats, userSplitStats, userStats
+  alertStats, examPlanStats, examResultStats, minutesStats, newsStats, studentStats, halqatSplitStats, studentSplitStats, supervisorSplitStats, supervisorStats, transportStats, userSplitStats, userStats
 } from './pageStats'
 
 const values = (items: { key: string, value: string | number }[]) => Object.fromEntries(items.map(i => [i.key, i.value]))
@@ -116,5 +116,34 @@ describe('userSplitStats', () => {
     ])
     const by = Object.fromEntries(out.map(i => [i.key, [i.male, i.female]]))
     expect(by).toEqual({ active: [2, 2], disabled: [0, 1], teachers: [1, 2], sups: [0, 0], examiners: [1, 0] })
+  })
+})
+
+describe('الفصل بين البنين والبنات (الطلاب والحلقات والمشرفون)', () => {
+  const pick = (items: { key: string, male: number | null, female: number | null, total?: number | null }[]) =>
+    Object.fromEntries(items.map(i => [i.key, [i.male, i.female, i.total ?? null]]))
+
+  it('الطلاب: النشطون وغيرُهم والملتحقون، ومتوسّطُ المحفوظ بعامّه', () => {
+    const today = '2026-10-22'
+    const out = studentSplitStats([
+      { gender: 'male', status: 'active', enrollment_date: '2026-10-01', quran_parts: 2 },
+      { gender: 'male', status: 'withdrawn', enrollment_date: '2026-09-01', quran_parts: null },
+      { gender: 'female', status: 'active', enrollment_date: '2026-09-01', quran_parts: 4 },
+      { gender: 'female', status: 'active', enrollment_date: '2026-10-05', quran_parts: null }
+    ], today)
+    expect(pick(out)).toEqual({ active: [1, 2, null], inactive: [1, 0, null], new: [1, 1, null], parts: [2, 4, 3] })
+  })
+
+  it('الحلقات: العددُ والطلابُ، ومتوسّطُ الحلقة لكلٍّ وللمجموع', () => {
+    const h = (gender: string, n: number) => ({ gender, status: 'active', student_count: [{ count: n }] })
+    expect(pick(halqatSplitStats([h('male', 6), h('male', 4), h('female', 6)])))
+      .toEqual({ halqat: [2, 1, null], students: [10, 6, null], avg: [5, 6, 5.3] })
+  })
+
+  it('المشرفون: بلا حلقة، والإنجازُ متوسّطٌ ولا قيمةَ حين لا حلقات نشطة', () => {
+    expect(pick(supervisorSplitStats([
+      { gender: 'male', halqat: 2, commitment: 100 },
+      { gender: 'female', halqat: 0, commitment: null }
+    ]))).toEqual({ sups: [1, 1, null], halqat: [2, 0, null], idle: [0, 1, null], commit: [100, null, 100] })
   })
 })

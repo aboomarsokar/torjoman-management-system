@@ -79,6 +79,54 @@ export function examPlanStats(cycles: { stage_number: number, parts_from: number
 }
 
 /** المستخدمون (العاملون): النشطون، والمعطَّلون، والمعلّمون، والمشرفون الميدانيون — نشطين. */
+type G = { gender: string | null }
+const byG = <T extends G>(rows: T[], g: string) => rows.filter(r => r.gender === g)
+const avgOf = (ns: number[]) => ns.length ? round1(ns.reduce((a, b) => a + b, 0) / ns.length) : null
+
+/** الطلاب مفصولين بين البنين والبنات (لمن يرى القسمين — 2026-10-22). */
+export function studentSplitStats(rows: (G & { status: string, enrollment_date: string | null, quran_parts: number | null })[], today: string) {
+  const act = (rs: typeof rows) => rs.filter(s => s.status === 'active')
+  const parts = (rs: typeof rows) => act(rs).map(s => s.quran_parts).filter((p): p is number => p !== null)
+  const m = byG(rows, 'male')
+  const f = byG(rows, 'female')
+  return [
+    { key: 'active', icon: 'i-lucide-graduation-cap', label: 'الطلاب والطالبات النشطون', male: act(m).length, female: act(f).length, maleLabel: 'طلاب', femaleLabel: 'طالبات' },
+    { key: 'inactive', icon: 'i-lucide-user-minus', label: 'غيرُ النشطين', male: m.length - act(m).length, female: f.length - act(f).length, maleLabel: 'طلاب', femaleLabel: 'طالبات' },
+    { key: 'new', icon: 'i-lucide-user-plus', label: 'التحقوا هذا الشهر', male: act(m).filter(s => sameMonth(s.enrollment_date, today)).length, female: act(f).filter(s => sameMonth(s.enrollment_date, today)).length, maleLabel: 'طلاب', femaleLabel: 'طالبات' },
+    { key: 'parts', icon: 'i-lucide-book-open-check', label: 'متوسّطُ المحفوظ عند الالتحاق', male: avgOf(parts(m)), female: avgOf(parts(f)), maleLabel: 'جزءاً — البنين', femaleLabel: 'جزءاً — البنات', avg: true, total: avgOf(parts(rows)) }
+  ]
+}
+
+/** الحلقات مفصولةً (لمن يرى القسمين ولم يُصفِّ بالجنس — 2026-10-22). */
+export function halqatSplitStats(rows: (G & { status: string | null, student_count: { count: number }[] })[]) {
+  const studs = (rs: typeof rows) => rs.reduce((s, h) => s + (h.student_count[0]?.count ?? 0), 0)
+  const per = (rs: typeof rows) => rs.length ? round1(studs(rs) / rs.length) : null
+  const m = byG(rows, 'male')
+  const f = byG(rows, 'female')
+  return [
+    { key: 'halqat', icon: 'i-lucide-book-open', label: 'الحلقات', male: m.length, female: f.length, maleLabel: 'بنين', femaleLabel: 'بنات' },
+    { key: 'students', icon: 'i-lucide-graduation-cap', label: 'الطلاب والطالبات النشطون', male: studs(m), female: studs(f), maleLabel: 'طلاب', femaleLabel: 'طالبات' },
+    { key: 'avg', icon: 'i-lucide-users', label: 'متوسّطُ الحلقة', male: per(m), female: per(f), maleLabel: 'طالباً للحلقة', femaleLabel: 'طالبةً للحلقة', avg: true, total: per(rows) }
+  ]
+}
+
+/** المشرفون مفصولين (لمن يرى القسمين — 2026-10-22). */
+export function supervisorSplitStats(rows: (G & { halqat: number, commitment: number | null })[]) {
+  const rated = (rs: typeof rows) => rs.map(r => r.commitment).filter((c): c is number => c !== null)
+  const avgPct = (rs: typeof rows) => {
+    const a = avgOf(rated(rs))
+    return a === null ? null : Math.round(a)
+  }
+  const m = byG(rows, 'male')
+  const f = byG(rows, 'female')
+  return [
+    { key: 'sups', icon: 'i-lucide-users-round', label: 'المشرفون والمشرفات', male: m.length, female: f.length, maleLabel: 'مشرفون', femaleLabel: 'مشرفات' },
+    { key: 'halqat', icon: 'i-lucide-book-open', label: 'الحلقات المسندة', male: m.reduce((s, r) => s + r.halqat, 0), female: f.reduce((s, r) => s + r.halqat, 0), maleLabel: 'بنين', femaleLabel: 'بنات' },
+    { key: 'idle', icon: 'i-lucide-user-x', label: 'بلا حلقة', male: m.filter(r => !r.halqat).length, female: f.filter(r => !r.halqat).length, maleLabel: 'مشرفون', femaleLabel: 'مشرفات' },
+    { key: 'commit', icon: 'i-lucide-gauge', label: 'إنجازُ الزيارات هذا الشهر', male: avgPct(m), female: avgPct(f), maleLabel: 'متوسّط البنين', femaleLabel: 'متوسّط البنات', avg: true, total: avgPct(rows), suffix: '٪' }
+  ]
+}
+
 /** أرقامُ الحسابات مفصولةً بين البنين والبنات (`DashboardGenderSplit`) — لمن يرى القسمين (2026-10-22). */
 export function userSplitStats(rows: { status: string, role: string, gender: string | null }[]) {
   const n = (f: (u: { status: string, role: string }) => boolean, g: string) => rows.filter(u => u.gender === g && f(u)).length

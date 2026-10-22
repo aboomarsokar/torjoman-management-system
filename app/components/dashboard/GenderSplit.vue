@@ -2,23 +2,32 @@
 /**
  * إحصائياتُ المدير الإداري ومشرف المشروع مفصولةً بين البنين والبنات (طلب المستخدم 2026-10-22): بطاقةٌ لكلّ فئة،
  * فيها القسمان متجاوران بعدديهما، وشريطُ نسبتهما (بياناتٌ لا زخرفة)، والمجموعُ في رأسها — فتُقارَن الفئةُ بنظرة.
- * كان العرضُ قسمين متتاليين، فيبعد الرقمُ عن نظيره.
+ * كان العرضُ قسمين متتاليين، فيبعد الرقمُ عن نظيره. و`avg`: متوسّطٌ لا عدد — في الرأس المتوسّطُ العامّ بدل المجموع
+ * (`total`)، وبلا شريط نسبة (المتوسّطان لا يُجمعان)، و«—» حين لا قيمة. `suffix` لاحقةٌ كـ«٪».
  */
 export interface SplitItem {
   key: string
   icon: string
   /** اسمُ الفئة جامعاً («الطلاب والطالبات»). */
   label: string
-  male: number
-  female: number
+  male: number | null
+  female: number | null
   /** تسميتا القسمين داخل البطاقة («الطلاب» / «الطالبات»). */
   maleLabel: string
   femaleLabel: string
+  /** متوسّطٌ لا عدد (انظر أعلاه). */
+  avg?: boolean
+  /** ما في الرأس للمتوسّط: المتوسّطُ العامّ. */
+  total?: number | null
+  suffix?: string
 }
 
 defineProps<{ items: SplitItem[] }>()
 
 const pct = (part: number, total: number) => total ? Math.round((100 * part) / total) : 50
+const sum = (it: SplitItem) => (it.male ?? 0) + (it.female ?? 0)
+const show = (n: number | null | undefined, suffix = '') => n == null ? '—' : `${n}${suffix}`
+const head = (it: SplitItem) => it.avg ? show(it.total, it.suffix) : String(sum(it))
 </script>
 
 <template>
@@ -39,24 +48,24 @@ const pct = (part: number, total: number) => total ? Math.round((100 * part) / t
         <span class="gs-label">{{ it.label }}</span>
         <span
           class="gs-total"
-          :aria-label="`المجموع ${it.male + it.female}`"
-        >{{ it.male + it.female }}</span>
+          :aria-label="`${it.avg ? 'المتوسّط العامّ' : 'المجموع'} ${head(it)}`"
+        >{{ head(it) }}</span>
       </div>
 
       <div class="gs-split">
         <div class="gs-side m">
-          <b>{{ it.male }}</b>
+          <b>{{ show(it.male, it.suffix) }}</b>
           <span>{{ it.maleLabel }}</span>
         </div>
         <div class="gs-side f">
-          <b>{{ it.female }}</b>
+          <b>{{ show(it.female, it.suffix) }}</b>
           <span>{{ it.femaleLabel }}</span>
         </div>
       </div>
 
       <!-- لا عددَ في الفئة: شريطٌ رماديٌّ واحد — كان نصفين متساويين يوحيان بالتساوي -->
       <div
-        v-if="it.male + it.female === 0"
+        v-if="!it.avg && sum(it) === 0"
         class="gs-bar empty"
         role="img"
         aria-label="لا أحد"
@@ -64,18 +73,18 @@ const pct = (part: number, total: number) => total ? Math.round((100 * part) / t
         <i />
       </div>
       <div
-        v-else
+        v-else-if="!it.avg"
         class="gs-bar"
         role="img"
         :aria-label="`${it.maleLabel} ${it.male}، ${it.femaleLabel} ${it.female}`"
       >
         <i
           class="m"
-          :style="{ width: `${pct(it.male, it.male + it.female)}%` }"
+          :style="{ width: `${pct(it.male ?? 0, sum(it))}%` }"
         />
         <i
           class="f"
-          :style="{ width: `${pct(it.female, it.male + it.female)}%` }"
+          :style="{ width: `${pct(it.female ?? 0, sum(it))}%` }"
         />
       </div>
     </li>

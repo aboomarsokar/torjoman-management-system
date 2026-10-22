@@ -1,14 +1,15 @@
 <script setup lang="ts">
 /**
- * «متابعة الرصد» (طلب المستخدم 2026-10-22) — للمدير الإداري (القسمان)، والمدير الفنيّ (البنين، اطّلاعاً: صفحتا الحضور
+ * «متابعة الرصد» (طلب المستخدم 2026-10-22) — لمشرف المشروع (القسمان، اطّلاعاً) والمدير الإداري (القسمان)، والمدير الفنيّ (البنين، اطّلاعاً: صفحتا الحضور
  * والرصد اللتان تقود إليهما قراءةٌ له)، والمديرة الإدارية (البنات):
  * أيُّ الحلقات رصدت حضورها وشهرَها القرآنيّ في المهلة وأيُّها قصّرت، بنظرة. المحتوى `DashboardRecordingFollowUp`.
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'متابعة الرصد — ترجمان' })
 
-const { role, isAdmin, isTechnical, isWomenAdmin: fem } = usePermissions()
-const canView = computed(() => isAdmin.value || isTechnical.value || fem.value)
+const { role, isAdmin, isTechnical, isReadOnly, isWomenAdmin: fem } = usePermissions()
+// isReadOnly = مشرف المشروع: يطّلع على القسمين (صفحتا الحضور والرصد قراءةٌ له)
+const canView = computed(() => isAdmin.value || isTechnical.value || isReadOnly.value || fem.value)
 </script>
 
 <template>

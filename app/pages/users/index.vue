@@ -34,8 +34,8 @@ const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'w
   teacher: 'success',
   student: 'neutral'
 }
-// المدير الفني لا يرى حساباتِ الإدارة هنا: مشرفَ المشروع والمديرَ الإداري والمديرةَ الإدارية (طلب المستخدم 2026-10-22)
-const HIDDEN_FROM_TECHNICAL: readonly Role[] = ['project_supervisor', 'admin_manager', 'women_admin']
+// المدير الفني لا يرى حساباتِ الإدارة هنا: مشرفَ المشروع والمديرَين (ولا نفسَه ولا زملاءه) والمديرةَ الإدارية (طلب المستخدم 2026-10-22)
+const HIDDEN_FROM_TECHNICAL: readonly Role[] = ['project_supervisor', 'admin_manager', 'technical_manager', 'women_admin']
 const visibleRoles = computed(() => isTechnical.value ? STAFF_ROLES.filter(r => !HIDDEN_FROM_TECHNICAL.includes(r)) : STAFF_ROLES)
 const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
   'users-list',

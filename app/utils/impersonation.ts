@@ -65,10 +65,12 @@ export function sessionReadOnly(s: Pick<ImpersonationStatus, 'writeUntil' | 'end
 }
 
 /** نصُّ نافذة التأكيد قبل الدخول بحساب موظف — حرفاً كالمواصفة. */
-export function impersonateConfirmText(name: string): { title: string, lines: string[] } {
+export function impersonateConfirmText(name: string, female = false): { title: string, lines: string[] } {
   return {
     title: `الدخول بحساب ${name}`,
-    lines: ['تفتح شاشته كما يراها، قراءةً فقط', 'يصله إشعارٌ بأنّك اطّلعت على حسابه', 'تنتهي بعد نصف ساعة']
+    lines: female
+      ? ['تفتح شاشتها كما تراها، قراءةً فقط', 'يصلها إشعارٌ بالاطّلاع على حسابها', 'تنتهي بعد نصف ساعة']
+      : ['تفتح شاشته كما يراها، قراءةً فقط', 'يصله إشعارٌ بأنّك اطّلعت على حسابه', 'تنتهي بعد نصف ساعة']
   }
 }
 

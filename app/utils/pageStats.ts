@@ -11,13 +11,14 @@ const round1 = (n: number) => Math.round(n * 10) / 10
 const sameMonth = (iso: string | null | undefined, today: string) => !!iso && iso.slice(0, 7) === today.slice(0, 7)
 
 /** الطلاب: النشطون، وغيرُ النشطين (منقطع/متخرّج/منقول)، والملتحقون هذا الشهر، ومتوسّطُ المحفوظ عند الالتحاق. */
-export function studentStats(rows: { status: string, enrollment_date: string | null, quran_parts: number | null }[], today: string): StatItem[] {
+/** `female`: قسمُ البنات (المديرة الإدارية — 2026-10-22). */
+export function studentStats(rows: { status: string, enrollment_date: string | null, quran_parts: number | null }[], today: string, female = false): StatItem[] {
   const active = rows.filter(s => s.status === 'active')
   const parts = active.map(s => s.quran_parts).filter((p): p is number => p !== null)
   return [
-    { key: 'active', icon: 'i-lucide-graduation-cap', value: active.length, label: 'طالباً نشطاً' },
-    { key: 'inactive', icon: 'i-lucide-user-minus', tone: 'neutral', value: rows.length - active.length, label: 'غيرُ نشط (منقطع/متخرّج/منقول)' },
-    { key: 'new', icon: 'i-lucide-user-plus', tone: 'green', value: active.filter(s => sameMonth(s.enrollment_date, today)).length, label: 'التحق هذا الشهر' },
+    { key: 'active', icon: 'i-lucide-graduation-cap', value: active.length, label: female ? 'طالبةً نشطة' : 'طالباً نشطاً' },
+    { key: 'inactive', icon: 'i-lucide-user-minus', tone: 'neutral', value: rows.length - active.length, label: female ? 'غيرُ نشطة (منقطعة/متخرّجة/منقولة)' : 'غيرُ نشط (منقطع/متخرّج/منقول)' },
+    { key: 'new', icon: 'i-lucide-user-plus', tone: 'green', value: active.filter(s => sameMonth(s.enrollment_date, today)).length, label: female ? 'التحقت هذا الشهر' : 'التحق هذا الشهر' },
     { key: 'parts', icon: 'i-lucide-book-open-check', value: parts.length ? String(round1(parts.reduce((a, b) => a + b, 0) / parts.length)) : '—', label: 'جزءاً محفوظاً متوسّطاً عند الالتحاق' }
   ]
 }
@@ -78,22 +79,24 @@ export function examPlanStats(cycles: { stage_number: number, parts_from: number
 }
 
 /** المستخدمون (العاملون): النشطون، والمعطَّلون، والمعلّمون، والمشرفون الميدانيون — نشطين. */
-export function userStats(rows: { status: string, role: string }[]): StatItem[] {
+/** `female`: عاملاتُ قسم البنات (المديرة الإدارية — 2026-10-22). */
+export function userStats(rows: { status: string, role: string }[], female = false): StatItem[] {
   const active = rows.filter(u => u.status === 'active')
   return [
     { key: 'active', icon: 'i-lucide-users', value: active.length, label: 'حساباً نشطاً' },
     { key: 'disabled', icon: 'i-lucide-user-x', tone: 'neutral', value: rows.length - active.length, label: 'حساباً معطَّلاً' },
-    { key: 'teachers', icon: 'i-lucide-book-open', tone: 'green', value: active.filter(u => u.role === 'teacher').length, label: 'معلّماً' },
-    { key: 'supervisors', icon: 'i-lucide-clipboard-check', value: active.filter(u => u.role === 'field_supervisor').length, label: 'مشرفاً ميدانيّاً' }
+    { key: 'teachers', icon: 'i-lucide-book-open', tone: 'green', value: active.filter(u => u.role === 'teacher').length, label: female ? 'معلّمةً' : 'معلّماً' },
+    { key: 'supervisors', icon: 'i-lucide-clipboard-check', value: active.filter(u => u.role === 'field_supervisor').length, label: female ? 'مشرفةً ميدانيّة' : 'مشرفاً ميدانيّاً' }
   ]
 }
 
 /** المشرفون: عددُهم، والحلقاتُ المسندة، ومن بلا حلقة، ومتوسّطُ «إنجاز الزيارات» لشهر اليوم (لمن له حلقاتٌ نشطة). */
-export function supervisorStats(rows: { halqat: number, commitment: number | null }[]): StatItem[] {
+/** `female`: قسمُ البنات (المديرة الإدارية) — «مشرفةً ميدانيّة» (2026-10-22). */
+export function supervisorStats(rows: { halqat: number, commitment: number | null }[], female = false): StatItem[] {
   const rated = rows.map(r => r.commitment).filter((c): c is number => c !== null)
   const idle = rows.filter(r => r.halqat === 0).length
   return [
-    { key: 'sups', icon: 'i-lucide-users-round', value: rows.length, label: 'مشرفاً ميدانيّاً' },
+    { key: 'sups', icon: 'i-lucide-users-round', value: rows.length, label: female ? 'مشرفةً ميدانيّة' : 'مشرفاً ميدانيّاً' },
     { key: 'halqat', icon: 'i-lucide-book-open', tone: 'green', value: rows.reduce((s, r) => s + r.halqat, 0), label: 'حلقةً مسندة' },
     { key: 'idle', icon: 'i-lucide-user-x', tone: idle ? 'err' : 'neutral', value: idle, label: 'بلا حلقة' },
     { key: 'commit', icon: 'i-lucide-gauge', value: rated.length ? `${Math.round(rated.reduce((a, b) => a + b, 0) / rated.length)}٪` : '—', label: 'متوسّطُ إنجاز الزيارات هذا الشهر' }

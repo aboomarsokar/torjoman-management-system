@@ -284,6 +284,7 @@ const pwOpen = ref(false)
               :name="data.p.full_name"
               :role="data.p.role"
               :status="data.p.status"
+              :gender="data.p.gender"
             />
             <UButton
               v-if="isSelf && notImpersonating"

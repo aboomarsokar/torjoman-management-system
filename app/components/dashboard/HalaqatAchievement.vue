@@ -9,6 +9,8 @@ import { ACHIEVEMENT_LOW_PCT, achievementPct, defaultAchievementMonth, measuredO
 import { shiftMonth } from '~/utils/reportWindow'
 
 const MONTHS_BACK = 6
+// المديرةُ الإدارية قسمُها إناث: التسمياتُ بالمؤنّث (قرار المستخدم 2026-10-22)
+const { isWomenAdmin: fem } = usePermissions()
 
 const initial = defaultAchievementMonth()
 const year = ref(initial.year)
@@ -64,7 +66,7 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
       <div class="ha-sum">
         <div class="ha-big">
           <b :class="`t-${toneOf(totals.pct)}`">{{ totals.pct === null ? '—' : `${totals.pct}٪` }}</b>
-          <span>أنجز {{ totals.done }} من {{ totals.measured }} طالباً خطةَ الحفظ هذا الشهر</span>
+          <span>{{ fem ? 'أنجزت' : 'أنجز' }} {{ totals.done }} من {{ totals.measured }} {{ fem ? 'طالبةً' : 'طالباً' }} خطةَ الحفظ هذا الشهر</span>
         </div>
         <div
           class="ha-low"
@@ -87,7 +89,7 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
           >
             <span class="ha-main">
               <span class="ha-name">{{ r.halaqa_name }}</span>
-              <span class="ha-sub">المعلّم: {{ r.teacher_name ?? '—' }}<template v-if="r.short"> · مقصّرون {{ r.short }}</template><template v-if="r.unrecorded"> · لم يُرصد {{ r.unrecorded }}</template></span>
+              <span class="ha-sub">{{ fem ? 'المعلّمة' : 'المعلّم' }}: {{ r.teacher_name ?? '—' }}<template v-if="r.short"> · {{ fem ? 'مقصّرات' : 'مقصّرون' }} {{ r.short }}</template><template v-if="r.unrecorded"> · لم يُرصد {{ r.unrecorded }}</template></span>
               <span
                 class="ha-bar"
                 :class="`b-${toneOf(achievementPct(r))}`"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * تفصيلُ إنجاز حلقةٍ في شهر (طلب المستخدم 2026-10-22): معلّمُها وأزرارُ التواصل معه (واتس أب واتصال — المعلمُ وحده،
- * لا أولياءُ الأمور)، ثم طلابُها في مجموعاتٍ: مقصّر (صفحاتُه من المطلوب) · لم يُرصد · لا يُقاس · أنجز.
+ * لا أولياءُ الأمور)، ثم طلابُها (وبالمؤنّث للمديرة الإدارية) في مجموعاتٍ: مقصّر (صفحاتُه من المطلوب) · لم يُرصد · لا يُقاس · أنجز.
  * البياناتُ من `halaqa_achievement_students` بحكم سجلّ التقييم نفسه.
  */
 import type { Database } from '~/types/database.types'
@@ -13,6 +13,8 @@ const props = defineProps<{ row: AchievementRow | null, year: number, month: num
 const open = defineModel<boolean>('open', { default: false })
 
 const supabase = useSupabaseClient<Database>()
+// المديرةُ الإدارية قسمُها إناث: التسمياتُ بالمؤنّث (قرار المستخدم 2026-10-22)
+const { isWomenAdmin: fem } = usePermissions()
 const { handle } = useErrorHandler()
 
 type Student = Database['public']['Functions']['halaqa_achievement_students']['Returns'][number]
@@ -31,13 +33,13 @@ watch([open, () => props.row?.halaqa_id, () => props.year, () => props.month], a
 }, { immediate: true })
 
 const GROUPS = [
-  { key: 'short', label: 'مقصّرون', tone: 'err' },
-  { key: 'unrecorded', label: 'لم يُرصدوا', tone: 'warn' },
-  { key: 'unmeasured', label: 'لا يُقاسون (غابوا الشهرَ كلّه)', tone: 'neutral' },
-  { key: 'done', label: 'أنجزوا', tone: 'ok' }
+  { key: 'short', label: 'مقصّرون', labelF: 'مقصّرات', tone: 'err' },
+  { key: 'unrecorded', label: 'لم يُرصدوا', labelF: 'لم يُرصدن', tone: 'warn' },
+  { key: 'unmeasured', label: 'لا يُقاسون (غابوا الشهرَ كلّه)', labelF: 'لا يُقسن (غبن الشهرَ كلّه)', tone: 'neutral' },
+  { key: 'done', label: 'أنجزوا', labelF: 'أنجزن', tone: 'ok' }
 ] as const
 const groups = computed(() => GROUPS
-  .map(g => ({ ...g, items: students.value.filter(s => s.state === g.key) }))
+  .map(g => ({ ...g, label: fem.value ? g.labelF : g.label, items: students.value.filter(s => s.state === g.key) }))
   .filter(g => g.items.length))
 
 const pct = computed(() => props.row ? achievementPct(props.row) : null)
@@ -59,7 +61,7 @@ const status = computed(() => (props.row?.report_status ?? 'none') as keyof type
       >
         <dl class="am-meta">
           <div><dt>الشهر</dt><dd><bdi dir="ltr">{{ month }}/{{ year }}</bdi></dd></div>
-          <div><dt>الإنجاز القرآني</dt><dd>{{ pct === null ? '—' : `${pct}٪` }} · أنجز {{ row.done }} من {{ row.done + row.short + row.unrecorded }}</dd></div>
+          <div><dt>الإنجاز القرآني</dt><dd>{{ pct === null ? '—' : `${pct}٪` }} · {{ fem ? 'أنجزت' : 'أنجز' }} {{ row.done }} من {{ row.done + row.short + row.unrecorded }}</dd></div>
           <div>
             <dt>رصدُ الشهر</dt><dd>
               <UBadge
@@ -74,8 +76,8 @@ const status = computed(() => (props.row?.report_status ?? 'none') as keyof type
         <!-- التواصلُ مع المعلم وحده (قرار المستخدم 2026-10-22) -->
         <div class="am-teacher">
           <div class="am-t-name">
-            <span>المعلّم</span>
-            <b>{{ row.teacher_name ?? 'بلا معلّم' }}</b>
+            <span>{{ fem ? 'المعلّمة' : 'المعلّم' }}</span>
+            <b>{{ row.teacher_name ?? (fem ? 'بلا معلّمة' : 'بلا معلّم') }}</b>
           </div>
           <div class="am-t-actions">
             <UButton
@@ -100,7 +102,7 @@ const status = computed(() => (props.row?.report_status ?? 'none') as keyof type
             <span
               v-if="!wa && !tel"
               class="am-none"
-            >لا رقمَ للمعلّم في بياناته</span>
+            >{{ fem ? 'لا رقمَ للمعلّمة في بياناتها' : 'لا رقمَ للمعلّم في بياناته' }}</span>
           </div>
         </div>
 
@@ -112,7 +114,7 @@ const status = computed(() => (props.row?.report_status ?? 'none') as keyof type
           v-else-if="!groups.length"
           class="am-empty"
         >
-          لا طلابَ نشطين في الحلقة.
+          {{ fem ? 'لا طالباتٍ نشطاتٍ في الحلقة.' : 'لا طلابَ نشطين في الحلقة.' }}
         </p>
         <section
           v-for="g in groups"

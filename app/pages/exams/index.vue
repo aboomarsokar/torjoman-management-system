@@ -11,14 +11,14 @@ import { EXAM_MAX_TOTAL } from '~/constants/exams'
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الاختبارات — ترجمان' })
 
-const { isTeacher, isManager, isExaminer } = usePermissions()
+const { isTeacher, isManager, isExaminer, isWomenAdmin } = usePermissions()
 /** الرصد: المختبِر لحلقاته، والمديران (الإداري والفني) احتياطاً — كما يسمح RLS. */
 const canGrade = computed(() => isManager.value || isExaminer.value)
 
 const subtitle = computed(() => {
   if (isTeacher.value) return 'لكلّ طالبٍ دورتُه المستحقّة بالترتيب — حدّد من تراه جاهزاً وأرسل القائمة للمختبِر.'
   if (canGrade.value) return `الاختبارات الواردة من المعلّمين — افتح كلّ اختبار وارصد نتيجته من ${EXAM_MAX_TOTAL}، وتابع النتائج في نطاقك.`
-  return 'تابع نتائج اختبارات الطلاب في نطاقك.'
+  return isWomenAdmin.value ? 'تابعي نتائج اختبارات الطالبات في قسمك.' : 'تابع نتائج اختبارات الطلاب في نطاقك.'
 })
 
 const resultsRef = ref<{ refresh: () => Promise<void> } | null>(null)

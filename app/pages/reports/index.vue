@@ -33,7 +33,8 @@ const linked = periodFromQuery(route.query.y, route.query.m, today)
 const initial = linked ?? defaultPeriod(today, { previousStatus: null })
 const year = ref(initial.year)
 const month = ref(initial.month)
-const halaqaId = ref<string | null>(null)
+// ?h= من «متابعة الرصد» يفتح حلقةً بعينها مع ?y=&m=
+const halaqaId = ref<string | null>(typeof route.query.h === 'string' ? route.query.h : null)
 let periodSettled = !!linked
 
 // المعلم حلقتُه، والمشرفُ الميدانيّ حلقاتُه وحدَها، وغيرُهما ما تسمح به RLS — النشطةُ وحدَها
@@ -68,7 +69,7 @@ async function settleTeacherPeriod(hid: string) {
 
 watch(halaqat, async (list) => {
   if (!isTeacher.value) {
-    if (!list.some(h => h.id === halaqaId.value)) halaqaId.value = null
+    if (list.length && !list.some(h => h.id === halaqaId.value)) halaqaId.value = null
     return
   }
   const id = list[0]?.id ?? null

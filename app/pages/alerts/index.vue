@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * التنبيهات الإدارية (§4.21) — متابعة أداء المعلّمين.
- * المديران (الإداري والفني) يُصدران تنبيهاً لمعلّم (نوع المخالفة + درجة + وصف)،
- * والمعلّم يستقبله ويؤكّد الاطّلاع. مشرف المشروع والمديرة الإدارية للاطّلاع. النطاق محكوم بـ RLS.
+ * المديران (الإداري والفني) والمديرةُ الإدارية (لمعلّمات قسمها) يُصدرون تنبيهاً لمعلّم (نوع المخالفة + درجة + وصف)،
+ * والمعلّم يستقبله ويؤكّد الاطّلاع. مشرف المشروع للاطّلاع. النطاق محكوم بـ RLS، والمخاطَبةُ بجنس القارئ.
  * والمشرفُ الميدانيّ خارجها (قرار 2026-10-21): لا قائمةَ ولا إصدار، ومن فتح الرابط رأى قفلاً.
  */
 import type { Database } from '~/types/database.types'
@@ -17,9 +17,23 @@ const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { role, isTeacher, isManager, isFieldSupervisor } = usePermissions()
-/** الإصدار كما يسمح RLS (alerts_insert): الإداري، والفنيُّ لمعلّمي البنين (قائمتُه لا ترى المعلّمات) — المشرفُ أُخرج 2026-10-21. */
-const canIssue = computed(() => isManager.value)
+const { role, isTeacher, isManager, isFieldSupervisor, isWomenAdmin } = usePermissions()
+/**
+ * الإصدار كما يسمح RLS (alerts_insert): الإداري، والفنيُّ لمعلّمي البنين (قائمتُه لا ترى المعلّمات)، والمديرةُ الإدارية
+ * لمعلّمات قسمها (2026-10-22 — قائمتُها مُصفّاةٌ بالجنس لأنها ترى ملفّاتِ العاملين كلِّهم). المشرفُ أُخرج 2026-10-21.
+ */
+const canIssue = computed(() => isManager.value || isWomenAdmin.value)
+// المخاطَبةُ بالمؤنّث لمن تقرأ وهي أنثى (المديرةُ والمعلّمة)، والمعلّماتُ بالمؤنّث في قسم البنات (2026-10-22)
+const youF = computed(() => profile.value?.gender === 'female')
+const T = computed(() => ({
+  teacherSubtitle: youF.value ? 'التنبيهات الموجَّهة إليكِ — أكّدي اطّلاعك عليها.' : 'التنبيهات الموجَّهة إليك — أكّد اطّلاعك عليها.',
+  staffSubtitle: isWomenAdmin.value ? 'متابعة أداء المعلّمات — أصدِري تنبيهاً وتابعي الاطّلاع عليه.' : 'متابعة أداء المعلّمين — أصدِر تنبيهاً وتابع الاطّلاع عليه.',
+  emptyTeacher: youF.value ? 'لا تنبيهات موجَّهة إليكِ' : 'لا تنبيهات موجَّهة إليك',
+  emptyStaff: youF.value ? 'أصدِري أول تنبيه عند الحاجة.' : 'أصدِر أول تنبيه عند الحاجة.',
+  teacher: isWomenAdmin.value ? 'المعلّمة' : 'المعلّم',
+  pickTeacher: isWomenAdmin.value ? 'اختاري المعلّمة' : 'اختر المعلّم',
+  missing: isWomenAdmin.value ? 'اختاري المعلّمة واكتبي نوع المخالفة.' : 'اختر المعلّم واكتب نوع المخالفة.'
+}))
 
 const SEVERITY: Record<Severity, { label: string, color: 'neutral' | 'warning' | 'error' }> = {
   note: { label: 'ملاحظة', color: 'neutral' },
@@ -59,7 +73,9 @@ const { data: alerts, refresh, pending } = useLazyAsyncData<AlertRow[]>('alerts-
 const { data: teachers } = useLazyAsyncData('alert-teachers', async () => {
   if (!canIssue.value) return []
   const [{ data: people }, { data: halqat }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').order('full_name'),
+    (isWomenAdmin.value
+      ? supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active').eq('gender', 'female')
+      : supabase.from('profiles').select('id, full_name').eq('role', 'teacher').eq('status', 'active')).order('full_name'),
     supabase.from('halaqat').select('teacher_id, name').eq('status', 'active')
   ])
   const halqaOf = new Map((halqat ?? []).map(h => [h.teacher_id, h.name]))
@@ -87,7 +103,7 @@ function openCreate() {
 
 async function save() {
   if (!form.teacher_id || !form.violation_type.trim()) {
-    toast.add({ title: 'اختر المعلّم واكتب نوع المخالفة.', color: 'error', icon: 'i-lucide-circle-alert' })
+    toast.add({ title: T.value.missing, color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
   saving.value = true
@@ -135,7 +151,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
   <div class="alerts">
     <UiPageHeader
       title="التنبيهات الإدارية"
-      :subtitle="isTeacher ? 'التنبيهات الموجَّهة إليك — أكّد اطّلاعك عليها.' : 'متابعة أداء المعلّمين — أصدِر تنبيهاً وتابع الاطّلاع عليه.'"
+      :subtitle="isTeacher ? T.teacherSubtitle : T.staffSubtitle"
     >
       <template
         v-if="canIssue"
@@ -171,8 +187,8 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
       <UiEmptyState
         v-else-if="!alerts || !alerts.length"
         icon="i-lucide-bell-off"
-        :title="isTeacher ? 'لا تنبيهات موجَّهة إليك' : 'لا تنبيهات بعد'"
-        :description="isTeacher ? 'كل شيء على ما يُرام.' : 'أصدِر أول تنبيه عند الحاجة.'"
+        :title="isTeacher ? T.emptyTeacher : 'لا تنبيهات بعد'"
+        :description="isTeacher ? 'كل شيء على ما يُرام.' : T.emptyStaff"
       />
 
       <template v-else>
@@ -269,13 +285,13 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
       <template #body>
         <div class="form">
           <UFormField
-            label="المعلّم"
+            :label="T.teacher"
             required
           >
             <UiSelect
               v-model="form.teacher_id"
               :items="teacherItems"
-              placeholder="اختر المعلّم"
+              :placeholder="T.pickTeacher"
               size="lg"
             />
           </UFormField>

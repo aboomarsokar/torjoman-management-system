@@ -379,6 +379,7 @@ async function confirmDelete() {
             :examiner="row.examiner?.full_name ?? null"
             :gender="row.gender"
             :students="studentsOf(row)"
+            card
           />
           <div
             v-if="isAdmin"

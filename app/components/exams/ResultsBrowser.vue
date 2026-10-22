@@ -157,6 +157,8 @@ const columns = computed(() => [
 ])
 const verdict = (r: FlatResult) => (r.passed ? 'مجتاز' : 'غير مجتاز')
 const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
+/** التاريخُ يوماً-شهراً-سنة كبقيّة النظام. */
+const fmtDate = (iso: string) => iso.split('-').reverse().join('-')
 </script>
 
 <template>
@@ -260,10 +262,10 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
         </div>
       </template>
       <template #exam_date="{ row }">
-        <span
-          class="muted"
+        <bdi
+          class="muted nowrap"
           dir="ltr"
-        >{{ row.exam_date }}</span>
+        >{{ fmtDate(row.exam_date) }}</bdi>
       </template>
       <template #total_score="{ row }">
         <button
@@ -272,7 +274,11 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
           :aria-label="`تفصيل علامة ${row.student}`"
           @click="openDetail(row)"
         >
-          <strong>{{ row.total_score ?? '—' }}</strong> / {{ MAX_TOTAL }}
+          <!-- سطرٌ واحدٌ باتّجاهٍ ثابت: كانت «76 /» تنكسر فوق «99» في العمود الضيّق (2026-10-22) -->
+          <bdi
+            dir="ltr"
+            class="nowrap"
+          ><strong>{{ row.total_score ?? '—' }}</strong> / {{ MAX_TOTAL }}</bdi>
           <UIcon
             name="i-lucide-chevron-left"
             class="size-4"
@@ -294,7 +300,7 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
             { label: 'الحلقة', value: row.halqa },
             ...(showSupervisorColumn ? [{ label: 'المشرف', value: row.sup }] : []),
             { label: 'النطاق', value: row.detail },
-            { label: 'التاريخ', value: row.exam_date },
+            { label: 'التاريخ', value: fmtDate(row.exam_date) },
             { label: 'العلامة', value: scoreText(row) }
           ]"
         >
@@ -348,8 +354,10 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
 .res-filters :deep(.rf-label) { font-size: 14px; font-weight: 600; color: var(--ink-2); }
 @media (max-width: 560px) { .rf { width: 100%; } .res-filters > * { width: 100%; } }
 .strong { font-weight: 600; color: var(--ink); }
-.score-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; margin: -4px -8px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); font: inherit; cursor: pointer; }
-.score-btn:hover { background: var(--blue-soft); color: var(--blue-ink); }
+.nowrap { white-space: nowrap; }
+/* زرٌّ ظاهرٌ دائماً — لا عند المرور وحده (طلب المستخدم 2026-10-22) */
+.score-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 36px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgb(9 64 100 / 0.06); color: var(--ink); font: inherit; cursor: pointer; transition: background .15s, border-color .15s; }
+.score-btn:hover { background: var(--blue-soft); border-color: var(--blue); color: var(--blue-ink); }
 .score-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .muted { color: var(--ink-2); }
 .sm { font-size: 13px; }

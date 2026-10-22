@@ -5,7 +5,7 @@
  * المسمّيات بجنس الحلقة: طاقم حلقة البنات من جنسها (حارس guard_halaqa_staff).
  * `hideSupervisor`: لصفحة المشرف الميداني — حلقاتُه كلُّها مسندةٌ إليه فلا معنى لتكرار اسمه.
  * `card`: شكلُ بطاقة الجوال (طلب المستخدم 2026-10-22) — سطرٌ لكلٍّ بأيقونته وتسميةٍ بعرضٍ ثابت واسمٍ أوضح،
- *   والعددُ شارةٌ تحتها لا سطرٌ بين الأسماء.
+ *   والعددُ شارةٌ تحتها لا سطرٌ بين الأسماء. و`dense` الشكلُ نفسُه مضغوطاً لخانة «الطاقم» في الجدول (بلا فواصل).
  */
 const props = defineProps<{
   teacher: string | null
@@ -15,6 +15,7 @@ const props = defineProps<{
   gender?: 'male' | 'female' | null
   hideSupervisor?: boolean
   card?: boolean
+  dense?: boolean
 }>()
 
 const f = computed(() => props.gender === 'female')
@@ -25,19 +26,14 @@ const staff = computed(() => [
 ])
 const studentsLabel = computed(() => f.value ? 'الطالبات' : 'الطلاب')
 /** «6 طالبات» / «طالبةٌ واحدة» — للشارة في البطاقة. */
-const studentsText = computed(() => {
-  const n = props.students ?? 0
-  if (n === 0) return f.value ? 'لا طالبات' : 'لا طلاب'
-  if (n === 1) return f.value ? 'طالبةٌ واحدة' : 'طالبٌ واحد'
-  if (n === 2) return f.value ? 'طالبتان' : 'طالبان'
-  return `${n} ${f.value ? (n <= 10 ? 'طالبات' : 'طالبة') : (n <= 10 ? 'طلاب' : 'طالباً')}`
-})
+const studentsText = computed(() => studentsCountText(props.students ?? 0, f.value))
 </script>
 
 <template>
   <div
     v-if="card"
     class="sc"
+    :class="{ dense }"
   >
     <ul class="sc-rows">
       <li
@@ -100,6 +96,12 @@ dd.empty { color: var(--ink-3); }
 .sc-label { width: 64px; flex: none; font-size: 12.5px; color: var(--ink-3); }
 .sc-val { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .sc-val.empty { font-weight: 500; color: var(--ink-3); }
+.sc.dense { gap: 0; }
+.sc.dense .sc-rows li { min-height: 30px; gap: 8px; }
+.sc.dense .sc-rows li + li { border-top: 0; }
+.sc.dense .sc-ico { width: 24px; height: 24px; border-radius: 7px; }
+.sc.dense .sc-label { width: 56px; font-size: 12px; }
+.sc.dense .sc-val { font-size: 14px; }
 .sc-count { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sc-count.empty { background: var(--surface-2); color: var(--ink-3); }
 </style>

@@ -26,10 +26,11 @@ const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
 /** الإنشاءُ والتعديلُ والحذفُ للمدير الإداري وحده — كما يسمح RLS (والفنيُّ يطّلع — قرار 2026-10-22). */
-const { isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer, isTechnical } = usePermissions()
+const { isAdmin, isReadOnly, isFieldSupervisor, isWomenAdmin, isExaminer, isTechnical } = usePermissions()
 // المشرفُ والمختبِرُ يريان حلقاتِهما المسندة وحدها وهي من جنسهما، والمديرةُ حلقاتِ البنات وحدها (RLS) —
 // فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
 // والمديرُ الفنيّ لقسم البنين وحده (قرار 2026-10-22)
+const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
 const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value && !isTechnical.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
@@ -243,8 +244,13 @@ async function confirmDelete() {
     </div>
 
     <ClientOnly>
+      <!-- من يرى القسمين ولم يُصفِّ بالجنس: مفصولةً بين البنين والبنات (2026-10-22)؛ وإلا خلاصةُ القسم -->
+      <DashboardGenderSplit
+        v-if="!pending && filtered.length && seesBoth && genderF === 'all'"
+        :items="halqatSplitStats(filtered)"
+      />
       <HalqatSummary
-        v-if="!pending && filtered.length"
+        v-else-if="!pending && filtered.length"
         :rows="filtered"
       />
       <UiSkeletonTable
@@ -297,13 +303,19 @@ async function confirmDelete() {
             :hide-supervisor="isFieldSupervisor"
             :examiner="row.examiner?.full_name ?? null"
             :gender="row.gender"
+            card
+            dense
           />
         </template>
+        <!-- العددُ شارةٌ بتمييزه وجنس الحلقة («6 طالبات») كبطاقة الجوال (2026-10-22) -->
         <template #students="{ row }">
           <span
-            class="num count"
+            class="stud"
             :class="{ zero: !studentsOf(row) }"
-          >{{ studentsOf(row) }}</span>
+          ><UIcon
+            name="i-lucide-users"
+            class="size-3.5"
+          />{{ studentsCountText(studentsOf(row), row.gender === 'female') }}</span>
         </template>
         <template #status="{ row }">
           <UBadge
@@ -590,8 +602,8 @@ async function confirmDelete() {
 .idx { color: var(--ink-3); font-size: 13px; }
 .person { color: var(--ink-2); }
 .person.orphan { color: var(--ink-3); }
-.count { font-weight: 600; color: var(--ink); }
-.count.zero { color: var(--ink-3); font-weight: 500; }
+.stud { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.stud.zero { background: var(--surface-2); color: var(--ink-3); }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
 .halqat :deep(.col-narrow) { display: none; }

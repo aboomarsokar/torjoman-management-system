@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort, type RecordingRow } from './recordingStatus'
 
 const row = (name: string, o: Partial<RecordingRow> = {}): RecordingRow => ({
-  halaqa_id: name, halaqa_name: name, teacher_name: null, teacher_phone: null, teacher_whatsapp: null,
+  halaqa_id: name, halaqa_name: name, gender: 'male', teacher_name: null, teacher_phone: null, teacher_whatsapp: null,
   today: '2026-10-22', recorded_today: true, expected_days: 5, recorded_days: 5, missed_days: [], recent: [],
   report_year: 2026, report_month: 9, report_status: 'submitted', report_deadline: '2026-10-03', ...o
 })

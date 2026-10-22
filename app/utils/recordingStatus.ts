@@ -7,6 +7,8 @@
 export interface RecordingRow {
   halaqa_id: string
   halaqa_name: string
+  /** جنسُ الحلقة — «المعلّم/المعلّمة» به. */
+  gender: string
   teacher_name: string | null
   teacher_phone: string | null
   teacher_whatsapp: string | null

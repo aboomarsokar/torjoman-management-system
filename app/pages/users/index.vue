@@ -23,6 +23,8 @@ const toast = useToast()
 const { isAdmin, isReadOnly, isTechnical, isWomenAdmin: fem } = usePermissions()
 // والمديرةُ الإدارية اطّلاعاً على عاملات قسمها، ومنها «ادخلي بحسابها» (طلب المستخدم 2026-10-22)
 const canView = computed(() => isAdmin.value || isReadOnly.value || isTechnical.value || fem.value)
+/** يرى القسمين: المدير الإداري ومشرف المشروع — فتُفصل أرقامُهما بين البنين والبنات. */
+const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
 useSeoMeta({ title: () => fem.value ? 'عاملات القسم — ترجمان' : 'إدارة المستخدمين — ترجمان' })
 
 const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'neutral' | 'error'> = {
@@ -105,12 +107,26 @@ const { createStaff, resetPassword } = useAccountAdmin()
 const occupiedRoles = computed(() => new Set((users.value ?? [])
   .filter(u => u.status === 'active' && MANAGER_ROLES.includes(u.role))
   .map(u => u.role)))
-// المسمّى بجنس الحساب المختار؛ والمديرة الإدارية تُميَّز بقسمها كي لا تلتبس بالمدير الإداري الأنثى
-const roleItems = computed(() => STAFF_ROLES.map((r) => {
-  const label = r === 'women_admin' ? `${roleLabel(r, form.gender || null)} — قسم البنات` : roleLabel(r, form.gender || null)
+// المسمّى بجنس الحساب المختار؛ والمديرة الإدارية تُميَّز بقسمها كي لا تلتبس بالمدير الإداري الأنثى.
+// والمختبِرةُ والمشرفةُ الميدانية خياران مستقلّان (طلب المستخدم 2026-10-22): الدورُ نفسُه تماماً، والجنسُ أنثى مقفلاً —
+// و«مختبِر» و«مشرف ميداني» ذكرٌ مقفلاً. القيمةُ «الدور:الجنس» لهذين وحدهما.
+const SPLIT_ROLES: readonly Role[] = ['field_supervisor', 'examiner']
+const roleItems = computed(() => STAFF_ROLES.flatMap((r) => {
   const occupied = occupiedRoles.value.has(r)
-  return { label: occupied ? `${label} — له شاغلٌ نشط` : label, value: r, disabled: occupied }
+  const item = (label: string, value: string) => ({ label: occupied ? `${label} — له شاغلٌ نشط` : label, value, disabled: occupied })
+  if (SPLIT_ROLES.includes(r)) return [item(roleLabel(r, 'male'), `${r}:male`), item(roleLabel(r, 'female'), `${r}:female`)]
+  return [item(r === 'women_admin' ? `${roleLabel(r, form.gender || null)} — قسم البنات` : roleLabel(r, form.gender || null), r)]
 }))
+const roleChoice = computed({
+  get: () => SPLIT_ROLES.includes(form.role) ? `${form.role}:${form.gender === 'female' ? 'female' : 'male'}` : form.role,
+  set: (v: string) => {
+    const [r, g] = v.split(':') as [Role, Gender | undefined]
+    form.role = r
+    if (g) form.gender = g
+  }
+})
+/** الجنسُ مقفلٌ حين يحدّده المسمّى: المديرةُ الإدارية، والمختبِر/ة والمشرف/ة الميداني/ة. */
+const genderLocked = computed(() => form.role === 'women_admin' || SPLIT_ROLES.includes(form.role))
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
 // دور المديرة الإدارية نسائيّ حصراً (قسم البنات)
 watch(() => form.role, (r) => {
@@ -230,8 +246,13 @@ async function confirmReset() {
       </div>
 
       <ClientOnly>
+        <!-- من يرى القسمين (الإداري ومشرف المشروع): كلُّ فئةٍ بقسميها متجاورَين؛ وغيرُهما قسمُه وحده (2026-10-22) -->
+        <DashboardGenderSplit
+          v-if="!pending && (users ?? []).length && seesBoth"
+          :items="userSplitStats(users ?? [])"
+        />
         <UiStatStrip
-          v-if="!pending && (users ?? []).length"
+          v-else-if="!pending && (users ?? []).length"
           :items="userStats(users ?? [], fem)"
           label="أرقام الحسابات"
         />
@@ -436,7 +457,7 @@ async function confirmReset() {
               class="flex-1"
             >
               <USelect
-                v-model="form.role"
+                v-model="roleChoice"
                 :items="roleItems"
                 size="lg"
                 class="w-full"
@@ -466,7 +487,7 @@ async function confirmReset() {
             <USelect
               v-model="form.gender"
               :items="genderItems"
-              :disabled="form.role === 'women_admin'"
+              :disabled="genderLocked"
               placeholder="ذكر أم أنثى؟"
               size="lg"
               class="w-full"

@@ -2118,7 +2118,7 @@ export type Database = {
         }[]
       }
       halaqat_recording_status: {
-        Args: never
+        Args: { p_month?: number; p_year?: number }
         Returns: {
           expected_days: number
           gender: string

@@ -69,6 +69,8 @@ const filteredUsers = computed(() => (users.value ?? []).filter(u =>
   && matchesSearch(query.value, u.full_name, u.employee_number)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filteredUsers, 12)
+/** الرقمُ المتسلسل عبر الصفحات لا داخلَ الصفحة وحدها (طلب المستخدم 2026-10-22). */
+const seq = (index: number) => (page.value - 1) * pageSize + index + 1
 watch([filter, query], resetPage)
 const columns = [
   { key: 'num', label: '#' },
@@ -240,7 +242,7 @@ async function confirmReset() {
           row-key="id"
         >
           <template #num="{ index }">
-            <span class="muted">{{ index + 1 }}</span>
+            <span class="muted">{{ seq(index) }}</span>
           </template>
           <template #user="{ row }">
             <div class="user-cell">
@@ -319,7 +321,7 @@ async function confirmReset() {
               />
             </div>
           </template>
-          <template #card="{ row }">
+          <template #card="{ row, index }">
             <UiCardRow
               :title="row.full_name"
               :subtitle="row.employee_number"
@@ -328,12 +330,12 @@ async function confirmReset() {
               :fields="[{ label: 'عيّنه', value: row.assigner?.full_name, muted: true }]"
             >
               <template #lead>
-                <span class="av">
+                <span class="lead"><span class="seq">{{ seq(index) }}</span><span class="av">
                   <ProfileAvatar
                     :name="row.full_name"
                     :photo-url="photoUrlFor(displayPhotoPath(row))"
                   />
-                </span>
+                </span></span>
               </template>
               <template #badge>
                 <UBadge
@@ -519,6 +521,8 @@ async function confirmReset() {
 }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }
+.lead { display: inline-flex; align-items: center; gap: 10px; }
+.seq { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
 .u-name { font-weight: 600; color: var(--ink); }
 .emp-no { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }

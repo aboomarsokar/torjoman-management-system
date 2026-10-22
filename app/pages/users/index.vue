@@ -67,6 +67,8 @@ const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
 // المختبِرةُ والمشرفةُ الميدانية خياران مستقلّان (طلب المستخدم 2026-10-22): الدورُ نفسُه تماماً بجنسٍ مختلف —
 // في نموذج الإنشاء وفي فلتر القائمة. القيمةُ «الدور:الجنس» لهذين وحدهما.
 const SPLIT_ROLES: readonly Role[] = ['field_supervisor', 'examiner']
+// والفلترُ يفصل المعلّمين عن المعلّمات أيضاً (طلب المستخدم 2026-10-22) — ونموذجُ الإنشاء يُبقي «معلم» واحداً بجنسٍ يُختار
+const FILTER_SPLIT_ROLES: readonly Role[] = [...SPLIT_ROLES, 'teacher']
 
 /** قيمةُ الفلتر: «all» أو دور، أو «الدور:الجنس» للدورين المفصولَين. */
 const filter = ref<string>('all')
@@ -83,7 +85,7 @@ function countFor(key: string) {
 // وعند المديرة الإدارية القائمةُ كلُّها إناثٌ فلا فصل
 const roleFilterItems = computed(() => ([
   { value: 'all', label: 'كل الأدوار' },
-  ...visibleRoles.value.flatMap(r => !fem.value && SPLIT_ROLES.includes(r)
+  ...visibleRoles.value.flatMap(r => !fem.value && FILTER_SPLIT_ROLES.includes(r)
     ? [{ value: `${r}:male`, label: roleLabel(r, 'male') }, { value: `${r}:female`, label: roleLabel(r, 'female') }]
     : [{ value: r, label: roleLabel(r, fem.value ? 'female' : null) }])
 ]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
@@ -393,11 +395,18 @@ async function confirmReset() {
                   variant="soft"
                 />
               </template>
-              <template
-                v-if="isAdmin || isTechnical"
-                #actions
-              >
+              <!-- «البيانات» ظاهرٌ لكلّ من يرى القائمة: البطاقةُ تُضغط لكنّ ذلك لا يُرى (طلب المستخدم 2026-10-22) -->
+              <template #actions>
+                <UButton
+                  :to="`/profile/${row.id}`"
+                  label="البيانات"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-id-card"
+                  :ui="{ base: 'rounded-[11px]' }"
+                />
                 <ImpersonationStartButton
+                  v-if="isAdmin || isTechnical"
                   :profile-id="row.id"
                   :name="row.full_name"
                   :role="row.role"

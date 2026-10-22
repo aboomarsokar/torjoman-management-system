@@ -89,8 +89,7 @@ const pct = (part: number, total: number) => total ? Math.round((100 * part) / t
 .gs-side.f b { color: var(--green-ink); }
 
 .gs-bar { display: flex; gap: 3px; height: 8px; }
-.gs-bar i { display: block; height: 100%; border-radius: 999px; min-width: 6px; transition: width .3s ease-out; }
+.gs-bar i { display: block; height: 100%; border-radius: 999px; min-width: 6px; }
 .gs-bar i.m { background: var(--navy); }
 .gs-bar i.f { background: var(--green); }
-@media (prefers-reduced-motion: reduce) { .gs-bar i { transition: none; } }
 </style>

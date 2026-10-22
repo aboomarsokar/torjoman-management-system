@@ -179,7 +179,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                 color="neutral"
                 variant="outline"
                 size="sm"
-                :ui="{ base: 'rounded-[10px] min-h-9' }"
+                :ui="{ base: 'rounded-[10px] min-h-9', leadingIcon: 'size-3.5' }"
               />
               <UButton
                 :to="`/reports?h=${r.halaqa_id}&y=${r.report_year}&m=${r.report_month}`"
@@ -188,7 +188,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                 color="neutral"
                 variant="outline"
                 size="sm"
-                :ui="{ base: 'rounded-[10px] min-h-9' }"
+                :ui="{ base: 'rounded-[10px] min-h-9', leadingIcon: 'size-3.5' }"
               />
               <UButton
                 v-if="whatsappLink(r.teacher_whatsapp || r.teacher_phone)"
@@ -323,7 +323,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
               variant="outline"
               size="sm"
               class="rf-d-go"
-              :ui="{ base: 'rounded-[10px] min-h-9' }"
+              :ui="{ base: 'rounded-[10px] min-h-9', leadingIcon: 'size-3.5' }"
             />
           </div>
         </li>

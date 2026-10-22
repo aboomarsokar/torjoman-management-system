@@ -89,11 +89,12 @@ export function userStats(rows: { status: string, role: string }[]): StatItem[] 
 }
 
 /** المشرفون: عددُهم، والحلقاتُ المسندة، ومن بلا حلقة، ومتوسّطُ «إنجاز الزيارات» لشهر اليوم (لمن له حلقاتٌ نشطة). */
-export function supervisorStats(rows: { halqat: number, commitment: number | null }[]): StatItem[] {
+/** `female`: قسمُ البنات (المديرة الإدارية) — «مشرفةً ميدانيّة» (2026-10-22). */
+export function supervisorStats(rows: { halqat: number, commitment: number | null }[], female = false): StatItem[] {
   const rated = rows.map(r => r.commitment).filter((c): c is number => c !== null)
   const idle = rows.filter(r => r.halqat === 0).length
   return [
-    { key: 'sups', icon: 'i-lucide-users-round', value: rows.length, label: 'مشرفاً ميدانيّاً' },
+    { key: 'sups', icon: 'i-lucide-users-round', value: rows.length, label: female ? 'مشرفةً ميدانيّة' : 'مشرفاً ميدانيّاً' },
     { key: 'halqat', icon: 'i-lucide-book-open', tone: 'green', value: rows.reduce((s, r) => s + r.halqat, 0), label: 'حلقةً مسندة' },
     { key: 'idle', icon: 'i-lucide-user-x', tone: idle ? 'err' : 'neutral', value: idle, label: 'بلا حلقة' },
     { key: 'commit', icon: 'i-lucide-gauge', value: rated.length ? `${Math.round(rated.reduce((a, b) => a + b, 0) / rated.length)}٪` : '—', label: 'متوسّطُ إنجاز الزيارات هذا الشهر' }

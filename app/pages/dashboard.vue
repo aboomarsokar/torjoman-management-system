@@ -3,7 +3,7 @@
  * لوحة التحكم (§4.3) داخل الهيكل العام.
  * لوحة المدير الإداري: بطاقات إحصائية (أعداد حقيقية) + بطاقات إعدادات مربوطة بـ app_settings
  * (ومشرف المشروع يراها بلا تعديل). لوحة المدير الفني: المشرفون الميدانيون والتقارير المُرسلة للاطّلاع (يعتمدها المشرفون الميدانيون، لا هو).
- * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته.
+ * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته. والمديرة الإدارية لوحةَ الفنيّ نفسَها لقسم البنات وبالمؤنّث (2026-10-22).
  */
 import type { Database } from '~/types/database.types'
 import { formatVisitMoment } from '~/utils/visitStatus'
@@ -16,15 +16,19 @@ const { role, fullName, profile, pending: profilePending } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { isAdmin, isReadOnly, isTeacher, isExaminer, isFieldSupervisor: isSupervisor, isTechnical } = usePermissions()
+const { isAdmin, isReadOnly, isTeacher, isExaminer, isFieldSupervisor: isSupervisor, isTechnical, isWomenAdmin } = usePermissions()
+/** لوحةُ القسم: المدير الفنيّ (البنين) والمديرةُ الإدارية (البنات) — النطاقُ من RLS، والتسمياتُ بمؤنّثها لها. */
+const isSectionHead = computed(() => isTechnical.value || isWomenAdmin.value)
+const T = computed(() => isWomenAdmin.value
+  ? { sups: 'المشرفات الميدانيات', supsBtn: 'المشرفات', noSups: 'لا مشرفاتٍ في قسمك', reports: 'تقارير مُرسلة — تعتمدها المشرفات الميدانيات' }
+  : { sups: 'المشرفون الميدانيون', supsBtn: 'المشرفون', noSups: 'لا مشرفين في نطاقك', reports: 'تقارير مُرسلة — يعتمدها المشرفون الميدانيون' })
 /** لوحة النظرة العامة والإعدادات: المدير الإداري، ومشرف المشروع عرضاً. */
 const showOverview = computed(() => isAdmin.value || isReadOnly.value)
 
 // للمختبِر لوحتُه منذ 2026-10-22 (`DashboardExaminerHome`)؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)؛
-// والمديرة الإدارية لا لوحة لها في قائمتها — تبدأ من حلقات قسمها
+// والمديرةُ الإدارية لها لوحةُ قسمها منذ 2026-10-22 (كانت تُحوَّل إلى الحلقات)
 watch(role, (r) => {
   if (r === 'student') navigateTo('/me', { replace: true })
-  if (r === 'women_admin') navigateTo('/halqat', { replace: true })
 }, { immediate: true })
 
 // ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) ──
@@ -154,9 +158,10 @@ const qReportsCount = ref(0)
 
 async function loadTechnicalData() {
   try {
-    const { data: sups } = await supabase
-      .from('profiles').select('id, full_name')
-      .eq('role', 'field_supervisor').eq('status', 'active').order('full_name')
+    // المديرةُ ترى ملفّاتِ العاملين كلِّهم (لا تحجبها RLS)، فمشرفاتُ قسمها بالجنس صراحةً؛ والفنيُّ تحجب عنه RLS العاملات
+    let supsQ = supabase.from('profiles').select('id, full_name').eq('role', 'field_supervisor').eq('status', 'active')
+    if (isWomenAdmin.value) supsQ = supsQ.eq('gender', 'female')
+    const { data: sups } = await supsQ.order('full_name')
 
     const { data: halqat } = await supabase.from('halaqat').select('id, supervisor_id')
     const halqaCount: Record<string, number> = {}
@@ -183,7 +188,7 @@ async function loadTechnicalData() {
   }
 }
 
-watch(isTechnical, (v) => {
+watch(isSectionHead, (v) => {
   if (v) loadTechnicalData()
 }, { immediate: true })
 
@@ -395,14 +400,14 @@ const settingCards = [
         </ClientOnly>
       </template>
 
-      <template v-else-if="isTechnical">
+      <template v-else-if="isSectionHead">
         <ClientOnly>
           <div class="stats stats-4">
             <UiStatCard
               icon="i-lucide-shield-check"
               tone="blue"
               :value="qSupervisors.length"
-              label="المشرفون الميدانيون"
+              :label="T.sups"
               stacked
             />
             <UiStatCard
@@ -436,10 +441,10 @@ const settingCards = [
             <div class="card sec">
               <div class="sec-head">
                 <!-- العددُ بارزاً والرابطُ زرٌّ ظاهر (طلب المستخدم 2026-10-22) -->
-                <h3>المشرفون الميدانيون <span class="count">{{ qSupervisors.length }}</span></h3>
+                <h3>{{ T.sups }} <span class="count">{{ qSupervisors.length }}</span></h3>
                 <UButton
                   to="/supervisors"
-                  label="المشرفون"
+                  :label="T.supsBtn"
                   color="neutral"
                   variant="outline"
                   trailing-icon="i-lucide-chevron-left"
@@ -449,7 +454,7 @@ const settingCards = [
               <UiEmptyState
                 v-if="!qSupervisors.length"
                 icon="i-lucide-shield"
-                title="لا مشرفين في نطاقك"
+                :title="T.noSups"
               />
               <ul
                 v-else
@@ -473,7 +478,7 @@ const settingCards = [
             <!-- تقارير مُرسلة للاطّلاع -->
             <div class="card sec">
               <div class="sec-head">
-                <h3>تقارير مُرسلة — يعتمدها المشرفون الميدانيون <span class="count">{{ qReportsCount }}</span></h3>
+                <h3>{{ T.reports }} <span class="count">{{ qReportsCount }}</span></h3>
                 <UButton
                   to="/reports"
                   label="التقارير"

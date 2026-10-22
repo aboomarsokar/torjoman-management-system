@@ -299,6 +299,7 @@ async function confirmReset() {
                 :name="row.full_name"
                 :role="row.role"
                 :status="row.status"
+                :gender="row.gender"
                 size="sm"
               />
               <UButton
@@ -362,6 +363,7 @@ async function confirmReset() {
                   :name="row.full_name"
                   :role="row.role"
                   :status="row.status"
+                  :gender="row.gender"
                 />
                 <UButton
                   v-if="isAdmin"

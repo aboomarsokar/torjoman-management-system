@@ -18,7 +18,7 @@ export function assertMayImpersonate(
 ): Decision {
   if (actor.isImpersonating) return { ok: false, statusCode: 403, message: NESTED_IMPERSONATION_MESSAGE }
   if (!isImpersonatorRole(actor.role)) {
-    return { ok: false, statusCode: 403, message: 'الدخولُ بالنيابة للمدير الإداري والمدير الفني وحدهما.' }
+    return { ok: false, statusCode: 403, message: 'الدخولُ بالنيابة للمدير الإداري والمدير الفني والمديرة الإدارية وحدهم.' }
   }
   if (actor.id === target.id) return { ok: false, statusCode: 400, message: 'أنت في حسابك أصلاً.' }
   if (target.status !== 'active') return { ok: false, statusCode: 400, message: 'هذا الحساب غير مُفعَّل — لا يُناب عنه.' }

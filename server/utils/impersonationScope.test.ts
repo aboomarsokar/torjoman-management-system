@@ -22,10 +22,12 @@ describe('assertMayImpersonate', () => {
       expect(ok(assertMayImpersonate(actor('admin_manager'), target(r))), r).toBe(true)
     }
   })
-  it('المدير الفني عن كلّ موظفٍ نشط إلا المدير الإداري', () => {
+  it('المدير الفني عن الميدان وحده، لا عن الإدارة (قرار 2026-10-22)', () => {
     expect(ok(assertMayImpersonate(actor('technical_manager'), target('teacher')))).toBe(true)
-    expect(ok(assertMayImpersonate(actor('technical_manager'), target('project_supervisor')))).toBe(true)
-    expect(assertMayImpersonate(actor('technical_manager'), target('admin_manager'))).toMatchObject({ ok: false, statusCode: 403 })
+    expect(ok(assertMayImpersonate(actor('technical_manager'), target('field_supervisor')))).toBe(true)
+    for (const r of ['project_supervisor', 'admin_manager', 'women_admin'] as const) {
+      expect(assertMayImpersonate(actor('technical_manager'), target(r)), r).toMatchObject({ ok: false, statusCode: 403 })
+    }
   })
   it('لا أحد عن المدير الإداري ولا عن طالب', () => {
     expect(assertMayImpersonate(actor('admin_manager'), target('admin_manager'))).toMatchObject({ ok: false, statusCode: 403 })

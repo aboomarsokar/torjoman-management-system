@@ -189,6 +189,10 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
           class="side-logo"
         >
       </div>
+      <!-- «ثبّت التطبيق» أعلى القائمة وفي الترويسة (طلب المستخدم 2026-10-22) — يختفي في التطبيق المثبَّت -->
+      <div class="side-install">
+        <PwaInstallButton variant="side" />
+      </div>
 
       <nav class="side-nav">
         <ClientOnly>
@@ -263,8 +267,6 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
       </nav>
 
       <div class="side-foot">
-        <!-- ثابتٌ ما دام التطبيقُ غيرَ مثبَّت (طلب المستخدم 2026-10-22) — يختفي في التطبيق المثبَّت -->
-        <PwaInstallButton variant="side" />
         <div class="user-card">
           <div class="user-av">
             <ProfileAvatar
@@ -316,6 +318,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
             </h1>
           </div>
           <div class="top-end">
+            <PwaInstallButton variant="top" />
             <!-- الوضعُ بجانب الجرس (كان في أسفل القائمة الجانبية — 2026-10-22) -->
             <UiThemeToggle />
             <NotificationsBell />
@@ -357,6 +360,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 /* القائمة الجانبية: عرضٌ يلين بين 236 و274، ورأسٌ وذيلٌ ثابتان، والقائمة وحدها تُمرَّر.
    عناصر القائمة لا تنكمش (flex-shrink: 0) — كانت تنضغط فوق بعضها في الشاشات القصيرة بدل أن تُمرَّر */
 .side { width: clamp(236px, 20vw, 274px); flex-shrink: 0; background: var(--side-bg); display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: sticky; top: 0; }
+.side-install { flex-shrink: 0; padding: 12px 12px 4px; }
+.side-install:empty { display: none; }
 .side-head { flex-shrink: 0; padding: 22px 22px 18px; display: flex; align-items: center; border-bottom: 1px solid var(--side-line); }
 .side-logo { height: 52px; width: auto; filter: brightness(0) invert(1); }
 .side-nav { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 2px; scrollbar-width: thin; scrollbar-color: var(--side-line) transparent; }

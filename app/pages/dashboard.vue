@@ -31,16 +31,26 @@ watch(role, (r) => {
   if (r === 'student') navigateTo('/me', { replace: true })
 }, { immediate: true })
 
-// ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) ──
-const counts = reactive({ students: 0, teachers: 0, supervisors: 0, examiners: 0, halqat: 0 })
+// ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) — قسمُ البنين وقسمُ البنات منفصلَين (طلب المستخدم 2026-10-22) ──
+// النشطون وحدهم: كان «إجمالي الطلاب» يعدّ المنقطعين والمتخرّجين، و«الحلقات النشطة» يعدّ الموقوفة
+type Sex = Database['public']['Enums']['gender_type']
+type SectionCounts = { students: number, teachers: number, supervisors: number, examiners: number, halqat: number }
+const emptyCounts = (): SectionCounts => ({ students: 0, teachers: 0, supervisors: 0, examiners: 0, halqat: 0 })
+const counts = reactive<Record<Sex, SectionCounts>>({ male: emptyCounts(), female: emptyCounts() })
 
-async function countOf(table: 'students' | 'halaqat') {
-  const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
+async function countActive(table: 'students' | 'halaqat', g: Sex) {
+  const { count } = await supabase.from(table).select('*', { count: 'exact', head: true }).eq('gender', g).eq('status', 'active')
   return count ?? 0
 }
-async function countRole(r: Database['public']['Enums']['user_role']) {
-  const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', r)
+async function countRole(r: Database['public']['Enums']['user_role'], g: Sex) {
+  const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', r).eq('gender', g).eq('status', 'active')
   return count ?? 0
+}
+async function loadSection(g: Sex): Promise<SectionCounts> {
+  const [students, teachers, supervisors, examiners, halqat] = await Promise.all([
+    countActive('students', g), countRole('teacher', g), countRole('field_supervisor', g), countRole('examiner', g), countActive('halaqat', g)
+  ])
+  return { students, teachers, supervisors, examiners, halqat }
 }
 
 // ── إعدادات المدير (app_settings) ──
@@ -82,14 +92,9 @@ async function saveSetting(key: SettingKey, unit: string) {
 }
 
 async function loadManagerData() {
-  const [st, te, su, ex, ha] = await Promise.all([
-    countOf('students'), countRole('teacher'), countRole('field_supervisor'), countRole('examiner'), countOf('halaqat')
-  ])
-  counts.students = st
-  counts.teachers = te
-  counts.supervisors = su
-  counts.examiners = ex
-  counts.halqat = ha
+  const [m, f] = await Promise.all([loadSection('male'), loadSection('female')])
+  counts.male = m
+  counts.female = f
   await loadSettings()
 }
 
@@ -192,14 +197,18 @@ watch(isSectionHead, (v) => {
   if (v) loadTechnicalData()
 }, { immediate: true })
 
-type Tone = 'blue' | 'green' | 'neutral' | 'err'
-const statCards = computed(() => [
-  { icon: 'i-lucide-graduation-cap', tone: 'blue' as Tone, value: counts.students, label: 'إجمالي الطلاب' },
-  { icon: 'i-lucide-users', tone: 'green' as Tone, value: counts.teachers, label: 'المعلمون' },
-  { icon: 'i-lucide-shield-check', tone: 'blue' as Tone, value: counts.supervisors, label: 'المشرفون الميدانيون' },
-  { icon: 'i-lucide-award', tone: 'green' as Tone, value: counts.examiners, label: 'المختبِرون' },
-  { icon: 'i-lucide-book-open', tone: 'neutral' as Tone, value: counts.halqat, label: 'الحلقات النشطة' }
-])
+// بطاقةٌ لكلّ فئةٍ بقسميها متجاورَين (`DashboardGenderSplit`)
+const splitItems = computed(() => {
+  const m = counts.male
+  const f = counts.female
+  return [
+    { key: 'students', icon: 'i-lucide-graduation-cap', label: 'الطلاب والطالبات', male: m.students, female: f.students, maleLabel: 'طلاب', femaleLabel: 'طالبات' },
+    { key: 'teachers', icon: 'i-lucide-users', label: 'المعلّمون والمعلّمات', male: m.teachers, female: f.teachers, maleLabel: 'معلّمون', femaleLabel: 'معلّمات' },
+    { key: 'sups', icon: 'i-lucide-shield-check', label: 'المشرفون والمشرفات', male: m.supervisors, female: f.supervisors, maleLabel: 'مشرفون', femaleLabel: 'مشرفات' },
+    { key: 'examiners', icon: 'i-lucide-award', label: 'المختبِرون والمختبِرات', male: m.examiners, female: f.examiners, maleLabel: 'مختبِرون', femaleLabel: 'مختبِرات' },
+    { key: 'halqat', icon: 'i-lucide-book-open', label: 'الحلقات النشطة', male: m.halqat, female: f.halqat, maleLabel: 'بنين', femaleLabel: 'بنات' }
+  ]
+})
 
 const settingCards = [
   { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'المطلوب الشهريّ (صفحات)', unit: 'صفحة', desc: 'ما يُطالَب به كلُّ طالبٍ حفظاً في الشهر، ويُقسَّط بحضوره؛ عليه يُحكم بـ«أنجز» أو «مقصّر».' },
@@ -226,18 +235,8 @@ const settingCards = [
         </div>
       </template>
       <template v-else-if="showOverview">
-        <!-- بطاقات إحصائية -->
-        <div class="stats">
-          <UiStatCard
-            v-for="c in statCards"
-            :key="c.label"
-            :icon="c.icon"
-            :tone="c.tone"
-            :value="c.value"
-            :label="c.label"
-            stacked
-          />
-        </div>
+        <!-- بطاقات إحصائية: كلُّ فئةٍ بقسميها البنين والبنات متجاورَين (طلب المستخدم 2026-10-22) -->
+        <DashboardGenderSplit :items="splitItems" />
 
         <!-- بطاقات الإعدادات -->
         <div class="settings">

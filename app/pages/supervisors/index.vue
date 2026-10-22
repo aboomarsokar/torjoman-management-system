@@ -12,15 +12,17 @@ definePageMeta({ layout: 'dashboard' })
 
 const supabase = useSupabaseClient<Database>()
 // role: ما دام فارغاً لا قفل ولا محتوى (كان القفل يومض للمدير عند التحميل الكامل)
-const { role, isManager, isReadOnly, isWomenAdmin: fem } = usePermissions()
+const { role, isAdmin, isManager, isReadOnly, isWomenAdmin: fem } = usePermissions()
 const canView = computed(() => isManager.value || isReadOnly.value || fem.value)
+/** يرى القسمين (الإداري ومشرف المشروع): أرقامُهما مفصولةٌ بين البنين والبنات (2026-10-22). */
+const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
 useSeoMeta({ title: () => fem.value ? 'المشرفات — ترجمان' : 'المشرفون — ترجمان' })
 
-type Row = { id: string, name: string, employeeNumber: string | null, halqat: number, commitment: number | null }
+type Row = { id: string, name: string, employeeNumber: string | null, gender: string | null, halqat: number, commitment: number | null }
 
 const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async () => {
   if (!canView.value) return []
-  let supsQ = supabase.from('profiles').select('id, full_name, employee_number')
+  let supsQ = supabase.from('profiles').select('id, full_name, employee_number, gender')
     .eq('role', 'field_supervisor').eq('status', 'active')
   if (fem.value) supsQ = supsQ.eq('gender', 'female')
   const { data: sups } = await supsQ.order('full_name')
@@ -43,7 +45,7 @@ const { data: rows, pending } = useLazyAsyncData<Row[]>('supervisors-dir', async
   const bySup: Record<string, { status: string, scheduled_at: string }[]> = {}
   for (const v of visits ?? []) if (gazaDayOf(v.scheduled_at).slice(0, 7) === month) (bySup[v.supervisor_id] ??= []).push(v)
   return (sups ?? []).map(s => ({
-    id: s.id, name: s.full_name, employeeNumber: s.employee_number,
+    id: s.id, name: s.full_name, employeeNumber: s.employee_number, gender: s.gender,
     halqat: halqaCount[s.id] ?? 0,
     commitment: visitCompletion(bySup[s.id] ?? [], activeCount[s.id] ?? 0).pct
   }))
@@ -81,6 +83,10 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
         v-else-if="!rows || !rows.length"
         icon="i-lucide-users-round"
         :title="fem ? 'لا مشرفاتٍ في قسمك' : 'لا مشرفين في نطاقك'"
+      />
+      <DashboardGenderSplit
+        v-else-if="seesBoth"
+        :items="supervisorSplitStats(rows)"
       />
       <UiStatStrip
         v-else

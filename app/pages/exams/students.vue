@@ -38,21 +38,38 @@ const halaqaItems = computed(() => (halqat.value ?? []).map(h => ({ label: h.nam
 const current = computed(() => (halqat.value ?? []).find(h => h.id === halaqaId.value) ?? null)
 
 type Row = { id: string, full_name: string, exams: number, passed: number, last: { score: number | null, passed: boolean | null, date: string } | null }
-const { data: rows, pending: sPending } = useLazyAsyncData<Row[]>('exam-students-rows', async () => {
-  if (!halaqaId.value) return []
+type Result = { student_id: string, passed: boolean | null, total_score: number | null, exam_date: string }
+const { data: raw, pending: sPending } = useLazyAsyncData('exam-students-rows', async () => {
+  if (!halaqaId.value) return { studs: [] as { id: string, full_name: string }[], results: [] as Result[] }
   const { data: studs, error } = await supabase.from('students').select('id, full_name')
     .eq('halaqa_id', halaqaId.value).eq('status', 'active').order('full_name')
-  if (error) {
-    handle(error)
-    return []
-  }
+  if (error) handle(error)
   const ids = (studs ?? []).map(s => s.id)
   const { data: results, error: rErr } = ids.length
     ? await supabase.from('exam_results').select('student_id, passed, total_score, exam_date').in('student_id', ids).order('exam_date', { ascending: false })
-    : { data: [], error: null }
+    : { data: [] as Result[], error: null }
   if (rErr) handle(rErr)
-  return (studs ?? []).map((s) => {
-    const mine = (results ?? []).filter(r => r.student_id === s.id)
+  return { studs: studs ?? [], results: results ?? [] }
+}, { server: false, default: () => ({ studs: [], results: [] }), watch: [halaqaId] })
+
+// فلترُ الشهر (طلب المستخدم 2026-10-22): أشهرُ الاختبارات المرصودة في الحلقة، أحدثُها أولاً، بالأرقام
+const ALL = 'all' // Reka Select لا يقبل قيمةً فارغة
+const month = ref(ALL)
+const monthItems = computed(() => [
+  { label: 'كلّ الأشهر', value: ALL },
+  ...[...new Set(raw.value.results.map(r => r.exam_date.slice(0, 7)))].map((m) => {
+    const [y, mo] = m.split('-')
+    return { label: `${Number(mo)}/${y}`, value: m }
+  })
+])
+watch(halaqaId, () => {
+  month.value = ALL
+})
+
+const rows = computed<Row[]>(() => {
+  const results = month.value !== ALL ? raw.value.results.filter(r => r.exam_date.startsWith(month.value)) : raw.value.results
+  return raw.value.studs.map((s) => {
+    const mine = results.filter(r => r.student_id === s.id)
     const l = mine[0]
     return {
       id: s.id,
@@ -62,7 +79,7 @@ const { data: rows, pending: sPending } = useLazyAsyncData<Row[]>('exam-students
       last: l ? { score: l.total_score, passed: l.passed, date: l.exam_date } : null
     }
   })
-}, { server: false, default: () => [], watch: [halaqaId] })
+})
 
 const stats = computed(() => {
   const list = rows.value ?? []
@@ -101,6 +118,16 @@ const day = (iso: string) => iso.split('-').reverse().join('-')
           class="pick-sel"
           aria-label="الحلقة"
           :disabled="!halaqaItems.length"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
+        />
+        <span class="pick-label">الشهر</span>
+        <UiSelect
+          v-model="month"
+          :items="monthItems"
+          size="xl"
+          class="pick-month"
+          aria-label="الشهر"
+          :disabled="monthItems.length < 2"
           :ui="{ base: 'rounded-[12px] min-h-12' }"
         />
         <span
@@ -152,7 +179,7 @@ const day = (iso: string) => iso.split('-').reverse().join('-')
                 <span class="row-title">{{ r.full_name }}</span>
                 <span class="row-sub">
                   <template v-if="r.exams">{{ r.exams }} اختبار · اجتاز {{ r.passed }}<template v-if="r.last"> · آخرُها <bdi dir="ltr">{{ day(r.last.date) }}</bdi></template></template>
-                  <template v-else>لم يُختبر بعد</template>
+                  <template v-else>{{ month !== ALL ? 'لم يُختبر في هذا الشهر' : 'لم يُختبر بعد' }}</template>
                 </span>
               </span>
               <span
@@ -187,6 +214,7 @@ const day = (iso: string) => iso.split('-').reverse().join('-')
 .pick { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 14px 18px; }
 .pick-label { font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .pick-sel { width: 280px; max-width: 100%; }
+.pick-month { width: 160px; }
 .pick-teacher { font-size: 13.5px; color: var(--ink-3); }
 .list { list-style: none; margin: 0; padding: 6px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); }
 .list li + li { border-top: 1px solid var(--line); }
@@ -202,5 +230,5 @@ const day = (iso: string) => iso.split('-').reverse().join('-')
 .row-score.ok { background: var(--green-soft); color: var(--green-ink); }
 .row-score.no { background: var(--err-soft); color: var(--err); }
 .row-go { color: var(--ink-3); }
-@media (max-width: 560px) { .pick-sel { width: 100%; } }
+@media (max-width: 560px) { .pick-sel, .pick-month { width: 100%; } }
 </style>

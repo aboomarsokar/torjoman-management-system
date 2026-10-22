@@ -17,9 +17,9 @@ const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { role, isTeacher, isManager, isFieldSupervisor } = usePermissions()
-/** الإصدار كما يسمح RLS (alerts_insert): الإداري والفني وحدهما — المشرفُ الميدانيّ أُخرج منها (قرار 2026-10-21). */
-const canIssue = computed(() => isManager.value)
+const { role, isTeacher, isAdmin, isFieldSupervisor } = usePermissions()
+/** الإصدار كما يسمح RLS (alerts_insert): المدير الإداري وحده — أُخرج المشرفُ (2026-10-21) ثم الفنيُّ (2026-10-22). */
+const canIssue = computed(() => isAdmin.value)
 
 const SEVERITY: Record<Severity, { label: string, color: 'neutral' | 'warning' | 'error' }> = {
   note: { label: 'ملاحظة', color: 'neutral' },

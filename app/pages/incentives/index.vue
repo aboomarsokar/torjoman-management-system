@@ -16,7 +16,7 @@ const { role, profile } = useProfile()
 // role (من useProfile أعلاه): ما دام فارغاً لا قفل ولا محتوى (كان «للمعلّم» يومض للمدير عند التحميل الكامل)
 const { isTeacher, isAdmin, isWomenAdmin, isReadOnly } = usePermissions()
 // المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً — بلا المدير الفني (قرار 2026-10-19؛
-// القاعدة: can_review_statement_in_halaqa). canApprove يشمل المدير الفني (يستعمله تسجيل الحضور)، فلا يصلح هنا.
+// القاعدة: can_review_statement_in_halaqa). canApprove لرصد الحضور (الإداري والمديرة)، فلا يصلح هنا.
 const canReview = computed(() => isAdmin.value || isWomenAdmin.value || isReadOnly.value)
 
 const categoryItems = STATEMENT_ITEM_CATEGORIES.map(c => ({ label: c, value: c }))

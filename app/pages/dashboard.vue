@@ -557,5 +557,6 @@ const settingCards = [
 .row-sub { font-size: 13px; color: var(--ink-3); }
 
 @media (max-width: 1024px) { .stats { grid-template-columns: repeat(2, 1fr); } .settings { grid-template-columns: 1fr; } .sup-grid { grid-template-columns: 1fr; } .stats-4 { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 620px) { .stats { grid-template-columns: 1fr; } }
+/* بطاقتان في السطر على الجوال (طلب المستخدم 2026-10-22) */
+@media (max-width: 620px) { .stats, .stats-4 { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
 </style>

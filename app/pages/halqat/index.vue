@@ -26,10 +26,10 @@ const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
 /** الإنشاء والتعديل للمديرَين (الإداري والفني)، والحذف للمدير الإداري — كما يسمح RLS. */
-const { isManager, isAdmin, isFieldSupervisor, isWomenAdmin } = usePermissions()
-// المشرفُ يرى حلقاتِه المسندة وحدها وهي من جنسه، والمديرةُ حلقاتِ البنات وحدها (RLS) —
-// فلا معنى لقائمة «البنين والبنات» عندهما (طلب المستخدم 2026-10-21)
-const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value)
+const { isManager, isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer } = usePermissions()
+// المشرفُ والمختبِرُ يريان حلقاتِهما المسندة وحدها وهي من جنسهما، والمديرةُ حلقاتِ البنات وحدها (RLS) —
+// فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
+const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
 // بحالة pending، والسكيلتون يغطّي الانتظار ريثما تصل البيانات. الاستعلامات

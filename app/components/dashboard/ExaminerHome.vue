@@ -78,7 +78,7 @@ const stats = computed<StatItem[]>(() => {
             :key="h.id"
           >
             <NuxtLink
-              :to="`/halqat/${h.id}`"
+              :to="`/exams/students?h=${h.id}`"
               class="row"
             >
               <span class="row-main">

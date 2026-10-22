@@ -1,8 +1,12 @@
 /**
- * منطق تحفيز تثبيت التطبيق (PWA) — يلتقط حدث beforeinstallprompt ويقرّر متى
- * يظهر البانر المخصّص. لا يظهر إن كان مثبّتاً مسبقاً (standalone) أو أُغلق مؤخّراً.
- * iOS لا يدعم التثبيت البرمجي، فنكتفي بإظهار إرشاد يدوي.
+ * تثبيتُ التطبيق (PWA) — حالةٌ واحدةٌ مشتركة: يُلتقط حدثُ beforeinstallprompt مرّةً واحدةً من أوّل لحظة
+ * (`plugins/pwa-install.client.ts`) فيصل إليه البانرُ وزرُّ «تثبيت التطبيق» أينما رُكِّبا ومتى — كان كلُّ استدعاءٍ
+ * يلتقطه لنفسه فيفوت ما رُكِّب بعد إطلاقه (الزرُّ في لوحة التحكم بعد الانتقال من الدخول).
+ * البانرُ تحفيزٌ يُغلق فلا يعود قبل أسبوعين؛ والزرُّ ثابتٌ ما دام التطبيقُ غيرَ مثبَّت (طلب المستخدم 2026-10-22).
+ * وحيث لا حوارَ أصليّ (Safari، ومتصفّحاتُ iPhone الأخرى، وما لم يُطلق الحدث) تُعرض خطواتٌ بحسب الجهاز.
+ * والمنصّةُ دالّةٌ نقيّة في `utils/installPlatform.ts` (مختبَرة).
  */
+import type { InstallPlatform } from '~/utils/installPlatform'
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -10,94 +14,67 @@ type BeforeInstallPromptEvent = Event & {
 }
 
 const DISMISS_KEY = 'turjuman:pwa-install-dismissed'
-const DISMISS_DAYS = 14 // لا يُعاد الظهور قبل أسبوعين من الإغلاق
-const SHOW_DELAY_MS = 3000 // مهلة قبل الظهور (كي يرى المستخدم القيمة أولاً)
+const DISMISS_DAYS = 14 // لا يعود البانرُ قبل أسبوعين من إغلاقه
+const SHOW_DELAY_MS = 3000 // مهلةٌ قبل ظهور البانر (كي يرى المستخدمُ القيمةَ أولاً)
+
+// الحالةُ المشتركة — تُكتب في المتصفّح وحده (`listenForInstallPrompt` لا يعمل على الخادم)
+const deferred = shallowRef<BeforeInstallPromptEvent | null>(null)
+const installed = ref(false)
+const platform = ref<InstallPlatform>('desktop')
+let listening = false
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as unknown as { standalone?: boolean }).standalone === true
+}
+
+/** يلتقط حدثَي التثبيت مرّةً واحدة؛ تستدعيه الإضافةُ مبكراً، وكلُّ استدعاءٍ للـcomposable احتياطاً. */
+export function listenForInstallPrompt() {
+  if (import.meta.server || listening) return
+  listening = true
+  installed.value = isStandalone()
+  platform.value = installPlatform(navigator.userAgent, navigator.platform, navigator.maxTouchPoints)
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault() // امنع تلميحَ Chrome الافتراضي؛ نعرض بانرنا وزرَّنا بدلاً منه
+    deferred.value = e as BeforeInstallPromptEvent
+  })
+  window.addEventListener('appinstalled', () => {
+    installed.value = true
+    deferred.value = null
+  })
+}
 
 export function usePwaInstall() {
-  const deferred = ref<BeforeInstallPromptEvent | null>(null)
-  const ready = ref(false) // انقضت المهلة
-  const installed = ref(false)
+  listenForInstallPrompt()
+  const ready = ref(false) // انقضت مهلةُ البانر
 
-  // نعمل على العميل فقط (الأحداث والـ localStorage غير متاحة على الخادم)
-  const isStandalone = () => {
-    if (import.meta.server) return false
-    return window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as unknown as { standalone?: boolean }).standalone === true
-  }
-
-  /**
-   * Safari لا يدعم beforeinstallprompt (حصريّ لمتصفّحات Chromium)، فالتثبيت يدويّ.
-   * نميّز الجوّال (الشاشة الرئيسية) عن الماك (Dock) لاختلاف نصّ الإرشاد.
-   * ملاحظة: تثبيت PWA على الماك يتطلّب Safari 17+ (macOS Sonoma).
-   */
-  const safariKind = (): 'none' | 'mobile' | 'mac' => {
-    if (import.meta.server) return 'none'
-    const ua = window.navigator.userAgent
-    // استبعد متصفّحات أخرى تعمل بمحرّك WebKit على iOS أو Chromium على الماك
-    const isSafari = /safari/i.test(ua) && !/crios|fxios|edgios|chrome|chromium|edg\//i.test(ua)
-    if (!isSafari) return 'none'
-    const iOSDevice = /iphone|ipad|ipod/i.test(ua)
-    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
-    if (iOSDevice || iPadOS) return 'mobile'
-    if (/macintosh|mac os x/i.test(ua)) return 'mac'
-    return 'none'
-  }
+  /** حوارُ التثبيت الأصليّ متاح (Chromium أطلق الحدث). */
+  const canPrompt = computed(() => !!deferred.value)
+  /** للبانر: 'none' = لا إرشاد · 'mobile' = الشاشة الرئيسية · 'mac' = Dock (Safari وحده). */
+  const manual = computed<'none' | 'mobile' | 'mac'>(() =>
+    platform.value === 'ios-safari' ? 'mobile' : platform.value === 'mac-safari' ? 'mac' : 'none')
 
   const dismissedRecently = () => {
     if (import.meta.server) return false
-    const raw = localStorage.getItem(DISMISS_KEY)
-    if (!raw) return false
-    const ts = Number(raw)
-    if (Number.isNaN(ts)) return false
-    return (Date.now() - ts) < DISMISS_DAYS * 24 * 60 * 60 * 1000
+    const ts = Number(localStorage.getItem(DISMISS_KEY))
+    return !!ts && (Date.now() - ts) < DISMISS_DAYS * 24 * 60 * 60 * 1000
   }
 
-  /** 'none' = لا إرشاد يدوي · 'mobile' = الشاشة الرئيسية · 'mac' = Dock */
-  const manual = ref<'none' | 'mobile' | 'mac'>('none')
-
-  // يظهر البانر إذا: انقضت المهلة، وغير مثبّت، وغير مُغلَق مؤخّراً،
-  // و(قابل للتثبيت عبر الحدث [Chromium] أو Safari الذي يحتاج إرشاداً يدويّاً).
+  // البانر: بعد المهلة، وغيرُ مثبَّت ولا مُغلَقٍ مؤخّراً، و(الحوارُ متاح أو Safari بإرشاده)
   const visible = computed(() =>
-    ready.value
-    && !installed.value
-    && (!!deferred.value || manual.value !== 'none')
-    && !isStandalone()
-    && !dismissedRecently())
+    ready.value && !installed.value && (canPrompt.value || manual.value !== 'none') && !dismissedRecently())
 
-  let onPrompt: ((e: Event) => void) | null = null
-  let onInstalled: (() => void) | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
-
   onMounted(() => {
-    if (isStandalone()) {
-      installed.value = true
-      return
-    }
-    manual.value = safariKind()
-
-    onPrompt = (e: Event) => {
-      e.preventDefault() // امنع تلميح Chrome الافتراضي؛ نعرض بانرنا بدلاً منه
-      deferred.value = e as BeforeInstallPromptEvent
-    }
-    onInstalled = () => {
-      installed.value = true
-      deferred.value = null
-    }
-    window.addEventListener('beforeinstallprompt', onPrompt)
-    window.addEventListener('appinstalled', onInstalled)
-
     timer = setTimeout(() => {
       ready.value = true
     }, SHOW_DELAY_MS)
   })
-
   onUnmounted(() => {
-    if (onPrompt) window.removeEventListener('beforeinstallprompt', onPrompt)
-    if (onInstalled) window.removeEventListener('appinstalled', onInstalled)
     if (timer) clearTimeout(timer)
   })
 
-  /** يستدعي حوار التثبيت الأصلي (Chrome/Android). */
+  /** يفتح حوارَ التثبيت الأصليّ (Chrome/Android/Edge)؛ والحدثُ لا يُستعمل إلا مرّة. */
   async function install() {
     const evt = deferred.value
     if (!evt) return
@@ -107,11 +84,11 @@ export function usePwaInstall() {
     if (choice.outcome === 'accepted') installed.value = true
   }
 
-  /** يُخفي البانر ويتذكّر الإغلاق (لا يعود قبل DISMISS_DAYS). */
+  /** يُخفي البانر ويتذكّر الإغلاق (لا يعود قبل DISMISS_DAYS) — والزرُّ الثابتُ باقٍ. */
   function dismiss() {
     if (!import.meta.server) localStorage.setItem(DISMISS_KEY, String(Date.now()))
     ready.value = false
   }
 
-  return { visible, manual, install, dismiss }
+  return { visible, manual, canPrompt, installed: readonly(installed), platform: readonly(platform), install, dismiss }
 }

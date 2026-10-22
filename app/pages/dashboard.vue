@@ -197,18 +197,18 @@ watch(isSectionHead, (v) => {
   if (v) loadTechnicalData()
 }, { immediate: true })
 
-type Tone = 'blue' | 'green' | 'neutral' | 'err'
-const sectionCards = (c: SectionCounts, f: boolean) => [
-  { icon: 'i-lucide-graduation-cap', tone: 'blue' as Tone, value: c.students, label: f ? 'الطالبات' : 'الطلاب' },
-  { icon: 'i-lucide-users', tone: 'green' as Tone, value: c.teachers, label: f ? 'المعلّمات' : 'المعلّمون' },
-  { icon: 'i-lucide-shield-check', tone: 'blue' as Tone, value: c.supervisors, label: f ? 'المشرفات الميدانيات' : 'المشرفون الميدانيون' },
-  { icon: 'i-lucide-award', tone: 'green' as Tone, value: c.examiners, label: f ? 'المختبِرات' : 'المختبِرون' },
-  { icon: 'i-lucide-book-open', tone: 'neutral' as Tone, value: c.halqat, label: 'الحلقات النشطة' }
-]
-const statSections = computed(() => [
-  { key: 'male', title: 'قسم البنين', cards: sectionCards(counts.male, false) },
-  { key: 'female', title: 'قسم البنات', cards: sectionCards(counts.female, true) }
-])
+// بطاقةٌ لكلّ فئةٍ بقسميها متجاورَين (`DashboardGenderSplit`)
+const splitItems = computed(() => {
+  const m = counts.male
+  const f = counts.female
+  return [
+    { key: 'students', icon: 'i-lucide-graduation-cap', label: 'الطلاب والطالبات', male: m.students, female: f.students, maleLabel: 'طلاب', femaleLabel: 'طالبات' },
+    { key: 'teachers', icon: 'i-lucide-users', label: 'المعلّمون والمعلّمات', male: m.teachers, female: f.teachers, maleLabel: 'معلّمون', femaleLabel: 'معلّمات' },
+    { key: 'sups', icon: 'i-lucide-shield-check', label: 'المشرفون والمشرفات', male: m.supervisors, female: f.supervisors, maleLabel: 'مشرفون', femaleLabel: 'مشرفات' },
+    { key: 'examiners', icon: 'i-lucide-award', label: 'المختبِرون والمختبِرات', male: m.examiners, female: f.examiners, maleLabel: 'مختبِرون', femaleLabel: 'مختبِرات' },
+    { key: 'halqat', icon: 'i-lucide-book-open', label: 'الحلقات النشطة', male: m.halqat, female: f.halqat, maleLabel: 'بنين', femaleLabel: 'بنات' }
+  ]
+})
 
 const settingCards = [
   { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'المطلوب الشهريّ (صفحات)', unit: 'صفحة', desc: 'ما يُطالَب به كلُّ طالبٍ حفظاً في الشهر، ويُقسَّط بحضوره؛ عليه يُحكم بـ«أنجز» أو «مقصّر».' },
@@ -235,28 +235,8 @@ const settingCards = [
         </div>
       </template>
       <template v-else-if="showOverview">
-        <!-- بطاقات إحصائية: قسمُ البنين ثم قسمُ البنات (طلب المستخدم 2026-10-22) -->
-        <section
-          v-for="sec in statSections"
-          :key="sec.key"
-          class="sex-sec"
-          :aria-label="sec.title"
-        >
-          <h3 class="sex-head">
-            {{ sec.title }}
-          </h3>
-          <div class="stats">
-            <UiStatCard
-              v-for="c in sec.cards"
-              :key="c.label"
-              :icon="c.icon"
-              :tone="c.tone"
-              :value="c.value"
-              :label="c.label"
-              stacked
-            />
-          </div>
-        </section>
+        <!-- بطاقات إحصائية: كلُّ فئةٍ بقسميها البنين والبنات متجاورَين (طلب المستخدم 2026-10-22) -->
+        <DashboardGenderSplit :items="splitItems" />
 
         <!-- بطاقات الإعدادات -->
         <div class="settings">
@@ -560,8 +540,6 @@ const settingCards = [
 
 /* الإحصائيات */
 .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-bottom: 24px; }
-.sex-head { margin: 4px 4px 12px; font-size: 16px; font-weight: 700; color: var(--ink); }
-.sex-sec + .sex-sec .sex-head { margin-top: 8px; }
 
 /* الإعدادات */
 .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }

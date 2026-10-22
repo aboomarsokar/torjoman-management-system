@@ -64,20 +64,33 @@ const { data: users, refresh, pending } = useLazyAsyncData<UserRow[]>(
   { server: false, default: () => [], watch: [visibleRoles] }
 )
 
-const filter = ref<Role | 'all'>('all')
-function countFor(key: Role | 'all') {
-  const list = users.value ?? []
-  return key === 'all' ? list.length : list.filter(u => u.role === key).length
+// المختبِرةُ والمشرفةُ الميدانية خياران مستقلّان (طلب المستخدم 2026-10-22): الدورُ نفسُه تماماً بجنسٍ مختلف —
+// في نموذج الإنشاء وفي فلتر القائمة. القيمةُ «الدور:الجنس» لهذين وحدهما.
+const SPLIT_ROLES: readonly Role[] = ['field_supervisor', 'examiner']
+
+/** قيمةُ الفلتر: «all» أو دور، أو «الدور:الجنس» للدورين المفصولَين. */
+const filter = ref<string>('all')
+/** «الدور:male» يضمّ كلَّ من ليس أنثى، كي لا يسقط حسابٌ بلا جنسٍ مسجَّل من الخيارين. */
+function matchesFilter(u: UserRow, key: string) {
+  if (key === 'all') return true
+  const [role, gender] = key.split(':')
+  return u.role === role && (!gender || (gender === 'female') === (u.gender === 'female'))
 }
-// قائمةٌ منسدلة بعدد كلّ دور (كانت ثمانيةَ أزرارٍ تأخذ ثلاثة أسطر على الجوال — طلب المستخدم 2026-10-20)
+function countFor(key: string) {
+  return (users.value ?? []).filter(u => matchesFilter(u, key)).length
+}
+// قائمةٌ منسدلة بعدد كلّ دور (كانت ثمانيةَ أزرارٍ تأخذ ثلاثة أسطر على الجوال — طلب المستخدم 2026-10-20)؛
+// وعند المديرة الإدارية القائمةُ كلُّها إناثٌ فلا فصل
 const roleFilterItems = computed(() => ([
-  { value: 'all' as const, label: 'كل الأدوار' },
-  ...visibleRoles.value.map(r => ({ value: r, label: roleLabel(r, fem.value ? 'female' : null) }))
+  { value: 'all', label: 'كل الأدوار' },
+  ...visibleRoles.value.flatMap(r => !fem.value && SPLIT_ROLES.includes(r)
+    ? [{ value: `${r}:male`, label: roleLabel(r, 'male') }, { value: `${r}:female`, label: roleLabel(r, 'female') }]
+    : [{ value: r, label: roleLabel(r, fem.value ? 'female' : null) }])
 ]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
 // البحث بالاسم أو الرقم الوظيفي (يقبل الأرقام العربية) — فوق تصفية الدور
 const query = ref('')
 const filteredUsers = computed(() => (users.value ?? []).filter(u =>
-  (filter.value === 'all' || u.role === filter.value)
+  matchesFilter(u, filter.value)
   && matchesSearch(query.value, u.full_name, u.employee_number)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filteredUsers, 12)
@@ -108,9 +121,7 @@ const occupiedRoles = computed(() => new Set((users.value ?? [])
   .filter(u => u.status === 'active' && MANAGER_ROLES.includes(u.role))
   .map(u => u.role)))
 // المسمّى بجنس الحساب المختار؛ والمديرة الإدارية تُميَّز بقسمها كي لا تلتبس بالمدير الإداري الأنثى.
-// والمختبِرةُ والمشرفةُ الميدانية خياران مستقلّان (طلب المستخدم 2026-10-22): الدورُ نفسُه تماماً، والجنسُ أنثى مقفلاً —
-// و«مختبِر» و«مشرف ميداني» ذكرٌ مقفلاً. القيمةُ «الدور:الجنس» لهذين وحدهما.
-const SPLIT_ROLES: readonly Role[] = ['field_supervisor', 'examiner']
+// والدوران المفصولان (`SPLIT_ROLES` أعلاه): الأنثى مقفلةٌ للمختبِرة والمشرفة الميدانية، والذكرُ لنظيرَيهما.
 const roleItems = computed(() => STAFF_ROLES.flatMap((r) => {
   const occupied = occupiedRoles.value.has(r)
   const item = (label: string, value: string) => ({ label: occupied ? `${label} — له شاغلٌ نشط` : label, value, disabled: occupied })

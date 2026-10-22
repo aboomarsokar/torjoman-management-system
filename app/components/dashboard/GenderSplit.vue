@@ -54,7 +54,17 @@ const pct = (part: number, total: number) => total ? Math.round((100 * part) / t
         </div>
       </div>
 
+      <!-- لا عددَ في الفئة: شريطٌ رماديٌّ واحد — كان نصفين متساويين يوحيان بالتساوي -->
       <div
+        v-if="it.male + it.female === 0"
+        class="gs-bar empty"
+        role="img"
+        aria-label="لا أحد"
+      >
+        <i />
+      </div>
+      <div
+        v-else
         class="gs-bar"
         role="img"
         :aria-label="`${it.maleLabel} ${it.male}، ${it.femaleLabel} ${it.female}`"
@@ -74,6 +84,16 @@ const pct = (part: number, total: number) => total ? Math.round((100 * part) / t
 
 <style scoped>
 .gs { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+/* بطاقتان في السطر على الجوال (كبطاقات الأرقام الأخرى) */
+@media (max-width: 620px) {
+  .gs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .gs-card { padding: 12px; gap: 10px; }
+  .gs-ico { width: 30px; height: 30px; border-radius: 9px; }
+  .gs-label { font-size: 13px; }
+  .gs-total { min-width: 26px; height: 24px; font-size: 12.5px; padding: 0 8px; }
+  .gs-side b { font-size: 21px; }
+  .gs-side + .gs-side { padding-inline-start: 10px; }
+}
 .gs-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
 .gs-head { display: flex; align-items: center; gap: 10px; }
 .gs-ico { width: 36px; height: 36px; flex: none; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
@@ -92,4 +112,5 @@ const pct = (part: number, total: number) => total ? Math.round((100 * part) / t
 .gs-bar i { display: block; height: 100%; border-radius: 999px; min-width: 6px; }
 .gs-bar i.m { background: var(--navy); }
 .gs-bar i.f { background: var(--green); }
+.gs-bar.empty i { width: 100%; background: var(--surface-2); }
 </style>

@@ -23,6 +23,8 @@ const toast = useToast()
 const { isAdmin, isReadOnly, isTechnical, isWomenAdmin: fem } = usePermissions()
 // والمديرةُ الإدارية اطّلاعاً على عاملات قسمها، ومنها «ادخلي بحسابها» (طلب المستخدم 2026-10-22)
 const canView = computed(() => isAdmin.value || isReadOnly.value || isTechnical.value || fem.value)
+/** يرى القسمين: المدير الإداري ومشرف المشروع — فتُفصل أرقامُهما بين البنين والبنات. */
+const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
 useSeoMeta({ title: () => fem.value ? 'عاملات القسم — ترجمان' : 'إدارة المستخدمين — ترجمان' })
 
 const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'neutral' | 'error'> = {
@@ -244,8 +246,13 @@ async function confirmReset() {
       </div>
 
       <ClientOnly>
+        <!-- من يرى القسمين (الإداري ومشرف المشروع): كلُّ فئةٍ بقسميها متجاورَين؛ وغيرُهما قسمُه وحده (2026-10-22) -->
+        <DashboardGenderSplit
+          v-if="!pending && (users ?? []).length && seesBoth"
+          :items="userSplitStats(users ?? [])"
+        />
         <UiStatStrip
-          v-if="!pending && (users ?? []).length"
+          v-else-if="!pending && (users ?? []).length"
           :items="userStats(users ?? [], fem)"
           label="أرقام الحسابات"
         />

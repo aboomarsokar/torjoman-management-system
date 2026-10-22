@@ -79,6 +79,21 @@ export function examPlanStats(cycles: { stage_number: number, parts_from: number
 }
 
 /** المستخدمون (العاملون): النشطون، والمعطَّلون، والمعلّمون، والمشرفون الميدانيون — نشطين. */
+/** أرقامُ الحسابات مفصولةً بين البنين والبنات (`DashboardGenderSplit`) — لمن يرى القسمين (2026-10-22). */
+export function userSplitStats(rows: { status: string, role: string, gender: string | null }[]) {
+  const n = (f: (u: { status: string, role: string }) => boolean, g: string) => rows.filter(u => u.gender === g && f(u)).length
+  const pair = (f: (u: { status: string, role: string }) => boolean) => ({ male: n(f, 'male'), female: n(f, 'female') })
+  const active = (u: { status: string }) => u.status === 'active'
+  const role = (r: string) => (u: { status: string, role: string }) => active(u) && u.role === r
+  return [
+    { key: 'active', icon: 'i-lucide-users', label: 'الحسابات النشطة', ...pair(active), maleLabel: 'ذكور', femaleLabel: 'إناث' },
+    { key: 'disabled', icon: 'i-lucide-user-x', label: 'الحسابات المعطَّلة', ...pair(u => !active(u)), maleLabel: 'ذكور', femaleLabel: 'إناث' },
+    { key: 'teachers', icon: 'i-lucide-book-open', label: 'المعلّمون والمعلّمات', ...pair(role('teacher')), maleLabel: 'معلّمون', femaleLabel: 'معلّمات' },
+    { key: 'sups', icon: 'i-lucide-shield-check', label: 'المشرفون والمشرفات', ...pair(role('field_supervisor')), maleLabel: 'مشرفون', femaleLabel: 'مشرفات' },
+    { key: 'examiners', icon: 'i-lucide-award', label: 'المختبِرون والمختبِرات', ...pair(role('examiner')), maleLabel: 'مختبِرون', femaleLabel: 'مختبِرات' }
+  ]
+}
+
 /** `female`: عاملاتُ قسم البنات (المديرة الإدارية — 2026-10-22). */
 export function userStats(rows: { status: string, role: string }[], female = false): StatItem[] {
   const active = rows.filter(u => u.status === 'active')

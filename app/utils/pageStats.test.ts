@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  alertStats, examPlanStats, examResultStats, minutesStats, newsStats, studentStats, supervisorStats, transportStats, userStats
+  alertStats, examPlanStats, examResultStats, minutesStats, newsStats, studentStats, supervisorStats, transportStats, userSplitStats, userStats
 } from './pageStats'
 
 const values = (items: { key: string, value: string | number }[]) => Object.fromEntries(items.map(i => [i.key, i.value]))
@@ -102,5 +102,19 @@ describe('minutesStats', () => {
       { status: 'draft', meeting_date: '2026-10-20' },
       { status: 'final', meeting_date: '2026-09-30' }
     ], '2026-10-21'))).toEqual({ all: 3, final: 2, draft: 1, month: 2 })
+  })
+})
+
+describe('userSplitStats', () => {
+  it('يفصل الحسابات والأدوار النشطة بين الذكور والإناث', () => {
+    const out = userSplitStats([
+      { status: 'active', role: 'teacher', gender: 'male' },
+      { status: 'active', role: 'teacher', gender: 'female' },
+      { status: 'active', role: 'teacher', gender: 'female' },
+      { status: 'disabled', role: 'teacher', gender: 'female' },
+      { status: 'active', role: 'examiner', gender: 'male' }
+    ])
+    const by = Object.fromEntries(out.map(i => [i.key, [i.male, i.female]]))
+    expect(by).toEqual({ active: [2, 2], disabled: [0, 1], teachers: [1, 2], sups: [0, 0], examiners: [1, 0] })
   })
 })

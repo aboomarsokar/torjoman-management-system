@@ -13,6 +13,7 @@ import { roleLabel } from '~/constants/roles'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
 import { maritalItems, maritalLabel } from '~/constants/maritalStatus'
 import { educationItems } from '~/constants/educationLevel'
+import { choiceItems, RESIDENCE_AREAS, TAJWEED_LEVELS } from '~/constants/profileChoices'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -147,6 +148,8 @@ const numStr = (v: number | null) => v != null ? String(v) : ''
 const jobTitle = computed(() => data.value?.p ? roleLabel(data.value.p.role, form.gender || null) : '')
 const maritalOptions = computed(() => maritalItems(form.gender || null, data.value?.p?.marital_status))
 const educationOptions = computed(() => educationItems(data.value?.p?.education_level))
+const residenceOptions = computed(() => choiceItems(RESIDENCE_AREAS, data.value?.p?.residence_area))
+const tajweedOptions = computed(() => choiceItems(TAJWEED_LEVELS, data.value?.p?.tajweed_level))
 
 function openEdit() {
   const p = data.value?.p
@@ -490,8 +493,10 @@ const pwOpen = ref(false)
               label="المنطقة/المدينة"
               class="f1"
             >
-              <UInput
+              <USelect
                 v-model="form.residence_area"
+                :items="residenceOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
@@ -580,8 +585,10 @@ const pwOpen = ref(false)
               label="مستوى التجويد"
               class="f1"
             >
-              <UInput
+              <USelect
                 v-model="form.tajweed_level"
+                :items="tajweedOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

@@ -20,8 +20,10 @@ const { handle } = useErrorHandler()
 const { isTeacher, canApprove, isReadOnly } = usePermissions()
 
 const today = gazaToday()
-const day = ref(today)
 const route = useRoute()
+// ?d= من تفصيل يومٍ في «متابعة الرصد» — يومٌ صحيحٌ لا يتجاوز اليوم، وإلا اليوم
+const qd = typeof route.query.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.d) && route.query.d <= today ? route.query.d : null
+const day = ref(qd ?? today)
 const halaqaId = ref<string | null>(typeof route.query.h === 'string' ? route.query.h : null)
 
 // حلقة المعلم تلقائياً، وغيرُه يرى الحلقات التي تسمح له بها RLS

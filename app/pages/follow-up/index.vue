@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
- * «متابعة الرصد» (طلب المستخدم 2026-10-22) — للمدير الفنيّ (البنين) والمديرة الإدارية (البنات):
+ * «متابعة الرصد» (طلب المستخدم 2026-10-22) — للمدير الإداري (القسمان)، والمدير الفنيّ (البنين، اطّلاعاً: صفحتا الحضور
+ * والرصد اللتان تقود إليهما قراءةٌ له)، والمديرة الإدارية (البنات):
  * أيُّ الحلقات رصدت حضورها وشهرَها القرآنيّ في المهلة وأيُّها قصّرت، بنظرة. المحتوى `DashboardRecordingFollowUp`.
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'متابعة الرصد — ترجمان' })
 
-const { role, isTechnical, isWomenAdmin: fem } = usePermissions()
-const canView = computed(() => isTechnical.value || fem.value)
+const { role, isAdmin, isTechnical, isWomenAdmin: fem } = usePermissions()
+const canView = computed(() => isAdmin.value || isTechnical.value || fem.value)
 </script>
 
 <template>
@@ -21,7 +22,7 @@ const canView = computed(() => isTechnical.value || fem.value)
     <UiEmptyState
       v-if="role && !canView"
       icon="i-lucide-lock"
-      title="هذه الصفحة للمدير الفني والمديرة الإدارية."
+      title="هذه الصفحة للإدارة."
     />
     <ClientOnly v-else-if="canView">
       <DashboardRecordingFollowUp page />

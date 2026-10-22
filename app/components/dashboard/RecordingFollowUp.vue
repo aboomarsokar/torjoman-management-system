@@ -178,8 +178,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                 icon="i-lucide-calendar-check"
                 color="neutral"
                 variant="outline"
-                size="sm"
-                :ui="{ base: 'rounded-[10px] min-h-9', leadingIcon: 'size-2.5' }"
+                size="xs"
+                class="rf-btn"
+                :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
               />
               <UButton
                 :to="`/reports?h=${r.halaqa_id}&y=${r.report_year}&m=${r.report_month}`"
@@ -187,8 +188,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                 icon="i-lucide-book-marked"
                 color="neutral"
                 variant="outline"
-                size="sm"
-                :ui="{ base: 'rounded-[10px] min-h-9', leadingIcon: 'size-2.5' }"
+                size="xs"
+                class="rf-btn"
+                :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
               />
               <UButton
                 v-if="whatsappLink(r.teacher_whatsapp || r.teacher_phone)"
@@ -321,9 +323,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
               icon="i-lucide-calendar-check"
               color="neutral"
               variant="outline"
-              size="sm"
-              class="rf-d-go"
-              :ui="{ base: 'rounded-[10px] min-h-9', leadingIcon: 'size-2.5' }"
+              size="xs"
+              class="rf-d-go rf-btn"
+              :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
             />
           </div>
         </li>
@@ -357,6 +359,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 .rf-name { font-size: 15.5px; font-weight: 600; color: var(--ink); }
 .rf-teacher { font-size: 12.5px; color: var(--ink-3); overflow-wrap: anywhere; }
 .rf-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+/* أزرارُ الانتقال مدمجة (طلب المستخدم 2026-10-22) — وعلى الجوال 36 كي يبقى اللمسُ مريحاً */
+.rf-btn { min-height: 30px; padding-inline: 10px; font-size: 12.5px; gap: 5px; }
+@media (max-width: 560px) { .rf-btn { min-height: 36px; } }
 .rf-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .rf-month { font-size: 13px; color: var(--ink-2); }
 .rf-month b { color: var(--ink); font-variant-numeric: tabular-nums; }

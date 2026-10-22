@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * «إنجاز الحلقات» في لوحة المدير الفنيّ (طلب المستخدم 2026-10-22): للوهلة الأولى نسبةُ المنجزين كلِّهم وعددُ الحلقات
+ * «الإنجاز القرآني للحلقات» (حفظُ خطة الشهر — لا البرامج المصاحبة؛ سُمّي هكذا بعد لبسٍ 2026-10-22) في لوحة المدير الفنيّ (طلب المستخدم 2026-10-22): للوهلة الأولى نسبةُ المنجزين كلِّهم وعددُ الحلقات
  * المتأخّرة، ثم سطرٌ لكلّ حلقةٍ بشريطٍ ونسبة «أنجز X من Y» والأضعفُ أولاً؛ والضغطُ يفتح التفصيلَ والتواصلَ مع المعلم.
  * الشهرُ الافتراضيُّ السابقُ لشهر اليوم، ويُختار من آخر ستة أشهر (بالأرقام).
  */
@@ -40,7 +40,7 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
 <template>
   <section class="card ha">
     <div class="ha-head">
-      <h3>إنجاز الحلقات</h3>
+      <h3>الإنجاز القرآني للحلقات</h3>
       <UiSelect
         v-model="monthKey"
         :items="monthItems"
@@ -64,7 +64,7 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
       <div class="ha-sum">
         <div class="ha-big">
           <b :class="`t-${toneOf(totals.pct)}`">{{ totals.pct === null ? '—' : `${totals.pct}٪` }}</b>
-          <span>أنجز {{ totals.done }} من {{ totals.measured }} طالباً خطةَ الشهر</span>
+          <span>أنجز {{ totals.done }} من {{ totals.measured }} طالباً خطةَ الحفظ هذا الشهر</span>
         </div>
         <div
           class="ha-low"

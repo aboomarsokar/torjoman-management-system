@@ -59,7 +59,7 @@ const status = computed(() => (props.row?.report_status ?? 'none') as keyof type
       >
         <dl class="am-meta">
           <div><dt>الشهر</dt><dd><bdi dir="ltr">{{ month }}/{{ year }}</bdi></dd></div>
-          <div><dt>الإنجاز</dt><dd>{{ pct === null ? '—' : `${pct}٪` }} · أنجز {{ row.done }} من {{ row.done + row.short + row.unrecorded }}</dd></div>
+          <div><dt>الإنجاز القرآني</dt><dd>{{ pct === null ? '—' : `${pct}٪` }} · أنجز {{ row.done }} من {{ row.done + row.short + row.unrecorded }}</dd></div>
           <div>
             <dt>رصدُ الشهر</dt><dd>
               <UBadge

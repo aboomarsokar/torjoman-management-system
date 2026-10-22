@@ -41,14 +41,16 @@ function comingSoon() {
 }
 
 /** `tab`: تبويبُ صفحة الطالب (`/me?tab=`) — عناصرُ الطالب تقابل تبويباتِ صفحته (طلب المستخدم 2026-10-21).
- * `group`: مجموعتُه في القائمة (طلب المستخدم 2026-10-22: مجموعاتٌ بعناوين تُطوى)؛ وبلا مجموعةٍ يبقى في الأعلى ظاهراً. */
-type GroupKey = 'people' | 'supervision' | 'quran' | 'exams' | 'sheets' | 'project' | 'account'
-type Item = { key: string, label: string, icon: string, to?: string, tab?: StudentTab, roles: Role[], group?: GroupKey }
+ * `group`: مجموعتُه في القائمة (طلب المستخدم 2026-10-22: مجموعاتٌ بعناوين تُطوى)؛ وبلا مجموعةٍ يبقى في الأعلى ظاهراً.
+ * `qtab`: تبويبُ صفحةٍ للعاملين في الرابط (`?tab=`) — `null` للتبويب الافتراضيّ؛ و`title` عنوانُ الشريط إن خالف التسمية. */
+type GroupKey = 'people' | 'supervision' | 'quran' | 'programs' | 'exams' | 'sheets' | 'project' | 'account'
+type Item = { key: string, label: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey }
 
 const GROUPS: { key: GroupKey, label: string, icon: string }[] = [
   { key: 'people', label: 'الحلقات والأفراد', icon: 'i-lucide-users-round' },
   { key: 'supervision', label: 'الإشراف والتقييم', icon: 'i-lucide-shield-check' },
   { key: 'quran', label: 'المتابعة القرآنية', icon: 'i-lucide-book-open-text' },
+  { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library' },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-award' },
   { key: 'sheets', label: 'الكشوف', icon: 'i-lucide-receipt-text' },
   { key: 'project', label: 'إدارة المشروع', icon: 'i-lucide-briefcase' },
@@ -71,7 +73,7 @@ const mainNav: Item[] = [
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, FIELD, 'teacher', 'examiner'] },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
-  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH], group: 'people' },
+  { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS, group: 'people' },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },
   // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)
@@ -84,7 +86,9 @@ const mainNav: Item[] = [
   { key: 'quality-mine', label: 'تقييمي الشهري', icon: 'i-lucide-badge-check', to: '/quality', roles: ['teacher'], group: 'supervision' },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
-  { key: 'programs-staff', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
+  // البرامجُ المصاحبة عنوانٌ مستقلّ تحته تبويبا صفحتها (طلب المستخدم 2026-10-22)
+  { key: 'programs-progress', label: 'إنجاز الطلاب', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
+  { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
   { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'], group: 'quran' },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
@@ -135,27 +139,32 @@ function toggleGroup(g: GroupKey) {
 // المسار أو ما تحته: صفحات التفاصيل (/halqat/<id>، /students/<id>…) تحمل عنوان قسمها وتُبرزه في القائمة
 // (الملف الشخصي استثناء: /profile/<id> ملفّ غيرك، فلا يُبرز «الملف الشخصي» إلا لـ/profile/me)
 // (وعناصرُ تبويبات الطالب تُطابَق بالتبويب أيضاً: «رحلتي» لا تُبرز «لوحة التحكم» على /me نفسها)
+const routeTab = () => (typeof route.query.tab === 'string' ? route.query.tab : null)
 const matches = (item: Item) => !!item.to
   && (item.tab
     ? route.path === item.to && tabFromQuery(route.query.tab) === item.tab
-    : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
+    : item.qtab !== undefined
+      ? route.path === item.to && routeTab() === item.qtab
+      : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
 const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const navTitle = computed(() => {
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
-  return activeItem.value?.label ?? 'لوحة التحكم'
+  return activeItem.value?.title ?? activeItem.value?.label ?? 'لوحة التحكم'
 })
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
 function go(item: Item) {
   drawerOpen.value = false
-  if (item.to) navigateTo(item.tab ? { path: item.to, query: { tab: queryFromTab(item.tab) } } : item.to)
+  if (item.to && item.tab) navigateTo({ path: item.to, query: { tab: queryFromTab(item.tab) } })
+  else if (item.to && item.qtab) navigateTo({ path: item.to, query: { tab: item.qtab } })
+  else if (item.to) navigateTo(item.to)
   else comingSoon()
 }
 // البارزُ واحد: إن طابق المسارَ بندان (/exams و/exams/students) فالأطولُ رابطاً — الأدقّ — وحده
-const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === activeItem.value?.to)
+const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== undefined || item.to === activeItem.value?.to)
 </script>
 
 <template>

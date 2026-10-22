@@ -21,7 +21,8 @@ const { isTeacher, canApprove, isReadOnly } = usePermissions()
 
 const today = gazaToday()
 const day = ref(today)
-const halaqaId = ref<string | null>(null)
+const route = useRoute()
+const halaqaId = ref<string | null>(typeof route.query.h === 'string' ? route.query.h : null)
 
 // حلقة المعلم تلقائياً، وغيرُه يرى الحلقات التي تسمح له بها RLS
 const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<NameRow[]>('attendance-halaqat', async () => {
@@ -36,7 +37,8 @@ const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<NameRow[]>('
 }, { server: false, default: () => [], watch: [role] })
 
 watch(halaqat, (list) => {
-  if (!list.some(h => h.id === halaqaId.value)) halaqaId.value = list[0]?.id ?? null
+  // ?h= من «متابعة الرصد» يبقى حتى تصل القائمة (فارغةً قبلها كانت تمسحه)
+  if (list.length && !list.some(h => h.id === halaqaId.value)) halaqaId.value = list[0]?.id ?? null
 }, { immediate: true })
 
 // UiSelect لا يقبل null: الحلقةُ الفارغة نصٌّ فارغ في المحدِّد

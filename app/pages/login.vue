@@ -3,6 +3,8 @@
  * شاشة تسجيل الدخول (§4.1) — حقلٌ واحد: الرقم الوظيفي (4 أرقام) للموظف أو رقم الهوية (9 أرقام) للطالب.
  * مبنيّة بمكوّنات Nuxt UI (UForm/UInput/UButton) + تخطيط مخصّص للوحَين.
  * التسجيل مغلق — الحسابات تُنشأ من الإدارة، ولا استعادة ذاتية: كلمة المرور يعيد تعيينها المدير الإداري.
+ * حقولٌ أكبر (56) بخطٍّ أوضح، وزرُّ إظهار الكلمة بمساحة لمس، والملاحظتان سطران هادئان بأيقونتيهما، والوضعُ زرٌّ
+ * يدور بين ثلاث حالات (`UiThemeToggle`) — طلب المستخدم 2026-10-22.
  */
 import { classifyLoginId, LOGIN_ID_ERROR } from '~/constants/identity'
 
@@ -10,12 +12,6 @@ definePageMeta({ layout: false })
 
 const { user, signInWithIdentifier } = useAuth()
 const { handle } = useErrorHandler()
-
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
 
 useSeoMeta({
   title: 'تسجيل الدخول — ترجمان',
@@ -26,6 +22,10 @@ useSeoMeta({
 onMounted(() => {
   if (user.value) navigateTo('/dashboard')
 })
+
+/** حقولٌ أكبر بخطٍّ أوضح (طلب المستخدم 2026-10-22). */
+const FIELD_UI = { label: 'text-[15px] font-semibold text-(--ink)', error: 'text-[14px]' }
+const INPUT_UI = { base: 'rounded-[14px] min-h-14 text-[17px] ps-12 bg-(--surface)', leading: 'ps-4', leadingIcon: 'size-[22px] text-(--ink-3)' }
 
 const state = reactive({ identifier: '', password: '' })
 const showPassword = ref(false)
@@ -55,17 +55,9 @@ async function onSubmit() {
   <div class="login">
     <!-- FORM SIDE -->
     <div class="form-side">
-      <UButton
-        :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-        color="neutral"
-        variant="subtle"
-        size="lg"
-        square
-        class="theme-toggle"
-        aria-label="تبديل الوضع"
-        :ui="{ base: 'rounded-xl' }"
-        @click="toggleTheme"
-      />
+      <div class="theme-toggle">
+        <UiThemeToggle />
+      </div>
 
       <div class="form-box">
         <div class="brand-head">
@@ -87,50 +79,53 @@ async function onSubmit() {
           <UFormField
             label="الرقم الوظيفي أو رقم الهوية"
             name="identifier"
+            :ui="FIELD_UI"
           >
             <UInput
               v-model="state.identifier"
               type="text"
               inputmode="numeric"
               autocomplete="username"
+              enterkeyhint="next"
               dir="ltr"
               icon="i-lucide-id-card"
               placeholder="1001"
               size="xl"
               class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
+              :ui="INPUT_UI"
             />
           </UFormField>
 
           <UFormField
             label="كلمة المرور"
             name="password"
+            :ui="FIELD_UI"
           >
             <UInput
               v-model="state.password"
               :type="showPassword ? 'text' : 'password'"
+              autocomplete="current-password"
+              enterkeyhint="go"
               icon="i-lucide-lock"
               placeholder="••••••••"
               size="xl"
               class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
+              :ui="{ ...INPUT_UI, trailing: 'pe-1.5' }"
             >
               <template #trailing>
                 <UButton
                   :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
                   color="neutral"
-                  variant="link"
-                  size="sm"
+                  variant="ghost"
+                  size="lg"
+                  square
                   :aria-label="showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'"
+                  :ui="{ base: 'rounded-[10px] size-11 justify-center', leadingIcon: 'size-5' }"
                   @click="showPassword = !showPassword"
                 />
               </template>
             </UInput>
           </UFormField>
-
-          <p class="forgot">
-            نسيت كلمة المرور؟ تواصل مع المدير الإداري.
-          </p>
 
           <UButton
             type="submit"
@@ -139,13 +134,26 @@ async function onSubmit() {
             size="xl"
             block
             :loading="loading"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            class="submit"
+            :ui="{ base: 'rounded-[14px] font-semibold min-h-14 text-[17px]' }"
           />
         </UForm>
 
-        <div class="closed-note">
-          التسجيل مغلق — الحسابات تُنشأ من قِبل الإدارة.
-        </div>
+        <!-- ملاحظتان هادئتان بأيقونتيهما (كانت الأولى سطراً عائماً والثانية صندوقاً) -->
+        <ul class="notes">
+          <li>
+            <UIcon
+              name="i-lucide-key-round"
+              class="size-4"
+            />نسيت كلمة المرور؟ تواصل مع المدير الإداري.
+          </li>
+          <li>
+            <UIcon
+              name="i-lucide-lock-keyhole"
+              class="size-4"
+            />التسجيل مغلق — الحسابات تُنشأ من قِبل الإدارة.
+          </li>
+        </ul>
 
         <NuxtLink
           to="/"
@@ -176,16 +184,18 @@ async function onSubmit() {
 .login { min-height: 100vh; display: grid; grid-template-columns: 1.05fr 0.95fr; background: var(--bg); color: var(--ink); }
 
 /* FORM SIDE */
-.form-side { display: flex; align-items: center; justify-content: center; padding: 40px 28px; position: relative; }
+.form-side { display: flex; align-items: center; justify-content: center; padding: 88px 24px 40px; position: relative; }
 .theme-toggle { position: absolute; top: 26px; left: 26px; }
-.form-box { width: 100%; max-width: 400px; }
+.form-box { width: 100%; max-width: 420px; }
 .brand-head { text-align: center; margin-bottom: 34px; }
 .brand-head .mark { height: 72px; width: auto; margin: 0 auto 14px; display: block; filter: var(--logo-filter); }
 .brand-head h1 { margin: 0; font-size: 30px; font-weight: 700; color: var(--ink); }
 .brand-head p { margin: 10px 0 0; font-size: 16px; color: var(--ink-2); font-weight: 300; }
-.form { display: flex; flex-direction: column; gap: 18px; }
-.forgot { margin: -4px 0 0; font-size: 15px; line-height: 1.7; color: var(--ink-2); }
-.closed-note { margin-top: 24px; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); text-align: center; font-size: 14px; line-height: 1.7; color: var(--ink-3); }
+.form { display: flex; flex-direction: column; gap: 20px; }
+.submit { margin-top: 6px; }
+.notes { list-style: none; margin: 22px 0 0; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
+.notes li { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.notes li :deep(svg), .notes li .iconify { flex: none; margin-top: 4px; color: var(--ink-3); }
 .back-link { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 22px; font-size: 15px; font-weight: 500; color: var(--ink-2); transition: color .2s; }
 .back-link:hover { color: var(--ink); }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * نافذةُ رحلة المواصلات: إضافةٌ (بلا `trip`) أو تعديلُ رحلةٍ غير مسدَّدة (بـ`trip`).
- * التسمياتُ فوق الحقول وكلُّها بعرضٍ كامل على الجوال؛ والمبلغُ يقبل لوحةَ المفاتيح العربية (`normalizeAmount`).
+ * التسمياتُ فوق الحقول وكلُّها بعرضٍ كامل على الجوال؛ والمبلغُ حقلُ رقمٍ (طلب المستخدم 2026-10-22) ويبقى نصّاً في النموذج لـ`normalizeAmount`.
  * التاريخُ الافتراضيّ للجديدة: اليوم إن كان في الشهر المعروض، وإلا آخرُ يومٍ منه. يُصدر `saved` بعد الحفظ.
  */
 import { TRANSPORT_AMOUNT_MAX, TRANSPORT_DESCRIPTION_MAX, TRANSPORT_NOTES_MAX } from '~/constants/transport'
@@ -96,12 +96,17 @@ async function save() {
             required
           >
             <UInput
-              v-model="form.amount"
+              :model-value="form.amount"
+              type="number"
               inputmode="decimal"
+              min="0"
+              :max="TRANSPORT_AMOUNT_MAX"
+              step="any"
               :placeholder="`حتى ${TRANSPORT_AMOUNT_MAX}`"
               size="lg"
               class="w-full"
               :ui="{ base: 'rounded-[13px] min-h-11' }"
+              @update:model-value="v => form.amount = v == null ? '' : String(v)"
             >
               <template #trailing>
                 <span class="unit">₪</span>

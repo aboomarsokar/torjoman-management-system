@@ -62,6 +62,8 @@ const mainNav: Item[] = [
   { key: 'users', label: 'إدارة المستخدمين', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH] },
   { key: 'supervisors', label: 'المشرفون', icon: 'i-lucide-users-round', to: '/supervisors', roles: LEADERS },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF },
+  // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)
+  { key: 'exam-students', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/exams/students', roles: ['examiner'] },
   { key: 'students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'] },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'] },
@@ -104,10 +106,12 @@ const matches = (item: Item) => !!item.to
   && (item.tab
     ? route.path === item.to && tabFromQuery(route.query.tab) === item.tab
     : item.to === route.path || (item.key !== 'profile' && route.path.startsWith(`${item.to}/`)))
+const activeItem = computed(() => [...mainNav, ...managerNav, metricsItem, profileItem]
+  .filter(i => role.value && i.roles.includes(role.value) && matches(i))
+  .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const navTitle = computed(() => {
-  const all = [...mainNav, ...managerNav, metricsItem, profileItem]
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
-  return all.find(matches)?.label ?? 'لوحة التحكم'
+  return activeItem.value?.label ?? 'لوحة التحكم'
 })
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
@@ -117,7 +121,8 @@ function go(item: Item) {
   if (item.to) navigateTo(item.tab ? { path: item.to, query: { tab: queryFromTab(item.tab) } } : item.to)
   else comingSoon()
 }
-const isActive = matches
+// البارزُ واحد: إن طابق المسارَ بندان (/exams و/exams/students) فالأطولُ رابطاً — الأدقّ — وحده
+const isActive = (item: Item) => matches(item) && (!!item.tab || item.to === activeItem.value?.to)
 </script>
 
 <template>

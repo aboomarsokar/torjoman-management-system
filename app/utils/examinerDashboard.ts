@@ -17,7 +17,7 @@ const DAY = 86_400_000
 const inMonth = (iso: string, ym: string) => iso.slice(0, 7) === ym
 
 /** ما ينتظر الرصد، وأقدمُه بالأيام (منذ الترشيح). */
-export function pendingQueue(items: ExaminerItem[], today: string) {
+export function examinerQueue(items: ExaminerItem[], today: string) {
   const pending = items.filter(i => !i.result)
   const oldest = pending.reduce<string | null>((o, i) => (!o || i.created_at < o ? i.created_at : o), null)
   const oldestDays = oldest ? Math.max(0, Math.floor((Date.parse(`${today}T12:00:00Z`) - Date.parse(oldest)) / DAY)) : 0

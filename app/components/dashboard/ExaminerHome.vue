@@ -7,6 +7,8 @@ import type { StatItem } from '~/components/ui/StatStrip.vue'
 import type { TeacherAction } from '~/utils/teacherDashboard'
 import { EXAM_MAX_TOTAL } from '~/constants/exams'
 
+const HALQAT_PREVIEW = 5
+
 const { dash, pending } = useExaminerDashboard()
 const d = computed(() => dash.value)
 
@@ -71,14 +73,25 @@ const stats = computed<StatItem[]>(() => {
         v-if="d.byHalaqa.length"
         class="card sec"
       >
-        <h3>حلقاتي</h3>
+        <!-- العددُ ظاهراً وزرُّ «عرض الجميع» إلى صفحة الحلقات (طلب المستخدم 2026-10-22)؛ واللوحةُ تكتفي بأوّل HALQAT_PREVIEW -->
+        <div class="sec-head">
+          <h3>حلقاتي <span class="count">{{ d.byHalaqa.length }}</span></h3>
+          <UButton
+            to="/exams/students"
+            label="عرض الجميع"
+            color="neutral"
+            variant="outline"
+            trailing-icon="i-lucide-chevron-left"
+            :ui="{ base: 'rounded-[12px] font-semibold min-h-11' }"
+          />
+        </div>
         <ul class="rows">
           <li
-            v-for="h in d.byHalaqa"
+            v-for="h in d.byHalaqa.slice(0, HALQAT_PREVIEW)"
             :key="h.id"
           >
             <NuxtLink
-              to="/exams"
+              :to="`/exams/students?h=${h.id}`"
               class="row"
             >
               <span class="row-main">
@@ -112,7 +125,9 @@ const stats = computed<StatItem[]>(() => {
 .h-info { min-width: 0; }
 .h-info h2 { margin: 0; font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
-.sec h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; color: var(--ink); }
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.sec h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .rows { list-style: none; margin: 0; padding: 0; }
 .rows li + li { border-top: 1px solid var(--line); }
 .row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 4px; color: inherit; text-decoration: none; border-radius: 12px; }

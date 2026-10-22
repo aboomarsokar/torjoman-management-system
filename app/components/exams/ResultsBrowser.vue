@@ -168,24 +168,26 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
       <UFormField
         v-if="showSupervisorFilter"
         label="المشرف"
-        size="sm"
+        :ui="{ label: 'rf-label' }"
       >
         <UiSelect
           v-model="fSupervisor"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
           :items="supervisorOpts"
-          size="md"
+          size="xl"
           class="rf"
         />
       </UFormField>
       <UFormField
         v-if="!isTeacher"
         label="الحلقة"
-        size="sm"
+        :ui="{ label: 'rf-label' }"
       >
         <UiSelect
           v-model="fHalqa"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
           :items="halqaOpts"
-          size="md"
+          size="xl"
           class="rf"
         />
       </UFormField>
@@ -194,7 +196,7 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
         label="مسح الفلاتر"
         color="neutral"
         variant="ghost"
-        size="md"
+        size="xl"
         icon="i-lucide-x"
         @click="clearResFilters"
       />
@@ -308,8 +310,11 @@ const scoreText = (r: FlatResult) => `${r.total_score ?? '—'} / ${MAX_TOTAL}`
 <style scoped>
 .sec-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
 .count { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; }
-.res-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
-.rf { width: 200px; max-width: 100%; }
+.res-filters { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+/* مثلُ فلترَي «اختبارات الطلاب» (الحلقة والشهر — طلب المستخدم 2026-10-22) */
+.rf { width: 280px; max-width: 100%; }
+.res-filters :deep(.rf-label) { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+@media (max-width: 560px) { .rf { width: 100%; } .res-filters > * { width: 100%; } }
 .strong { font-weight: 600; color: var(--ink); }
 .score-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; margin: -4px -8px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); font: inherit; cursor: pointer; }
 .score-btn:hover { background: var(--blue-soft); color: var(--blue-ink); }

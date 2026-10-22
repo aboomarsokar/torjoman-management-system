@@ -13,6 +13,8 @@ import { roleLabel } from '~/constants/roles'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
 import { maritalItems, maritalLabel } from '~/constants/maritalStatus'
 import { educationItems } from '~/constants/educationLevel'
+import { choiceItems, RESIDENCE_AREAS, TAJWEED_LEVELS } from '~/constants/profileChoices'
+import { digitsOnly, normalizeDigits, IDENTITY_ERROR, IDENTITY_LENGTH, isValidIdentity } from '~/constants/identity'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -119,7 +121,8 @@ const sections = computed(() => {
         { label: 'المنطقة/المدينة', value: dash(p.residence_area) },
         { label: 'أقرب مسجد', value: dash(p.nearest_mosque) },
         { label: 'العنوان التفصيلي', value: dash(p.address_detail) },
-        { label: 'الجوال', value: dash(p.phone) }
+        { label: 'الجوال', value: dash(p.phone) },
+        { label: 'واتس أب', value: dash(p.whatsapp) }
       ]
     },
     {
@@ -139,7 +142,7 @@ const saving = ref(false)
 const form = reactive({
   full_name: '', gender: '' as '' | 'male' | 'female', birth_date: '', national_id: '', marital_status: '', family_count: '',
   hire_date: '', years_experience: '',
-  residence_area: '', nearest_mosque: '', address_detail: '', phone: '',
+  residence_area: '', nearest_mosque: '', address_detail: '', phone: '', whatsapp: '',
   education_level: '', academic_major: '', quran_parts: '', tajweed_level: ''
 })
 const numStr = (v: number | null) => v != null ? String(v) : ''
@@ -147,6 +150,8 @@ const numStr = (v: number | null) => v != null ? String(v) : ''
 const jobTitle = computed(() => data.value?.p ? roleLabel(data.value.p.role, form.gender || null) : '')
 const maritalOptions = computed(() => maritalItems(form.gender || null, data.value?.p?.marital_status))
 const educationOptions = computed(() => educationItems(data.value?.p?.education_level))
+const residenceOptions = computed(() => choiceItems(RESIDENCE_AREAS, data.value?.p?.residence_area))
+const tajweedOptions = computed(() => choiceItems(TAJWEED_LEVELS, data.value?.p?.tajweed_level))
 
 function openEdit() {
   const p = data.value?.p
@@ -154,7 +159,7 @@ function openEdit() {
   Object.assign(form, {
     full_name: p.full_name, gender: p.gender ?? '', birth_date: p.birth_date ?? '', national_id: p.national_id ?? '', marital_status: p.marital_status ?? '', family_count: numStr(p.family_count),
     hire_date: p.hire_date ?? '', years_experience: numStr(p.years_experience),
-    residence_area: p.residence_area ?? '', nearest_mosque: p.nearest_mosque ?? '', address_detail: p.address_detail ?? '', phone: p.phone ?? '',
+    residence_area: p.residence_area ?? '', nearest_mosque: p.nearest_mosque ?? '', address_detail: p.address_detail ?? '', phone: p.phone ?? '', whatsapp: p.whatsapp ?? '',
     education_level: p.education_level ?? '', academic_major: p.academic_major ?? '', quran_parts: numStr(p.quran_parts), tajweed_level: p.tajweed_level ?? ''
   })
   modalOpen.value = true
@@ -166,6 +171,15 @@ const strOrNull = (v: string) => v.trim() || null
 async function save() {
   if (!form.full_name.trim()) {
     toast.add({ title: 'الاسم مطلوب.', color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  if (form.national_id && !isValidIdentity(form.national_id)) {
+    toast.add({ title: `${IDENTITY_ERROR}.`, color: 'error', icon: 'i-lucide-circle-alert' })
+    return
+  }
+  const whatsapp = normalizeDigits(form.whatsapp).replace(/[\s-]/g, '')
+  if (whatsapp && !/^\+?\d{7,15}$/.test(whatsapp)) {
+    toast.add({ title: 'رقم الواتس أب أرقامٌ فقط (و+ في أوّله إن شئت).', color: 'error', icon: 'i-lucide-circle-alert' })
     return
   }
   saving.value = true
@@ -184,6 +198,7 @@ async function save() {
       nearest_mosque: strOrNull(form.nearest_mosque),
       address_detail: strOrNull(form.address_detail),
       phone: strOrNull(form.phone),
+      whatsapp: strOrNull(whatsapp),
       education_level: strOrNull(form.education_level),
       academic_major: strOrNull(form.academic_major),
       quran_parts: numOrNull(form.quran_parts),
@@ -228,8 +243,21 @@ const pwOpen = ref(false)
         <!-- الترويسة -->
         <div class="band">
           <div class="band-id">
-            <div class="av">
+            <div
+              class="av"
+              :class="{ 'av-btn': showPhotoField }"
+            >
+              <!-- الحرفُ نفسُه زرُّ رفع الصورة وتبديلها (طلب المستخدم 2026-10-22 بدل بطاقتها المنفصلة) -->
+              <ProfilePhotoButton
+                v-if="showPhotoField"
+                :profile-id="data.p.id"
+                :name="data.p.full_name"
+                :photo-path="photoPath"
+                :gender="data.p.gender"
+                @changed="onPhotoChanged"
+              />
               <ProfileAvatar
+                v-else
                 :name="data.p.full_name"
                 :photo-url="photoUrl"
               />
@@ -284,20 +312,6 @@ const pwOpen = ref(false)
           v-if="isSelf && notImpersonating && data.p.must_change_password"
           @change="pwOpen = true"
         />
-
-        <!-- الصورة الشخصية (اختيارية؛ لا تُعرض لحساب أنثى) -->
-        <section
-          v-if="showPhotoField"
-          class="card photo-card"
-        >
-          <ProfilePhotoField
-            :profile-id="data.p.id"
-            :name="data.p.full_name"
-            :photo-path="photoPath"
-            :gender="data.p.gender"
-            @changed="onPhotoChanged"
-          />
-        </section>
 
         <!-- النطاق -->
         <div
@@ -408,10 +422,15 @@ const pwOpen = ref(false)
               class="f1"
             >
               <UInput
-                v-model="form.national_id"
+                :model-value="form.national_id"
+                inputmode="numeric"
+                :maxlength="IDENTITY_LENGTH"
+                dir="ltr"
+                placeholder="9 أرقام"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
+                @update:model-value="v => form.national_id = digitsOnly(String(v ?? '')).slice(0, IDENTITY_LENGTH)"
               />
             </UFormField>
           </div>
@@ -491,8 +510,10 @@ const pwOpen = ref(false)
               label="المنطقة/المدينة"
               class="f1"
             >
-              <UInput
+              <USelect
                 v-model="form.residence_area"
+                :items="residenceOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
@@ -504,11 +525,31 @@ const pwOpen = ref(false)
             >
               <UInput
                 v-model="form.phone"
+                inputmode="tel"
+                dir="ltr"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
               />
             </UFormField>
+          </div>
+          <div class="row">
+            <UFormField
+              label="واتس أب"
+              hint="إن خالف الجوال"
+              class="f1"
+            >
+              <UInput
+                v-model="form.whatsapp"
+                inputmode="tel"
+                dir="ltr"
+                placeholder="+970…"
+                size="lg"
+                class="w-full"
+                :ui="{ base: 'rounded-[13px]' }"
+              />
+            </UFormField>
+            <div class="f1" />
           </div>
           <div class="row">
             <UFormField
@@ -581,8 +622,10 @@ const pwOpen = ref(false)
               label="مستوى التجويد"
               class="f1"
             >
-              <UInput
+              <USelect
                 v-model="form.tajweed_level"
+                :items="tajweedOptions"
+                placeholder="اختر"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
@@ -620,7 +663,7 @@ const pwOpen = ref(false)
 .band-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .av { width: 64px; height: 64px; border-radius: 18px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex: none; overflow: hidden; }
-.photo-card { padding: 18px 22px; margin-bottom: 18px; }
+.av.av-btn { overflow: visible; } /* شارةُ الكاميرا تخرج عن الحافة */
 .band h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; color: var(--ink); }
 .band-sub { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .band-sub span { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-2); }

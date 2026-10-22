@@ -429,14 +429,15 @@ const settingCards = [
             <!-- المشرفون الميدانيون -->
             <div class="card sec">
               <div class="sec-head">
-                <h3>المشرفون الميدانيون</h3>
+                <!-- العددُ بارزاً والرابطُ زرٌّ ظاهر (طلب المستخدم 2026-10-22) -->
+                <h3>المشرفون الميدانيون <span class="count">{{ qSupervisors.length }}</span></h3>
                 <UButton
                   to="/supervisors"
                   label="المشرفون"
                   color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  trailing-icon="i-lucide-arrow-left"
+                  variant="outline"
+                  trailing-icon="i-lucide-chevron-left"
+                  :ui="{ base: 'rounded-[12px] font-semibold min-h-11' }"
                 />
               </div>
               <UiEmptyState
@@ -548,7 +549,8 @@ const settingCards = [
 .sup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
 .sec { padding: 20px 22px; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .row:first-child { border-top: none; }

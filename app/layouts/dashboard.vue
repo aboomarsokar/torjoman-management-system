@@ -28,12 +28,6 @@ watch(status, async (s) => {
   }
 }, { immediate: true })
 
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
-
 const drawerOpen = ref(false)
 function comingSoon() {
   drawerOpen.value = false
@@ -267,16 +261,6 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
       </nav>
 
       <div class="side-foot">
-        <button
-          class="nav-item theme"
-          @click="toggleTheme"
-        >
-          <UIcon
-            :name="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-            class="size-5"
-          />
-          <span>{{ isDark ? 'الوضع الفاتح' : 'الوضع الليلي' }}</span>
-        </button>
         <div class="user-card">
           <div class="user-av">
             <ProfileAvatar
@@ -328,6 +312,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
             </h1>
           </div>
           <div class="top-end">
+            <!-- الوضعُ بجانب الجرس (كان في أسفل القائمة الجانبية — 2026-10-22) -->
+            <UiThemeToggle />
             <NotificationsBell />
             <div class="top-user">
               <div class="top-usertext">

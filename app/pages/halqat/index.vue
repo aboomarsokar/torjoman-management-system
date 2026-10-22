@@ -25,8 +25,8 @@ type HalaqaRow = Database['public']['Tables']['halaqat']['Row'] & {
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-/** الإنشاء والتعديل للمديرَين (الإداري والفني)، والحذف للمدير الإداري — كما يسمح RLS. */
-const { isManager, isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer } = usePermissions()
+/** الإنشاءُ والتعديلُ والحذفُ للمدير الإداري وحده — كما يسمح RLS (والفنيُّ يطّلع — قرار 2026-10-22). */
+const { isAdmin, isFieldSupervisor, isWomenAdmin, isExaminer } = usePermissions()
 // المشرفُ والمختبِرُ يريان حلقاتِهما المسندة وحدها وهي من جنسهما، والمديرةُ حلقاتِ البنات وحدها (RLS) —
 // فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
 const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value)
@@ -230,7 +230,7 @@ async function confirmDelete() {
         />
       </div>
       <UButton
-        v-if="isManager"
+        v-if="isAdmin"
         label="إنشاء حلقة"
         color="primary"
         size="md"
@@ -254,7 +254,7 @@ async function confirmDelete() {
         v-else-if="filtered.length === 0"
         icon="i-lucide-book-open"
         title="لا حلقات بعد"
-        :description="isManager ? 'أنشئ أول حلقة وعيّن لها معلّماً لتظهر هنا.' : 'لا حلقات ضمن نطاقك بعد.'"
+        :description="isAdmin ? 'أنشئ أول حلقة وعيّن لها معلّماً لتظهر هنا.' : 'لا حلقات ضمن نطاقك بعد.'"
       />
       <UiDataTable
         v-else
@@ -324,7 +324,7 @@ async function confirmDelete() {
               aria-label="تفاصيل"
             />
             <UButton
-              v-if="isManager"
+              v-if="isAdmin"
               color="neutral"
               variant="outline"
               size="sm"
@@ -380,7 +380,7 @@ async function confirmDelete() {
             :students="studentsOf(row)"
           />
           <div
-            v-if="isManager"
+            v-if="isAdmin"
             class="hcard-actions"
           >
             <UButton

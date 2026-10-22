@@ -62,7 +62,8 @@ const supQuery = useRoute().query.supervisor
 const supervisorF = ref<string>(typeof supQuery === 'string' ? supQuery : 'all')
 const supervisorItems = computed(() => {
   const map = new Map<string, string>()
-  for (const v of visits.value ?? []) if (v.supervisor) map.set(v.supervisor_id, v.supervisor.full_name)
+  // المشرفون الميدانيّون وحدهم — زيارةٌ قديمة جدولها مديرٌ قبل قصر الجدولة على المشرف لا تُدخله القائمة (2026-10-22)
+  for (const v of visits.value ?? []) if (v.supervisor?.role === 'field_supervisor') map.set(v.supervisor_id, v.supervisor.full_name)
   return [{ label: 'كل المشرفين', value: 'all' }, ...[...map].map(([value, label]) => ({ label, value }))]
 })
 // الحلقة (طلب المستخدم 2026-10-21): حلقاتُ الزيارات الظاهرة للمشرف المختار، فلا تُعرض حلقةٌ لا زيارةَ لها

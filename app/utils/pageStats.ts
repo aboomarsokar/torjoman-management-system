@@ -11,13 +11,14 @@ const round1 = (n: number) => Math.round(n * 10) / 10
 const sameMonth = (iso: string | null | undefined, today: string) => !!iso && iso.slice(0, 7) === today.slice(0, 7)
 
 /** الطلاب: النشطون، وغيرُ النشطين (منقطع/متخرّج/منقول)، والملتحقون هذا الشهر، ومتوسّطُ المحفوظ عند الالتحاق. */
-export function studentStats(rows: { status: string, enrollment_date: string | null, quran_parts: number | null }[], today: string): StatItem[] {
+/** `female`: قسمُ البنات (المديرة الإدارية — 2026-10-22). */
+export function studentStats(rows: { status: string, enrollment_date: string | null, quran_parts: number | null }[], today: string, female = false): StatItem[] {
   const active = rows.filter(s => s.status === 'active')
   const parts = active.map(s => s.quran_parts).filter((p): p is number => p !== null)
   return [
-    { key: 'active', icon: 'i-lucide-graduation-cap', value: active.length, label: 'طالباً نشطاً' },
-    { key: 'inactive', icon: 'i-lucide-user-minus', tone: 'neutral', value: rows.length - active.length, label: 'غيرُ نشط (منقطع/متخرّج/منقول)' },
-    { key: 'new', icon: 'i-lucide-user-plus', tone: 'green', value: active.filter(s => sameMonth(s.enrollment_date, today)).length, label: 'التحق هذا الشهر' },
+    { key: 'active', icon: 'i-lucide-graduation-cap', value: active.length, label: female ? 'طالبةً نشطة' : 'طالباً نشطاً' },
+    { key: 'inactive', icon: 'i-lucide-user-minus', tone: 'neutral', value: rows.length - active.length, label: female ? 'غيرُ نشطة (منقطعة/متخرّجة/منقولة)' : 'غيرُ نشط (منقطع/متخرّج/منقول)' },
+    { key: 'new', icon: 'i-lucide-user-plus', tone: 'green', value: active.filter(s => sameMonth(s.enrollment_date, today)).length, label: female ? 'التحقت هذا الشهر' : 'التحق هذا الشهر' },
     { key: 'parts', icon: 'i-lucide-book-open-check', value: parts.length ? String(round1(parts.reduce((a, b) => a + b, 0) / parts.length)) : '—', label: 'جزءاً محفوظاً متوسّطاً عند الالتحاق' }
   ]
 }

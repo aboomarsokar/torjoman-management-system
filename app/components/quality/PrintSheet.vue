@@ -60,7 +60,7 @@ watch(() => props.active, async (on) => {
 
       <div class="pq-notes">
         <section>
-          <h2>ملاحظات المشرف</h2>
+          <h2>الملاحظات</h2>
           <p>{{ record?.supervisor_notes || '—' }}</p>
         </section>
         <section>

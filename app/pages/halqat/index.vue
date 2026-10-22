@@ -55,6 +55,14 @@ const { data: halqat, refresh, pending } = useLazyAsyncData<HalaqaRow[]>(
 const NO_SUP = NO_STAFF
 
 const genderF = ref<Gender | 'all'>('all')
+// «عرض الكل» من صفحة المشرف يفتح حلقاتِه وحدها (?supervisor=) — وتُزال بزرّها (طلب المستخدم 2026-10-22)
+const route = useRoute()
+const supervisorF = ref(typeof route.query.supervisor === 'string' ? route.query.supervisor : '')
+const supervisorFName = computed(() => (halqat.value ?? []).find(h => h.supervisor_id === supervisorF.value)?.supervisor?.full_name ?? '')
+function clearSupervisorF() {
+  supervisorF.value = ''
+  navigateTo({ query: { ...route.query, supervisor: undefined } }, { replace: true })
+}
 const statusF = ref<Status | 'all'>('all')
 // قائمتان منسدلتان كصفحة الطلاب (طلب المستخدم 2026-10-20) — العددُ بجانب كلّ خيار
 const genderFilterItems = computed(() => {
@@ -69,9 +77,10 @@ const genderFilterItems = computed(() => {
 const filtered = computed(() => (halqat.value ?? []).filter(h =>
   (genderF.value === 'all' || h.gender === genderF.value)
   && (statusF.value === 'all' || h.status === statusF.value)
+  && (!supervisorF.value || h.supervisor_id === supervisorF.value)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
-watch([genderF, statusF], resetPage)
+watch([genderF, statusF, supervisorF], resetPage)
 function studentsOf(h: HalaqaRow) {
   return h.student_count?.[0]?.count ?? 0
 }
@@ -208,6 +217,16 @@ async function confirmDelete() {
           class="filter-sel"
           aria-label="الحالة"
           :ui="{ base: 'rounded-[12px] min-h-12' }"
+        />
+        <UButton
+          v-if="supervisorF"
+          :label="`المشرف: ${supervisorFName || '…'}`"
+          color="neutral"
+          variant="soft"
+          trailing-icon="i-lucide-x"
+          aria-label="إزالة تصفية المشرف"
+          :ui="{ base: 'rounded-[12px] min-h-12 font-semibold' }"
+          @click="clearSupervisorF"
         />
       </div>
       <UButton

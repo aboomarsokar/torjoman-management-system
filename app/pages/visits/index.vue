@@ -57,7 +57,9 @@ const periodItems = computed(() => {
   })
   return [{ label: 'كل الشهور', value: 'all' }, ...list]
 })
-const supervisorF = ref<string>('all')
+// «عرض الكل» من صفحة المشرف يفتح زياراتِه وحدها (?supervisor= — طلب المستخدم 2026-10-22)
+const supQuery = useRoute().query.supervisor
+const supervisorF = ref<string>(typeof supQuery === 'string' ? supQuery : 'all')
 const supervisorItems = computed(() => {
   const map = new Map<string, string>()
   for (const v of visits.value ?? []) if (v.supervisor) map.set(v.supervisor_id, v.supervisor.full_name)

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
  * بطاقة إحصائية: أيقونة ملوّنة + رقم + تسمية. stacked = الأيقونة فوق الرقم.
- * الرقم يُعدّ تصاعدياً عند تغيّره (وصول العدد الحقيقي بعد الجلب غير الحاجز)
- * بدل الظهور دفعة واحدة — عبر requestAnimationFrame، عميل فقط.
+ * الرقمُ يُعدّ تصاعدياً من 0 عند الظهور ومن السابق عند التغيّر (`UiCountUp`)؛ والقيمةُ النصّية تُعرض كما هي.
  */
 const props = defineProps<{
   icon: string
@@ -17,34 +16,6 @@ const props = defineProps<{
 /** السطرُ الثاني قِطعاً: الأرقامُ (ومعها الكسر) تُميَّز عن الكلام. */
 const subParts = computed(() => (props.sub ?? '').split(/(\d+(?:[.,]\d+)?٪?%?)/).filter(Boolean)
   .map(text => ({ text, num: /^\d/.test(text) })))
-
-const displayValue = ref(props.value)
-let rafId: number | null = null
-
-function animateTo(target: number, from: number) {
-  if (rafId) cancelAnimationFrame(rafId)
-  const duration = 700
-  const start = performance.now()
-  function tick(now: number) {
-    const t = Math.min(1, (now - start) / duration)
-    const eased = 1 - (1 - t) ** 3
-    displayValue.value = Math.round(from + (target - from) * eased)
-    rafId = t < 1 ? requestAnimationFrame(tick) : null
-  }
-  rafId = requestAnimationFrame(tick)
-}
-
-watch(() => props.value, (newVal, oldVal) => {
-  if (import.meta.client && typeof newVal === 'number' && typeof oldVal === 'number') {
-    animateTo(newVal, oldVal)
-  } else {
-    displayValue.value = newVal
-  }
-})
-
-onUnmounted(() => {
-  if (rafId) cancelAnimationFrame(rafId)
-})
 </script>
 
 <template>
@@ -63,7 +34,13 @@ onUnmounted(() => {
     </div>
     <div class="txt">
       <div class="num">
-        {{ displayValue }}
+        <UiCountUp
+          v-if="typeof value === 'number'"
+          :value="value"
+        />
+        <template v-else>
+          {{ value }}
+        </template>
       </div>
       <div class="lbl">
         {{ label }}

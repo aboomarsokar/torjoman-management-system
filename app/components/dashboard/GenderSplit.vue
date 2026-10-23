@@ -49,16 +49,26 @@ const head = (it: SplitItem) => it.avg ? show(it.total, it.suffix) : String(sum(
         <span
           class="gs-total"
           :aria-label="`${it.avg ? 'المتوسّط العامّ' : 'المجموع'} ${head(it)}`"
-        >{{ head(it) }}</span>
+        ><UiCountUp
+          :value="it.avg ? it.total : sum(it)"
+          :suffix="it.avg ? it.suffix : ''"
+        /></span>
       </div>
 
+      <!-- الأرقامُ تُعدّ تصاعدياً من 0 (طلب المستخدم 2026-10-23) -->
       <div class="gs-split">
         <div class="gs-side m">
-          <b>{{ show(it.male, it.suffix) }}</b>
+          <b><UiCountUp
+            :value="it.male"
+            :suffix="it.suffix"
+          /></b>
           <span>{{ it.maleLabel }}</span>
         </div>
         <div class="gs-side f">
-          <b>{{ show(it.female, it.suffix) }}</b>
+          <b><UiCountUp
+            :value="it.female"
+            :suffix="it.suffix"
+          /></b>
           <span>{{ it.femaleLabel }}</span>
         </div>
       </div>

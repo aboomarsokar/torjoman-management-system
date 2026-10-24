@@ -255,17 +255,17 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `student_id` | uuid FK → students | |
 | `examiner_id` | uuid FK → profiles | الراصد (المختبِر؛ النتائج القديمة باسم المشرف) |
 | `exam_date` | date | تاريخ الاختبار |
-| `q1_memorization` | int | س1 حفظ (0–10) |
-| `q1_understanding` | int | س1 فهم (0–10) |
-| `q1_reflection` | int | س1 تدبر (0–10) |
-| `q2_memorization` | int | س2 حفظ (0–10) |
-| `q2_understanding` | int | س2 فهم (0–10) |
-| `q2_reflection` | int | س2 تدبر (0–10) |
-| `q3_memorization` | int | س3 حفظ (0–10) |
-| `q3_understanding` | int | س3 فهم (0–10) |
-| `q3_reflection` | int | س3 تدبر (0–10) |
-| `tajweed_score` | int | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
-| `total_score` | int | يُحسب آلياً (المجموع من 99) |
+| `q1_memorization` | numeric(3,1) | س1 حفظ (0–10، بخطوة نصف) |
+| `q1_understanding` | numeric(3,1) | س1 فهم (0–10، بخطوة نصف) |
+| `q1_reflection` | numeric(3,1) | س1 تدبر (0–10، بخطوة نصف) |
+| `q2_memorization` | numeric(3,1) | س2 حفظ (0–10، بخطوة نصف) |
+| `q2_understanding` | numeric(3,1) | س2 فهم (0–10، بخطوة نصف) |
+| `q2_reflection` | numeric(3,1) | س2 تدبر (0–10، بخطوة نصف) |
+| `q3_memorization` | numeric(3,1) | س3 حفظ (0–10، بخطوة نصف) |
+| `q3_understanding` | numeric(3,1) | س3 فهم (0–10، بخطوة نصف) |
+| `q3_reflection` | numeric(3,1) | س3 تدبر (0–10، بخطوة نصف) |
+| `tajweed_score` | numeric(3,1) | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
+| `total_score` | numeric(4,1) | يُحسب آلياً (المجموع من 99). **أنصافُ الدرجات مقبولة منذ `20261024111415_exam_results_half_marks`**: الدرجاتُ العشر `numeric(3,1)` بقيد `exam_results_half_steps` (كلُّ درجةٍ مضاعفُ 0.5)، و`total_score`/`passed` مولَّدان من جديد |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها). **تضعها القاعدة** (`exam_results_guard_pass_mark`): عند الإدراج من `app_settings.pass_mark` مهما أرسل العميل، وعند التعديل لا تتغيّر |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |
 | `notes` | text | ملاحظات |
@@ -958,7 +958,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ### قراءةُ الطالب لنتائجه `public.my_exam_cycle_results()`
 
-`(exam_cycle_id smallint, passed boolean, total_score int, exam_date date)` لكلّ محاولات الطالب نفسه على بنودٍ بدورة (`exam_cycle_id is not null`)، مرتَّبةً بالدورة ثم التاريخ ثم الإنشاء؛ مقصورةٌ على `students.user_id = auth.uid()` فلا يرى غير سجلّه ولا `teacher_note`. `language sql stable security definer`، `search_path = ''`، `revoke … from public, anon`، `grant execute … to authenticated`. تغذّي رحلته في `/me` (يُجمع **النجاحُ يغلب**: لا يُلغى اجتيازٌ برسوب لاحق). أمّا العاملون فيقرؤون `exam_results` ببنودها مباشرةً (RLS).
+`(exam_cycle_id smallint, passed boolean, total_score numeric, exam_date date)` (numeric منذ `20261024111415`) لكلّ محاولات الطالب نفسه على بنودٍ بدورة (`exam_cycle_id is not null`)، مرتَّبةً بالدورة ثم التاريخ ثم الإنشاء؛ مقصورةٌ على `students.user_id = auth.uid()` فلا يرى غير سجلّه ولا `teacher_note`. `language sql stable security definer`، `search_path = ''`، `revoke … from public, anon`، `grant execute … to authenticated`. تغذّي رحلته في `/me` (يُجمع **النجاحُ يغلب**: لا يُلغى اجتيازٌ برسوب لاحق). أمّا العاملون فيقرؤون `exam_results` ببنودها مباشرةً (RLS).
 
 ### حالة البيانات والإزالة اللاحقة
 

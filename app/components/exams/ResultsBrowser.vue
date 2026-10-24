@@ -12,16 +12,18 @@ import { examResultStats } from '~/utils/pageStats'
 
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
-const { isTeacher, isFieldSupervisor, isManager, isReadOnly, isWomenAdmin } = usePermissions()
+const { isTeacher, isFieldSupervisor, isExaminer, isManager, isReadOnly, isWomenAdmin } = usePermissions()
 /** فلتر المشرف لمن يرى أكثر من مشرف: الإداري والفني ومشرف المشروع والمديرة الإدارية. */
 const showSupervisorFilter = computed(() => isManager.value || isReadOnly.value || isWomenAdmin.value)
 /** عمود المشرف لمن يرى أكثر من مشرف (لا المعلّم ولا المشرف الميداني). */
 const showSupervisorColumn = computed(() => !isTeacher.value && !isFieldSupervisor.value)
+/** عمودُ من رصد النتيجة (طلب المستخدم 2026-10-24) — لكلّ من يرى النتائج إلا المختبِرَ نفسَه (هو صاحبُها غالباً). */
+const showExaminerColumn = computed(() => !isExaminer.value)
 // قسمُ المديرة الإدارية إناثٌ كلُّه: التسمياتُ بالمؤنّث (2026-10-22)
 const fem = isWomenAdmin
 const W = computed(() => fem.value
-  ? { results: 'نتائج الطالبات', student: 'الطالبة', sup: 'المشرفة', allSups: 'كل المشرفات', emptyHint: 'تظهر هنا حين ترصد المختبِرةُ نتائجَ طالبات قسمك.' }
-  : { results: 'نتائج الطلاب', student: 'الطالب', sup: 'المشرف', allSups: 'كل المشرفين', emptyHint: 'تظهر هنا حين يرصد المختبِرُ نتائجَ طلاب نطاقك.' })
+  ? { results: 'نتائج الطالبات', student: 'الطالبة', sup: 'المشرفة', examiner: 'المختبِرة', allSups: 'كل المشرفات', emptyHint: 'تظهر هنا حين ترصد المختبِرةُ نتائجَ طالبات قسمك.' }
+  : { results: 'نتائج الطلاب', student: 'الطالب', sup: 'المشرف', examiner: 'المختبِر', allSups: 'كل المشرفين', emptyHint: 'تظهر هنا حين يرصد المختبِرُ نتائجَ طلاب نطاقك.' })
 
 /** أعلى مجموعٍ ممكن: تسعةُ أسئلةٍ من 10 + التجويد حتى 9. */
 const MAX_TOTAL = EXAM_MAX_TOTAL
@@ -41,6 +43,7 @@ type RawResult = {
     } | null
   } | null
   exam_list_item: { exam_cycle: ExamCycleRow | null } | null
+  examiner: { full_name: string } | null
 }
 type FlatResult = {
   id: string
@@ -55,13 +58,14 @@ type FlatResult = {
   halqa: string
   supId: string
   sup: string
+  examiner: string
 }
 
 // بلا await قبل defineExpose (قاعدة vue/no-expose-after-await) — الجلب عميل فقط أصلاً
 const { data: rawResults, refresh, pending } = useAsyncData<RawResult[]>('exams-results', async () => {
   const { data, error } = await supabase
     .from('exam_results')
-    .select('id, exam_date, total_score, passed, student:student_id(id, full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order))')
+    .select('id, exam_date, total_score, passed, student:student_id(id, full_name, halaqa:halaqa_id(id, name, supervisor:supervisor_id(id, full_name))), exam_list_item:exam_list_item_id(exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order)), examiner:examiner_id(full_name)')
     .order('exam_date', { ascending: false })
     .limit(500)
     .returns<RawResult[]>()
@@ -95,7 +99,8 @@ const allResults = computed<FlatResult[]>(() => (rawResults.value ?? []).filter(
     student: r.student?.full_name ?? '—',
     title: t.title, detail: t.detail,
     halqaId: h?.id ?? '', halqa: h?.name ?? '—',
-    supId: sup?.id ?? '', sup: sup?.full_name ?? '—'
+    supId: sup?.id ?? '', sup: sup?.full_name ?? '—',
+    examiner: r.examiner?.full_name ?? '—'
   }
 }))
 
@@ -150,6 +155,7 @@ const columns = computed(() => [
   { key: 'student', label: W.value.student },
   { key: 'halqa', label: 'الحلقة' },
   ...(showSupervisorColumn.value ? [{ key: 'sup', label: W.value.sup }] : []),
+  ...(showExaminerColumn.value ? [{ key: 'examiner', label: W.value.examiner }] : []),
   { key: 'cycle', label: 'الدورة' },
   { key: 'exam_date', label: 'التاريخ' },
   { key: 'total_score', label: 'العلامة' },
@@ -255,6 +261,9 @@ const fmtDate = (iso: string) => iso.split('-').reverse().join('-')
       <template #sup="{ row }">
         <span class="muted">{{ row.sup }}</span>
       </template>
+      <template #examiner="{ row }">
+        <span class="muted">{{ row.examiner }}</span>
+      </template>
       <template #cycle="{ row }">
         <div class="cyc">
           <span>{{ row.title }}</span>
@@ -299,6 +308,7 @@ const fmtDate = (iso: string) => iso.split('-').reverse().join('-')
           :fields="[
             { label: 'الحلقة', value: row.halqa },
             ...(showSupervisorColumn ? [{ label: 'المشرف', value: row.sup }] : []),
+            ...(showExaminerColumn ? [{ label: W.examiner, value: row.examiner }] : []),
             { label: 'النطاق', value: row.detail },
             { label: 'التاريخ', value: fmtDate(row.exam_date) },
             { label: 'العلامة', value: scoreText(row) }

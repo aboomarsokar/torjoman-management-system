@@ -1,6 +1,20 @@
 /** نافذةُ رصد الشهر (قفلُ الإرسال) وتنسيقُ الشهور والأيام بالأرقام، بتاريخ غزة. */
 import { describe, expect, it } from 'vitest'
-import { formatDay, gazaToday, isSubmittable, openingDay, periodLabel, shiftMonth } from './reportWindow'
+import { formatDay, gazaToday, isFriday, isSubmittable, openingDay, periodLabel, schoolDayOnOrBefore, shiftMonth } from './reportWindow'
+
+describe('الجمعة عطلة', () => {
+  it('isFriday', () => {
+    expect(isFriday('2026-10-23')).toBe(true)
+    expect(isFriday('2026-10-22')).toBe(false) // خميس
+    expect(isFriday('2026-10-24')).toBe(false) // سبت
+  })
+
+  it('schoolDayOnOrBefore: الجمعةُ ← الخميس، وعبر حدّ الشهر', () => {
+    expect(schoolDayOnOrBefore('2026-10-23')).toBe('2026-10-22')
+    expect(schoolDayOnOrBefore('2026-10-24')).toBe('2026-10-24')
+    expect(schoolDayOnOrBefore('2026-05-01')).toBe('2026-04-30') // 01-05-2026 جمعة
+  })
+})
 
 describe('openingDay', () => {
   it('آخرُ يومٍ في الشهر', () => {

@@ -11,6 +11,19 @@ export function gazaToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
 }
 
+/** الجمعةُ عطلةُ الحلقات (الدوامُ من السبت إلى الخميس): لا حضورَ فيها، والقاعدةُ ترفض تسجيلَها. */
+export function isFriday(day: string): boolean {
+  return new Date(`${day.slice(0, 10)}T12:00:00Z`).getUTCDay() === FRIDAY
+}
+
+/** آخرُ يومِ دوامٍ لا يتجاوز `day` (YYYY-MM-DD): الجمعةُ ← الخميسُ قبلها، وما سواها كما هو. */
+export function schoolDayOnOrBefore(day: string): string {
+  if (!isFriday(day)) return day
+  const d = new Date(`${day.slice(0, 10)}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
 /** أولُ يومٍ يُرسَل فيه رصدُ الشهر: آخرُ يومٍ فيه، والخميسُ إن كان جمعة. */
 export function openingDay(year: number, month: number): string {
   const last = new Date(Date.UTC(year, month, 0))

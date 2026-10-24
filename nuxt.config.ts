@@ -59,6 +59,12 @@ export default defineNuxtConfig({
     ? { providers: { google: false, bunny: false, fontshare: false, googleicons: false } }
     : {},
 
+  // أيقوناتُ الوضع في حزمة العميل (2026-10-22): حين تُجلب «moon-star» و«monitor» في طلبٍ واحد يبني @nuxt/icon 2.2.2
+  // قاعدةَ الأولى بصورة الثانية فيظهر القمرُ شاشة — والمضمَّنةُ لا تُجلب أصلاً.
+  icon: {
+    clientBundle: { icons: ['lucide:sun', 'lucide:moon-star', 'lucide:monitor'] }
+  },
+
   // PWA: التطبيق قابل للتثبيت (مانيفست + service worker لهيكل التطبيق فقط).
   // لا يخزّن استدعاءات Supabase — البيانات تبقى حيّة. النصوص عربية RTL.
   pwa: {

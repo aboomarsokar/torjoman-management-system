@@ -28,13 +28,9 @@ watch(status, async (s) => {
   }
 }, { immediate: true })
 
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
-
 const drawerOpen = ref(false)
+/** حاويةُ المحتوى — يقرؤها زرُّ «إلى الأعلى» حين تكون هي المُمرَّرة لا النافذة. */
+const contentEl = ref<HTMLElement | null>(null)
 function comingSoon() {
   drawerOpen.value = false
   toast.add({ title: 'هذه الشاشة قيد الإنشاء — قريباً.', icon: 'i-lucide-hammer', color: 'info' })
@@ -193,6 +189,10 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
           class="side-logo"
         >
       </div>
+      <!-- «ثبّت التطبيق» أعلى القائمة وفي الترويسة (طلب المستخدم 2026-10-22) — يختفي في التطبيق المثبَّت -->
+      <div class="side-install">
+        <PwaInstallButton variant="side" />
+      </div>
 
       <nav class="side-nav">
         <ClientOnly>
@@ -267,16 +267,6 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
       </nav>
 
       <div class="side-foot">
-        <button
-          class="nav-item theme"
-          @click="toggleTheme"
-        >
-          <UIcon
-            :name="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-            class="size-5"
-          />
-          <span>{{ isDark ? 'الوضع الفاتح' : 'الوضع الليلي' }}</span>
-        </button>
         <div class="user-card">
           <div class="user-av">
             <ProfileAvatar
@@ -328,6 +318,9 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
             </h1>
           </div>
           <div class="top-end">
+            <PwaInstallButton variant="top" />
+            <!-- الوضعُ بجانب الجرس (كان في أسفل القائمة الجانبية — 2026-10-22) -->
+            <UiThemeToggle />
             <NotificationsBell />
             <div class="top-user">
               <div class="top-usertext">
@@ -349,9 +342,13 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
         </header>
       </div>
 
-      <main class="content">
+      <main
+        ref="contentEl"
+        class="content"
+      >
         <slot />
       </main>
+      <UiBackToTop :container="contentEl" />
     </div>
   </div>
 </template>
@@ -363,6 +360,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 /* القائمة الجانبية: عرضٌ يلين بين 236 و274، ورأسٌ وذيلٌ ثابتان، والقائمة وحدها تُمرَّر.
    عناصر القائمة لا تنكمش (flex-shrink: 0) — كانت تنضغط فوق بعضها في الشاشات القصيرة بدل أن تُمرَّر */
 .side { width: clamp(236px, 20vw, 274px); flex-shrink: 0; background: var(--side-bg); display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: sticky; top: 0; }
+.side-install { flex-shrink: 0; padding: 12px 12px 4px; }
+.side-install:empty { display: none; }
 .side-head { flex-shrink: 0; padding: 22px 22px 18px; display: flex; align-items: center; border-bottom: 1px solid var(--side-line); }
 .side-logo { height: 52px; width: auto; filter: brightness(0) invert(1); }
 .side-nav { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 2px; scrollbar-width: thin; scrollbar-color: var(--side-line) transparent; }
@@ -407,7 +406,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .tu-role { font-size: 12.5px; color: var(--ink-3); }
 .top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; overflow: hidden; }
 /* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
-.content { --content-pad: 24px; flex: 1; overflow-y: auto; padding: var(--content-pad); background: var(--bg); position: relative; }
+/* القاعُ أوسع بقدر زرّ «إلى الأعلى» (44 + هامشه) كي يُمرَّر آخرُ عنصرٍ — كأزرار الترقيم يساراً — فوقه لا تحته */
+.content { --content-pad: 24px; flex: 1; overflow-y: auto; padding: var(--content-pad); padding-bottom: calc(var(--content-pad) + 60px); background: var(--bg); position: relative; }
 
 /* RESPONSIVE */
 .overlay { display: none; }
@@ -432,5 +432,15 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
   .topbar { padding: 0 16px; }
   .content { --content-pad: 16px; }
   .top-usertext { display: none; }
+}
+/* الجوال: كان العنوانُ (nowrap) يمتدّ تحت «ثبّت التطبيق» — 45px في «الحضور اليوميّ» بعرض 390 (2026-10-23).
+   فالصورةُ تُخفى (هي والاسمُ في أسفل القائمة الجانبية)، والفجواتُ تضيق، والعنوانُ يصغر ويأخذ ما بقي
+   ويُقصّ بنقاطٍ إن طال؛ وزرُّ التثبيت يبقى بحجمه ولونه ونبضه */
+@media (max-width: 480px) {
+  .topbar { gap: 8px; }
+  .top-start { flex: 1; gap: 8px; }
+  .top-title { min-width: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; }
+  .top-end { gap: 6px; flex-shrink: 0; }
+  .top-user { display: none; }
 }
 </style>

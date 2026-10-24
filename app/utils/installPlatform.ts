@@ -13,3 +13,16 @@ export function installPlatform(ua: string, platform = '', maxTouchPoints = 0): 
   if (safari && /macintosh|mac os x/i.test(ua)) return 'mac-safari'
   return 'desktop'
 }
+
+/**
+ * يُعرض زرُّ التثبيت؟ (المستخدم 2026-10-24: «يظلّ ظاهراً مع أني منزّلُ التطبيق».) الموقعُ في تبويب المتصفّح لا يعرف
+ * أنّ تطبيقه مثبَّت — إلا أنّ متصفّحات Chromium (Chrome وEdge وSamsung) لا تُطلق `beforeinstallprompt` لتطبيقٍ مثبَّت:
+ * فيها يُعرض الزرُّ بوصول الحدث وحدَه. وحيث لا حدثَ أصلاً (iPhone وSafari الماك وFirefox أندرويد) لا سبيلَ للعلم،
+ * فيبقى الزرُّ بخطواته. والحاسوبُ بلا حدثٍ لا يُثبِّت (Firefox الحاسوب) فلا زرّ.
+ */
+export function showInstallButton(platform: InstallPlatform, ua: string, canPrompt: boolean): boolean {
+  if (canPrompt) return true
+  if (platform === 'ios-safari' || platform === 'ios-other' || platform === 'mac-safari') return true
+  const chromium = /chrome|chromium|edg\/|samsungbrowser/i.test(ua) && !/firefox/i.test(ua)
+  return platform === 'android' && !chromium
+}

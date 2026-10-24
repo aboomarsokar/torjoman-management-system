@@ -5,8 +5,10 @@
  * التاريخ: زرّ بالعربية يفتح تقويماً (السبت أوّل الأسبوع، أرقام لاتينية). الوقت: قائمة كل ربع ساعة «4:30 م».
  * v-model نصّ محلّي `YYYY-MM-DDTHH:mm` (كقيمة datetime-local) — لا يتغيّر شيء عند المستهلك.
  * `suggestedTime` يُملأ تلقائياً حين يُختار اليوم والوقت فارغ (وقت الحلقة اليومي مثلاً).
+ * لا يومَ قبل بداية المشروع `PROJECT_START_DATE` (قرار المستخدم 2026-10-24).
  */
 import { CalendarDate, parseDate, type DateValue } from '@internationalized/date'
+import { PROJECT_START_DATE } from '~/constants/project'
 
 interface Props {
   /** وقتٌ مقترح `HH:mm` يُملأ عند اختيار اليوم إن لم يُحدَّد وقت. */
@@ -17,6 +19,7 @@ const model = defineModel<string>({ default: '' })
 
 const LOCALE = 'ar-u-nu-latn'
 const SATURDAY = 6
+const minValue = parseDate(PROJECT_START_DATE)
 
 const parts = computed(() => splitDateTime(model.value))
 const open = ref(false)
@@ -75,6 +78,7 @@ watch(model, (v) => {
           v-model="calendarValue"
           :locale="LOCALE"
           :week-starts-on="SATURDAY"
+          :min-value="minValue"
           class="p-2"
         />
       </template>

@@ -8,6 +8,7 @@
  * - الزيارةُ القديمة (قبل النموذج، بلا `deductions`) تُعرض بحقولها القديمة للقراءة.
  * ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع.
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import type { VisitRow } from '~/types/visits'
 import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
@@ -179,6 +180,7 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
             <input
               v-model="executedDay"
               type="date"
+              :min="PROJECT_START_DATE"
               :max="today"
               :disabled="!editable"
               class="date-input"

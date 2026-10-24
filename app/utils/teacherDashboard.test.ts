@@ -44,8 +44,12 @@ describe('لوحة المعلم — الحضور', () => {
 
 describe('لوحة المعلم — رصد الشهر', () => {
   it('السابقُ المعادُ بملاحظةٍ هو المنتظَر، وحالُه «أُعيد»', () => {
-    const r = recordingStatus([report(2026, 9, 'draft', 'راجع حمزة')], '2026-10-20')
-    expect(r).toMatchObject({ label: '09-2026', state: 'returned', returnNote: 'راجع حمزة', opensOn: '2026-09-30' })
+    const r = recordingStatus([report(2026, 10, 'draft', 'راجع حمزة')], '2026-11-20')
+    expect(r).toMatchObject({ label: '10-2026', state: 'returned', returnNote: 'راجع حمزة', opensOn: '2026-10-31' })
+  })
+
+  it('لا شهرَ قبل بداية المشروع (10/2026): مسوّدةُ 9 لا تُعرض', () => {
+    expect(recordingStatus([report(2026, 9, 'draft', 'راجع')], '2026-10-20')).toMatchObject({ label: '10-2026', state: 'none' })
   })
 
   it('السابقُ مُرسَل ← الجاري، ولم يبدأ بعد', () => {
@@ -80,12 +84,12 @@ describe('لوحة المعلم — المطلوب منك الآن', () => {
     const acts = teacherActions({
       ...base,
       todayAttendance: { isFriday: false, held: true, absent: 2 },
-      recording: recordingStatus([report(2026, 9, 'draft', 'راجع')], '2026-10-20'),
+      recording: recordingStatus([report(2026, 10, 'draft', 'راجع')], '2026-11-20'),
       incentive: { allocated: 300, status: null, returned: false },
       newAlerts: 1
     })
     expect(acts.map(a => `${a.key}:${a.tone}`)).toEqual(['rec:urgent', 'alerts:urgent', 'inc:todo', 'att:done'])
-    expect(acts.find(a => a.key === 'rec')).toMatchObject({ detail: 'راجع', to: '/reports?y=2026&m=9' })
+    expect(acts.find(a => a.key === 'rec')).toMatchObject({ detail: 'راجع', to: '/reports?y=2026&m=10' })
     expect(acts.find(a => a.key === 'att')?.detail).toBe('غاب 2')
   })
 

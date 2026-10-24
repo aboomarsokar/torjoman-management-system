@@ -3,6 +3,7 @@
  * تسجيلُ تسليم ملازم لحلقة (المدير الإداري) — الحلقةُ والملزمةُ وعددُ النسخ والتاريخ وملاحظةٌ اختياريّة.
  * التسليمُ يتكرّر (دفعةٌ ثانية من الملزمة نفسها صفٌّ جديد)، والتحقّقُ في `useBooklets`.
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import { BOOKLETS } from '~/constants/booklets'
 import type { DeliveryDraft } from '~/composables/useBooklets'
 import type { HalaqaLite } from '~/utils/booklets'
@@ -67,6 +68,7 @@ const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b
             <UInput
               v-model="form.deliveredOn"
               type="date"
+              :min="PROJECT_START_DATE"
               :max="today"
               size="lg"
               class="w-full"

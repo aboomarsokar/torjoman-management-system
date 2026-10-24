@@ -4,6 +4,7 @@
  * التسمياتُ فوق الحقول وكلُّها بعرضٍ كامل على الجوال؛ والمبلغُ حقلُ رقمٍ (طلب المستخدم 2026-10-22) ويبقى نصّاً في النموذج لـ`normalizeAmount`.
  * التاريخُ الافتراضيّ للجديدة: اليوم إن كان في الشهر المعروض، وإلا آخرُ يومٍ منه. يُصدر `saved` بعد الحفظ.
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import { TRANSPORT_AMOUNT_MAX, TRANSPORT_DESCRIPTION_MAX, TRANSPORT_NOTES_MAX } from '~/constants/transport'
 import { gazaToday } from '~/utils/reportWindow'
 import { monthBounds, normalizeAmount, validateTrip, type Trip } from '~/utils/transport'
@@ -84,6 +85,7 @@ async function save() {
             <UInput
               v-model="form.trip_date"
               type="date"
+              :min="PROJECT_START_DATE"
               :max="today"
               size="lg"
               class="w-full"

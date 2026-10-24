@@ -3,8 +3,10 @@
  * منتقي اليوم: سهما يومٍ سابق/لاحق وزرٌّ يفتح تقويماً (السبت أول الأسبوع، أرقام لاتينية).
  * v-model نصٌّ `YYYY-MM-DD`، لا يتجاوز `max` (اليوم بغزة)، ويُعرض `DD-MM-YYYY`.
  * الجمعةُ عطلة: السهمان يتخطّيانها، وهي معطّلةٌ في التقويم (قرار المستخدم 2026-10-24).
+ * ولا يومَ قبل بداية المشروع `PROJECT_START_DATE` (قرار المستخدم 2026-10-24).
  */
 import { CalendarDate, parseDate, type DateValue } from '@internationalized/date'
+import { PROJECT_START_DATE } from '~/constants/project'
 import { isFriday } from '~/utils/reportWindow'
 
 const props = defineProps<{ max: string, disabled?: boolean }>()
@@ -23,6 +25,7 @@ const calendarValue = computed<DateValue | undefined>({
   }
 })
 const maxValue = computed(() => parseDate(props.max))
+const minValue = parseDate(PROJECT_START_DATE)
 const fridayUnavailable = (d: DateValue) => isFriday(d.toString())
 
 // اليومُ التالي/السابق مع تخطّي الجمعة — والخميسُ «آخرُ يوم» إن كان الغدُ جمعةَ اليوم
@@ -31,10 +34,11 @@ function neighbour(by: number) {
   return (isFriday(next.toString()) ? next.add({ days: by }) : next).toString()
 }
 const atMax = computed(() => neighbour(1) > props.max)
+const atMin = computed(() => neighbour(-1) < PROJECT_START_DATE)
 
 function step(by: number) {
   const next = neighbour(by)
-  if (next <= props.max) day.value = next
+  if (next <= props.max && next >= PROJECT_START_DATE) day.value = next
 }
 </script>
 
@@ -48,7 +52,7 @@ function step(by: number) {
       icon="i-lucide-chevron-right"
       aria-label="اليوم السابق"
       class="dp-step"
-      :disabled="disabled"
+      :disabled="disabled || atMin"
       :ui="{ base: 'rounded-[13px] justify-center' }"
       @click="step(-1)"
     />
@@ -69,6 +73,7 @@ function step(by: number) {
           :locale="LOCALE"
           :week-starts-on="SATURDAY"
           :max-value="maxValue"
+          :min-value="minValue"
           :is-date-unavailable="fridayUnavailable"
           class="p-2"
         />

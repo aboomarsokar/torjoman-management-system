@@ -9,6 +9,7 @@ import type { Database } from '~/types/database.types'
 import type { QualityHalaqa, QualityRow } from '~/utils/qualityRecord'
 import { FINAL_MAX, QUALITY_STATE_META, fmtScore, qualityState } from '~/utils/qualityRecord'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'تقييم المعلمين — ترجمان' })
@@ -21,11 +22,11 @@ const { role, isTeacher } = usePermissions()
 
 const [ty, tm] = gazaToday().split('-').map(Number) as [number, number]
 const max = { year: ty, month: tm }
-const prev = shiftMonth(ty, tm, -1)
+const prev = clampToProjectStart(shiftMonth(ty, tm, -1))
 function fromQuery() {
   const y = Number(route.query.y)
   const m = Number(route.query.m)
-  const ok = Number.isInteger(y) && Number.isInteger(m) && m >= 1 && m <= 12 && y >= 2024 && y * 12 + m <= ty * 12 + tm
+  const ok = Number.isInteger(y) && Number.isInteger(m) && m >= 1 && m <= 12 && !isBeforeProjectStart({ year: y, month: m }) && y * 12 + m <= ty * 12 + tm
   return ok ? { year: y, month: m } : prev
 }
 const initial = fromQuery()

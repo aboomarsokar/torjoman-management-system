@@ -49,7 +49,8 @@ describe('whatsappLink', () => {
 
 describe('defaultAchievementMonth', () => {
   it('الشهرُ السابق، وعبرَ السنة', () => {
-    expect(defaultAchievementMonth('2026-10-22')).toEqual({ year: 2026, month: 9 })
+    expect(defaultAchievementMonth('2026-11-22')).toEqual({ year: 2026, month: 10 })
+    expect(defaultAchievementMonth('2026-10-22')).toEqual({ year: 2026, month: 10 }) // لا قبل بداية المشروع
     expect(defaultAchievementMonth('2027-01-05')).toEqual({ year: 2026, month: 12 })
   })
 })

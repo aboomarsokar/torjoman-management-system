@@ -518,6 +518,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ---
 
+## قيدُ بداية المشروع `*_from_project_start` (منذ `20261024143005_project_start_dates`)
+
+المشروع بدأ في الشهر 10/2026 (قرار المستخدم 2026-10-24): قيودُ `check` ترفض أيّ تاريخ عملٍ قبل `2026-10-01` — `admin_alerts.alert_date`، `attendance_days.day`، `attendance_absences.day`، `booklet_deliveries.delivered_on`، `exam_lists.week_date`، `exam_results.exam_date`، `financial_transactions.transaction_date`، `incentive_statement_items.item_date`، `meeting_minutes.meeting_date`، `news.news_date`، `students.enrollment_date` (أو null)، `transport_trips.trip_date`، و`supervision_visits.scheduled_at`/`executed_at` (من `2026-10-01 00:00+03`) — وأيَّ شهرٍ قبل 10/2026 (`year * 100 + month >= 202610`) في `monthly_reports` و`incentive_statements` و`halaqa_incentives` و`monthly_salaries` و`teacher_quality_months`. لا قيدَ على `birth_date` ولا `hire_date`. اسمُ كلّ قيد `<الجدول>_from_project_start` (وللطالب `students_enrollment_from_project_start`)، و`useErrorHandler` يترجمه «لا يُقبل تاريخٌ قبل بداية المشروع (1/10/2026).». الواجهةُ تحدّ منتقياتها بـ`PROJECT_START` (`app/constants/project.ts`).
+
 ## ملاحظات على الحساب (Computed — لا تُخزّن)
 
 هذه تُحسب في الكود أو views، لا تُخزّن كحقول:

@@ -26,7 +26,8 @@ const fridayToday = isFriday(today)
 const route = useRoute()
 // ?d= من تفصيل يومٍ في «متابعة الرصد» — يومٌ صحيحٌ لا يتجاوز اليوم، وإلا اليوم (والجمعةُ ← الخميس)
 const qd = typeof route.query.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.d) && route.query.d <= today ? route.query.d : null
-const day = ref(schoolDayOnOrBefore(qd ?? today))
+// لا يومَ قبل بداية المشروع (2026-10-01 خميس، فلا يقع على جمعة)
+const day = ref(clampDayToProjectStart(schoolDayOnOrBefore(qd ?? today)))
 const dayIsFriday = computed(() => isFriday(day.value))
 const halaqaId = ref<string | null>(typeof route.query.h === 'string' ? route.query.h : null)
 

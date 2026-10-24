@@ -48,12 +48,16 @@ describe('defaultPeriod', () => {
     expect(defaultPeriod('2026-11-05', { previousStatus: 'approved' })).toEqual({ year: 2026, month: 11 })
   })
   it('المعلم: يومُ الفتح لا يغيّر القاعدة', () => {
-    expect(defaultPeriod('2026-10-31', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 9 })
-    expect(defaultPeriod('2026-10-31', { previousStatus: 'none' })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-11-30', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-11-30', { previousStatus: 'none' })).toEqual({ year: 2026, month: 11 })
   })
   it('المعتمِد بلا حلقة (null): السابقُ قبل يوم فتح الجاري، والجاري منه', () => {
-    expect(defaultPeriod('2026-10-30', { previousStatus: null })).toEqual({ year: 2026, month: 9 })
-    expect(defaultPeriod('2026-10-31', { previousStatus: null })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-11-29', { previousStatus: null })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-11-30', { previousStatus: null })).toEqual({ year: 2026, month: 11 })
+  })
+  it('لا شهرَ قبل بداية المشروع (10/2026)', () => {
+    expect(defaultPeriod('2026-10-30', { previousStatus: null })).toEqual({ year: 2026, month: 10 })
+    expect(defaultPeriod('2026-10-20', { previousStatus: 'draft' })).toEqual({ year: 2026, month: 10 })
   })
   it('يعبر حدَّ السنة: يناير ← ديسمبر السابق', () => {
     expect(defaultPeriod('2027-01-10', { previousStatus: null })).toEqual({ year: 2026, month: 12 })
@@ -63,12 +67,13 @@ describe('defaultPeriod', () => {
 
 describe('periodFromQuery', () => {
   it('شهرٌ صحيحٌ في المدى', () => {
-    expect(periodFromQuery('2026', '09', '2026-10-19')).toEqual({ year: 2026, month: 9 })
-    expect(periodFromQuery('2025', '1', '2026-10-19')).toEqual({ year: 2025, month: 1 })
+    expect(periodFromQuery('2026', '10', '2026-10-19')).toEqual({ year: 2026, month: 10 })
+    expect(periodFromQuery('2026', '11', '2027-01-19')).toEqual({ year: 2026, month: 11 })
   })
   it('المستقبلُ وما قبل المدى والقيمُ الفاسدة ← null', () => {
     expect(periodFromQuery('2026', '11', '2026-10-19')).toBeNull()
-    expect(periodFromQuery('2024', '12', '2026-10-19')).toBeNull()
+    expect(periodFromQuery('2026', '09', '2026-10-19')).toBeNull()
+    expect(periodFromQuery('2025', '1', '2026-10-19')).toBeNull()
     expect(periodFromQuery('2026', '13', '2026-10-19')).toBeNull()
     expect(periodFromQuery('2026', 'x', '2026-10-19')).toBeNull()
     expect(periodFromQuery(undefined, '9', '2026-10-19')).toBeNull()

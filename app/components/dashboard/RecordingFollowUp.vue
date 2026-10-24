@@ -13,6 +13,7 @@ import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
 import type { DayState, RecordingRow, ReportState } from '~/utils/recordingStatus'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { isBeforeProjectStart } from '~/utils/projectStart'
 import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort } from '~/utils/recordingStatus'
 
 /** في صفحته: رأسُ الصفحة يحمل العنوان. الغيابُ false (يُظهر العنوان). */
@@ -25,16 +26,15 @@ const { profile } = useProfile()
 /** المخاطَبُ أنثى (المديرة الإدارية والمشرفة الميدانية): «افتحي» و«تواصلي». */
 const fem = computed(() => profile.value?.gender === 'female')
 
-// الشهر: الجاري افتراضاً (بلا معاملٍ في الدالّة)، وآخرُ ستة أشهر بالأرقام
+// الشهر: الجاري افتراضاً (بلا معاملٍ في الدالّة)، وآخرُ ستة أشهر بالأرقام — لا قبل بداية المشروع
 const MONTHS_BACK = 6
 const nowMonth = (() => {
   const [y, m] = gazaToday().split('-').map(Number)
   return { year: y!, month: m! }
 })()
-const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => {
-  const m = shiftMonth(nowMonth.year, nowMonth.month, -i)
-  return { label: i === 0 ? `${m.month}/${m.year} — الجاري` : `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }
-})
+const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => shiftMonth(nowMonth.year, nowMonth.month, -i))
+  .filter((m, i) => i === 0 || !isBeforeProjectStart(m))
+  .map((m, i) => ({ label: i === 0 ? `${m.month}/${m.year} — الجاري` : `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }))
 const monthKey = ref(monthItems[0]!.value)
 const isCurrent = computed(() => monthKey.value === monthItems[0]!.value)
 

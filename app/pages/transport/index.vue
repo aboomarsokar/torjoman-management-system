@@ -6,6 +6,7 @@
  */
 import { TRANSPORT_LOGGER_ROLES } from '~/constants/transport'
 import { gazaToday } from '~/utils/reportWindow'
+import { isBeforeProjectStart } from '~/utils/projectStart'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'كشف المواصلات — ترجمان' })
@@ -21,7 +22,7 @@ const max = { year: todayYear, month: todayMonth }
 function fromQuery(): { year: number, month: number } {
   const y = Number(route.query.y)
   const m = Number(route.query.m)
-  const valid = Number.isInteger(y) && Number.isInteger(m) && m >= 1 && m <= 12 && y >= 2000 && y * 12 + m <= max.year * 12 + max.month
+  const valid = Number.isInteger(y) && Number.isInteger(m) && m >= 1 && m <= 12 && !isBeforeProjectStart({ year: y, month: m }) && y * 12 + m <= max.year * 12 + max.month
   return valid ? { year: y, month: m } : { year: max.year, month: max.month }
 }
 const initial = fromQuery()

@@ -7,6 +7,7 @@
  * الهوية والجنس للمدير الإداري وحده (حارس القاعدة)، والحذف له.
  * الحذف وتصحيح الهوية عبر مسارَي الخادم (يمسّان حساب الدخول نفسه)، والكلمة المؤقّتة تظهر مرّةً واحدة بعد الإضافة.
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 import { IDENTITY_ERROR, isValidIdentity, normalizeDigits } from '~/constants/identity'
@@ -778,6 +779,7 @@ async function confirmDelete() {
               <UInput
                 v-model="form.enrollment_date"
                 type="date"
+                :min="PROJECT_START_DATE"
                 dir="ltr"
                 size="lg"
                 class="w-full"

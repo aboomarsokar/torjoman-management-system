@@ -9,7 +9,8 @@ import type { InstallPlatform } from '~/utils/installPlatform'
 
 withDefaults(defineProps<{ variant?: 'side' | 'top' | 'block' }>(), { variant: 'block' })
 
-const { installed, canPrompt, platform, install } = usePwaInstall()
+// `available`: غيرُ مثبَّت — وفي Chrome/Edge/Samsung بوصول حدث التثبيت وحدَه، فيختفي عند من ثبّت التطبيق (2026-10-24)
+const { available, canPrompt, platform, install } = usePwaInstall()
 const stepsOpen = ref(false)
 
 async function onClick() {
@@ -52,7 +53,7 @@ const label = computed(() => isPhone.value ? 'ثبّت التطبيق على ج�
 
 <template>
   <ClientOnly>
-    <template v-if="!installed">
+    <template v-if="available">
       <button
         v-if="variant === 'side'"
         type="button"

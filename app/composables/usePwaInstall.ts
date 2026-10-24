@@ -50,6 +50,9 @@ export function usePwaInstall() {
 
   /** حوارُ التثبيت الأصليّ متاح (Chromium أطلق الحدث). */
   const canPrompt = computed(() => !!deferred.value)
+  /** يُعرض زرُّ «ثبّت التطبيق»: غيرُ مثبَّتٍ، وفي Chromium بوصول الحدث وحدَه (`showInstallButton`). */
+  const available = computed(() => !installed.value && !import.meta.server
+    && showInstallButton(platform.value, navigator.userAgent, canPrompt.value))
   /** للبانر: 'none' = لا إرشاد · 'mobile' = الشاشة الرئيسية · 'mac' = Dock (Safari وحده). */
   const manual = computed<'none' | 'mobile' | 'mac'>(() =>
     platform.value === 'ios-safari' ? 'mobile' : platform.value === 'mac-safari' ? 'mac' : 'none')
@@ -90,5 +93,5 @@ export function usePwaInstall() {
     ready.value = false
   }
 
-  return { visible, manual, canPrompt, installed: readonly(installed), platform: readonly(platform), install, dismiss }
+  return { visible, manual, canPrompt, available, installed: readonly(installed), platform: readonly(platform), install, dismiss }
 }

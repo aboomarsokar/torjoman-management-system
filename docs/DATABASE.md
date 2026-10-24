@@ -477,6 +477,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## 16. `incentive_statements` — كشف حوافز الحلقة الشهري (المعلم — §4.25)
 
+> **المستلم يتبع التخصيص (منذ `20261024191310`):** المشغّل `halaqa_incentives_sync_statement` على `halaqa_incentives` (`after insert or delete or update of allocated_amount`) يضع `received_amount` لمسوّدة كشف الحلقة في الشهر نفسه = مبلغ التخصيص (أو 0 عند حذفه)؛ والكشفُ المُرسَل أو المعتمَد لا يُمسّ. الدالّة `private.sync_statement_received()` (`security definer`، `search_path=''`، بلا منحٍ للعميل).
+
 المعلم يرفع كشفاً بمصروفات مبلغ الحوافز، يطّلع عليه المدير (§4.20د).
 
 | العمود | النوع | ملاحظات |

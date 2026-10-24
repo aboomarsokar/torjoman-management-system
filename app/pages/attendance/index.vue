@@ -20,10 +20,14 @@ const { handle } = useErrorHandler()
 const { isTeacher, canApprove, isReadOnly } = usePermissions()
 
 const today = gazaToday()
+// الجمعةُ عطلة (الدوامُ من السبت إلى الخميس — قرار المستخدم 2026-10-24): الشاشةُ تفتح يومَها على الخميس
+// قبلها لإكمال حضوره، ولا يُرصَد فيها يوم؛ والحارسُ في القاعدة يرفضها كذلك
+const fridayToday = isFriday(today)
 const route = useRoute()
-// ?d= من تفصيل يومٍ في «متابعة الرصد» — يومٌ صحيحٌ لا يتجاوز اليوم، وإلا اليوم
+// ?d= من تفصيل يومٍ في «متابعة الرصد» — يومٌ صحيحٌ لا يتجاوز اليوم، وإلا اليوم (والجمعةُ ← الخميس)
 const qd = typeof route.query.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.d) && route.query.d <= today ? route.query.d : null
-const day = ref(qd ?? today)
+const day = ref(schoolDayOnOrBefore(qd ?? today))
+const dayIsFriday = computed(() => isFriday(day.value))
 const halaqaId = ref<string | null>(typeof route.query.h === 'string' ? route.query.h : null)
 
 // حلقة المعلم تلقائياً، وغيرُه يرى الحلقات التي تسمح له بها RLS
@@ -76,7 +80,7 @@ const enrolled = computed(() => students.value.filter(s => !s.enrollment_date ||
 const { held, draft, locked, loading, saving, load, setDraft, isDirty, save, cancelDay: cancelHeldDay } = useAttendanceDay(halaqaId, day)
 watch([halaqaId, day], load, { immediate: true })
 
-const canWrite = computed(() => !isReadOnly.value && (isTeacher.value || canApprove.value) && !locked.value)
+const canWrite = computed(() => !isReadOnly.value && (isTeacher.value || canApprove.value) && !locked.value && !dayIsFriday.value)
 const enrolledIds = computed(() => enrolled.value.map(s => s.id))
 const summary = computed(() => summarizeDay(enrolled.value, draft.value))
 const summaryText = computed(() => `حضر ${summary.value.present} · بعذر ${summary.value.excused} · بلا عذر ${summary.value.unexcused}`)
@@ -158,6 +162,22 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
         </div>
       </div>
 
+      <!-- يومَ الجمعة: عطلةٌ بلا رصد، والشاشةُ على الخميس قبلها -->
+      <div
+        v-if="fridayToday"
+        class="holiday"
+        role="status"
+      >
+        <UIcon
+          name="i-lucide-calendar-off"
+          class="size-6 shrink-0"
+        />
+        <div>
+          <b>اليوم الجمعة — عطلةُ الحلقات</b>
+          <span>لا يُسجَّل فيه حضور. يُعرض الخميس <bdi class="holiday-day">{{ formatDay(schoolDayOnOrBefore(today)) }}</bdi> لتُكمل حضوره إن لزم.</span>
+        </div>
+      </div>
+
       <div
         v-if="locked"
         class="locked"
@@ -184,6 +204,13 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
           :action="false"
         />
       </div>
+
+      <UiEmptyState
+        v-else-if="dayIsFriday"
+        icon="i-lucide-calendar-off"
+        title="الجمعة عطلة — لا يُسجَّل فيها حضور"
+        description="اختر يوماً من السبت إلى الخميس."
+      />
 
       <template v-else-if="halaqaId">
         <!-- حالُ اليوم: الحلقةُ «انعقدت» إذا سُجّل حضورُها — لا زرَّ منفصلاً -->
@@ -283,6 +310,10 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
 
 .locked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
+.holiday { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; margin-bottom: 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent); background: var(--blue-soft); color: var(--blue-ink); line-height: 1.6; }
+.holiday b { display: block; font-size: 15.5px; font-weight: 700; }
+.holiday span { font-size: 14.5px; font-weight: 500; }
+.holiday-day { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .day-state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--blue-soft); color: var(--blue-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
 .day-state.on { background: var(--green-soft); color: var(--green-ink); }

@@ -9,7 +9,7 @@ import { ABSENCE_ATTENTION_DAYS } from '~/constants/teacherDashboard'
 import { CYCLE_COLUMNS, toExamCycle } from '~/utils/exams/cycles'
 import { approvedJuzReached, buildNomineeRows, type CycleItemRow } from '~/utils/exams/nomination'
 import { HISTORY_MONTHS, monthRange, type HistoryRow } from '~/utils/quran/monthHistory'
-import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { gazaToday, isFriday, shiftMonth } from '~/utils/reportWindow'
 import { behindStudents } from '~/utils/reading'
 import {
   examEligible, examTally, frequentAbsentees, halaqaAttendance, lastRecordedReport, monthSummary, recordingStatus, unrecordedStudents,
@@ -20,7 +20,6 @@ import { buildStudentRows, type QuranRecordRow } from '~/utils/quran/month'
 
 type StatementStatus = Database['public']['Enums']['statement_status']
 type RecordRow = HistoryRow & DashRecord
-const FRIDAY = 5
 
 export function useTeacherDashboard() {
   const supabase = useSupabaseClient<Database>()
@@ -127,7 +126,7 @@ export function useTeacherDashboard() {
       halaqa,
       studentCount: studs.length,
       today: {
-        isFriday: new Date(`${today}T12:00:00Z`).getUTCDay() === FRIDAY,
+        isFriday: isFriday(today),
         held: todayHeld,
         absent: todayHeld ? absenceRows.filter(a => a.day === today).length : 0
       },

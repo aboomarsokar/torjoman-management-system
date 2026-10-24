@@ -433,4 +433,14 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
   .content { --content-pad: 16px; }
   .top-usertext { display: none; }
 }
+/* الجوال: كان العنوانُ (nowrap) يمتدّ تحت «ثبّت التطبيق» — 45px في «الحضور اليوميّ» بعرض 390 (2026-10-23).
+   فالصورةُ تُخفى (هي والاسمُ في أسفل القائمة الجانبية)، والفجواتُ تضيق، والعنوانُ يصغر ويأخذ ما بقي
+   ويُقصّ بنقاطٍ إن طال؛ وزرُّ التثبيت يبقى بحجمه ولونه ونبضه */
+@media (max-width: 480px) {
+  .topbar { gap: 8px; }
+  .top-start { flex: 1; gap: 8px; }
+  .top-title { min-width: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; }
+  .top-end { gap: 6px; flex-shrink: 0; }
+  .top-user { display: none; }
+}
 </style>

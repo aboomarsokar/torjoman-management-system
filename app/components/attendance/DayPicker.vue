@@ -2,8 +2,10 @@
 /**
  * منتقي اليوم: سهما يومٍ سابق/لاحق وزرٌّ يفتح تقويماً (السبت أول الأسبوع، أرقام لاتينية).
  * v-model نصٌّ `YYYY-MM-DD`، لا يتجاوز `max` (اليوم بغزة)، ويُعرض `DD-MM-YYYY`.
+ * الجمعةُ عطلة: السهمان يتخطّيانها، وهي معطّلةٌ في التقويم (قرار المستخدم 2026-10-24).
  */
 import { CalendarDate, parseDate, type DateValue } from '@internationalized/date'
+import { isFriday } from '~/utils/reportWindow'
 
 const props = defineProps<{ max: string, disabled?: boolean }>()
 const day = defineModel<string>({ required: true })
@@ -21,10 +23,17 @@ const calendarValue = computed<DateValue | undefined>({
   }
 })
 const maxValue = computed(() => parseDate(props.max))
-const atMax = computed(() => day.value >= props.max)
+const fridayUnavailable = (d: DateValue) => isFriday(d.toString())
+
+// اليومُ التالي/السابق مع تخطّي الجمعة — والخميسُ «آخرُ يوم» إن كان الغدُ جمعةَ اليوم
+function neighbour(by: number) {
+  const next = parseDate(day.value).add({ days: by })
+  return (isFriday(next.toString()) ? next.add({ days: by }) : next).toString()
+}
+const atMax = computed(() => neighbour(1) > props.max)
 
 function step(by: number) {
-  const next = parseDate(day.value).add({ days: by }).toString()
+  const next = neighbour(by)
   if (next <= props.max) day.value = next
 }
 </script>
@@ -60,6 +69,7 @@ function step(by: number) {
           :locale="LOCALE"
           :week-starts-on="SATURDAY"
           :max-value="maxValue"
+          :is-date-unavailable="fridayUnavailable"
           class="p-2"
         />
       </template>

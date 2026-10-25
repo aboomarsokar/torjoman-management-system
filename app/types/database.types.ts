@@ -1847,6 +1847,47 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_announcements: {
+        Row: {
+          audience: string
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          recipients: number
+          sent_by: string
+          title: string
+        }
+        Insert: {
+          audience: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          recipients?: number
+          sent_by?: string
+          title: string
+        }
+        Update: {
+          audience?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          recipients?: number
+          sent_by?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_announcements_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_quality_months: {
         Row: {
           achievement: number | null
@@ -2250,6 +2291,15 @@ export type Database = {
           p_year: number
         }
         Returns: string
+      }
+      send_teacher_announcement: {
+        Args: {
+          p_audience: string
+          p_body: string
+          p_link: string
+          p_title: string
+        }
+        Returns: number
       }
       set_my_halaqa_time: {
         Args: { p_halaqa: string; p_time: string }

@@ -1,6 +1,9 @@
 <script setup lang="ts">
-/** شريط ترقيم الصفحات (§4.16ج) — «عرض س–ص من الإجمالي» + سابق/تالي. يختفي عند صفحة واحدة. */
-const props = defineProps<{ page: number, pageCount: number, total: number, pageSize: number }>()
+/**
+ * شريط ترقيم الصفحات (§4.16ج) — «عرض س–ص من الإجمالي» + سابق/تالي. يختفي عند صفحة واحدة.
+ * `edges`: زرّا «الأولى» و«الأخيرة» على طرفي الشريط (تجربةٌ على الطلاب 2026-10-25) — في العربية الأولى يميناً.
+ */
+const props = defineProps<{ page: number, pageCount: number, total: number, pageSize: number, edges?: boolean }>()
 const emit = defineEmits<{ 'update:page': [number] }>()
 
 const from = computed(() => props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1)
@@ -46,6 +49,19 @@ const pages = computed(() => {
   >
     <span class="pg-info">عرض {{ from }}–{{ to }} من {{ total }}</span>
     <div class="pg-btns">
+      <button
+        v-if="edges"
+        class="pg-b"
+        :disabled="page <= 1"
+        aria-label="الصفحة الأولى"
+        title="الصفحة الأولى"
+        @click="go(1)"
+      >
+        <UIcon
+          name="i-lucide-chevrons-right"
+          class="size-4"
+        />
+      </button>
       <button
         class="pg-b"
         :disabled="page <= 1"
@@ -96,6 +112,19 @@ const pages = computed(() => {
       >
         <UIcon
           name="i-lucide-chevron-left"
+          class="size-4"
+        />
+      </button>
+      <button
+        v-if="edges"
+        class="pg-b"
+        :disabled="page >= pageCount"
+        aria-label="الصفحة الأخيرة"
+        title="الصفحة الأخيرة"
+        @click="go(pageCount)"
+      >
+        <UIcon
+          name="i-lucide-chevrons-left"
           class="size-4"
         />
       </button>

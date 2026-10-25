@@ -145,13 +145,16 @@ function clearStudentFilters() {
 }
 /** لا طلابَ في النطاق أصلاً — غيرُ «لا نتائج لهذا البحث». */
 const noStudents = computed(() => !(statsRows.value ?? []).length)
+// العمودُ الفارغُ عند طلاب النطاق كلِّهم يُخفى (تجربةٌ 2026-10-25) — بالنطاق لا بالصفحة، فلا يظهر ويختفي بين الصفحات
+const noParts = computed(() => !!scopeStats.value.length && scopeStats.value.every(s => s.quran_parts == null))
+const noHalqa = computed(() => !!scopeStats.value.length && scopeStats.value.every(s => !s.halaqa_id))
 const columns = computed(() => {
   const base = [
     { key: 'num', label: '#' },
     { key: 'student', label: 'الطالب' },
     // المعلم له حلقة واحدة: عمودا الحلقة والمعلّم يكرّران نفسيهما عنده فيُحذفان (أقلّ عرضاً، بلا تمرير)
-    ...(isTeacher.value ? [] : [{ key: 'halqa', label: 'الحلقة' }, { key: 'teacher', label: 'المعلّم', class: 'col-teacher' }]),
-    { key: 'parts', label: 'المحفوظ', align: 'center' as const, class: 'col-parts' },
+    ...(isTeacher.value || noHalqa.value ? [] : [{ key: 'halqa', label: 'الحلقة' }, { key: 'teacher', label: 'المعلّم', class: 'col-teacher' }]),
+    ...(noParts.value ? [] : [{ key: 'parts', label: 'المحفوظ', align: 'center' as const, class: 'col-parts' }]),
     { key: 'status', label: 'الحالة' }
   ]
   // عمود الإجراءات للجميع: «عرض الملف» متاح لكل من يرى الطالب، والتعديل والحذف مقيّدان داخله
@@ -643,6 +646,7 @@ async function confirmDelete() {
         :page-count="pageCount"
         :total="total"
         :page-size="PAGE_SIZE"
+        edges
         @update:page="page = $event"
       />
     </ClientOnly>
@@ -969,7 +973,8 @@ async function confirmDelete() {
 .u-name { font-weight: 600; color: var(--ink); }
 .u-text .u-name { display: block; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
 .u-text .u-name:hover { color: var(--blue-ink); }
-.u-sub { font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+/* الهويةُ بخطٍّ ثابت العرض فتصطفّ أرقامُها صفّاً تحت صفّ (تجربةٌ 2026-10-25) */
+.u-sub { font-size: 12.5px; color: var(--ink-3); font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; letter-spacing: .02em; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
 .seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .h-cell { display: flex; flex-direction: column; line-height: 1.4; }

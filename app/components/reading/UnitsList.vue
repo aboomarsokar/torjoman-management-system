@@ -12,7 +12,25 @@ interface Props {
 
 defineProps<Props>()
 const { units, refreshUnits, coverUrls } = useReadingUnits()
-const { busy, download, uploadPdf, uploadCover } = useReadingAdmin()
+const { busy, download, uploadPdf, uploadCover, deleteUnit } = useReadingAdmin()
+// الحذفُ للمدير الإداري وحده (سياسةُ reading_units)، وللمقرّر الأخير وحدَه (2026-10-25)
+const { isAdmin } = usePermissions()
+const lastId = computed(() => (units.value ?? []).reduce<{ id: number, o: number } | null>(
+  (m, u) => !m || u.sort_order > m.o ? { id: u.id, o: u.sort_order } : m, null)?.id ?? null)
+type UnitItem = NonNullable<typeof units.value>[number]
+const deleteTarget = ref<UnitItem | null>(null)
+const deleteOpen = computed({
+  get: () => !!deleteTarget.value,
+  set: (v) => {
+    if (!v) deleteTarget.value = null
+  }
+})
+async function confirmDelete() {
+  if (deleteTarget.value && await deleteUnit(deleteTarget.value)) {
+    deleteTarget.value = null
+    await refreshUnits()
+  }
+}
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const coverInput = ref<HTMLInputElement | null>(null)
@@ -118,6 +136,15 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
             :ui="{ base: 'min-h-11 rounded-xl justify-center' }"
             @click="pickFor(u.id, 'cover')"
           />
+          <UButton
+            v-if="manage && isAdmin && u.id === lastId"
+            label="حذف المقرّر"
+            icon="i-lucide-trash-2"
+            color="error"
+            variant="ghost"
+            :ui="{ base: 'min-h-11 rounded-xl justify-center' }"
+            @click="deleteTarget = u"
+          />
         </div>
       </li>
     </ol>
@@ -155,6 +182,14 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
     <ReadingAddBookModal
       v-if="manage"
       v-model:open="addBookOpen"
+    />
+    <UiConfirmModal
+      v-model:open="deleteOpen"
+      :title="`حذف ${deleteTarget?.title ?? 'المقرّر'}؟`"
+      message="يُحذف المقرّرُ وأجزاؤه وأسئلةُ بنكه، وملفُّه وغلافُه. لا يمكن التراجع. ولا يُحذف إن كان عليه اختبارٌ لطالب."
+      confirm-label="احذف المقرّر"
+      :loading="busy"
+      @confirm="confirmDelete"
     />
   </section>
 </template>

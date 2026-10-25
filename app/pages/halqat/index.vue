@@ -78,13 +78,52 @@ const genderFilterItems = computed(() => {
     { value: 'female' as const, label: `بنات (${n('female')})` }
   ]
 })
+// تبويبان: الحلقات، والمعلّمون والمعلّمات (طلب المستخدم 2026-10-25) — والتبويبُ في الرابط (?tab=teachers)
+type HalqatTab = 'halqat' | 'teachers'
+const tab = ref<HalqatTab>(route.query.tab === 'teachers' ? 'teachers' : 'halqat')
+watch(tab, t => navigateTo({ query: { ...route.query, tab: t === 'teachers' ? 'teachers' : undefined } }, { replace: true }))
+const tabs = computed(() => [
+  { key: 'halqat' as const, label: 'الحلقات', icon: 'i-lucide-book-open', count: (halqat.value ?? []).length },
+  { key: 'teachers' as const, label: isWomenAdmin.value ? 'المعلّمات' : isTechnical.value ? 'المعلّمون' : 'المعلّمون والمعلّمات', icon: 'i-lucide-users' }
+])
+/** حلقاتُ النطاق لتبويب المعلّمين بأقلّ ما يلزمه. */
+const teacherHalqat = computed(() => (halqat.value ?? []).map(h => ({
+  id: h.id, name: h.name, gender: h.gender, status: h.status, teacher_id: h.teacher_id, students: studentsOf(h)
+})))
+
+// فلترُ المعلّم وبحثٌ باسم الحلقة أو المعلّم (طلب المستخدم 2026-10-25)
+const teacherF = ref('all')
+const queryH = ref('')
+const teacherFilterItems = computed(() => {
+  const m = new Map<string, { label: string, n: number }>()
+  for (const h of halqat.value ?? []) {
+    if (genderF.value !== 'all' && h.gender !== genderF.value) continue
+    const cur = m.get(h.teacher_id)
+    m.set(h.teacher_id, { label: h.teacher?.full_name ?? '—', n: (cur?.n ?? 0) + 1 })
+  }
+  const all = isWomenAdmin.value ? 'كل المعلّمات' : 'كل المعلّمين'
+  return [{ value: 'all', label: all }, ...[...m].map(([value, t]) => ({ value, label: t.n > 1 ? `${t.label} (${t.n})` : t.label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'ar'))]
+})
 const filtered = computed(() => (halqat.value ?? []).filter(h =>
   (genderF.value === 'all' || h.gender === genderF.value)
   && (statusF.value === 'all' || h.status === statusF.value)
   && (!supervisorF.value || h.supervisor_id === supervisorF.value)
+  && (teacherF.value === 'all' || h.teacher_id === teacherF.value)
+  && matchesSearch(queryH.value, h.name, h.teacher?.full_name)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
-watch([genderF, statusF, supervisorF], resetPage)
+watch([genderF, statusF, supervisorF, teacherF, queryH], resetPage)
+function clearHalqatFilters() {
+  queryH.value = ''
+  teacherF.value = 'all'
+  statusF.value = 'all'
+  genderF.value = 'all'
+}
+// معلّمٌ من الجنس الآخر لا يبقى مختاراً بعد تغيير الجنس
+watch(genderF, () => {
+  if (!teacherFilterItems.value.some(i => i.value === teacherF.value)) teacherF.value = 'all'
+})
 function studentsOf(h: HalaqaRow) {
   return h.student_count?.[0]?.count ?? 0
 }
@@ -100,7 +139,7 @@ const allColumns = [
   { key: 'examiner', label: 'المختبِر', class: 'col-wide' },
   { key: 'staff', label: 'الطاقم', class: 'col-narrow' },
   { key: 'students', label: 'الطلاب', align: 'center' as const },
-  { key: 'status', label: 'الحالة' },
+  { key: 'status', label: 'الحالة', class: 'col-status' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
 // المشرف الميدانيّ يرى حلقاتِه المسندة إليه وحدها، فعمودُ «المشرف» تكرارٌ لاسمه
@@ -202,9 +241,22 @@ async function confirmDelete() {
 
 <template>
   <div class="halqat">
-    <!-- العنوان في الشريط العلوي؛ هنا صفّ أدواتٍ واحد: التصفية ثم الإنشاء -->
+    <UiSegmentTabs
+      v-model="tab"
+      :tabs="tabs"
+      label="الحلقات والمعلّمون"
+    />
+    <!-- العنوان في الشريط العلوي؛ هنا صفّ أدواتٍ واحد: التصفية ثم الإنشاء — والجنسُ للتبويبين معاً -->
     <div class="toolbar">
       <div class="filters">
+        <UiSearchField
+          v-if="tab === 'halqat'"
+          v-model="queryH"
+          placeholder="ابحث باسم الحلقة أو المعلّم"
+          :shown="filtered.length"
+          :total="(halqat ?? []).length"
+          class="search"
+        />
         <UiSelect
           v-if="showGenderFilter"
           v-model="genderF"
@@ -215,6 +267,16 @@ async function confirmDelete() {
           :ui="{ base: 'rounded-[12px] min-h-12' }"
         />
         <UiSelect
+          v-if="tab === 'halqat'"
+          v-model="teacherF"
+          :items="teacherFilterItems"
+          size="xl"
+          class="filter-sel teacher-sel"
+          :aria-label="isWomenAdmin ? 'المعلّمة' : 'المعلّم'"
+          :ui="{ base: 'rounded-[12px] min-h-12' }"
+        />
+        <UiSelect
+          v-if="tab === 'halqat'"
           v-model="statusF"
           :items="[{ label: 'كل الحالات', value: 'all' }, ...statusItems]"
           size="xl"
@@ -234,7 +296,7 @@ async function confirmDelete() {
         />
       </div>
       <UButton
-        v-if="isAdmin"
+        v-if="isAdmin && tab === 'halqat'"
         label="إنشاء حلقة"
         color="primary"
         size="md"
@@ -246,132 +308,64 @@ async function confirmDelete() {
     </div>
 
     <ClientOnly>
-      <!-- من يرى القسمين ولم يُصفِّ بالجنس: مفصولةً بين البنين والبنات (2026-10-22)؛ وإلا خلاصةُ القسم -->
-      <DashboardGenderSplit
-        v-if="!pending && filtered.length && seesBoth && genderF === 'all'"
-        :items="halqatSplitStats(filtered)"
+      <HalqatTeachersTab
+        v-if="tab === 'teachers'"
+        :halqat="teacherHalqat"
+        :gender="genderF"
+        :all-teachers="seesBoth || isWomenAdmin || isTechnical"
+        :female-only="isWomenAdmin"
       />
-      <HalqatSummary
-        v-else-if="!pending && filtered.length"
-        :rows="filtered"
-      />
-      <UiSkeletonTable
-        v-if="pending"
-        :columns="columns"
-      />
-      <UiEmptyState
-        v-else-if="filtered.length === 0"
-        icon="i-lucide-book-open"
-        title="لا حلقات بعد"
-        :description="isAdmin ? 'أنشئ أول حلقة وعيّن لها معلّماً لتظهر هنا.' : 'لا حلقات ضمن نطاقك بعد.'"
-      />
-      <UiDataTable
+      <div
         v-else
-        :columns="columns"
-        :rows="paged"
-        row-key="id"
+        id="panel-halqat"
+        role="tabpanel"
+        aria-labelledby="tab-halqat"
       >
-        <template #num="{ index }">
-          <span class="num idx">{{ (page - 1) * pageSize + index + 1 }}</span>
-        </template>
-        <template #name="{ row }">
-          <HalqatNameCell
-            :id="row.id"
-            :name="row.name"
-            :gender="row.gender"
-            :classification="row.classification"
-            :daily-time="row.daily_time"
-          />
-        </template>
-        <template #teacher="{ row }">
-          <span class="person">{{ row.teacher?.full_name || '—' }}</span>
-        </template>
-        <template #supervisorName="{ row }">
-          <span
-            class="person"
-            :class="{ orphan: !row.supervisor }"
-          >{{ row.supervisor?.full_name || 'بلا مشرف' }}</span>
-        </template>
-        <template #examiner="{ row }">
-          <span
-            class="person"
-            :class="{ orphan: !row.examiner }"
-          >{{ row.examiner?.full_name || 'بلا مختبِر' }}</span>
-        </template>
-        <template #staff="{ row }">
-          <HalqatStaffList
-            :teacher="row.teacher?.full_name ?? null"
-            :supervisor="row.supervisor?.full_name ?? null"
-            :hide-supervisor="isFieldSupervisor"
-            :examiner="row.examiner?.full_name ?? null"
-            :gender="row.gender"
-            card
-            dense
-          />
-        </template>
-        <!-- العددُ شارةٌ بتمييزه وجنس الحلقة («6 طالبات») كبطاقة الجوال (2026-10-22) -->
-        <template #students="{ row }">
-          <span
-            class="stud"
-            :class="{ zero: !studentsOf(row) }"
-          ><UIcon
-            name="i-lucide-users"
-            class="size-3.5"
-          />{{ studentsCountText(studentsOf(row), row.gender === 'female') }}</span>
-        </template>
-        <template #status="{ row }">
-          <UBadge
-            :label="row.status === 'active' ? 'نشطة' : 'متوقفة'"
-            :color="row.status === 'active' ? 'success' : 'neutral'"
-            variant="soft"
-            size="sm"
-          />
-        </template>
-        <template #actions="{ row }">
-          <div class="actions">
-            <UButton
-              :to="`/halqat/${row.id}`"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-eye"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="تفاصيل"
-            />
-            <UButton
-              v-if="canEditHalaqa"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="تعديل"
-              @click="openEdit(row)"
-            />
-            <UButton
-              v-if="isAdmin"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-trash-2"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="حذف"
-              @click="deleteTarget = row"
-            />
-          </div>
-        </template>
-      </UiDataTable>
-      <!-- الحاوية الضيّقة (الجوال): بطاقاتٌ بدل الجدول — الجدول يُخفى هناك بالاستعلام -->
-      <ul
-        v-if="!pending && filtered.length"
-        class="cards"
-      >
-        <li
-          v-for="row in paged"
-          :key="row.id"
-          class="hcard"
+        <!-- من يرى القسمين ولم يُصفِّ بالجنس: مفصولةً بين البنين والبنات (2026-10-22)؛ وإلا خلاصةُ القسم -->
+        <DashboardGenderSplit
+          v-if="!pending && filtered.length && seesBoth && genderF === 'all'"
+          :items="halqatSplitStats(filtered)"
+        />
+        <HalqatSummary
+          v-else-if="!pending && filtered.length"
+          :rows="filtered"
+        />
+        <UiSkeletonTable
+          v-if="pending"
+          :columns="columns"
+        />
+        <UiEmptyState
+          v-else-if="!(halqat ?? []).length"
+          icon="i-lucide-book-open"
+          title="لا حلقات بعد"
+          :description="isAdmin ? 'أنشئ أول حلقة وعيّن لها معلّماً لتظهر هنا.' : 'لا حلقات ضمن نطاقك بعد.'"
+        />
+        <!-- فراغُ التصفية غيرُ فراغ النطاق: المخرجُ مسحُ الفلاتر -->
+        <UiEmptyState
+          v-else-if="filtered.length === 0"
+          icon="i-lucide-filter-x"
+          title="لا حلقاتٍ لهذا الاختيار"
+          description="جرّب اسماً آخر أو معلّماً آخر، أو اعرض الحلقات كلَّها."
         >
-          <div class="hcard-top">
+          <UButton
+            label="مسح الفلاتر"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-x"
+            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+            @click="clearHalqatFilters"
+          />
+        </UiEmptyState>
+        <UiDataTable
+          v-else
+          :columns="columns"
+          :rows="paged"
+          row-key="id"
+        >
+          <template #num="{ index }">
+            <span class="num idx">{{ (page - 1) * pageSize + index + 1 }}</span>
+          </template>
+          <template #name="{ row }">
             <HalqatNameCell
               :id="row.id"
               :name="row.name"
@@ -379,56 +373,154 @@ async function confirmDelete() {
               :classification="row.classification"
               :daily-time="row.daily_time"
             />
+          </template>
+          <template #teacher="{ row }">
+            <span class="person">{{ row.teacher?.full_name || '—' }}</span>
+          </template>
+          <template #supervisorName="{ row }">
+            <span
+              class="person"
+              :class="{ orphan: !row.supervisor }"
+            >{{ row.supervisor?.full_name || 'بلا مشرف' }}</span>
+          </template>
+          <template #examiner="{ row }">
+            <span
+              class="person"
+              :class="{ orphan: !row.examiner }"
+            >{{ row.examiner?.full_name || 'بلا مختبِر' }}</span>
+          </template>
+          <template #staff="{ row }">
+            <HalqatStaffList
+              :teacher="row.teacher?.full_name ?? null"
+              :supervisor="row.supervisor?.full_name ?? null"
+              :hide-supervisor="isFieldSupervisor"
+              :examiner="row.examiner?.full_name ?? null"
+              :gender="row.gender"
+              card
+              dense
+            />
+          </template>
+          <!-- العددُ شارةٌ بتمييزه وجنس الحلقة («6 طالبات») كبطاقة الجوال (2026-10-22) -->
+          <template #students="{ row }">
+            <span
+              class="stud"
+              :class="{ zero: !studentsOf(row) }"
+            ><UIcon
+              name="i-lucide-users"
+              class="size-3.5"
+            />{{ studentsCountText(studentsOf(row), row.gender === 'female') }}</span>
+          </template>
+          <template #status="{ row }">
             <UBadge
               :label="row.status === 'active' ? 'نشطة' : 'متوقفة'"
               :color="row.status === 'active' ? 'success' : 'neutral'"
               variant="soft"
               size="sm"
             />
-          </div>
-          <HalqatStaffList
-            :teacher="row.teacher?.full_name ?? null"
-            :supervisor="row.supervisor?.full_name ?? null"
-            :hide-supervisor="isFieldSupervisor"
-            :examiner="row.examiner?.full_name ?? null"
-            :gender="row.gender"
-            :students="studentsOf(row)"
-            card
-          />
-          <div
-            v-if="canEditHalaqa"
-            class="hcard-actions"
+          </template>
+          <template #actions="{ row }">
+            <div class="actions">
+              <UButton
+                :to="`/halqat/${row.id}`"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-eye"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="تفاصيل"
+              />
+              <UButton
+                v-if="canEditHalaqa"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-pencil"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="تعديل"
+                @click="openEdit(row)"
+              />
+              <UButton
+                v-if="isAdmin"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-trash-2"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="حذف"
+                @click="deleteTarget = row"
+              />
+            </div>
+          </template>
+        </UiDataTable>
+        <!-- الحاوية الضيّقة (الجوال): بطاقاتٌ بدل الجدول — الجدول يُخفى هناك بالاستعلام -->
+        <ul
+          v-if="!pending && filtered.length"
+          class="cards"
+        >
+          <li
+            v-for="row in paged"
+            :key="row.id"
+            class="hcard"
           >
-            <UButton
-              label="تعديل"
-              color="neutral"
-              variant="outline"
-              size="md"
-              icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[11px]' }"
-              @click="openEdit(row)"
+            <div class="hcard-top">
+              <HalqatNameCell
+                :id="row.id"
+                :name="row.name"
+                :gender="row.gender"
+                :classification="row.classification"
+                :daily-time="row.daily_time"
+              />
+              <UBadge
+                :label="row.status === 'active' ? 'نشطة' : 'متوقفة'"
+                :color="row.status === 'active' ? 'success' : 'neutral'"
+                variant="soft"
+                size="sm"
+              />
+            </div>
+            <HalqatStaffList
+              :teacher="row.teacher?.full_name ?? null"
+              :supervisor="row.supervisor?.full_name ?? null"
+              :hide-supervisor="isFieldSupervisor"
+              :examiner="row.examiner?.full_name ?? null"
+              :gender="row.gender"
+              :students="studentsOf(row)"
+              card
             />
-            <UButton
-              v-if="isAdmin"
-              label="حذف"
-              color="neutral"
-              variant="ghost"
-              size="md"
-              icon="i-lucide-trash-2"
-              :ui="{ base: 'rounded-[11px]' }"
-              @click="deleteTarget = row"
-            />
-          </div>
-        </li>
-      </ul>
-      <UiPaginator
-        v-if="filtered.length"
-        :page="page"
-        :page-count="pageCount"
-        :total="total"
-        :page-size="pageSize"
-        @update:page="page = $event"
-      />
+            <div
+              v-if="canEditHalaqa"
+              class="hcard-actions"
+            >
+              <UButton
+                label="تعديل"
+                color="neutral"
+                variant="outline"
+                size="md"
+                icon="i-lucide-pencil"
+                :ui="{ base: 'rounded-[11px]' }"
+                @click="openEdit(row)"
+              />
+              <UButton
+                v-if="isAdmin"
+                label="حذف"
+                color="neutral"
+                variant="ghost"
+                size="md"
+                icon="i-lucide-trash-2"
+                :ui="{ base: 'rounded-[11px]' }"
+                @click="deleteTarget = row"
+              />
+            </div>
+          </li>
+        </ul>
+        <UiPaginator
+          v-if="filtered.length"
+          :page="page"
+          :page-count="pageCount"
+          :total="total"
+          :page-size="pageSize"
+          @update:page="page = $event"
+        />
+      </div>
     </ClientOnly>
 
     <!-- نافذة إنشاء/تعديل -->
@@ -597,9 +689,15 @@ async function confirmDelete() {
 /* الصفحة تملأ مساحة المحتوى (لا عرض أقصى)، وتتكيّف بعرض حاويتها لا بعرض النافذة:
    ≥1180 أعمدة الطاقم الثلاثة · دونها عمود «الطاقم» المكدَّس · دون 720 بطاقات */
 .halqat { container: halqat / inline-size; }
+/* العرضُ المتوسّط: تسقط «الحالة» (جُلُّ الحلقات نشطة) فيبقى الطاقمُ والإجراءاتُ بلا تمرير (2026-10-25) */
+@container halqat (max-width: 899px) {
+  .halqat :deep(.col-status) { display: none; }
+}
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .filters { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
 .filter-sel { width: 190px; }
+.teacher-sel { width: 230px; }
+.search { width: 300px; }
 
 .num { font-variant-numeric: tabular-nums; }
 .idx { color: var(--ink-3); font-size: 13px; }
@@ -620,8 +718,10 @@ async function confirmDelete() {
   .halqat :deep(.table-wrap) { display: none; }
   .cards { display: grid; gap: 12px; }
   .toolbar { align-items: stretch; }
-  .filters { width: 100%; flex-wrap: nowrap; }
-  .filter-sel { flex: 1 1 0; width: auto; min-width: 0; }
+  /* البحثُ سطرٌ كامل، والقوائمُ تتقاسم ما تحته (كانت قائمتين في سطرٍ لا يلتفّ) */
+  .filters { width: 100%; flex-wrap: wrap; }
+  .search { flex: 1 1 100%; width: auto; }
+  .filter-sel, .teacher-sel { flex: 1 1 140px; width: auto; min-width: 0; }
   .create { width: 100%; justify-content: center; min-height: 48px; }
 }
 .hcard { background: var(--surface); border-radius: 16px; padding: 16px; }

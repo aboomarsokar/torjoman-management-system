@@ -162,5 +162,27 @@ export function useReadingAdmin() {
     return !!ok
   }
 
-  return { busy, download, uploadPdf, uploadCover, addUnit, addBook }
+  /**
+   * يحذف المقرّرَ الأخيرَ في الخطّة (طلب المستخدم 2026-10-25) — الأخيرُ وحدَه كي لا تنقطع الأرقامُ ولا يختلّ
+   * المقرّرُ المستحقّ للطالب. يُرفض إن كان عليه اختبارٌ لطالب (والقاعدةُ تمنعه أيضاً: `on delete restrict`)،
+   * وأجزاؤه وأسئلتُه تُحذف معه (`on delete cascade`)، ثم ملفُّه وغلافُه من المستودع.
+   */
+  async function deleteUnit(unit: { id: number, title: string, pdfPath?: string | null, coverPath?: string | null }): Promise<boolean> {
+    const ok = await withBusy(async () => {
+      const { count, error: countErr } = await supabase.from('reading_attempts')
+        .select('id', { count: 'exact', head: true }).eq('unit_id', unit.id)
+      if (countErr) throw countErr
+      if (count) throw new Error(`لا يُحذف ${unit.title}: عليه ${count === 1 ? 'اختبارُ طالب' : `${count} اختبارات طلاب`} — سجلّاتُهم تبقى.`)
+      const { error } = await supabase.from('reading_units').delete().eq('id', unit.id)
+      if (error) throw error
+      const files = [unit.pdfPath, unit.coverPath].filter((p): p is string => !!p)
+      // الملفّاتُ بعد الصفّ: إن فشل حذفُها بقيت يتيمةً لا تضرّ، ولا يبقى صفٌّ بلا ملفّ
+      if (files.length) await supabase.storage.from(READING_BUCKET).remove(files)
+      return true
+    })
+    if (ok) toast.add({ title: `حُذف ${unit.title}.`, color: 'neutral', icon: 'i-lucide-trash-2' })
+    return !!ok
+  }
+
+  return { busy, download, uploadPdf, uploadCover, addUnit, addBook, deleteUnit }
 }

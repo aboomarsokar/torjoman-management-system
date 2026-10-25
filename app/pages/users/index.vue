@@ -104,7 +104,8 @@ const columns = [
   { key: 'user', label: 'المستخدم' },
   { key: 'employee_number', label: 'الرقم الوظيفي' },
   { key: 'role', label: 'الدور' },
-  { key: 'assigner', label: 'عيّنه' },
+  // «عيّنه» أقلُّ الأعمدة شأناً: يسقط على العرض المتوسّط فلا يُعصر الاسم (2026-10-25)
+  { key: 'assigner', label: 'عيّنه', class: 'col-assigner' },
   { key: 'status', label: 'الحالة' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
@@ -296,9 +297,13 @@ async function confirmReset() {
                   :photo-url="photoUrlFor(displayPhotoPath(row))"
                 />
               </div>
-              <div class="u-name">
+              <NuxtLink
+                :to="`/profile/${row.id}`"
+                class="u-name u-link"
+                :title="row.full_name"
+              >
                 {{ row.full_name }}
-              </div>
+              </NuxtLink>
             </div>
           </template>
           <template #employee_number="{ row }">
@@ -324,17 +329,20 @@ async function confirmReset() {
               variant="soft"
             />
           </template>
+          <!-- أيقوناتٌ بلا نصّ وتلميحٌ بالنصّ (طلب المستخدم 2026-10-25) — بنمط أزرار جدول الحلقات؛ والجوالُ بنصوصه في البطاقة -->
           <template #actions="{ row }">
             <div class="actions">
-              <UButton
-                :to="`/profile/${row.id}`"
-                label="عرض البيانات"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-id-card"
-                :ui="{ base: 'rounded-[10px]' }"
-              />
+              <UTooltip text="عرض البيانات">
+                <UButton
+                  :to="`/profile/${row.id}`"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-id-card"
+                  aria-label="عرض البيانات"
+                  :ui="{ base: 'rounded-[10px]' }"
+                />
+              </UTooltip>
               <ImpersonationStartButton
                 :profile-id="row.id"
                 :name="row.full_name"
@@ -342,28 +350,38 @@ async function confirmReset() {
                 :status="row.status"
                 :gender="row.gender"
                 size="sm"
+                icon-only
               />
-              <UButton
+              <UTooltip
                 v-if="isAdmin"
-                label="إعادة تعيين الكلمة"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-key-round"
-                :ui="{ base: 'rounded-[10px]' }"
-                @click="resetTarget = row"
-              />
-              <UButton
+                text="إعادة تعيين الكلمة"
+              >
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-key-round"
+                  aria-label="إعادة تعيين الكلمة"
+                  :ui="{ base: 'rounded-[10px]' }"
+                  @click="resetTarget = row"
+                />
+              </UTooltip>
+              <UTooltip
                 v-if="isAdmin"
-                :label="row.status === 'disabled' ? 'تفعيل' : 'تعطيل'"
-                :color="row.status === 'disabled' ? 'success' : 'neutral'"
-                variant="outline"
-                size="sm"
-                :icon="row.status === 'disabled' ? 'i-lucide-power' : 'i-lucide-ban'"
-                :loading="togglingId === row.id"
-                :ui="{ base: 'rounded-[10px]' }"
-                @click="toggleStatus(row)"
-              />
+                :text="row.status === 'disabled' ? 'تفعيل الحساب' : 'تعطيل الحساب'"
+              >
+                <UButton
+                  :color="row.status === 'disabled' ? 'success' : 'neutral'"
+                  variant="outline"
+                  size="sm"
+                  :icon="row.status === 'disabled' ? 'i-lucide-power' : 'i-lucide-ban'"
+                  :aria-label="row.status === 'disabled' ? 'تفعيل الحساب' : 'تعطيل الحساب'"
+                  :loading="togglingId === row.id"
+                  :class="{ 'act-danger': row.status !== 'disabled' }"
+                  :ui="{ base: 'rounded-[10px]' }"
+                  @click="toggleStatus(row)"
+                />
+              </UTooltip>
             </div>
           </template>
           <template #card="{ row, index }">
@@ -578,8 +596,17 @@ async function confirmReset() {
 .seq { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .av { width: 40px; height: 40px; border-radius: 11px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
 .u-name { font-weight: 600; color: var(--ink); }
+/* الاسمُ في الجدول سطرٌ واحدٌ بـ«…» ورابطٌ إلى الملف، وخانتُه لا تُعصر (كشكل جدول الطلاب 2026-10-25) */
+.user-cell:has(.u-link) { min-width: 220px; }
+.u-link { display: block; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+.u-link:hover { color: var(--blue-ink); }
+@container dt (max-width: 1099px) {
+  .users :deep(.col-assigner) { display: none; }
+}
 .emp-no { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+/* «تعطيل» حسّاسٌ: يحمرّ عند المرور لا قبله، فلا يصرخ في كلّ صفّ */
+.actions :deep(.act-danger:hover) { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
 
 .form { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }

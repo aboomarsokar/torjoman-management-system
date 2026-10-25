@@ -5,7 +5,7 @@
 import type { StatItem } from '~/components/ui/StatStrip.vue'
 import { BOOKLETS } from '~/constants/booklets'
 
-export interface DeliveryRow {
+export type DeliveryRow = {
   id: string
   halaqa_id: string
   booklet: number
@@ -18,6 +18,9 @@ export interface HalaqaLite {
   id: string
   name: string
   status: string
+  /** للبحث باسم المعلّم والفلترة بالجنس (2026-10-25). */
+  gender?: string | null
+  teacher?: { full_name: string } | null
 }
 
 export interface BookletTotal {
@@ -28,10 +31,13 @@ export interface BookletTotal {
   halaqat: number
 }
 
-export interface HalaqaBooklets {
+// type لا interface: يُمرَّر صفّاً لـ`UiDataTable` (المقيَّد بـRecord<string, unknown>)
+export type HalaqaBooklets = {
   id: string
   name: string
   status: string
+  gender: string | null
+  teacher: string | null
   total: number
   /** الملازمُ المستلَمة بترتيبها (1 = الجزء 29 + 30) ونُسخُ كلٍّ منها. */
   booklets: { no: number, label: string, copies: number }[]
@@ -59,7 +65,7 @@ export function halaqaBooklets(rows: DeliveryRow[], halaqat: HalaqaLite[]): Hala
       .map(b => ({ no: b.no, label: b.label, copies: mine.filter(r => r.booklet === b.no).reduce((s, r) => s + r.copies, 0) }))
       .filter(b => b.copies > 0)
     const lastOn = mine.reduce<string | null>((m, r) => (m === null || r.delivered_on > m ? r.delivered_on : m), null)
-    return { id: h.id, name: h.name, status: h.status, total: booklets.reduce((s, b) => s + b.copies, 0), booklets, lastOn }
+    return { id: h.id, name: h.name, status: h.status, gender: h.gender ?? null, teacher: h.teacher?.full_name ?? null, total: booklets.reduce((s, b) => s + b.copies, 0), booklets, lastOn }
   }).sort((a, b) => (b.total > 0 ? 1 : 0) - (a.total > 0 ? 1 : 0) || a.name.localeCompare(b.name, 'ar'))
 }
 

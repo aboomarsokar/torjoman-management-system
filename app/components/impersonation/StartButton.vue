@@ -18,8 +18,10 @@ interface Props {
   /** جنسُ الهدف — شرطُ القسم (`mayImpersonate`). */
   gender: string | null
   size?: 'sm' | 'lg'
+  /** أيقونةٌ بلا نصّ وتلميحٌ بالنصّ — لصفّ الجدول على الحاسوب (طلب المستخدم 2026-10-25). */
+  iconOnly?: boolean
 }
-const props = withDefaults(defineProps<Props>(), { size: 'lg' })
+const props = withDefaults(defineProps<Props>(), { size: 'lg', iconOnly: false })
 
 const { profile } = useProfile()
 const { notImpersonating, start } = useImpersonation()
@@ -53,12 +55,28 @@ async function confirmStart() {
 
 <template>
   <template v-if="visible">
+    <!-- سهمُ الدخول لا العين: العينُ «تفاصيل» في جدول الحلقات (2026-10-25) -->
+    <UTooltip
+      v-if="iconOnly"
+      :text="buttonLabel"
+    >
+      <UButton
+        color="neutral"
+        variant="outline"
+        :size="size"
+        icon="i-lucide-log-in"
+        :aria-label="buttonLabel"
+        :ui="{ base: 'rounded-[10px]' }"
+        @click="open = true"
+      />
+    </UTooltip>
     <UButton
+      v-else
       :label="buttonLabel"
       color="neutral"
       variant="outline"
       :size="size"
-      icon="i-lucide-eye"
+      icon="i-lucide-log-in"
       :ui="{ base: size === 'lg' ? 'rounded-[13px] font-semibold' : 'rounded-[10px]' }"
       @click="open = true"
     />

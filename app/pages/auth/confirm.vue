@@ -14,12 +14,6 @@ const user = useSupabaseUser()
 const toast = useToast()
 const { handle } = useErrorHandler()
 
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
-
 const next = ref('')
 const confirm = ref('')
 const saving = ref(false)
@@ -64,16 +58,8 @@ async function submit() {
         alt="ترجمان"
         class="logo"
       >
-      <UButton
-        :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-        color="neutral"
-        variant="subtle"
-        size="lg"
-        square
-        aria-label="تبديل الوضع"
-        :ui="{ base: 'rounded-xl' }"
-        @click="toggleTheme"
-      />
+      <!-- فاتح ← ليلي ← حسب النظام، كسائر المنصّة -->
+      <UiThemeToggle />
     </header>
 
     <main class="wrap">

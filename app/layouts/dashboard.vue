@@ -41,7 +41,7 @@ function comingSoon() {
  * `qtab`: تبويبُ صفحةٍ للعاملين في الرابط (`?tab=`) — `null` للتبويب الافتراضيّ؛ و`title` عنوانُ الشريط إن خالف التسمية.
  * `labelF`: التسميةُ بالمؤنّث للمديرة الإدارية — قسمُها كلُّه إناث (قرار المستخدم 2026-10-22). */
 type GroupKey = 'people' | 'supervision' | 'quran' | 'programs' | 'exams' | 'sheets' | 'project' | 'account'
-type Item = { key: string, label: string, labelF?: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey }
+type Item = { key: string, label: string, labelF?: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey, isNew?: boolean }
 
 const GROUPS: { key: GroupKey, label: string, icon: string }[] = [
   { key: 'people', label: 'الحلقات والأفراد', icon: 'i-lucide-users-round' },
@@ -70,6 +70,8 @@ const mainNav: Item[] = [
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'teacher', 'examiner'] },
+  // ما أرسلته الإدارة، وبجانبه عددُ غير المقروء (طلب المستخدم 2026-10-25)
+  { key: 'messages', label: 'رسائل الإدارة', icon: 'i-lucide-mail', to: '/messages', roles: [FIELD, 'teacher', 'examiner'], isNew: true },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
   { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },
@@ -94,8 +96,12 @@ const mainNav: Item[] = [
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },
   { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'], group: 'sheets' },
+  // ملازمُ حلقة المعلّم وطلبُها (طلب المستخدم 2026-10-25)
+  { key: 'my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', to: '/my-booklets', roles: ['teacher'], group: 'sheets', isNew: true },
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
-  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' }
+  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' },
+  // رسائلُ للكادر تصل أجراسَهم وصفحةَ «رسائل الإدارة» (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
+  { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true }
 ]
 
 const managerNav: Item[] = [
@@ -150,6 +156,12 @@ const matches = (item: Item) => !!item.to
 const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
+const { unread: unreadMessages } = useUnreadMessages()
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة. */
+const countOf = (item: Item) => (item.key === 'messages' ? unreadMessages.value : 0)
+const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
+const newKeys = isNewFor(allItems)
+
 const navTitle = computed(() => {
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
   return activeItem.value?.title ?? (activeItem.value ? labelOf(activeItem.value) : 'لوحة التحكم')
@@ -216,6 +228,18 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                 class="size-5"
               />
               <span>{{ labelOf(item) }}</span>
+              <span
+                v-if="newKeys.has(item.key)"
+                class="nav-new"
+              ><UIcon
+                name="i-lucide-sparkles"
+                class="size-3.5"
+              />جديد</span>
+              <span
+                v-if="countOf(item)"
+                class="nav-count"
+                :aria-label="`${countOf(item)} غير مقروءة`"
+              >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
             </button>
 
             <section
@@ -236,6 +260,12 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     class="size-5"
                   />
                   {{ g.label }}
+                  <UIcon
+                    v-if="!isOpen(g.key) && g.items.some(i => newKeys.has(i.key))"
+                    name="i-lucide-sparkles"
+                    class="size-4 nav-new-star"
+                    aria-label="فيها جديد"
+                  />
                 </span>
                 <UIcon
                   name="i-lucide-chevron-down"
@@ -259,6 +289,13 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     class="size-5"
                   />
                   <span>{{ labelOf(item) }}</span>
+                  <span
+                    v-if="newKeys.has(item.key)"
+                    class="nav-new"
+                  ><UIcon
+                    name="i-lucide-sparkles"
+                    class="size-3.5"
+                  />جديد</span>
                 </button>
               </div>
             </section>
@@ -381,6 +418,10 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item:focus-visible { outline: 2px solid var(--side-strong); outline-offset: -2px; }
 .nav-item:hover { background: var(--side-hover); color: var(--side-strong); }
 .nav-item.active { background: var(--side-active); color: var(--side-strong); }
+.nav-item > .nav-new { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 13px; font-weight: 700; -webkit-text-stroke: .3px currentColor; line-height: 1.4; overflow: visible; }
+.nav-item > .nav-count { margin-inline-start: auto; flex-shrink: 0; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; line-height: 24px; text-align: center; font-variant-numeric: tabular-nums; overflow: visible; }
+.nav-new-star { color: var(--side-new-bg); }
+.nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }
@@ -407,7 +448,9 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .top-av { width: 42px; height: 42px; border-radius: 12px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; overflow: hidden; }
 /* --content-pad يقرؤه .page-leave-active في main.css ليبقى موضع الصفحة المغادرة مطابقاً لحشوة المحتوى */
 /* القاعُ أوسع بقدر زرّ «إلى الأعلى» (44 + هامشه) كي يُمرَّر آخرُ عنصرٍ — كأزرار الترقيم يساراً — فوقه لا تحته */
-.content { --content-pad: 24px; flex: 1; overflow-y: auto; padding: var(--content-pad); padding-bottom: calc(var(--content-pad) + 60px); background: var(--bg); position: relative; }
+/* النافذةُ هي التي تُمرَّر لا `.content`: كان overflow-y:auto يجعلها حاويةَ تمريرٍ لا تتحرّك، فلا يثبت فيها
+   عنصرٌ لاصق (رأسُ الجدول، وشريطُ حفظ الحضور) — clip يمنع الفيضَ الأفقيّ بلا حاوية تمرير (2026-10-25) */
+.content { --content-pad: 24px; flex: 1; overflow-x: clip; padding: var(--content-pad); padding-bottom: calc(var(--content-pad) + 60px); background: var(--bg); position: relative; }
 
 /* RESPONSIVE */
 .overlay { display: none; }

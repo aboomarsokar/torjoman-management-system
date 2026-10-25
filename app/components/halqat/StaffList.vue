@@ -102,6 +102,9 @@ dd.empty { color: var(--ink-3); }
 .sc.dense .sc-ico { width: 24px; height: 24px; border-radius: 7px; }
 .sc.dense .sc-label { width: 56px; font-size: 12px; }
 .sc.dense .sc-val { font-size: 14px; }
+/* في خانة الجدول: الاسمُ سطرٌ واحدٌ بـ«…» والخانةُ لا تُعصر (كان كلمةً في السطر على العرض المتوسّط — 2026-10-25) */
+.sc.dense { min-width: 210px; }
+.sc.dense .sc-val { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-count { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sc-count.empty { background: var(--surface-2); color: var(--ink-3); }
 </style>

@@ -79,7 +79,7 @@ function toggle(state: State) {
       class="hl"
     >
       <li
-        v-for="h in sorted"
+        v-for="(h, i) in sorted"
         :key="h.id"
       >
         <button
@@ -87,6 +87,8 @@ function toggle(state: State) {
           class="hl-row"
           @click="emit('pick', h.id)"
         >
+          <!-- ترقيمُ الصفوف (طلب المستخدم 2026-10-25) بدائرة متابعة الرصد الكحلية -->
+          <span class="hl-seq">{{ i + 1 }}</span>
           <span class="hl-name">{{ h.name }}</span>
           <UBadge
             :color="REPORT_STATUS_COLORS[stateOf(h)]"
@@ -141,6 +143,7 @@ function toggle(state: State) {
 .hl-row:hover { background: var(--surface-2); }
 .hl-row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .hl-name { flex: 1; font-size: 15.5px; font-weight: 600; }
+.hl-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--navy); color: #fff; font-size: 13.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .hl-go { color: var(--ink-3); }
 .hl-empty { margin: 0; padding: 22px; text-align: center; font-size: 14px; color: var(--ink-3); background: var(--surface); border: 1px dashed var(--line-2); border-radius: var(--r-card); }
 

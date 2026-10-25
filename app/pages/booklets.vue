@@ -15,9 +15,13 @@ type View = 'halaqa' | 'booklet' | 'log' | 'requests'
 
 const { role, isAdmin, isReadOnly } = usePermissions()
 const canView = computed(() => isAdmin.value || isReadOnly.value)
-const { deliveries, halaqat, pending, busy, addDelivery, removeDelivery } = useBooklets()
+const { deliveries, halaqat, pending, busy, addDelivery, removeDelivery, refresh: refreshDeliveries } = useBooklets()
 // طلباتُ المعلّمين (2026-10-25) — إشعارُ الطلب يفتح هذا العرض (?view=requests)، والعددُ للمفتوحة الجديدة
-const { requests, openCount, busy: reqBusy, closeRequest } = useBookletRequests()
+const { requests, openCount, busy: reqBusy, deliverRequest } = useBookletRequests()
+/** «تمّ التسليم» يسجّل التسليمَ في الأرشيف — فتُحدَّث الأرقامُ والعروضُ معه. */
+async function deliver(id: string, deliveredOn: string) {
+  if (await deliverRequest(id, deliveredOn)) await refreshDeliveries()
+}
 
 const route = useRoute()
 const view = ref<View>(route.query.view === 'requests' ? 'requests' : 'halaqa')
@@ -105,7 +109,7 @@ async function confirmDelete() {
           :rows="requests ?? []"
           :can-close="isAdmin"
           :busy="reqBusy"
-          @close="closeRequest"
+          @deliver="deliver"
         />
         <template v-else>
           <UiEmptyState

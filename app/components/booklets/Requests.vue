@@ -1,16 +1,31 @@
 <script setup lang="ts">
 /**
  * طلباتُ الملازم في أرشيف الملازم (المدير الإداري — طلب المستخدم 2026-10-25): المفتوحةُ أوّلاً بشارة «جديد»،
- * والمعلّمُ وحلقتُه والملزمةُ وعددُ النسخ والملاحظةُ والتاريخ، و«تمّ التسليم» يُغلق الطلب. مشرفُ المشروع يقرأ.
+ * والمعلّمُ وحلقتُه والملزمةُ وعددُ النسخ والملاحظةُ والتاريخ. «تمّ التسليم» يفتح مربّعَ تأكيدٍ بتاريخ التسليم (اليومُ افتراضاً)،
+ * فيُسجَّل التسليمُ في الأرشيف ويُغلَق الطلبُ ويُشعَر المعلّم (طلب المستخدم 2026-10-25). مشرفُ المشروع يقرأ.
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { BookletRequest } from '~/composables/useBookletRequests'
 import { deliveryDate } from '~/utils/booklets'
+import { gazaToday } from '~/utils/reportWindow'
+import { PROJECT_START_DATE } from '~/constants/project'
 
 defineProps<{ rows: BookletRequest[], canClose: boolean, busy: boolean }>()
-const emit = defineEmits<{ close: [id: string] }>()
+const emit = defineEmits<{ deliver: [id: string, deliveredOn: string] }>()
 
 const label = (n: number) => BOOKLETS.find(b => b.no === n)?.label ?? `الملزمة ${n}`
+
+/** الطلبُ الذي ينتظر تأكيدَ «تمّ التسليم». */
+const toClose = ref<BookletRequest | null>(null)
+const deliveredOn = ref('')
+const today = gazaToday()
+watch(toClose, (r) => {
+  if (r) deliveredOn.value = today
+})
+function confirmClose() {
+  if (toClose.value && deliveredOn.value) emit('deliver', toClose.value.id, deliveredOn.value)
+  toClose.value = null
+}
 const columns = [
   { key: 'num', label: '#' },
   { key: 'who', label: 'المعلّم والحلقة' },
@@ -84,7 +99,7 @@ const columns = [
         size="sm"
         :loading="busy"
         :ui="{ base: 'rounded-[10px]' }"
-        @click="emit('close', row.id)"
+        @click="toClose = row"
       />
     </template>
     <template #card="{ row, index }">
@@ -118,16 +133,68 @@ const columns = [
             variant="outline"
             :loading="busy"
             :ui="{ base: 'rounded-[11px]' }"
-            @click="emit('close', row.id)"
+            @click="toClose = row"
           />
         </template>
       </UiCardRow>
     </template>
   </UiDataTable>
+
+  <UModal
+    :open="!!toClose"
+    title="تأكيدُ التسليم"
+    @update:open="(v: boolean) => { if (!v) toClose = null }"
+  >
+    <template #body>
+      <div class="dl">
+        <p>
+          هل سلّمتَ <b>{{ toClose?.halaqa?.teacher?.full_name ?? 'المعلّم' }}</b> ({{ toClose?.halaqa?.name }})
+          <b>{{ toClose ? label(toClose.booklet) : '' }} × {{ toClose?.copies }}</b>؟
+        </p>
+        <UFormField label="تاريخ التسليم">
+          <UInput
+            v-model="deliveredOn"
+            type="date"
+            :min="PROJECT_START_DATE"
+            :max="today"
+            size="xl"
+            class="w-full"
+            :ui="{ base: 'rounded-[12px] min-h-12' }"
+          />
+        </UFormField>
+        <p class="dl-hint">
+          يُسجَّل التسليمُ في الأرشيف، ويُغلَق الطلب، ويصل المعلّمَ إشعارٌ بالتسليم وتاريخه.
+        </p>
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex w-full justify-end gap-2">
+        <UButton
+          label="إلغاء"
+          color="neutral"
+          variant="ghost"
+          :ui="{ base: 'rounded-[12px] min-h-11' }"
+          @click="toClose = null"
+        />
+        <UButton
+          label="نعم، تمّ التسليم"
+          icon="i-lucide-check"
+          color="primary"
+          :loading="busy"
+          :disabled="!deliveredOn || deliveredOn > today"
+          :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+          @click="confirmClose"
+        />
+      </div>
+    </template>
+  </UModal>
 </template>
 
 <style scoped>
 .seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.dl { display: flex; flex-direction: column; gap: 14px; }
+.dl p { margin: 0; color: var(--ink); line-height: 1.8; }
+.dl .dl-hint { color: var(--ink-3); font-size: 13.5px; }
 .who { display: flex; flex-direction: column; line-height: 1.45; min-width: 180px; }
 .who b { color: var(--ink); font-weight: 600; white-space: nowrap; }
 .who span { font-size: 13px; color: var(--ink-3); white-space: nowrap; }

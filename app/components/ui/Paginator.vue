@@ -2,8 +2,8 @@
 /**
  * شريط ترقيم الصفحات (§4.16ج) — «عرض س–ص من الإجمالي» + سابق/تالي. يختفي عند صفحة واحدة.
  * `edges`: زرّا «الأولى» و«الأخيرة» على طرفي الشريط (تجربةٌ على الطلاب 2026-10-25) — في العربية الأولى يميناً.
- * `refined`: الشكلُ الجديد (طلب المستخدم 2026-10-25 «غيّر شكلها وخلّيها في الوسط»): في الوسط، والأزرارُ كبسولةٌ
- * واحدة بلا أطرٍ منفصلة، والصفحةُ الحاليةُ دائرةٌ كحلية، و«عرض س–ص» سطرٌ صغيرٌ تحتها.
+ * `refined`: الشكلُ الجديد (طلب المستخدم 2026-10-25 «غيّر شكلها وخلّيها في الوسط»): في الوسط، مربّعاتٌ بحدودٍ
+ * والحاليةُ مملوءةٌ بالكحليّ، و«عرض س–ص» سطرٌ صغيرٌ تحتها.
  */
 const props = defineProps<{ page: number, pageCount: number, total: number, pageSize: number, edges?: boolean, refined?: boolean }>()
 const emit = defineEmits<{ 'update:page': [number] }>()
@@ -12,11 +12,14 @@ const from = computed(() => props.total === 0 ? 0 : (props.page - 1) * props.pag
 const to = computed(() => Math.min(props.page * props.pageSize, props.total))
 
 const root = ref<HTMLElement>()
+/** ارتفاعُ الشريط العلويّ اللاصق وهامشٌ تحته. */
+const STICKY_OFFSET = 88
 /**
- * الصفحةُ الجديدة تُعرض من أوّلها (طلب المستخدم 2026-10-22): يصعد أقربُ سلفٍ يُمرَّر — `.content` في لوحة التحكم
- * لا النافذة، أو جسمُ نافذةٍ منبثقة — وإلا فالنافذة. بلا حركةٍ لمن طلب تقليلها.
+ * الصفحةُ الجديدة تُعرض من أوّل القائمة لا من أعلى الصفحة (2026-10-25 — كان يصعد فوق بطاقات الأرقام فيُتعب):
+ * القائمةُ أقربُ أخٍ ظاهرٍ قبل الترقيم (الجدول، أو بطاقاتُ الجوال)، ولا حركةَ إن كان أوّلُها ظاهراً أصلاً.
+ * وداخل نافذةٍ منبثقة يصعد جسمُها. بلا حركةٍ ناعمةٍ لمن طلب تقليلها.
  */
-function scrollToStart() {
+function scrollToListStart() {
   const behavior: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   for (let el = root.value?.parentElement; el && el !== document.body; el = el.parentElement) {
     const overflow = getComputedStyle(el).overflowY
@@ -25,13 +28,17 @@ function scrollToStart() {
       return
     }
   }
-  window.scrollTo({ top: 0, behavior })
+  let list = root.value?.previousElementSibling as HTMLElement | null | undefined
+  while (list && !list.offsetParent) list = list.previousElementSibling as HTMLElement | null
+  const top = list?.getBoundingClientRect().top
+  if (top === undefined || top >= STICKY_OFFSET) return
+  window.scrollTo({ top: window.scrollY + top - STICKY_OFFSET, behavior })
 }
 
 function go(p: number) {
   if (p < 1 || p > props.pageCount || p === props.page) return
   emit('update:page', p)
-  scrollToStart()
+  scrollToListStart()
 }
 // أرقام صفحات مختصرة حول الصفحة الحالية
 const pages = computed(() => {
@@ -148,14 +155,17 @@ const pages = computed(() => {
 /* ── الشكلُ الجديد (`refined`): في الوسط، كبسولةٌ واحدة، والحاليةُ دائرةٌ كحلية ── */
 .pg.refined { flex-direction: column-reverse; justify-content: center; gap: 10px; margin-top: 22px; }
 .refined .pg-info { font-size: 13px; font-variant-numeric: tabular-nums; }
-.refined .pg-btns { gap: 2px; padding: 5px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow); }
-.refined .pg-b { min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 14.5px; font-variant-numeric: tabular-nums; }
-.refined .pg-b:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
-.refined .pg-b:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
-.refined .pg-b.active { background: var(--navy); color: #fff; }
-.refined .pg-b:disabled { opacity: .3; }
-.refined .pg-dots { min-width: 18px; text-align: center; }
+/* مربّعات (طلب المستخدم 2026-10-25 «نظام مربعات ويميز المربع المقصود والباقي حدود فقط»):
+   الحاليةُ مملوءةٌ بالكحليّ، والبقيةُ حدودٌ على الشفاف */
+.refined .pg-btns { gap: 8px; }
+.refined .pg-b { width: 42px; min-width: 42px; height: 42px; padding: 0; border: 1px solid var(--line-2); border-radius: 11px; background: transparent; color: var(--ink-2); font-size: 15px; font-variant-numeric: tabular-nums; }
+.refined .pg-b:hover:not(:disabled) { border-color: var(--navy); color: var(--ink); }
+.refined .pg-b:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.refined .pg-b.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+.refined .pg-b:disabled { opacity: .35; }
+.refined .pg-dots { min-width: 14px; text-align: center; }
 @media (max-width: 480px) {
-  .refined .pg-b { min-width: 36px; height: 36px; padding: 0 6px; }
+  .refined .pg-btns { gap: 5px; }
+  .refined .pg-b { width: 36px; min-width: 36px; height: 36px; border-radius: 10px; }
 }
 </style>

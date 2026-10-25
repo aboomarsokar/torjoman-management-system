@@ -5,7 +5,9 @@
  * `refined`: الشكلُ الجديد (طلب المستخدم 2026-10-25 «غيّر شكلها وخلّيها في الوسط»): في الوسط، مربّعاتٌ بحدودٍ
  * والحاليةُ مملوءةٌ بالكحليّ، و«عرض س–ص» سطرٌ صغيرٌ تحتها.
  */
-const props = defineProps<{ page: number, pageCount: number, total: number, pageSize: number, edges?: boolean, refined?: boolean }>()
+// الشكلُ الجديد وزرّا الأولى والأخيرة افتراضيّان لكلّ القوائم (عُمّما بطلب المستخدم 2026-10-25)
+const props = withDefaults(defineProps<{ page: number, pageCount: number, total: number, pageSize: number, edges?: boolean, refined?: boolean }>(),
+  { edges: true, refined: true })
 const emit = defineEmits<{ 'update:page': [number] }>()
 
 const from = computed(() => props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1)

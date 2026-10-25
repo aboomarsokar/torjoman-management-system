@@ -37,23 +37,67 @@ const canCreate = isAdmin
 const canDelete = isAdmin
 const HALQA_NONE = 'none'
 
-// جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً
-const { data: students, refresh, pending } = useLazyAsyncData<StudentRow[]>(
-  'students-list',
-  async () => {
-    const { data, error } = await supabase
-      .from('students')
-      .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name))')
-      .order('created_at', { ascending: false })
-      .returns<StudentRow[]>()
-    if (error) {
-      console.error('[students] فشل الجلب:', error.message)
-      return []
-    }
-    return data ?? []
-  },
-  { server: false, default: () => [] }
-)
+// ── القائمةُ من الخادم صفحةً صفحة (طلب المستخدم 2026-10-25) ──
+// يجلب المتصفّحُ عشرين طالباً، والصفحةُ التالية عشرين أخرى؛ والبحثُ والحالةُ والحلقةُ شروطٌ على الخادم.
+// والأرقامُ (البطاقات وعددُ كلّ حالة) من استعلامٍ خفيفٍ منفصل: خمسةُ أعمدةٍ بلا ربطٍ لطلاب النطاق كلِّهم.
+const PAGE_SIZE = 20
+type StatsRow = Pick<StudentRow, 'id' | 'gender' | 'status' | 'enrollment_date' | 'quran_parts' | 'halaqa_id'>
+const { data: statsRows, refresh: refreshStats } = useLazyAsyncData<StatsRow[]>('students-stats', async () => {
+  const { data, error } = await supabase.from('students').select('id, gender, status, enrollment_date, quran_parts, halaqa_id')
+  if (error) {
+    console.error('[students] فشل جلب الأرقام:', error.message)
+    return []
+  }
+  return data ?? []
+}, { server: false, default: () => [] })
+
+const statusF = ref<StudentStatus | 'all'>('all')
+const halqaF = ref<string>('all')
+// البحث بالاسم أو رقم الهوية (يقبل الأرقام العربية وأشكال الألف — `serverSearchClauses`) بعد توقّف الكتابة
+const query = ref('')
+const searchQ = ref('')
+const page = ref(1)
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+watch(query, (q) => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    searchQ.value = q
+  }, 300)
+})
+onBeforeUnmount(() => clearTimeout(searchTimer))
+
+const { data: pageData, refresh: refreshPage, pending } = useLazyAsyncData('students-page', async () => {
+  let q = supabase.from('students').select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name))', { count: 'exact' })
+  if (statusF.value !== 'all') q = q.eq('status', statusF.value)
+  if (halqaF.value !== 'all') q = q.eq('halaqa_id', halqaF.value)
+  for (const clause of serverSearchClauses(searchQ.value, 'full_name', 'national_id')) q = q.or(clause)
+  const from = (page.value - 1) * PAGE_SIZE
+  const { data, count, error } = await q
+    .order('created_at', { ascending: false })
+    .order('id')
+    .range(from, from + PAGE_SIZE - 1)
+    .returns<StudentRow[]>()
+  if (error) {
+    console.error('[students] فشل الجلب:', error.message)
+    return { rows: [] as StudentRow[], total: 0 }
+  }
+  return { rows: data ?? [], total: count ?? 0 }
+}, { server: false, default: () => ({ rows: [] as StudentRow[], total: 0 }), watch: [page, statusF, halqaF, searchQ] })
+const rows = computed(() => pageData.value?.rows ?? [])
+const total = computed(() => pageData.value?.total ?? 0)
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+// تغييرُ الفلتر يعيد الصفحةَ الأولى في اللحظة نفسها (sync) — فيُجلب مرّةً واحدة لا الصفحةَ القديمة ثم الأولى
+watch([statusF, halqaF], () => {
+  page.value = 1
+}, { flush: 'sync' })
+watch(pageCount, (pc) => {
+  if (page.value > pc) page.value = pc
+})
+/** بعد إضافةٍ أو تعديلٍ أو حذف: الصفحةُ والأرقامُ معاً. */
+async function refresh() {
+  await Promise.all([refreshPage(), refreshStats()])
+}
 
 const { data: halqat } = useLazyAsyncData<HalqaOpt[]>('students-halqat', async () => {
   const { data } = await supabase
@@ -74,10 +118,8 @@ const halqaItems = computed(() => [
 ])
 const halqaFilterItems = computed(() => [{ label: 'كل الحلقات', value: 'all' }, ...(halqat.value ?? []).map(h => ({ label: h.name, value: h.id }))])
 
-const statusF = ref<StudentStatus | 'all'>('all')
-const halqaF = ref<string>('all')
 function countFor(key: StudentStatus | 'all') {
-  const list = students.value ?? []
+  const list = statsRows.value ?? []
   return key === 'all' ? list.length : list.filter(s => s.status === key).length
 }
 // قائمةٌ منسدلة بالعدد بجانب كلّ حالة (كانت خمسةَ أزرارٍ تأخذ سطرين على الجوال — طلب المستخدم 2026-10-19)
@@ -88,22 +130,21 @@ const statusFilterItems = computed(() => ([
   { value: 'graduated' as const, label: 'متخرّج' },
   { value: 'transferred' as const, label: 'منقول' }
 ]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
-// البحث بالاسم أو رقم الهوية (يقبل الأرقام العربية) — فوق تصفية الحالة والحلقة
-const query = ref('')
-const filtered = computed(() => (students.value ?? []).filter(s =>
-  (statusF.value === 'all' || s.status === statusF.value)
-  && (halqaF.value === 'all' || s.halaqa_id === halqaF.value)
-  && matchesSearch(query.value, s.full_name, s.national_id)
-))
-const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filtered, 12)
 /** الرقمُ المتسلسل عبر الصفحات لا داخلَ الصفحة وحدها (طلب المستخدم 2026-10-22). */
-const seq = (index: number) => (page.value - 1) * pageSize + index + 1
-watch([statusF, halqaF, query], resetPage)
+const seq = (index: number) => (page.value - 1) * PAGE_SIZE + index + 1
 const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
-const splitStats = computed(() => studentSplitStats(
-  (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday()))
-const stats = computed(() => studentStats(
-  (students.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value), gazaToday(), isWomenAdmin.value))
+/** أرقامُ الحلقة المختارة (لا تتبع البحثَ ولا الحالة: تعرض الحالاتِ نفسَها). */
+const scopeStats = computed(() => (statsRows.value ?? []).filter(s => halqaF.value === 'all' || s.halaqa_id === halqaF.value))
+const splitStats = computed(() => studentSplitStats(scopeStats.value, gazaToday()))
+const stats = computed(() => studentStats(scopeStats.value, gazaToday(), isWomenAdmin.value))
+function clearStudentFilters() {
+  query.value = ''
+  searchQ.value = ''
+  statusF.value = 'all'
+  halqaF.value = 'all'
+}
+/** لا طلابَ في النطاق أصلاً — غيرُ «لا نتائج لهذا البحث». */
+const noStudents = computed(() => !(statsRows.value ?? []).length)
 const columns = computed(() => {
   const base = [
     { key: 'num', label: '#' },
@@ -130,7 +171,7 @@ function studentPhotoPath(s: StudentRow) {
   return displayPhotoPath({ gender: s.gender, photo_path: s.user_id ? studentPhotoPaths.value?.[s.user_id] : null })
 }
 const { prime: primePhotos, urlFor: photoUrlFor } = useProfilePhotoUrls()
-watch([paged, studentPhotoPaths], ([rows]) => void primePhotos(rows.map(studentPhotoPath)), { immediate: true })
+watch([rows, studentPhotoPaths], ([list]) => void primePhotos(list.map(studentPhotoPath)), { immediate: true })
 // ── إضافة/تعديل ──
 const modalOpen = ref(false)
 const saving = ref(false)
@@ -234,7 +275,7 @@ async function createStudent(details: Database['public']['Tables']['students']['
 
 /** تعديل طالب: الهوية (إن تغيّرت) عبر الخادم لأنها معرّف الدخول، والباقي تحديثٌ مباشر تحكمه RLS. */
 async function updateStudent(id: string, details: Database['public']['Tables']['students']['Update']) {
-  const original = (students.value ?? []).find(s => s.id === id)
+  const original = rows.value.find(s => s.id === id)
   const nationalId = normalizeDigits(form.national_id.trim())
   if (isAdmin.value && nationalId && nationalId !== original?.national_id) {
     await changeStudentNationalId(id, nationalId)
@@ -330,8 +371,8 @@ async function confirmDelete() {
       <UiSearchField
         v-model="query"
         placeholder="ابحث بالاسم أو رقم الهوية"
-        :shown="filtered.length"
-        :total="(students ?? []).length"
+        :shown="total"
+        :total="(statsRows ?? []).length"
         class="search"
       />
       <UiSelect
@@ -358,29 +399,46 @@ async function confirmDelete() {
       <!-- أرقامُ الطلاب في النطاق بحلقته المختارة (لا تتبع البحثَ ولا الحالةَ: تعرض الحالاتِ نفسَها) -->
       <!-- من يرى القسمين (الإداري ومشرف المشروع): مفصولةً بين البنين والبنات (2026-10-22) -->
       <DashboardGenderSplit
-        v-if="!pending && (students ?? []).length && seesBoth"
+        v-if="!noStudents && seesBoth"
         :items="splitStats"
       />
       <UiStatStrip
-        v-else-if="!pending && (students ?? []).length"
+        v-else-if="!noStudents"
         :items="stats"
         label="أرقام الطلاب"
       />
+      <!-- الهيكلُ في التحميل الأوّل وحدَه؛ وبين الصفحات يبقى الجدولُ باهتاً حتى تصل التالية (بلا وميض) -->
       <UiSkeletonTable
-        v-if="pending"
+        v-if="pending && !rows.length"
         :columns="columns"
       />
       <UiEmptyState
-        v-else-if="filtered.length === 0"
+        v-else-if="noStudents"
         icon="i-lucide-graduation-cap"
         title="لا طلاب بعد"
         :description="canCreate ? 'أضِف أول طالب واربطه بحلقته ليظهر هنا.' : 'لا طلاب في نطاقك حاليّاً.'"
       />
+      <UiEmptyState
+        v-else-if="!rows.length"
+        icon="i-lucide-search-x"
+        title="لا نتائج لهذا البحث"
+        description="جرّب جزءاً من الاسم أو رقمَ الهوية، أو اعرض كلَّ الحالات والحلقات."
+      >
+        <UButton
+          label="مسح البحث والفلاتر"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-x"
+          :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+          @click="clearStudentFilters"
+        />
+      </UiEmptyState>
       <UiDataTable
         v-else
         :columns="columns"
-        :rows="paged"
+        :rows="rows"
         row-key="id"
+        :class="{ 'is-loading': pending }"
       >
         <template #num="{ index }">
           <span class="muted">{{ seq(index) }}</span>
@@ -459,11 +517,12 @@ async function confirmDelete() {
       </UiDataTable>
       <!-- الحاوية الضيّقة (الجوال): بطاقةٌ لكل طالب بكل بياناته بلا تمرير أفقيّ — الجدول يُخفى هناك -->
       <ul
-        v-if="!pending && filtered.length"
+        v-if="rows.length"
         class="scards"
+        :class="{ 'is-loading': pending }"
       >
         <li
-          v-for="(row, i) in paged"
+          v-for="(row, i) in rows"
           :key="row.id"
           class="scard"
         >
@@ -552,11 +611,11 @@ async function confirmDelete() {
         </li>
       </ul>
       <UiPaginator
-        v-if="filtered.length"
+        v-if="rows.length"
         :page="page"
         :page-count="pageCount"
         :total="total"
-        :page-size="pageSize"
+        :page-size="PAGE_SIZE"
         @update:page="page = $event"
       />
     </ClientOnly>
@@ -842,6 +901,8 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
+/* صفحةٌ تُجلب: الحاليةُ باهتةٌ لا تُضغط حتى تصل التالية */
+.is-loading { opacity: .5; pointer-events: none; transition: opacity .15s; }
 /* الحاوية دون 720: بطاقات بدل الجدول (الجوال) — بلا تمرير أفقيّ */
 .students { container: students / inline-size; }
 .scards { display: none; list-style: none; margin: 0; padding: 0; }

@@ -97,7 +97,9 @@ const mainNav: Item[] = [
   // ملازمُ حلقة المعلّم وطلبُها (طلب المستخدم 2026-10-25)
   { key: 'my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', to: '/my-booklets', roles: ['teacher'], group: 'sheets', isNew: true },
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
-  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' }
+  { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' },
+  // إشعاراتٌ للمعلّمين تصل أجراسَهم (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
+  { key: 'announcements', label: 'إشعارات للمعلّمين', labelF: 'إشعارات للمعلّمات', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision' }
 ]
 
 const managerNav: Item[] = [
@@ -152,7 +154,7 @@ const matches = (item: Item) => !!item.to
 const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
-const { isNewFor } = useNavNewBadges(computed(() => activeItem.value?.key))
+const { isNewFor } = useNavNewBadges(activeItem)
 const newKeys = isNewFor(allItems)
 
 const navTitle = computed(() => {

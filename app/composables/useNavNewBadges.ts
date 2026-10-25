@@ -10,7 +10,7 @@ export function unseenKeys(items: { key: string, isNew?: boolean }[], seen: Read
   return new Set(items.filter(i => i.isNew && !seen.has(i.key)).map(i => i.key))
 }
 
-export function useNavNewBadges(activeKey: Ref<string | null | undefined>) {
+export function useNavNewBadges(active: Ref<{ key: string, isNew?: boolean } | null | undefined>) {
   const seen = ref<Set<string>>(new Set())
   const ready = ref(false)
 
@@ -29,8 +29,8 @@ export function useNavNewBadges(activeKey: Ref<string | null | undefined>) {
     ready.value = true
   })
   // زيارةُ الصفحة تُطفئ شارتَها — ولو دخلها برابطٍ أو إشعارٍ لا من القائمة
-  watch([activeKey, ready], ([k, r]) => {
-    if (r && k) markSeen(k)
+  watch([active, ready], ([a, r]) => {
+    if (r && a?.isNew) markSeen(a.key)
   }, { immediate: true })
 
   /** لا تظهر قبل قراءة المحفوظ، كي لا تومض لمن رآها. */

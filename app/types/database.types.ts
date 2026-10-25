@@ -2200,6 +2200,10 @@ export type Database = {
         }
         Returns: string
       }
+      set_my_halaqa_time: {
+        Args: { p_halaqa: string; p_time: string }
+        Returns: undefined
+      }
       set_quality_admin_notes: {
         Args: { p_id: string; p_notes: string }
         Returns: undefined

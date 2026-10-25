@@ -160,7 +160,8 @@ const pages = computed(() => {
 /* مربّعات (طلب المستخدم 2026-10-25 «نظام مربعات ويميز المربع المقصود والباقي حدود فقط»):
    الحاليةُ مملوءةٌ بالكحليّ، والبقيةُ حدودٌ على الشفاف */
 .refined .pg-btns { gap: 8px; }
-.refined .pg-b { width: 42px; min-width: 42px; height: 42px; padding: 0; border: 1px solid var(--line-2); border-radius: 11px; background: transparent; color: var(--ink-2); font-size: 15px; font-variant-numeric: tabular-nums; }
+/* الحدُّ أغمق (طلب المستخدم 2026-10-25) — كان line-2 فبهت على الخلفية */
+.refined .pg-b { width: 42px; min-width: 42px; height: 42px; padding: 0; border: 1.5px solid color-mix(in srgb, var(--ink-3) 70%, transparent); border-radius: 11px; background: transparent; color: var(--ink-2); font-size: 15px; font-variant-numeric: tabular-nums; }
 .refined .pg-b:hover:not(:disabled) { border-color: var(--navy); color: var(--ink); }
 .refined .pg-b:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .refined .pg-b.active { background: var(--navy); border-color: var(--navy); color: #fff; }

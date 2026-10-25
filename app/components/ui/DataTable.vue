@@ -117,23 +117,24 @@ function onRowKey(row: T, e: KeyboardEvent) {
 .table-wrap :deep(td) { padding: 14px 18px; vertical-align: middle; }
 
 /* ── الشكلُ الجديد (`refined`) ── */
-/* clip لا auto: لا يصنع حاويةَ تمرير، فيثبت الرأسُ تحت الشريط العلويّ (76px) عند تمرير الصفحة */
+/* clip لا auto: لا يصنع حاويةَ تمرير، فيثبت الرأسُ تحت الشريط العلويّ (76px) عند تمرير الصفحة.
+   بلا إطار (طلب المستخدم 2026-10-25 «ما بدي حافة» — على مثال جدولٍ أرسله): لا حدَّ ولا ظلّ حول الصندوق،
+   والجدولُ داخله بهامشٍ فلا تمسّ خطوطُ الفصل حافتَيه، ورأسٌ بحبرٍ أوضح لا رماديّ */
+.refined .card { border: 0; box-shadow: none; padding: 6px 22px 10px; }
 .refined .table-wrap { overflow-x: clip; }
 .refined .table-wrap table { font-size: 14.5px; }
 .refined .table-wrap thead tr { background: none; }
-.refined .table-wrap th { position: sticky; top: 76px; z-index: 2; background: var(--surface); padding: 13px 16px 11px; font-size: 12.5px; letter-spacing: 0; color: var(--ink-3); border-bottom: 1px solid var(--line-2, var(--line)); }
-.refined .table-wrap th:first-child { border-start-start-radius: 20px; }
-.refined .table-wrap th:last-child { border-start-end-radius: 20px; }
+.refined .table-wrap th { position: sticky; top: 76px; z-index: 2; background: var(--surface); padding: 15px 14px 13px; font-size: 14px; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--line-2, var(--line)); }
 .refined .table-wrap tbody tr:first-child { border-top: 0; }
-.refined .table-wrap :deep(td) { padding: 11px 16px; }
+.refined .table-wrap tbody tr:last-child { border-bottom: 0; }
+.refined .table-wrap :deep(td) { padding: 13px 14px; }
 .refined .table-wrap tbody tr { transition: background .12s; }
 .refined .table-wrap tbody tr:hover { background: var(--surface-2); }
-.refined .table-wrap tbody tr:last-child :deep(td:first-child) { border-end-start-radius: 20px; }
-.refined .table-wrap tbody tr:last-child :deep(td:last-child) { border-end-end-radius: 20px; }
 /* حاويةٌ أضيقُ من 900: clip يقصّ ما لا يتّسع (عمودُ الإجراءات) — فالتمريرُ الأفقيّ أولى من الرأس الثابت */
 @container dt (max-width: 899px) {
   .refined .table-wrap { overflow-x: auto; }
   .refined .table-wrap th { position: static; }
+  .refined .card { padding-inline: 12px; }
 }
 /* الصفُّ كلُّه رابطٌ إلى سجلّه */
 .row-link .table-wrap tbody tr { cursor: pointer; }

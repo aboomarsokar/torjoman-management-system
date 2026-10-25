@@ -163,7 +163,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
             <div>
               <strong>أُعيد إليك الكشف للتعديل</strong>
               <p>{{ statement.returnNote }}</p>
-              <small>صحّح البنود ثم اضغط «حفظ وإرسال للمراجعة».</small>
+              <small>صحّح البنود ثم اضغط «إرسال الكشف» أسفل الصفحة.</small>
             </div>
           </div>
 
@@ -217,7 +217,6 @@ const fmt = (n: number) => n.toLocaleString('ar')
               v-if="canEdit"
               class="actions"
             >
-              <!-- الإرسالُ هو الفعلُ الأساسيّ، والمسوّدةُ ثانويّة (كانا زرّين صلبين يتنافسان) -->
               <UButton
                 label="حفظ مسوّدة"
                 color="neutral"
@@ -228,17 +227,17 @@ const fmt = (n: number) => n.toLocaleString('ar')
                 :ui="{ base: 'rounded-[13px] font-semibold min-h-12 justify-center' }"
                 @click="saveDraft"
               />
-              <UButton
-                label="حفظ وإرسال للمراجعة"
-                color="primary"
-                size="lg"
-                icon="i-lucide-send"
-                :loading="submitting"
-                :ui="{ base: 'rounded-[13px] font-semibold min-h-12 justify-center' }"
-                @click="submit"
-              />
             </div>
           </div>
+
+          <!-- الإرسالُ في بطاقته وحدَه، بعيداً عن «إضافة بند» و«حفظ مسوّدة» -->
+          <IncentivesSendCard
+            v-if="canEdit && rows.length"
+            :count="rows.length"
+            :total="fmt(spent)"
+            :busy="submitting"
+            @send="submit"
+          />
         </template>
       </ClientOnly>
     </template>
@@ -286,7 +285,6 @@ const fmt = (n: number) => n.toLocaleString('ar')
   .sm-seg { padding: 12px 12px; }
   .sm-seg dd { font-size: 20px; }
   .sm-seg dt { font-size: 12px; }
-  .actions { flex-direction: column-reverse; }
   .actions > * { width: 100%; }
 }
 </style>

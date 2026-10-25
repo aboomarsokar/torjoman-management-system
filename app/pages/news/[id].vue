@@ -41,12 +41,6 @@ useSeoMeta({
 const dateLabel = computed(() => item.value
   ? new Date(item.value.news_date).toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric' })
   : '')
-
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
 </script>
 
 <template>
@@ -62,16 +56,8 @@ function toggleTheme() {
           class="logo"
         >
       </NuxtLink>
-      <UButton
-        :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-        color="neutral"
-        variant="subtle"
-        size="lg"
-        square
-        aria-label="تبديل الوضع"
-        :ui="{ base: 'rounded-xl' }"
-        @click="toggleTheme"
-      />
+      <!-- فاتح ← ليلي ← حسب النظام، كسائر المنصّة -->
+      <UiThemeToggle />
     </header>
 
     <main class="wrap">

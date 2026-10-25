@@ -333,6 +333,8 @@ async function save() {
 
 // ── حذف ──
 const deleteTarget = ref<StudentRow | null>(null)
+// إعادةُ تعيين كلمة المرور من القائمة مباشرةً (طلب المستخدم 2026-10-25) — للمدير الإداريّ، ولمن له حسابُ دخول
+const resetTarget = ref<StudentRow | null>(null)
 const deleting = ref(false)
 async function confirmDelete() {
   if (!deleteTarget.value) return
@@ -523,6 +525,20 @@ async function confirmDelete() {
               />
             </UTooltip>
             <UTooltip
+              v-if="isAdmin && row.user_id"
+              text="إعادة تعيين كلمة المرور"
+            >
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                icon="i-lucide-key-round"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="إعادة تعيين كلمة المرور"
+                @click="resetTarget = row"
+              />
+            </UTooltip>
+            <UTooltip
               v-if="canDelete"
               text="حذف"
             >
@@ -626,6 +642,16 @@ async function confirmDelete() {
               icon="i-lucide-pencil"
               :ui="{ base: 'rounded-[11px]' }"
               @click="openEdit(row)"
+            />
+            <UButton
+              v-if="isAdmin && row.user_id"
+              color="neutral"
+              variant="ghost"
+              size="md"
+              icon="i-lucide-key-round"
+              aria-label="إعادة تعيين كلمة المرور"
+              :ui="{ base: 'rounded-[11px]' }"
+              @click="resetTarget = row"
             />
             <UButton
               v-if="canDelete"
@@ -914,6 +940,7 @@ async function confirmDelete() {
     </UModal>
 
     <!-- تأكيد الحذف -->
+    <StudentResetPasswordFlow v-model:student="resetTarget" />
     <UiConfirmModal
       :open="!!deleteTarget"
       title="حذف الطالب"

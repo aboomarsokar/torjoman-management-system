@@ -35,12 +35,6 @@ useSeoMeta({
   robots: 'noindex'
 })
 
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
-
 const dash = (v: string | number | null | undefined) => (v === null || v === undefined || v === '') ? '—' : String(v)
 
 const fields = computed(() => {
@@ -64,16 +58,8 @@ const fields = computed(() => {
         alt="ترجمان"
         class="logo"
       >
-      <UButton
-        :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-        color="neutral"
-        variant="subtle"
-        size="lg"
-        square
-        aria-label="تبديل الوضع"
-        :ui="{ base: 'rounded-xl' }"
-        @click="toggleTheme"
-      />
+      <!-- فاتح ← ليلي ← حسب النظام، كسائر المنصّة -->
+      <UiThemeToggle />
     </header>
 
     <main class="wrap">

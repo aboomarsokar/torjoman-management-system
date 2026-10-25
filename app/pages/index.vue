@@ -10,12 +10,6 @@ import type { Database } from '~/types/database.types'
 
 definePageMeta({ layout: false })
 
-const colorMode = useColorMode()
-const isDark = computed(() => colorMode.value === 'dark')
-function toggleTheme() {
-  colorMode.preference = isDark.value ? 'light' : 'dark'
-}
-
 const site = useRuntimeConfig().public.siteUrl.replace(/\/$/, '')
 const seoTitle = 'ترجمان — حفظ وفهم وعمل'
 const seoDesc = 'برنامج قرآني من مؤسسة المرقاة للتعليم والتدريب يجمع بين حفظ كتاب الله وفهمه وتدبّره والعمل به، ويرافق الطالب في رحلته القرآنية عبر حلقات تحفيظ القرآن والبرامج المصاحبة.'
@@ -180,16 +174,8 @@ const btnUi = { base: 'rounded-[14px] font-semibold' }
           <a href="#contact">تواصل</a>
         </nav>
         <div class="nav-actions">
-          <UButton
-            :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-            color="neutral"
-            variant="subtle"
-            size="lg"
-            square
-            aria-label="تبديل الوضع"
-            :ui="{ base: 'rounded-xl' }"
-            @click="toggleTheme"
-          />
+          <!-- فاتح ← ليلي ← حسب النظام، كسائر المنصّة -->
+          <UiThemeToggle />
           <UButton
             to="/login"
             label="تسجيل الدخول"

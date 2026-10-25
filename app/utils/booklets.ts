@@ -5,7 +5,7 @@
 import type { StatItem } from '~/components/ui/StatStrip.vue'
 import { BOOKLETS } from '~/constants/booklets'
 
-export interface DeliveryRow {
+export type DeliveryRow = {
   id: string
   halaqa_id: string
   booklet: number

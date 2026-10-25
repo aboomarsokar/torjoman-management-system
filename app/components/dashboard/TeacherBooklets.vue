@@ -7,8 +7,7 @@ import { deliveryDate, halaqaBooklets, type DeliveryRow } from '~/utils/booklets
 import { BOOKLETS } from '~/constants/booklets'
 import type { RequestDraft } from '~/composables/useBookletRequests'
 
-/** `full`: صفحةُ «الملازم» للمعلّم — كلُّ طلباته لا آخرُ أربعة. */
-const props = defineProps<{ halaqaId: string, halaqaName: string, full?: boolean }>()
+const props = defineProps<{ halaqaId: string, halaqaName: string }>()
 
 const supabase = useSupabaseClient()
 const { data: rows, pending } = useLazyAsyncData<DeliveryRow[]>(`teacher-booklets-${props.halaqaId}`, async () => {
@@ -26,7 +25,7 @@ const mine = computed(() => halaqaBooklets(rows.value ?? [], [{ id: props.halaqa
 // طلبُ ملازم من المعلّم (2026-10-25) — وطلباتُه الأخيرة بحالتها
 const { requests, busy, addRequest } = useBookletRequests(props.halaqaId)
 const requestOpen = ref(false)
-const recent = computed(() => props.full ? (requests.value ?? []) : (requests.value ?? []).slice(0, 4))
+const recent = computed(() => (requests.value ?? []).slice(0, 4))
 const label = (n: number) => BOOKLETS.find(b => b.no === n)?.label ?? `الملزمة ${n}`
 async function sendRequest(d: RequestDraft) {
   if (await addRequest(props.halaqaId, d)) requestOpen.value = false

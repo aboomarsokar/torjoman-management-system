@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * «الملازم» للمعلّم (طلب المستخدم 2026-10-25): ما استلمته حلقتُه بنُسخه وآخرِ تسليم، وطلبُ ملازم،
- * وكلُّ طلباته بحالتها. البطاقةُ نفسُها التي في لوحته (`DashboardTeacherBooklets`) بوضعها الكامل.
+ * «الملازم» للمعلّم (طلب المستخدم 2026-10-25): خلاصةٌ وجدولا التسليمات وطلباتِه (`BookletsTeacherHistory`)،
+ * وزرُّ «اطلب ملازم». والبطاقةُ المختصرة تبقى في لوحته.
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الملازم — ترجمان' })
@@ -41,16 +41,14 @@ const { data: halaqa, pending } = useLazyAsyncData('my-booklets-halaqa', async (
         title="لا حلقة معيّنة لك بعد"
         description="تواصل مع الإدارة لإسناد حلقتك."
       />
-      <DashboardTeacherBooklets
+      <BookletsTeacherHistory
         v-else
         :halaqa-id="halaqa.id"
-        :halaqa-name="halaqa.name"
-        full
       />
     </ClientOnly>
   </div>
 </template>
 
 <style scoped>
-.mb { max-width: 760px; }
+.mb { max-width: 900px; }
 </style>

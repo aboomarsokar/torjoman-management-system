@@ -41,7 +41,7 @@ function comingSoon() {
  * `qtab`: تبويبُ صفحةٍ للعاملين في الرابط (`?tab=`) — `null` للتبويب الافتراضيّ؛ و`title` عنوانُ الشريط إن خالف التسمية.
  * `labelF`: التسميةُ بالمؤنّث للمديرة الإدارية — قسمُها كلُّه إناث (قرار المستخدم 2026-10-22). */
 type GroupKey = 'people' | 'supervision' | 'quran' | 'programs' | 'exams' | 'sheets' | 'project' | 'account'
-type Item = { key: string, label: string, labelF?: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey }
+type Item = { key: string, label: string, labelF?: string, icon: string, to?: string, tab?: StudentTab, qtab?: string | null, title?: string, roles: Role[], group?: GroupKey, isNew?: boolean }
 
 const GROUPS: { key: GroupKey, label: string, icon: string }[] = [
   { key: 'people', label: 'الحلقات والأفراد', icon: 'i-lucide-users-round' },
@@ -95,7 +95,7 @@ const mainNav: Item[] = [
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },
   { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'], group: 'sheets' },
   // ملازمُ حلقة المعلّم وطلبُها (طلب المستخدم 2026-10-25)
-  { key: 'my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', to: '/my-booklets', roles: ['teacher'], group: 'sheets' },
+  { key: 'my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', to: '/my-booklets', roles: ['teacher'], group: 'sheets', isNew: true },
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
   { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' }
 ]
@@ -152,6 +152,9 @@ const matches = (item: Item) => !!item.to
 const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
+const { isNewFor } = useNavNewBadges(computed(() => activeItem.value?.key))
+const newKeys = isNewFor(allItems)
+
 const navTitle = computed(() => {
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
   return activeItem.value?.title ?? (activeItem.value ? labelOf(activeItem.value) : 'لوحة التحكم')
@@ -238,6 +241,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     class="size-5"
                   />
                   {{ g.label }}
+                  <span
+                    v-if="!isOpen(g.key) && g.items.some(i => newKeys.has(i.key))"
+                    class="nav-new-dot"
+                    aria-label="فيها جديد"
+                  />
                 </span>
                 <UIcon
                   name="i-lucide-chevron-down"
@@ -261,6 +269,10 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     class="size-5"
                   />
                   <span>{{ labelOf(item) }}</span>
+                  <span
+                    v-if="newKeys.has(item.key)"
+                    class="nav-new"
+                  >جديد</span>
                 </button>
               </div>
             </section>
@@ -383,6 +395,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item:focus-visible { outline: 2px solid var(--side-strong); outline-offset: -2px; }
 .nav-item:hover { background: var(--side-hover); color: var(--side-strong); }
 .nav-item.active { background: var(--side-active); color: var(--side-strong); }
+.nav-new { margin-inline-start: auto; flex-shrink: 0; padding: 2px 9px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 11.5px; font-weight: 600; line-height: 1.5; }
+.nav-new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--side-new-bg); }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }

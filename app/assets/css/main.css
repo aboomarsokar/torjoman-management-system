@@ -186,7 +186,7 @@
   --side-hover: rgba(255, 255, 255, .07);
   /* شارةُ «جديد» الذهبية في القائمة (طلب المستخدم 2026-10-25) */
   --side-new-bg: #C9A04A;
-  --side-new-ink: #2E2206;
+  --side-new-ink: #1F1703;
   --side-line: rgba(255, 255, 255, .12);
 
   /* شريط/خلفية مميّزة (CTA · جانب اللوغو في الدخول) */
@@ -280,7 +280,7 @@
   --side-active: rgba(255, 255, 255, .13);
   --side-hover: rgba(255, 255, 255, .06);
   --side-new-bg: #C9A24E;
-  --side-new-ink: #2A1F06;
+  --side-new-ink: #1A1302;
   --side-line: rgba(255, 255, 255, .09);
 
   --band: #062536;

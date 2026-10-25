@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * طلباتُ الملازم في أرشيف الملازم (المدير الإداري — طلب المستخدم 2026-10-25): المفتوحةُ أوّلاً بشارة «جديد»،
- * والمعلّمُ وحلقتُه والملزمةُ وعددُ النسخ والملاحظةُ والتاريخ، و«تمّ التسليم» يُغلق الطلب. مشرفُ المشروع يقرأ.
+ * والمعلّمُ وحلقتُه والملزمةُ وعددُ النسخ والملاحظةُ والتاريخ، و«تمّ التسليم» يُغلق الطلب بعد مربّع تأكيد
+ * (طلب المستخدم 2026-10-25). مشرفُ المشروع يقرأ.
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { BookletRequest } from '~/composables/useBookletRequests'
@@ -11,6 +12,13 @@ defineProps<{ rows: BookletRequest[], canClose: boolean, busy: boolean }>()
 const emit = defineEmits<{ close: [id: string] }>()
 
 const label = (n: number) => BOOKLETS.find(b => b.no === n)?.label ?? `الملزمة ${n}`
+
+/** الطلبُ الذي ينتظر تأكيدَ «تمّ التسليم». */
+const toClose = ref<BookletRequest | null>(null)
+function confirmClose() {
+  if (toClose.value) emit('close', toClose.value.id)
+  toClose.value = null
+}
 const columns = [
   { key: 'num', label: '#' },
   { key: 'who', label: 'المعلّم والحلقة' },
@@ -84,7 +92,7 @@ const columns = [
         size="sm"
         :loading="busy"
         :ui="{ base: 'rounded-[10px]' }"
-        @click="emit('close', row.id)"
+        @click="toClose = row"
       />
     </template>
     <template #card="{ row, index }">
@@ -118,12 +126,26 @@ const columns = [
             variant="outline"
             :loading="busy"
             :ui="{ base: 'rounded-[11px]' }"
-            @click="emit('close', row.id)"
+            @click="toClose = row"
           />
         </template>
       </UiCardRow>
     </template>
   </UiDataTable>
+
+  <UiConfirmModal
+    :open="!!toClose"
+    title="تأكيدُ التسليم"
+    confirm-label="نعم، تمّ التسليم"
+    confirm-color="primary"
+    confirm-icon="i-lucide-check"
+    :loading="busy"
+    @confirm="confirmClose"
+    @update:open="(v) => { if (!v) toClose = null }"
+  >
+    هل سلّمتَ {{ toClose?.halaqa?.teacher?.full_name ?? 'المعلّم' }} ({{ toClose?.halaqa?.name }})
+    {{ toClose ? label(toClose.booklet) : '' }} × {{ toClose?.copies }}؟ يُغلَق الطلبُ ويصير «تمّ التسليم».
+  </UiConfirmModal>
 </template>
 
 <style scoped>

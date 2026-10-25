@@ -154,7 +154,7 @@ const matches = (item: Item) => !!item.to
 const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
-const { isNewFor } = useNavNewBadges(activeItem)
+const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
 const newKeys = isNewFor(allItems)
 
 const navTitle = computed(() => {

@@ -31,6 +31,8 @@ const { isAdmin, isReadOnly, isFieldSupervisor, isWomenAdmin, isExaminer, isTech
 // فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
 // والمديرُ الفنيّ لقسم البنين وحده (قرار 2026-10-22)
 const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
+// تعديلُ الحلقة: الإداريّ، والمدير الفنيّ على حلقات البنين (قرار المستخدم 2026-10-25) — الإنشاءُ والحذفُ للإداريّ وحده
+const canEditHalaqa = computed(() => isAdmin.value || isTechnical.value)
 const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value && !isTechnical.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
@@ -337,7 +339,7 @@ async function confirmDelete() {
               aria-label="تفاصيل"
             />
             <UButton
-              v-if="isAdmin"
+              v-if="canEditHalaqa"
               color="neutral"
               variant="outline"
               size="sm"
@@ -394,7 +396,7 @@ async function confirmDelete() {
             card
           />
           <div
-            v-if="isAdmin"
+            v-if="canEditHalaqa"
             class="hcard-actions"
           >
             <UButton
@@ -451,6 +453,7 @@ async function confirmDelete() {
                 v-model="form.gender"
                 :items="genderItems"
                 placeholder="بنين أم بنات؟"
+                :disabled="isTechnical"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

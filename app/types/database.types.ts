@@ -1658,6 +1658,93 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_message_recipients: {
+        Row: {
+          message_id: string
+          recipient_id: string
+          seen_at: string | null
+        }
+        Insert: {
+          message_id: string
+          recipient_id: string
+          seen_at?: string | null
+        }
+        Update: {
+          message_id?: string
+          recipient_id?: string
+          seen_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_message_recipients_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_message_recipients_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_messages: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          recipients: number
+          roles: string[] | null
+          section: string | null
+          sent_by: string
+          target_id: string | null
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          recipients?: number
+          roles?: string[] | null
+          section?: string | null
+          sent_by?: string
+          target_id?: string | null
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          recipients?: number
+          roles?: string[] | null
+          section?: string | null
+          sent_by?: string
+          target_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_messages_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_messages_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           avatar_url: string | null
@@ -2200,6 +2287,7 @@ export type Database = {
       is_project_supervisor: { Args: never; Returns: boolean }
       is_women_admin: { Args: never; Returns: boolean }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
+      mark_staff_messages_seen: { Args: { p_ids: string[] }; Returns: number }
       my_approved_pages: { Args: never; Returns: number }
       my_exam_cycle_results: {
         Args: never
@@ -2250,6 +2338,17 @@ export type Database = {
           p_year: number
         }
         Returns: string
+      }
+      send_staff_message: {
+        Args: {
+          p_body: string
+          p_link: string
+          p_roles: string[]
+          p_section: string
+          p_target: string
+          p_title: string
+        }
+        Returns: number
       }
       set_my_halaqa_time: {
         Args: { p_halaqa: string; p_time: string }

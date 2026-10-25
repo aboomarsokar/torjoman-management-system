@@ -31,13 +31,15 @@ const calendarValue = computed<DateValue | undefined>({
   set: (d) => {
     if (!d) return
     const date = new CalendarDate(d.year, d.month, d.day).toString()
-    const time = parts.value.time || props.suggestedTime?.slice(0, 5) || ''
+    const time = parts.value.time || validSuggested.value
     pendingDate.value = date
     model.value = joinDateTime(date, time)
     open.value = false
   }
 })
 const dateShown = computed(() => parts.value.date || pendingDate.value)
+// المقترحُ يُقبل بصيغة `HH:MM` وحدها — غيرُها (كـ«4:00 م») يُفسد القيمة
+const validSuggested = computed(() => normalizeSuggestedTime(props.suggestedTime))
 
 const time = computed({
   get: () => parts.value.time,

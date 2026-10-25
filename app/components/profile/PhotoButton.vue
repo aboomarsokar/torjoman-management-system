@@ -115,6 +115,7 @@ async function onRemove() {
       <span class="pb-face"><ProfileAvatar
         :name="name"
         :photo-url="url"
+        :zoomable="false"
       /></span>
       <span
         class="pb-hover"
@@ -156,6 +157,7 @@ async function onRemove() {
         <span class="pb-face"><ProfileAvatar
           :name="name"
           :photo-url="url"
+          :zoomable="false"
         /></span>
         <span
           class="pb-hover"

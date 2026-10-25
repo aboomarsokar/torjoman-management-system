@@ -68,7 +68,7 @@ export function useTeacherDashboard() {
   async function load() {
     const me = profile.value?.id
     if (!me) return null
-    const { data: halaqa, error: hErr } = await supabase.from('halaqat').select('id, name, daily_time').eq('teacher_id', me).limit(1).maybeSingle()
+    const { data: halaqa, error: hErr } = await supabase.from('halaqat').select('id, name, daily_time, gender').eq('teacher_id', me).limit(1).maybeSingle()
     if (hErr) throw hErr
     if (!halaqa) return { halaqa: null } as const
 
@@ -149,7 +149,7 @@ export function useTeacherDashboard() {
     }
   }
 
-  const { data, pending } = useLazyAsyncData('teacher-dashboard', async () => {
+  const { data, pending, refresh } = useLazyAsyncData('teacher-dashboard', async () => {
     try {
       return await load()
     } catch (err) {
@@ -158,5 +158,5 @@ export function useTeacherDashboard() {
     }
   }, { server: false, default: () => null, watch: [() => profile.value?.id] })
 
-  return { dash: data, pending }
+  return { dash: data, pending, refresh }
 }

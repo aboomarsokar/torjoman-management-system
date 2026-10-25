@@ -15,7 +15,7 @@ import { formatHalaqaTime } from '~/utils/time'
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
 const day = (iso: string) => isolateLtr(formatDay(iso))
 
-const { dash, pending } = useTeacherDashboard()
+const { dash, pending, refresh } = useTeacherDashboard()
 
 const d = computed(() => (dash.value && dash.value.halaqa ? dash.value : null))
 const noHalaqa = computed(() => !pending.value && dash.value?.halaqa === null)
@@ -113,6 +113,14 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
             </template>
           </p>
         </div>
+        <!-- المعلّمُ يغيّر موعدَ حلقته وتُشعَر الإدارة (2026-10-25) -->
+        <DashboardHalaqaTimeEdit
+          :halaqa-id="d.halaqa.id"
+          :time="d.halaqa.daily_time"
+          :female="d.halaqa.gender === 'female'"
+          class="h-time"
+          @changed="refresh"
+        />
       </div>
 
       <DashboardTeacherActions :actions="actions" />
@@ -158,6 +166,11 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
         </section>
       </div>
 
+      <DashboardTeacherBooklets
+        :halaqa-id="d.halaqa.id"
+        :halaqa-name="d.halaqa.name"
+      />
+
       <DashboardTeacherAttention
         :absentees="d.absentees"
         :unrecorded="d.unrecorded"
@@ -176,7 +189,8 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
 .placeholder { font-size: 15px; color: var(--ink-2); }
 .head { display: flex; align-items: center; gap: 14px; }
 .h-ico { width: 48px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
-.h-info { min-width: 0; }
+.h-info { min-width: 0; flex: 1; }
+.head { flex-wrap: wrap; }
 .h-info h2 { margin: 0; font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 

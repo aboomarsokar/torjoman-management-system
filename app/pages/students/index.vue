@@ -150,8 +150,8 @@ const columns = computed(() => {
     { key: 'num', label: '#' },
     { key: 'student', label: 'الطالب' },
     // المعلم له حلقة واحدة: عمودا الحلقة والمعلّم يكرّران نفسيهما عنده فيُحذفان (أقلّ عرضاً، بلا تمرير)
-    ...(isTeacher.value ? [] : [{ key: 'halqa', label: 'الحلقة' }, { key: 'teacher', label: 'المعلّم' }]),
-    { key: 'parts', label: 'الأجزاء المحفوظة' },
+    ...(isTeacher.value ? [] : [{ key: 'halqa', label: 'الحلقة' }, { key: 'teacher', label: 'المعلّم', class: 'col-teacher' }]),
+    { key: 'parts', label: 'المحفوظ', align: 'center' as const, class: 'col-parts' },
     { key: 'status', label: 'الحالة' }
   ]
   // عمود الإجراءات للجميع: «عرض الملف» متاح لكل من يرى الطالب، والتعديل والحذف مقيّدان داخله
@@ -438,11 +438,14 @@ async function confirmDelete() {
         :columns="columns"
         :rows="rows"
         row-key="id"
+        refined
+        :row-to="(r: StudentRow) => `/students/${r.id}`"
         :class="{ 'is-loading': pending }"
       >
         <template #num="{ index }">
-          <span class="muted">{{ seq(index) }}</span>
+          <span class="seq-n">{{ seq(index) }}</span>
         </template>
+        <!-- الاسمُ سطرٌ واحدٌ لا ينكسر (كان كلمةً في السطر على العرض المتوسّط)، والكاملُ في التلميح -->
         <template #student="{ row }">
           <div class="user-cell">
             <div class="av">
@@ -451,10 +454,14 @@ async function confirmDelete() {
                 :photo-url="photoUrlFor(studentPhotoPath(row))"
               />
             </div>
-            <div>
-              <div class="u-name">
+            <div class="u-text">
+              <NuxtLink
+                :to="`/students/${row.id}`"
+                class="u-name"
+                :title="row.full_name"
+              >
                 {{ row.full_name }}
-              </div>
+              </NuxtLink>
               <div
                 v-if="row.national_id"
                 class="u-sub"
@@ -465,14 +472,28 @@ async function confirmDelete() {
             </div>
           </div>
         </template>
+        <!-- على العرض المتوسّط يسقط عمودُ المعلّم ويصير سطراً تحت الحلقة -->
         <template #halqa="{ row }">
-          <span class="muted">{{ row.halaqa?.name || '—' }}</span>
+          <div class="h-cell">
+            <span class="h-name">{{ row.halaqa?.name || '—' }}</span>
+            <span
+              v-if="row.halaqa?.teacher?.full_name"
+              class="h-teacher"
+            >{{ row.halaqa.teacher.full_name }}</span>
+          </div>
         </template>
         <template #teacher="{ row }">
           <span class="muted">{{ row.halaqa?.teacher?.full_name || '—' }}</span>
         </template>
         <template #parts="{ row }">
-          <span class="muted">{{ row.quran_parts != null ? `${row.quran_parts} جزء` : '—' }}</span>
+          <span
+            v-if="row.quran_parts != null"
+            class="parts-n"
+          ><b>{{ row.quran_parts }}</b> جزء</span>
+          <span
+            v-else
+            class="dash"
+          >—</span>
         </template>
         <template #status="{ row }">
           <UBadge
@@ -481,36 +502,42 @@ async function confirmDelete() {
             variant="soft"
           />
         </template>
+        <!-- الصفُّ كلُّه يفتح الملف (فلا زرَّ «عرض»)؛ التعديلُ والحذفُ أيقونتان هادئتان، والسهمُ يدلّ على الفتح -->
         <template #actions="{ row }">
           <div class="actions">
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-eye"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="عرض الملف"
-              @click="navigateTo(`/students/${row.id}`)"
-            />
-            <UButton
+            <UTooltip
               v-if="canManage"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="تعديل"
-              @click="openEdit(row)"
-            />
-            <UButton
+              text="تعديل"
+            >
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                icon="i-lucide-pencil"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="تعديل"
+                @click="openEdit(row)"
+              />
+            </UTooltip>
+            <UTooltip
               v-if="canDelete"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-trash-2"
-              :ui="{ base: 'rounded-[10px]' }"
-              aria-label="حذف"
-              @click="deleteTarget = row"
+              text="حذف"
+            >
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                icon="i-lucide-trash-2"
+                class="act-danger"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="حذف"
+                @click="deleteTarget = row"
+              />
+            </UTooltip>
+            <UIcon
+              name="i-lucide-chevron-left"
+              class="size-5 row-go"
+              aria-hidden="true"
             />
           </div>
         </template>
@@ -935,11 +962,34 @@ async function confirmDelete() {
   .filter-sel { flex: 1 1 0; width: auto; min-width: 0; }
 }
 .muted { color: var(--ink-2); white-space: nowrap; }
-.user-cell { display: flex; align-items: center; gap: 11px; }
-.av { width: 40px; height: 40px; border-radius: 11px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex: none; overflow: hidden; }
+/* خانةُ الطالب: لها عرضٌ أدنى فلا يُعصَر الاسمُ لأعمدةٍ أخرى، والاسمُ سطرٌ واحدٌ بـ«…» (2026-10-25) */
+.user-cell { display: flex; align-items: center; gap: 11px; min-width: 230px; }
+.av { width: 36px; height: 36px; border-radius: 10px; background: var(--green-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex: none; overflow: hidden; }
+.u-text { min-width: 0; }
 .u-name { font-weight: 600; color: var(--ink); }
-.u-sub { font-size: 13px; color: var(--ink-3); }
-.actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.u-text .u-name { display: block; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+.u-text .u-name:hover { color: var(--blue-ink); }
+.u-sub { font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+.seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.h-cell { display: flex; flex-direction: column; line-height: 1.4; }
+.h-name { color: var(--ink); }
+.h-teacher { display: none; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+.parts-n { color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.parts-n b { color: var(--ink); font-weight: 600; }
+.dash { color: var(--ink-3); opacity: .55; }
+.row-go { color: var(--ink-3); margin-inline-start: 6px; transition: transform .15s, color .15s; }
+.students :deep(tbody tr:hover) .row-go { color: var(--ink-2); transform: translateX(-3px); }
+.actions :deep(.act-danger:hover) { color: var(--err); }
+/* العرضُ المتوسّط: يسقط عمودُ المعلّم، ويظهر سطراً تحت الحلقة */
+@container dt (max-width: 1099px) {
+  .students :deep(.col-teacher) { display: none; }
+  .h-teacher { display: block; }
+}
+/* والأضيقُ يُسقط «المحفوظ» (في ملفّ الطالب) فيبقى عمودُ الإجراءات ظاهراً بلا تمرير */
+@container dt (max-width: 899px) {
+  .students :deep(.col-parts) { display: none; }
+}
 
 .form { display: flex; flex-direction: column; gap: 14px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }

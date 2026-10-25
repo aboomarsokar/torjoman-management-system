@@ -5,20 +5,42 @@
  * — لإظهار عمودٍ أو إخفائه بعرض الحاوية مثلاً.
  * وضع البطاقات: إن مرّرت الصفحة `#card="{ row, index }"` (غالباً UiCardRow) يُعرض الجدول بطاقاتٍ
  * حين تضيق حاويته عن 720px (الجوال) — بلا تمرير أفقيّ. بلا slot يبقى الجدول متمرّراً كما كان.
+ *
+ * `refined` — الشكلُ الجديد (طلب المستخدم 2026-10-25، يُجرَّب على الطلاب ثم يُعمَّم): رأسٌ خفيفٌ ثابتٌ تحت
+ * الشريط العلويّ عند التمرير، وصفوفٌ أقصر، وتظليلُ الصفّ عند المرور. و`rowTo` يجعل الصفَّ كلَّه يفتح السجلّ
+ * (بالفأرة وبـEnter) بسهمٍ صغيرٍ في آخره — والأزرارُ والروابطُ داخله تعمل وحدها.
  */
-defineProps<{
+const props = defineProps<{
   columns: { key: string, label: string, align?: 'start' | 'end' | 'center', class?: string }[]
   rows: T[]
   rowKey?: string
   /** صنفٌ يُضاف لصفّ الجدول (لا للبطاقة) — لإبراز صفٍّ بعينه؛ التنسيقُ من الصفحة بـ`:deep()`. */
   rowClass?: (row: T, index: number) => string | undefined
+  refined?: boolean
+  /** وجهةُ الصفّ حين يُضغط في غير زرٍّ أو رابط. */
+  rowTo?: (row: T) => string
 }>()
+
+/** ضغطةُ الصفّ تفتح سجلَّه — إلا إن كانت على زرٍّ أو رابطٍ أو حقلٍ داخله، أو تحديدٍ لنصّ. */
+function onRowClick(row: T, e: MouseEvent) {
+  if (!props.rowTo) return
+  if ((e.target as HTMLElement).closest('a, button, input, select, textarea, [role="button"]')) return
+  if (window.getSelection()?.toString()) return
+  if (e.metaKey || e.ctrlKey) {
+    window.open(props.rowTo(row), '_blank')
+    return
+  }
+  navigateTo(props.rowTo(row))
+}
+function onRowKey(row: T, e: KeyboardEvent) {
+  if (props.rowTo && e.key === 'Enter' && e.target === e.currentTarget) navigateTo(props.rowTo(row))
+}
 </script>
 
 <template>
   <div
     class="dt"
-    :class="{ 'has-cards': !!$slots.card }"
+    :class="{ 'has-cards': !!$slots.card, refined, 'row-link': !!rowTo }"
   >
     <div class="card table-wrap">
       <table>
@@ -38,6 +60,9 @@ defineProps<{
             v-for="(row, i) in rows"
             :key="rowKey ? String(row[rowKey]) : i"
             :class="rowClass?.(row, i)"
+            :tabindex="rowTo ? 0 : undefined"
+            @click="onRowClick(row, $event)"
+            @keydown="onRowKey(row, $event)"
           >
             <td
               v-for="c in columns"
@@ -90,6 +115,29 @@ defineProps<{
 .ta-center { text-align: center; }
 .table-wrap tbody tr { border-top: 1px solid var(--line); }
 .table-wrap :deep(td) { padding: 14px 18px; vertical-align: middle; }
+
+/* ── الشكلُ الجديد (`refined`) ── */
+/* clip لا auto: لا يصنع حاويةَ تمرير، فيثبت الرأسُ تحت الشريط العلويّ (76px) عند تمرير الصفحة */
+.refined .table-wrap { overflow-x: clip; }
+.refined .table-wrap table { font-size: 14.5px; }
+.refined .table-wrap thead tr { background: none; }
+.refined .table-wrap th { position: sticky; top: 76px; z-index: 2; background: var(--surface); padding: 13px 16px 11px; font-size: 12.5px; letter-spacing: 0; color: var(--ink-3); border-bottom: 1px solid var(--line-2, var(--line)); }
+.refined .table-wrap th:first-child { border-start-start-radius: 20px; }
+.refined .table-wrap th:last-child { border-start-end-radius: 20px; }
+.refined .table-wrap tbody tr:first-child { border-top: 0; }
+.refined .table-wrap :deep(td) { padding: 11px 16px; }
+.refined .table-wrap tbody tr { transition: background .12s; }
+.refined .table-wrap tbody tr:hover { background: var(--surface-2); }
+.refined .table-wrap tbody tr:last-child :deep(td:first-child) { border-end-start-radius: 20px; }
+.refined .table-wrap tbody tr:last-child :deep(td:last-child) { border-end-end-radius: 20px; }
+/* حاويةٌ أضيقُ من 900: clip يقصّ ما لا يتّسع (عمودُ الإجراءات) — فالتمريرُ الأفقيّ أولى من الرأس الثابت */
+@container dt (max-width: 899px) {
+  .refined .table-wrap { overflow-x: auto; }
+  .refined .table-wrap th { position: static; }
+}
+/* الصفُّ كلُّه رابطٌ إلى سجلّه */
+.row-link .table-wrap tbody tr { cursor: pointer; }
+.row-link .table-wrap tbody tr:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 
 .dt-cards { display: none; list-style: none; margin: 0; padding: 0; }
 @container dt (max-width: 719px) {

@@ -647,6 +647,7 @@ async function confirmDelete() {
         :total="total"
         :page-size="PAGE_SIZE"
         edges
+        refined
         @update:page="page = $event"
       />
     </ClientOnly>

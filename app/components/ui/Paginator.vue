@@ -2,8 +2,10 @@
 /**
  * شريط ترقيم الصفحات (§4.16ج) — «عرض س–ص من الإجمالي» + سابق/تالي. يختفي عند صفحة واحدة.
  * `edges`: زرّا «الأولى» و«الأخيرة» على طرفي الشريط (تجربةٌ على الطلاب 2026-10-25) — في العربية الأولى يميناً.
+ * `refined`: الشكلُ الجديد (طلب المستخدم 2026-10-25 «غيّر شكلها وخلّيها في الوسط»): في الوسط، والأزرارُ كبسولةٌ
+ * واحدة بلا أطرٍ منفصلة، والصفحةُ الحاليةُ دائرةٌ كحلية، و«عرض س–ص» سطرٌ صغيرٌ تحتها.
  */
-const props = defineProps<{ page: number, pageCount: number, total: number, pageSize: number, edges?: boolean }>()
+const props = defineProps<{ page: number, pageCount: number, total: number, pageSize: number, edges?: boolean, refined?: boolean }>()
 const emit = defineEmits<{ 'update:page': [number] }>()
 
 const from = computed(() => props.total === 0 ? 0 : (props.page - 1) * props.pageSize + 1)
@@ -46,6 +48,7 @@ const pages = computed(() => {
     v-if="pageCount > 1"
     ref="root"
     class="pg"
+    :class="{ refined }"
   >
     <span class="pg-info">عرض {{ from }}–{{ to }} من {{ total }}</span>
     <div class="pg-btns">
@@ -141,4 +144,18 @@ const pages = computed(() => {
 .pg-b.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 .pg-b:disabled { opacity: .4; cursor: not-allowed; }
 .pg-dots { color: var(--ink-3); padding: 0 2px; }
+
+/* ── الشكلُ الجديد (`refined`): في الوسط، كبسولةٌ واحدة، والحاليةُ دائرةٌ كحلية ── */
+.pg.refined { flex-direction: column-reverse; justify-content: center; gap: 10px; margin-top: 22px; }
+.refined .pg-info { font-size: 13px; font-variant-numeric: tabular-nums; }
+.refined .pg-btns { gap: 2px; padding: 5px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow); }
+.refined .pg-b { min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.refined .pg-b:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.refined .pg-b:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.refined .pg-b.active { background: var(--navy); color: #fff; }
+.refined .pg-b:disabled { opacity: .3; }
+.refined .pg-dots { min-width: 18px; text-align: center; }
+@media (max-width: 480px) {
+  .refined .pg-b { min-width: 36px; height: 36px; padding: 0 6px; }
+}
 </style>

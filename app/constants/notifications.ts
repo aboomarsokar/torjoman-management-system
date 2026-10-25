@@ -19,7 +19,8 @@ export const NOTIFICATION_KINDS = [
   'visit_rescheduled',
   'quality_month',
   'quality_unlocked',
-  'halaqa_time_changed'
+  'halaqa_time_changed',
+  'booklet_delivered'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -41,7 +42,8 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   visit_rescheduled: 'i-lucide-calendar-sync',
   quality_month: 'i-lucide-badge-check',
   quality_unlocked: 'i-lucide-lock-open',
-  halaqa_time_changed: 'i-lucide-clock'
+  halaqa_time_changed: 'i-lucide-clock',
+  booklet_delivered: 'i-lucide-book-copy'
 }
 
 /** آخرُ ما يُعرض في لوحة الجرس. */

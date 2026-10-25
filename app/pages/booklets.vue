@@ -11,17 +11,21 @@ import { bookletStats, halaqaBooklets, totalsByBooklet } from '~/utils/booklets'
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'أرشيف الملازم — ترجمان' })
 
-type View = 'halaqa' | 'booklet' | 'log'
+type View = 'halaqa' | 'booklet' | 'log' | 'requests'
 
 const { role, isAdmin, isReadOnly } = usePermissions()
 const canView = computed(() => isAdmin.value || isReadOnly.value)
 const { deliveries, halaqat, pending, busy, addDelivery, removeDelivery } = useBooklets()
+// طلباتُ المعلّمين (2026-10-25) — إشعارُ الطلب يفتح هذا العرض (?view=requests)، والعددُ للمفتوحة الجديدة
+const { requests, openCount, busy: reqBusy, closeRequest } = useBookletRequests()
 
-const view = ref<View>('halaqa')
+const route = useRoute()
+const view = ref<View>(route.query.view === 'requests' ? 'requests' : 'halaqa')
 const viewOptions = computed(() => [
   { value: 'halaqa' as const, label: 'حسب الحلقة' },
   { value: 'booklet' as const, label: 'حسب الملزمة' },
-  { value: 'log' as const, label: 'السجلّ', count: deliveries.value.length }
+  { value: 'log' as const, label: 'السجلّ', count: deliveries.value.length },
+  { value: 'requests' as const, label: 'الطلبات', count: openCount.value || undefined }
 ])
 
 const stats = computed(() => bookletStats(deliveries.value, halaqat.value.length))
@@ -95,6 +99,13 @@ async function confirmDelete() {
         <BookletsByBooklet
           v-else-if="view === 'booklet'"
           :rows="byBooklet"
+        />
+        <BookletsRequests
+          v-else-if="view === 'requests'"
+          :rows="requests ?? []"
+          :can-close="isAdmin"
+          :busy="reqBusy"
+          @close="closeRequest"
         />
         <template v-else>
           <UiEmptyState

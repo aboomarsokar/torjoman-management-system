@@ -31,6 +31,8 @@ const { isAdmin, isReadOnly, isFieldSupervisor, isWomenAdmin, isExaminer, isTech
 // فلا معنى لقائمة «البنين والبنات» عندهم (طلب المستخدم 2026-10-21)
 // والمديرُ الفنيّ لقسم البنين وحده (قرار 2026-10-22)
 const seesBoth = computed(() => isAdmin.value || isReadOnly.value)
+// تعديلُ الحلقة: الإداريّ، والمدير الفنيّ على حلقات البنين (قرار المستخدم 2026-10-25) — الإنشاءُ والحذفُ للإداريّ وحده
+const canEditHalaqa = computed(() => isAdmin.value || isTechnical.value)
 const showGenderFilter = computed(() => !isFieldSupervisor.value && !isWomenAdmin.value && !isExaminer.value && !isTechnical.value)
 
 // جلب غير حاجز (useLazyAsyncData): لا يوقف عرض الصفحة — تظهر فوراً
@@ -137,7 +139,7 @@ const allColumns = [
   { key: 'examiner', label: 'المختبِر', class: 'col-wide' },
   { key: 'staff', label: 'الطاقم', class: 'col-narrow' },
   { key: 'students', label: 'الطلاب', align: 'center' as const },
-  { key: 'status', label: 'الحالة' },
+  { key: 'status', label: 'الحالة', class: 'col-status' },
   { key: 'actions', label: 'إجراءات', align: 'end' as const }
 ]
 // المشرف الميدانيّ يرى حلقاتِه المسندة إليه وحدها، فعمودُ «المشرف» تكرارٌ لاسمه
@@ -428,7 +430,7 @@ async function confirmDelete() {
                 aria-label="تفاصيل"
               />
               <UButton
-                v-if="isAdmin"
+                v-if="canEditHalaqa"
                 color="neutral"
                 variant="outline"
                 size="sm"
@@ -485,7 +487,7 @@ async function confirmDelete() {
               card
             />
             <div
-              v-if="isAdmin"
+              v-if="canEditHalaqa"
               class="hcard-actions"
             >
               <UButton
@@ -543,6 +545,7 @@ async function confirmDelete() {
                 v-model="form.gender"
                 :items="genderItems"
                 placeholder="بنين أم بنات؟"
+                :disabled="isTechnical"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"
@@ -686,6 +689,10 @@ async function confirmDelete() {
 /* الصفحة تملأ مساحة المحتوى (لا عرض أقصى)، وتتكيّف بعرض حاويتها لا بعرض النافذة:
    ≥1180 أعمدة الطاقم الثلاثة · دونها عمود «الطاقم» المكدَّس · دون 720 بطاقات */
 .halqat { container: halqat / inline-size; }
+/* العرضُ المتوسّط: تسقط «الحالة» (جُلُّ الحلقات نشطة) فيبقى الطاقمُ والإجراءاتُ بلا تمرير (2026-10-25) */
+@container halqat (max-width: 899px) {
+  .halqat :deep(.col-status) { display: none; }
+}
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .filters { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
 .filter-sel { width: 190px; }

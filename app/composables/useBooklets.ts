@@ -42,7 +42,8 @@ export function useBooklets() {
   }, { server: false, default: () => [] })
 
   const { data: halaqat } = useLazyAsyncData<HalaqaLite[]>('booklet-halaqat', async () => {
-    const { data, error } = await supabase.from('halaqat').select('id, name, status').order('name')
+    const { data, error } = await supabase.from('halaqat').select('id, name, status, gender, teacher:teacher_id(full_name)').order('name')
+      .returns<HalaqaLite[]>()
     if (error) handle(error)
     return data ?? []
   }, { server: false, default: () => [] })

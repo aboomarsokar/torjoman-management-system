@@ -272,7 +272,10 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                   <span
                     v-if="newKeys.has(item.key)"
                     class="nav-new"
-                  >جديد</span>
+                  ><UIcon
+                    name="i-lucide-sparkles"
+                    class="size-3.5"
+                  />جديد</span>
                 </button>
               </div>
             </section>
@@ -395,7 +398,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item:focus-visible { outline: 2px solid var(--side-strong); outline-offset: -2px; }
 .nav-item:hover { background: var(--side-hover); color: var(--side-strong); }
 .nav-item.active { background: var(--side-active); color: var(--side-strong); }
-.nav-new { margin-inline-start: auto; flex-shrink: 0; padding: 2px 9px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 11.5px; font-weight: 600; line-height: 1.5; }
+.nav-item > .nav-new { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 12.5px; font-weight: 600; line-height: 1.4; overflow: visible; }
 .nav-new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--side-new-bg); }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }

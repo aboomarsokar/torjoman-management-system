@@ -3,6 +3,7 @@
  * المقصّرُ: حلقةٌ فاتها يومُ دوامٍ بلا رصد حضور (عدا اليوم الجاري)، أو رصدُ شهرٍ قرآنيٍّ تجاوز مهلتَه بلا إرسال.
  * اليومُ الجاري بلا رصدٍ «لم يُرصد بعد» لا تقصير — اليومُ قائم.
  */
+import { isBeforeProjectStart } from './projectStart'
 
 export interface RecordingRow {
   halaqa_id: string
@@ -24,12 +25,14 @@ export interface RecordingRow {
   report_deadline: string
 }
 
-export type ReportState = 'approved' | 'submitted' | 'late' | 'due'
+/** `none`: الشهرُ المستحقّ قبل بداية المشروع (10/2026) فلا رصدَ له — كان يظهر «رصد 9/2026: متأخّر» (2026-10-25). */
+export type ReportState = 'approved' | 'submitted' | 'late' | 'due' | 'none'
 export type DayState = 'held' | 'missed' | 'today' | 'before'
 export interface RecentDay { day: string, state: DayState }
 
 /** حالُ رصد الشهر المستحقّ: معتمَدٌ، أو مُرسَلٌ، أو متأخّرٌ (فاتت المهلة بلا إرسال)، أو مستحقٌّ بعدُ في مهلته. */
-export function reportState(r: Pick<RecordingRow, 'report_status' | 'report_deadline' | 'today'>): ReportState {
+export function reportState(r: Pick<RecordingRow, 'report_status' | 'report_deadline' | 'today' | 'report_year' | 'report_month'>): ReportState {
+  if (isBeforeProjectStart({ year: r.report_year, month: r.report_month })) return 'none'
   if (r.report_status === 'approved') return 'approved'
   if (r.report_status === 'submitted') return 'submitted'
   return r.today > r.report_deadline ? 'late' : 'due'

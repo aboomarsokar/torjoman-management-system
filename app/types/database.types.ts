@@ -2223,6 +2223,10 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      deliver_booklet_request: {
+        Args: { p_delivered_on: string; p_request: string }
+        Returns: string
+      }
       end_impersonation_sessions: {
         Args: { p_session_ids: string[] }
         Returns: number

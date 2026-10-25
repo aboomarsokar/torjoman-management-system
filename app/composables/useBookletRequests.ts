@@ -76,11 +76,14 @@ export function useBookletRequests(halaqaId?: string) {
     }), 'أُرسل طلبُك إلى المدير الإداري.')
   }
 
-  /** المديرُ يُغلق الطلبَ بعد التسليم. */
-  async function closeRequest(id: string): Promise<boolean> {
-    return run(() => supabase.from('booklet_requests').update({ status: 'done', closed_at: new Date().toISOString() }).eq('id', id),
-      'أُغلق الطلب.')
+  /**
+   * المديرُ يسلّم الطلب: يُسجَّل التسليمُ في الأرشيف بتاريخه ويُغلَق الطلب في خطوةٍ واحدة (`deliver_booklet_request`)،
+   * ومشغّلُ التسليم يُشعر المعلّم.
+   */
+  async function deliverRequest(id: string, deliveredOn: string): Promise<boolean> {
+    return run(() => supabase.rpc('deliver_booklet_request', { p_request: id, p_delivered_on: deliveredOn }),
+      'سُجّل التسليمُ في الأرشيف وأُشعر المعلّم.')
   }
 
-  return { requests, pending, busy, openCount, addRequest, closeRequest, refresh }
+  return { requests, pending, busy, openCount, addRequest, deliverRequest, refresh }
 }

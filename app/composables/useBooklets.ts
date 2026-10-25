@@ -89,5 +89,5 @@ export function useBooklets() {
     }
   }
 
-  return { deliveries, halaqat, pending, busy, addDelivery, removeDelivery }
+  return { deliveries, halaqat, pending, busy, addDelivery, removeDelivery, refresh }
 }

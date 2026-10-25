@@ -76,7 +76,10 @@ const DAY_META: Record<DayState, { icon: string | null, word: string }> = {
   before: { icon: null, word: 'قبل بدء الحلقة' }
 }
 const LEGEND: DayState[] = ['held', 'missed', 'today', 'before']
+/** شهرُ رابط «رصد الشهر»: المستحقّ، أو أوّلُ شهرٍ في المشروع إن وقع المستحقُّ قبله. */
+const reportLinkMonth = (r: RecordingRow) => clampToProjectStart({ year: r.report_year, month: r.report_month })
 const REPORT_META: Record<ReportState, { color: 'success' | 'info' | 'error' | 'warning', text: (r: RecordingRow) => string }> = {
+  none: { color: 'info', text: () => '' },
   approved: { color: 'success', text: () => 'معتمَد' },
   submitted: { color: 'info', text: () => 'مُرسَل' },
   late: { color: 'error', text: r => r.report_status === 'draft' ? 'متأخّر — مسوّدة' : 'متأخّر — لم يبدأ' },
@@ -245,7 +248,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
             class="rf-body"
           >
             <div class="rf-top">
+              <!-- لا شارةَ لشهرٍ قبل بداية المشروع (`none`) -->
               <UBadge
+                v-if="reportState(r) !== 'none'"
                 :label="`رصد ${r.report_month}/${r.report_year}: ${REPORT_META[reportState(r)].text(r)}`"
                 :color="REPORT_META[reportState(r)].color"
                 variant="soft"
@@ -262,7 +267,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                   :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
                 />
                 <UButton
-                  :to="`/reports?h=${r.halaqa_id}&y=${r.report_year}&m=${r.report_month}`"
+                  :to="`/reports?h=${r.halaqa_id}&y=${reportLinkMonth(r).year}&m=${reportLinkMonth(r).month}`"
                   label="رصد الشهر"
                   icon="i-lucide-book-marked"
                   color="neutral"

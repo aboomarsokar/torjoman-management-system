@@ -70,6 +70,8 @@ const mainNav: Item[] = [
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
   { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'teacher', 'examiner'] },
+  // ما أرسلته الإدارة، وبجانبه عددُ غير المقروء (طلب المستخدم 2026-10-25)
+  { key: 'messages', label: 'رسائل الإدارة', icon: 'i-lucide-mail', to: '/messages', roles: [FIELD, 'teacher', 'examiner'], isNew: true },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
   { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },
@@ -98,8 +100,8 @@ const mainNav: Item[] = [
   { key: 'my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', to: '/my-booklets', roles: ['teacher'], group: 'sheets', isNew: true },
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
   { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' },
-  // إشعاراتٌ للمعلّمين تصل أجراسَهم (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
-  { key: 'announcements', label: 'إشعارات للمعلّمين', labelF: 'إشعارات للمعلّمات', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision' }
+  // رسائلُ للكادر تصل أجراسَهم وصفحةَ «رسائل الإدارة» (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
+  { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision' }
 ]
 
 const managerNav: Item[] = [
@@ -154,6 +156,9 @@ const matches = (item: Item) => !!item.to
 const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
+const { unread: unreadMessages } = useUnreadMessages()
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة. */
+const countOf = (item: Item) => (item.key === 'messages' ? unreadMessages.value : 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
 const newKeys = isNewFor(allItems)
 
@@ -223,6 +228,18 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                 class="size-5"
               />
               <span>{{ labelOf(item) }}</span>
+              <span
+                v-if="newKeys.has(item.key)"
+                class="nav-new"
+              ><UIcon
+                name="i-lucide-sparkles"
+                class="size-3.5"
+              />جديد</span>
+              <span
+                v-if="countOf(item)"
+                class="nav-count"
+                :aria-label="`${countOf(item)} غير مقروءة`"
+              >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
             </button>
 
             <section
@@ -243,9 +260,10 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     class="size-5"
                   />
                   {{ g.label }}
-                  <span
+                  <UIcon
                     v-if="!isOpen(g.key) && g.items.some(i => newKeys.has(i.key))"
-                    class="nav-new-dot"
+                    name="i-lucide-sparkles"
+                    class="size-4 nav-new-star"
                     aria-label="فيها جديد"
                   />
                 </span>
@@ -401,7 +419,9 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item:hover { background: var(--side-hover); color: var(--side-strong); }
 .nav-item.active { background: var(--side-active); color: var(--side-strong); }
 .nav-item > .nav-new { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 13px; font-weight: 700; -webkit-text-stroke: .3px currentColor; line-height: 1.4; overflow: visible; }
-.nav-new-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--side-new-bg); }
+.nav-item > .nav-count { margin-inline-start: auto; flex-shrink: 0; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; line-height: 24px; text-align: center; font-variant-numeric: tabular-nums; overflow: visible; }
+.nav-new-star { color: var(--side-new-bg); }
+.nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }

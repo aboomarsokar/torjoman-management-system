@@ -33,6 +33,7 @@ const head = (it: SplitItem) => it.avg ? show(it.total, it.suffix) : String(sum(
 <template>
   <ul
     class="gs"
+    :class="`n-${items.length}`"
     aria-label="الإحصائيات بين البنين والبنات"
   >
     <li
@@ -103,6 +104,11 @@ const head = (it: SplitItem) => it.avg ? show(it.total, it.suffix) : String(sum(
 
 <style scoped>
 .gs { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+/* أربعُ بطاقات: صفٌّ واحدٌ على العريض، واثنتان في الصفّ على المتوسّط — لا ثلاثٌ ورابعةٌ وحيدةٌ تحتها */
+.gs.n-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1180px) {
+  .gs.n-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* بطاقتان في السطر على الجوال (كبطاقات الأرقام الأخرى) */
 @media (max-width: 620px) {
   .gs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

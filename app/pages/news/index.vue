@@ -3,6 +3,7 @@
  * إدارة الأخبار (§4.26) — للمدير الإداري (ومشرف المشروع اطّلاعاً). تظهر المنشورة للزوّار على صفحة الهبوط.
  * إنشاء/تعديل/حذف + نشر/إخفاء + فتح للقراءة. رفع الصورة إلى Storage (اختياري).
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import { newsStats } from '~/utils/pageStats'
 import { gazaToday } from '~/utils/reportWindow'
@@ -333,6 +334,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
               <UInput
                 v-model="form.news_date"
                 type="date"
+                :min="PROJECT_START_DATE"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

@@ -5,6 +5,7 @@
  * والمعلّم يستقبله ويؤكّد الاطّلاع. مشرف المشروع للاطّلاع. النطاق محكوم بـ RLS، والمخاطَبةُ بجنس القارئ.
  * والمشرفُ الميدانيّ خارجها (قرار 2026-10-21): لا قائمةَ ولا إصدار، ومن فتح الرابط رأى قفلاً.
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import { alertStats } from '~/utils/pageStats'
 
@@ -325,6 +326,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
               <UInput
                 v-model="form.alert_date"
                 type="date"
+                :min="PROJECT_START_DATE"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

@@ -1,20 +1,21 @@
 <script setup lang="ts">
 /**
  * منتقي الشهر بالأرقام: سهما شهرٍ سابق/لاحق، وشهرٌ `01..12` وسنة. لا شهرَ بعد `max`
- * (شهرُ اليوم بتوقيت غزة)، وتغييرُ السنة إلى سنة `max` يُرجع الشهرَ المستقبليّ إلى حدّه.
+ * (شهرُ اليوم بتوقيت غزة) ولا قبل بداية المشروع (`PROJECT_START`)، وتغييرُ السنة يُرجع الشهرَ الخارجَ إلى حدّه.
  */
-import { PERIOD_YEARS_BACK as YEARS_BACK } from '~/utils/quran/screen'
+import { PROJECT_START } from '~/constants/project'
+import { isAtProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
 
 const props = defineProps<{ max: { year: number, month: number }, disabled?: boolean }>()
 const year = defineModel<number>('year', { required: true })
 const month = defineModel<number>('month', { required: true })
 
 const atMax = computed(() => year.value * 12 + month.value >= props.max.year * 12 + props.max.month)
-const atMin = computed(() => year.value <= props.max.year - YEARS_BACK && month.value <= 1)
+const atMin = computed(() => isAtProjectStart({ year: year.value, month: month.value }))
 const monthOptions = computed(() => Array.from({ length: 12 }, (_, i) => i + 1)
-  .filter(m => year.value < props.max.year || m <= props.max.month)
+  .filter(m => (year.value < props.max.year || m <= props.max.month) && !isBeforeProjectStart({ year: year.value, month: m }))
   .map(m => ({ label: String(m).padStart(2, '0'), value: m })))
-const yearOptions = computed(() => Array.from({ length: YEARS_BACK + 1 }, (_, i) => props.max.year - YEARS_BACK + i)
+const yearOptions = computed(() => Array.from({ length: Math.max(1, props.max.year - PROJECT_START.year + 1) }, (_, i) => PROJECT_START.year + i)
   .map(y => ({ label: String(y), value: y })))
 
 const yearModel = computed<number>({
@@ -22,13 +23,14 @@ const yearModel = computed<number>({
   set: (y) => {
     year.value = y
     if (y === props.max.year && month.value > props.max.month) month.value = props.max.month
+    if (y === PROJECT_START.year && month.value < PROJECT_START.month) month.value = PROJECT_START.month
   }
 })
 
 function step(by: number) {
   const next = shiftMonth(year.value, month.value, by)
   if (next.year * 12 + next.month > props.max.year * 12 + props.max.month) return
-  if (next.year < props.max.year - YEARS_BACK) return
+  if (isBeforeProjectStart(next)) return
   // تُبدَّل القيمتان في دورةٍ واحدة فيُحمَّل الشهرُ الجديد مرّةً واحدة
   year.value = next.year
   month.value = next.month

@@ -6,6 +6,7 @@
 import { MUSHAF_PAGES } from '~/constants/quran'
 import { arabicFold } from '~/utils/arabicSearch'
 import { openingDay, shiftMonth } from '~/utils/reportWindow'
+import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
 import type { StudentMonthRow } from './month'
 import type { Outcome } from './plan'
 import { OUTCOME_LABELS } from './plan'
@@ -15,9 +16,6 @@ import { isInMemorizationOrder } from './position'
 export type ReportStatus = 'draft' | 'submitted' | 'approved'
 
 export interface Period { year: number, month: number }
-
-/** سنواتُ منتقي الشهر قبل سنة اليوم (والسنةُ الحالية معها). */
-export const PERIOD_YEARS_BACK = 1
 
 /**
  * الشهرُ الذي تفتح عليه الشاشة.
@@ -29,18 +27,19 @@ export const PERIOD_YEARS_BACK = 1
 export function defaultPeriod(today: string, opts: { previousStatus: ReportStatus | 'none' | null }): Period {
   const current = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }
   const previous = shiftMonth(current.year, current.month, -1)
-  if (opts.previousStatus !== null) return opts.previousStatus === 'draft' ? previous : current
-  return today < openingDay(current.year, current.month) ? previous : current
+  // لا شهرَ قبل بداية المشروع (10/2026)
+  if (opts.previousStatus !== null) return clampToProjectStart(opts.previousStatus === 'draft' ? previous : current)
+  return clampToProjectStart(today < openingDay(current.year, current.month) ? previous : current)
 }
 
-/** شهرُ الرابط `?y=YYYY&m=MM` إن صحّ ووقع في مدى المنتقي (لا مستقبل ولا قبل سنته الأولى)، وإلا null. */
+/** شهرُ الرابط `?y=YYYY&m=MM` إن صحّ ووقع في مدى المنتقي (لا مستقبل ولا قبل بداية المشروع)، وإلا null. */
 export function periodFromQuery(y: unknown, m: unknown, today: string): Period | null {
   if (typeof y !== 'string' || typeof m !== 'string' || !/^\d{4}$/.test(y) || !/^\d{1,2}$/.test(m)) return null
   const year = Number(y)
   const month = Number(m)
   const nowYear = Number(today.slice(0, 4))
   const nowMonth = Number(today.slice(5, 7))
-  if (month < 1 || month > 12 || year < nowYear - PERIOD_YEARS_BACK) return null
+  if (month < 1 || month > 12 || isBeforeProjectStart({ year, month })) return null
   if (year * 12 + month > nowYear * 12 + nowMonth) return null
   return { year, month }
 }

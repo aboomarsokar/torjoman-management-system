@@ -3,6 +3,7 @@
  * سجلّ الحركات المالية (§4.20ب) — جدول بالرصيد المحسوب + إضافة/تعديل/حذف + فلاتر،
  * ومستنداتُ كلّ حركة (فواتير وإيصالات — ROADMAP #17) بفلتر «مصروفاتٌ بلا مستند» للتدقيق.
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import type { DocsTransaction } from '~/components/finance/TransactionDocsModal.vue'
 import { FINANCE_DOCS_BUCKET } from '~/constants/financeDocs'
@@ -387,6 +388,7 @@ async function doExport() {
               <UInput
                 v-model="form.transaction_date"
                 type="date"
+                :min="PROJECT_START_DATE"
                 size="lg"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px]' }"

@@ -4,10 +4,16 @@ import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortBy
 const row = (name: string, o: Partial<RecordingRow> = {}): RecordingRow => ({
   halaqa_id: name, halaqa_name: name, gender: 'male', teacher_name: null, teacher_phone: null, teacher_whatsapp: null,
   today: '2026-10-22', recorded_today: true, expected_days: 5, recorded_days: 5, missed_days: [], recent: [],
-  report_year: 2026, report_month: 9, report_status: 'submitted', report_deadline: '2026-10-03', ...o
+  report_year: 2026, report_month: 10, report_status: 'submitted', report_deadline: '2026-10-03', ...o
 })
 
 describe('reportState', () => {
+  it('شهرٌ قبل بداية المشروع (10/2026) لا رصدَ له، ولا يُعدّ تقصيراً', () => {
+    const before = row('أ', { report_month: 9, report_status: null })
+    expect(reportState(before)).toBe('none')
+    expect(isLagging(before)).toBe(false)
+    expect(recordingSummary([before]).lateReports).toBe(0)
+  })
   it('المعتمدُ والمُرسَل كما هما', () => {
     expect(reportState(row('أ', { report_status: 'approved' }))).toBe('approved')
     expect(reportState(row('أ', { report_status: 'submitted' }))).toBe('submitted')

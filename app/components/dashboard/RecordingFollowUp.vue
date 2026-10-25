@@ -13,6 +13,7 @@ import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
 import type { DayState, RecordingRow, ReportState } from '~/utils/recordingStatus'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { isBeforeProjectStart } from '~/utils/projectStart'
 import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort } from '~/utils/recordingStatus'
 
 /** في صفحته: رأسُ الصفحة يحمل العنوان. الغيابُ false (يُظهر العنوان). */
@@ -25,16 +26,15 @@ const { profile } = useProfile()
 /** المخاطَبُ أنثى (المديرة الإدارية والمشرفة الميدانية): «افتحي» و«تواصلي». */
 const fem = computed(() => profile.value?.gender === 'female')
 
-// الشهر: الجاري افتراضاً (بلا معاملٍ في الدالّة)، وآخرُ ستة أشهر بالأرقام
+// الشهر: الجاري افتراضاً (بلا معاملٍ في الدالّة)، وآخرُ ستة أشهر بالأرقام — لا قبل بداية المشروع
 const MONTHS_BACK = 6
 const nowMonth = (() => {
   const [y, m] = gazaToday().split('-').map(Number)
   return { year: y!, month: m! }
 })()
-const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => {
-  const m = shiftMonth(nowMonth.year, nowMonth.month, -i)
-  return { label: i === 0 ? `${m.month}/${m.year} — الجاري` : `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }
-})
+const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => shiftMonth(nowMonth.year, nowMonth.month, -i))
+  .filter((m, i) => i === 0 || !isBeforeProjectStart(m))
+  .map((m, i) => ({ label: i === 0 ? `${m.month}/${m.year} — الجاري` : `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }))
 const monthKey = ref(monthItems[0]!.value)
 const isCurrent = computed(() => monthKey.value === monthItems[0]!.value)
 
@@ -76,7 +76,10 @@ const DAY_META: Record<DayState, { icon: string | null, word: string }> = {
   before: { icon: null, word: 'قبل بدء الحلقة' }
 }
 const LEGEND: DayState[] = ['held', 'missed', 'today', 'before']
+/** شهرُ رابط «رصد الشهر»: المستحقّ، أو أوّلُ شهرٍ في المشروع إن وقع المستحقُّ قبله. */
+const reportLinkMonth = (r: RecordingRow) => clampToProjectStart({ year: r.report_year, month: r.report_month })
 const REPORT_META: Record<ReportState, { color: 'success' | 'info' | 'error' | 'warning', text: (r: RecordingRow) => string }> = {
+  none: { color: 'info', text: () => '' },
   approved: { color: 'success', text: () => 'معتمَد' },
   submitted: { color: 'info', text: () => 'مُرسَل' },
   late: { color: 'error', text: r => r.report_status === 'draft' ? 'متأخّر — مسوّدة' : 'متأخّر — لم يبدأ' },
@@ -245,7 +248,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
             class="rf-body"
           >
             <div class="rf-top">
+              <!-- لا شارةَ لشهرٍ قبل بداية المشروع (`none`) -->
               <UBadge
+                v-if="reportState(r) !== 'none'"
                 :label="`رصد ${r.report_month}/${r.report_year}: ${REPORT_META[reportState(r)].text(r)}`"
                 :color="REPORT_META[reportState(r)].color"
                 variant="soft"
@@ -262,7 +267,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                   :ui="{ base: 'rounded-[9px]', leadingIcon: 'size-3' }"
                 />
                 <UButton
-                  :to="`/reports?h=${r.halaqa_id}&y=${r.report_year}&m=${r.report_month}`"
+                  :to="`/reports?h=${r.halaqa_id}&y=${reportLinkMonth(r).year}&m=${reportLinkMonth(r).month}`"
                   label="رصد الشهر"
                   icon="i-lucide-book-marked"
                   color="neutral"

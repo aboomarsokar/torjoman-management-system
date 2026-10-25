@@ -3,6 +3,7 @@
  * النسبةُ بمقام سجلّ تقييم المعلم نفسه: المنجزون ÷ (المنجزون + المقصّرون + من لم يُرصد) — «لا يُقاس» خارجها.
  */
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { clampToProjectStart } from '~/utils/projectStart'
 
 /** حلقةٌ دون هذه النسبة تُعدّ متأخّرة في الملخّص. */
 export const ACHIEVEMENT_LOW_PCT = 50
@@ -69,8 +70,8 @@ export function whatsappLink(raw: string | null | undefined): string | null {
   return digits.length >= 9 ? `https://wa.me/${digits}` : null
 }
 
-/** الشهرُ الافتراضيّ: السابقُ لشهر اليوم بتوقيت غزة (رصدُه اكتمل أو كاد). */
+/** الشهرُ الافتراضيّ: السابقُ لشهر اليوم بتوقيت غزة (رصدُه اكتمل أو كاد) — ولا قبل بداية المشروع. */
 export function defaultAchievementMonth(today: string = gazaToday()): { year: number, month: number } {
   const [y, m] = today.split('-').map(Number)
-  return shiftMonth(y!, m!, -1)
+  return clampToProjectStart(shiftMonth(y!, m!, -1))
 }

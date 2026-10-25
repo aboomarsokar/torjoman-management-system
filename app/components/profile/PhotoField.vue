@@ -86,6 +86,7 @@ async function onRemove() {
       <ProfileAvatar
         :name="name"
         :photo-url="url"
+        :zoomable="false"
       />
     </div>
     <div class="pf-body">

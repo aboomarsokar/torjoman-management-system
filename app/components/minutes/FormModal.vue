@@ -4,6 +4,7 @@
  * (جدول الأعمال والقرارات والأمور المؤجّلة والمهام — حقولٌ تتمدّد مع النصّ، بندٌ في كلّ سطر).
  * الحالةُ تُختار بالزرّ: «حفظ مسودّة» أو «اعتماد المحضر»، والحفظُ نفسُه في الصفحة (`save`).
  */
+import { PROJECT_START_DATE } from '~/constants/project'
 import { roleLabel } from '~/constants/roles'
 import type { MinuteForm, MinuteRow, MinuteStaff, MinuteStatus } from '~/utils/minutes'
 import { MINUTE_FIELD_MAX_ROWS, MINUTE_FIELD_MIN_ROWS, MINUTE_SECTIONS, emptyMinuteForm, minuteFormFrom } from '~/utils/minutes'
@@ -90,6 +91,7 @@ function submit(status: MinuteStatus) {
               <UInput
                 v-model="form.meeting_date"
                 type="date"
+                :min="PROJECT_START_DATE"
                 size="xl"
                 class="w-full"
                 :ui="{ base: 'rounded-[13px] tabular-nums' }"

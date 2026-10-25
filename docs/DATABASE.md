@@ -255,17 +255,17 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `student_id` | uuid FK → students | |
 | `examiner_id` | uuid FK → profiles | الراصد (المختبِر؛ النتائج القديمة باسم المشرف) |
 | `exam_date` | date | تاريخ الاختبار |
-| `q1_memorization` | int | س1 حفظ (0–10) |
-| `q1_understanding` | int | س1 فهم (0–10) |
-| `q1_reflection` | int | س1 تدبر (0–10) |
-| `q2_memorization` | int | س2 حفظ (0–10) |
-| `q2_understanding` | int | س2 فهم (0–10) |
-| `q2_reflection` | int | س2 تدبر (0–10) |
-| `q3_memorization` | int | س3 حفظ (0–10) |
-| `q3_understanding` | int | س3 فهم (0–10) |
-| `q3_reflection` | int | س3 تدبر (0–10) |
-| `tajweed_score` | int | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
-| `total_score` | int | يُحسب آلياً (المجموع من 99) |
+| `q1_memorization` | numeric(3,1) | س1 حفظ (0–10، بخطوة نصف) |
+| `q1_understanding` | numeric(3,1) | س1 فهم (0–10، بخطوة نصف) |
+| `q1_reflection` | numeric(3,1) | س1 تدبر (0–10، بخطوة نصف) |
+| `q2_memorization` | numeric(3,1) | س2 حفظ (0–10، بخطوة نصف) |
+| `q2_understanding` | numeric(3,1) | س2 فهم (0–10، بخطوة نصف) |
+| `q2_reflection` | numeric(3,1) | س2 تدبر (0–10، بخطوة نصف) |
+| `q3_memorization` | numeric(3,1) | س3 حفظ (0–10، بخطوة نصف) |
+| `q3_understanding` | numeric(3,1) | س3 فهم (0–10، بخطوة نصف) |
+| `q3_reflection` | numeric(3,1) | س3 تدبر (0–10، بخطوة نصف) |
+| `tajweed_score` | numeric(3,1) | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
+| `total_score` | numeric(4,1) | يُحسب آلياً (المجموع من 99). **أنصافُ الدرجات مقبولة منذ `20261024111415_exam_results_half_marks`**: الدرجاتُ العشر `numeric(3,1)` بقيد `exam_results_half_steps` (كلُّ درجةٍ مضاعفُ 0.5)، و`total_score`/`passed` مولَّدان من جديد |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها). **تضعها القاعدة** (`exam_results_guard_pass_mark`): عند الإدراج من `app_settings.pass_mark` مهما أرسل العميل، وعند التعديل لا تتغيّر |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |
 | `notes` | text | ملاحظات |
@@ -477,6 +477,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## 16. `incentive_statements` — كشف حوافز الحلقة الشهري (المعلم — §4.25)
 
+> **المستلم يتبع التخصيص (منذ `20261024191310`):** المشغّل `halaqa_incentives_sync_statement` على `halaqa_incentives` (`after insert or delete or update of allocated_amount`) يضع `received_amount` لمسوّدة كشف الحلقة في الشهر نفسه = مبلغ التخصيص (أو 0 عند حذفه)؛ والكشفُ المُرسَل أو المعتمَد لا يُمسّ. الدالّة `private.sync_statement_received()` (`security definer`، `search_path=''`، بلا منحٍ للعميل).
+
 المعلم يرفع كشفاً بمصروفات مبلغ الحوافز، يطّلع عليه المدير (§4.20د).
 
 | العمود | النوع | ملاحظات |
@@ -517,6 +519,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **الحارس `guard_statement_status`** (§17): المعلم ينقل `draft→submitted` ويعدّل ما دام مسودّة؛ `reviewed` وحقلا `reviewed_by/at` لنطاق الاعتماد وحده؛ وبعد الإرسال لا تعديل ولا حذف إلا بيد من يعتمد.
 
 ---
+
+## قيدُ بداية المشروع `*_from_project_start` (منذ `20261024143005_project_start_dates`)
+
+المشروع بدأ في الشهر 10/2026 (قرار المستخدم 2026-10-24): قيودُ `check` ترفض أيّ تاريخ عملٍ قبل `2026-10-01` — `admin_alerts.alert_date`، `attendance_days.day`، `attendance_absences.day`، `booklet_deliveries.delivered_on`، `exam_lists.week_date`، `exam_results.exam_date`، `financial_transactions.transaction_date`، `incentive_statement_items.item_date`، `meeting_minutes.meeting_date`، `news.news_date`، `students.enrollment_date` (أو null)، `transport_trips.trip_date`، و`supervision_visits.scheduled_at`/`executed_at` (من `2026-10-01 00:00+03`) — وأيَّ شهرٍ قبل 10/2026 (`year * 100 + month >= 202610`) في `monthly_reports` و`incentive_statements` و`halaqa_incentives` و`monthly_salaries` و`teacher_quality_months`. لا قيدَ على `birth_date` ولا `hire_date`. اسمُ كلّ قيد `<الجدول>_from_project_start` (وللطالب `students_enrollment_from_project_start`)، و`useErrorHandler` يترجمه «لا يُقبل تاريخٌ قبل بداية المشروع (1/10/2026).». الواجهةُ تحدّ منتقياتها بـ`PROJECT_START` (`app/constants/project.ts`).
 
 ## ملاحظات على الحساب (Computed — لا تُخزّن)
 
@@ -958,7 +964,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ### قراءةُ الطالب لنتائجه `public.my_exam_cycle_results()`
 
-`(exam_cycle_id smallint, passed boolean, total_score int, exam_date date)` لكلّ محاولات الطالب نفسه على بنودٍ بدورة (`exam_cycle_id is not null`)، مرتَّبةً بالدورة ثم التاريخ ثم الإنشاء؛ مقصورةٌ على `students.user_id = auth.uid()` فلا يرى غير سجلّه ولا `teacher_note`. `language sql stable security definer`، `search_path = ''`، `revoke … from public, anon`، `grant execute … to authenticated`. تغذّي رحلته في `/me` (يُجمع **النجاحُ يغلب**: لا يُلغى اجتيازٌ برسوب لاحق). أمّا العاملون فيقرؤون `exam_results` ببنودها مباشرةً (RLS).
+`(exam_cycle_id smallint, passed boolean, total_score numeric, exam_date date)` (numeric منذ `20261024111415`) لكلّ محاولات الطالب نفسه على بنودٍ بدورة (`exam_cycle_id is not null`)، مرتَّبةً بالدورة ثم التاريخ ثم الإنشاء؛ مقصورةٌ على `students.user_id = auth.uid()` فلا يرى غير سجلّه ولا `teacher_note`. `language sql stable security definer`، `search_path = ''`، `revoke … from public, anon`، `grant execute … to authenticated`. تغذّي رحلته في `/me` (يُجمع **النجاحُ يغلب**: لا يُلغى اجتيازٌ برسوب لاحق). أمّا العاملون فيقرؤون `exam_results` ببنودها مباشرةً (RLS).
 
 ### حالة البيانات والإزالة اللاحقة
 

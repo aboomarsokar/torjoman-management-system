@@ -7,7 +7,7 @@
 import type { Database } from '~/types/database.types'
 import { gradeErrorMessage } from '~/utils/exams/nomination'
 import { gazaToday } from '~/utils/reportWindow'
-import { EXAM_MAX_TOTAL } from '~/constants/exams'
+import { EXAM_MAX_TOTAL, EXAM_SCORE_STEP } from '~/constants/exams'
 
 /** البندُ المرصود: معرّفُه وطالبُه، ونصُّ هدفه (الدورة أو نطاقُ الخطة القديمة) وحدودُه. */
 type GradeTarget = {
@@ -72,19 +72,18 @@ const tajweedInvalid = computed(() => {
   return scores.tajweed_score === '' || Number.isNaN(n) || n < TAJWEED_MIN || n > TAJWEED_MAX
 })
 
-// حدّ كل فرع 10 (لا يقبل النظام أكثر)
+// حدّ كل فرع 10 (لا يقبل النظام أكثر). لا تُعاد كتابةُ الخانة إلا خارج الحدّ، كي لا تُمسح النقطة
+// أثناء كتابة «9.5»؛ والتقريبُ إلى أقرب نصف عند الحفظ (roundToStep)
 function clampScore(key: ScoreKey) {
   const raw = scores[key]
   if (raw === '') return
-  let n = Number(raw)
-  if (Number.isNaN(n)) {
-    scores[key] = ''
-    return
-  }
-  if (n > maxFor(key)) n = maxFor(key)
-  if (n < 0) n = 0
-  scores[key] = String(n)
+  const n = Number(raw)
+  if (Number.isNaN(n)) return
+  if (n > maxFor(key)) scores[key] = String(maxFor(key))
+  else if (n < 0) scores[key] = '0'
 }
+/** أقربُ مضاعفٍ لخطوة الرصد (نصف درجة) — القاعدة ترفض غيره (`exam_results_half_steps`). */
+const roundToStep = (n: number) => Math.round(n / EXAM_SCORE_STEP) * EXAM_SCORE_STEP
 
 const liveTotal = computed(() => scoreKeys.reduce((sum, k) => sum + (Number(scores[k]) || 0), 0))
 
@@ -104,7 +103,7 @@ async function saveGrade() {
   }
   grading.value = true
   try {
-    const sc = (k: ScoreKey) => Math.min(10, Math.max(0, Number(scores[k]) || 0))
+    const sc = (k: ScoreKey) => roundToStep(Math.min(maxFor(k), Math.max(0, Number(scores[k]) || 0)))
     const payload = {
       student_id: props.target.student.id,
       exam_list_item_id: props.target.id,
@@ -181,7 +180,8 @@ async function saveGrade() {
                   type="number"
                   :min="minFor(k)"
                   :max="maxFor(k)"
-                  inputmode="numeric"
+                  :step="EXAM_SCORE_STEP"
+                  inputmode="decimal"
                   dir="ltr"
                   class="qfield-input"
                   :class="{ invalid: k === 'tajweed_score' && scores[k] !== '' && tajweedInvalid }"

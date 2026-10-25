@@ -2,11 +2,12 @@
 /**
  * «الإنجاز القرآني للحلقات» (حفظُ خطة الشهر — لا البرامج المصاحبة؛ سُمّي هكذا بعد لبسٍ 2026-10-22) في لوحة المدير الفنيّ (طلب المستخدم 2026-10-22): للوهلة الأولى نسبةُ المنجزين كلِّهم وعددُ الحلقات
  * المتأخّرة، ثم سطرٌ لكلّ حلقةٍ بشريطٍ ونسبة «أنجز X من Y» والأضعفُ أولاً؛ والضغطُ يفتح التفصيلَ والتواصلَ مع المعلم.
- * الشهرُ الافتراضيُّ السابقُ لشهر اليوم، ويُختار من آخر ستة أشهر (بالأرقام).
+ * الشهرُ الافتراضيُّ السابقُ لشهر اليوم، ويُختار من آخر ستة أشهر (بالأرقام) — لا قبل بداية المشروع.
  */
 import type { AchievementRow } from '~/utils/halaqatAchievement'
 import { ACHIEVEMENT_LOW_PCT, achievementPct, defaultAchievementMonth, measuredOf } from '~/utils/halaqatAchievement'
 import { shiftMonth } from '~/utils/reportWindow'
+import { isBeforeProjectStart } from '~/utils/projectStart'
 
 const MONTHS_BACK = 6
 // المديرةُ الإدارية قسمُها إناث: التسمياتُ بالمؤنّث (قرار المستخدم 2026-10-22)
@@ -15,10 +16,9 @@ const { isWomenAdmin: fem } = usePermissions()
 const initial = defaultAchievementMonth()
 const year = ref(initial.year)
 const month = ref(initial.month)
-const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => {
-  const m = shiftMonth(initial.year, initial.month, -i)
-  return { label: `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }
-})
+const monthItems = Array.from({ length: MONTHS_BACK }, (_, i) => shiftMonth(initial.year, initial.month, -i))
+  .filter(m => !isBeforeProjectStart(m))
+  .map(m => ({ label: `${m.month}/${m.year}`, value: `${m.year}-${m.month}` }))
 const monthKey = computed({
   get: () => `${year.value}-${month.value}`,
   set: (v: string) => {

@@ -324,17 +324,20 @@ async function confirmReset() {
               variant="soft"
             />
           </template>
+          <!-- أيقوناتٌ بلا نصّ وتلميحٌ بالنصّ (طلب المستخدم 2026-10-25) — بنمط أزرار جدول الحلقات؛ والجوالُ بنصوصه في البطاقة -->
           <template #actions="{ row }">
             <div class="actions">
-              <UButton
-                :to="`/profile/${row.id}`"
-                label="عرض البيانات"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-id-card"
-                :ui="{ base: 'rounded-[10px]' }"
-              />
+              <UTooltip text="عرض البيانات">
+                <UButton
+                  :to="`/profile/${row.id}`"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-id-card"
+                  aria-label="عرض البيانات"
+                  :ui="{ base: 'rounded-[10px]' }"
+                />
+              </UTooltip>
               <ImpersonationStartButton
                 :profile-id="row.id"
                 :name="row.full_name"
@@ -342,28 +345,38 @@ async function confirmReset() {
                 :status="row.status"
                 :gender="row.gender"
                 size="sm"
+                icon-only
               />
-              <UButton
+              <UTooltip
                 v-if="isAdmin"
-                label="إعادة تعيين الكلمة"
-                color="neutral"
-                variant="outline"
-                size="sm"
-                icon="i-lucide-key-round"
-                :ui="{ base: 'rounded-[10px]' }"
-                @click="resetTarget = row"
-              />
-              <UButton
+                text="إعادة تعيين الكلمة"
+              >
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-key-round"
+                  aria-label="إعادة تعيين الكلمة"
+                  :ui="{ base: 'rounded-[10px]' }"
+                  @click="resetTarget = row"
+                />
+              </UTooltip>
+              <UTooltip
                 v-if="isAdmin"
-                :label="row.status === 'disabled' ? 'تفعيل' : 'تعطيل'"
-                :color="row.status === 'disabled' ? 'success' : 'neutral'"
-                variant="outline"
-                size="sm"
-                :icon="row.status === 'disabled' ? 'i-lucide-power' : 'i-lucide-ban'"
-                :loading="togglingId === row.id"
-                :ui="{ base: 'rounded-[10px]' }"
-                @click="toggleStatus(row)"
-              />
+                :text="row.status === 'disabled' ? 'تفعيل الحساب' : 'تعطيل الحساب'"
+              >
+                <UButton
+                  :color="row.status === 'disabled' ? 'success' : 'neutral'"
+                  variant="outline"
+                  size="sm"
+                  :icon="row.status === 'disabled' ? 'i-lucide-power' : 'i-lucide-ban'"
+                  :aria-label="row.status === 'disabled' ? 'تفعيل الحساب' : 'تعطيل الحساب'"
+                  :loading="togglingId === row.id"
+                  :class="{ 'act-danger': row.status !== 'disabled' }"
+                  :ui="{ base: 'rounded-[10px]' }"
+                  @click="toggleStatus(row)"
+                />
+              </UTooltip>
             </div>
           </template>
           <template #card="{ row, index }">
@@ -580,6 +593,8 @@ async function confirmReset() {
 .u-name { font-weight: 600; color: var(--ink); }
 .emp-no { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+/* «تعطيل» حسّاسٌ: يحمرّ عند المرور لا قبله، فلا يصرخ في كلّ صفّ */
+.actions :deep(.act-danger:hover) { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
 
 .form { display: flex; flex-direction: column; gap: 16px; }
 .row { display: flex; gap: 14px; flex-wrap: wrap; }

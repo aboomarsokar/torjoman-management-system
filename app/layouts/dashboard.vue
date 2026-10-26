@@ -6,6 +6,7 @@
  */
 import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 import { queryFromTab, tabFromQuery, type StudentTab } from '~/composables/useStudentTab'
+import { OFFLINE_PATHS, orderByKeys, TEACHER_NAV_ORDER } from '~/constants/navigation'
 
 const { profile, role, status, fullName, pending: profilePending } = useProfile()
 // صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
@@ -120,10 +121,16 @@ const allItems = [...mainNav, ...managerNav, profileItem]
 const labelOf = (i: Item) => (role.value === 'women_admin' && i.labelF) || i.label
 const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.includes(role.value)))
 /** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
-const topItems = computed(() => visibleItems.value.filter(i => !i.group))
-const navGroups = computed(() => GROUPS
-  .map(g => ({ ...g, items: visibleItems.value.filter(i => i.group === g.key) }))
-  .filter(g => g.items.length))
+// المعلّمُ قائمةٌ مسطّحةٌ بترتيب الاستعمال بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26)
+const flatNav = computed(() => role.value === 'teacher')
+const topItems = computed(() => flatNav.value
+  ? orderByKeys(visibleItems.value, TEACHER_NAV_ORDER)
+  : visibleItems.value.filter(i => !i.group))
+const navGroups = computed(() => flatNav.value
+  ? []
+  : GROUPS
+      .map(g => ({ ...g, items: visibleItems.value.filter(i => i.group === g.key) }))
+      .filter(g => g.items.length))
 
 // الطيُّ لكلّ متصفّحٍ وحده (تفضيلٌ لا بيانات)؛ ومجموعةُ الصفحة الحاليّة تبقى مفتوحةً كي لا يختفي البارز
 const COLLAPSE_KEY = 'torjoman-nav-collapsed'
@@ -171,7 +178,15 @@ const navTitle = computed(() => {
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
+// بلا إنترنت لا يعمل إلا الحضور: غيرُه يُعتَم في القائمة، وضغطُه يقول ذلك بدل أن يُحوَّل صامتاً إلى الحضور
+const { online, check: checkOnline } = useNetworkStatus()
+const needsNetwork = (item: Item) => !online.value && !OFFLINE_PATHS.includes(item.to ?? '')
 function go(item: Item) {
+  checkOnline()
+  if (needsNetwork(item)) {
+    toast.add({ title: 'هذه الشاشة تحتاج اتصالاً — بلا إنترنت يعمل «الحضور اليوميّ» وحده.', icon: 'i-lucide-wifi-off', color: 'warning' })
+    return
+  }
   drawerOpen.value = false
   if (item.to && item.tab) navigateTo({ path: item.to, query: { tab: queryFromTab(item.tab) } })
   else if (item.to && item.qtab) navigateTo({ path: item.to, query: { tab: item.qtab } })
@@ -222,7 +237,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
               v-for="item in topItems"
               :key="item.key"
               class="nav-item"
-              :class="{ active: isActive(item) }"
+              :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
               @click="go(item)"
             >
               <UIcon
@@ -283,7 +298,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                   v-for="item in g.items"
                   :key="item.key"
                   class="nav-item"
-                  :class="{ active: isActive(item) }"
+                  :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
                   @click="go(item)"
                 >
                   <UIcon
@@ -423,6 +438,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item > .nav-new { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 13px; font-weight: 700; -webkit-text-stroke: .3px currentColor; line-height: 1.4; overflow: visible; }
 .nav-item > .nav-count { margin-inline-start: auto; flex-shrink: 0; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; line-height: 24px; text-align: center; font-variant-numeric: tabular-nums; overflow: visible; }
 .nav-new-star { color: var(--side-new-bg); }
+.nav-item.needs-net { opacity: .45; }
 .nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }

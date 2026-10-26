@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * لوحة المعلم — بسيطةٌ عن قصد (طلب المستخدم 2026-10-26: «لوحة التحكم ما يكون فيها تفاصيل كتير»). ثلاثةُ أجزاء:
- * سطرُ الحلقة (اسمُها وعددُها وموعدُها وتغييرُه) ← «المطلوب منك» المعلّقُ وحده ← أربعةُ أزرارٍ كبيرة لأكثر الشاشات استعمالاً.
+ * لوحة المعلم — بسيطةٌ عن قصد (طلب المستخدم 2026-10-26: «لوحة التحكم ما يكون فيها تفاصيل كتير»، و«الأزرار الهامة في
+ * مقدّمة الصفحة» كتطبيق الصحابة): أزرارٌ عريضةٌ أوّلاً (الحضورُ ممتلئاً، وغيرُه هادئاً) ← «المطلوب منك» المعلّقُ وحده ←
+ * سطرُ الحلقة (اسمُها وعددُها وموعدُها وتغييرُه).
  * و«طلابٌ يحتاجون متابعتك» سطرٌ واحدٌ يُفتح عند الطلب. الأرقامُ والتفاصيلُ في صفحاتها. البياناتُ من `useTeacherDashboard`.
  */
 import { formatAmount, isolateLtr } from '~/utils/transport'
@@ -33,10 +34,10 @@ const actions = computed(() => d.value
 
 /** أكثرُ الشاشات استعمالاً — أزرارٌ كبيرةٌ تُضغط بالإبهام، وبقيّتُها في القائمة. */
 const QUICK = [
-  { to: '/t', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', tone: 'green' },
-  { to: '/reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-open-check', tone: 'blue' },
-  { to: '/students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', tone: 'navy' },
-  { to: '/my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', tone: 'gold' }
+  { to: '/t', label: 'تسجيل الحضور', icon: 'i-lucide-calendar-check', primary: true },
+  { to: '/reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-open-check', primary: false },
+  { to: '/students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', primary: false },
+  { to: '/my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', primary: false }
 ] as const
 
 const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned'].includes(d.value.recording.state))
@@ -65,6 +66,28 @@ const attentionOpen = ref(false)
     </div>
 
     <template v-else-if="d">
+      <!-- أكثرُ الشاشات استعمالاً -->
+      <nav
+        class="quick"
+        aria-label="الوصول السريع"
+      >
+        <NuxtLink
+          v-for="q in QUICK"
+          :key="q.to"
+          :to="q.to"
+          class="q"
+          :class="{ primary: q.primary }"
+        >
+          <UIcon
+            :name="q.icon"
+            class="size-6"
+          />
+          <span>{{ q.label }}</span>
+        </NuxtLink>
+      </nav>
+
+      <DashboardTeacherActions :actions="actions" />
+
       <!-- سطرُ الحلقة -->
       <div class="card head">
         <span class="h-ico"><UIcon
@@ -88,30 +111,6 @@ const attentionOpen = ref(false)
           @changed="refresh"
         />
       </div>
-
-      <DashboardTeacherActions :actions="actions" />
-
-      <!-- أكثرُ الشاشات استعمالاً -->
-      <nav
-        class="quick"
-        aria-label="الوصول السريع"
-      >
-        <NuxtLink
-          v-for="q in QUICK"
-          :key="q.to"
-          :to="q.to"
-          class="q"
-        >
-          <span
-            class="q-ico"
-            :class="q.tone"
-          ><UIcon
-            :name="q.icon"
-            class="size-6"
-          /></span>
-          <span class="q-label">{{ q.label }}</span>
-        </NuxtLink>
-      </nav>
 
       <!-- من يحتاج متابعةً: سطرٌ واحدٌ يُفتح عند الطلب -->
       <button
@@ -157,17 +156,13 @@ const attentionOpen = ref(false)
 .h-info h2 { margin: 0; font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 
-.quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.q { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 112px; padding: 16px 10px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--ink); text-decoration: none; transition: border-color .15s, transform .12s; }
-.q:hover { border-color: var(--blue); }
-.q:active { transform: scale(.97); }
+.quick { display: flex; flex-direction: column; gap: 10px; }
+.q { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; padding: 0 16px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
+.q:hover { background: var(--surface-3); }
+.q.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); min-height: 64px; font-size: 17.5px; box-shadow: var(--shadow); }
+.q.primary:hover { background: var(--primary-hover); }
+.q:active { transform: scale(.98); }
 .q:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
-.q-ico { width: 48px; height: 48px; border-radius: 15px; display: inline-flex; align-items: center; justify-content: center; }
-.q-ico.green { background: var(--green-soft); color: var(--green-ink); }
-.q-ico.blue { background: var(--blue-soft); color: var(--blue-ink); }
-.q-ico.navy { background: var(--surface-3); color: var(--ink); }
-.q-ico.gold { background: var(--chip-warn-bg); color: var(--chip-warn-ink); }
-.q-label { font-size: 15px; font-weight: 700; text-align: center; }
 
 .att-line { display: flex; align-items: center; gap: 12px; width: 100%; font: inherit; text-align: start; cursor: pointer; padding: 14px 18px; }
 .att-ico { width: 38px; height: 38px; border-radius: 11px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--err-soft); color: var(--err); }
@@ -176,10 +171,8 @@ const attentionOpen = ref(false)
 .att-chev { color: var(--ink-3); transition: transform .15s; }
 .att-chev.open { transform: rotate(180deg); }
 
-@media (max-width: 760px) { .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {
   .th { gap: 14px; }
   .card { padding: 16px; }
-  .q { min-height: 100px; }
 }
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * «طلاب يحتاجون انتباهك» في لوحة المعلم — ثلاث قوائم قصيرة لا كلُّ الطلاب: من غاب كثيراً هذا الشهر،
+ * «طلاب يحتاجون متابعتك» في لوحة المعلم — تُعرض داخل بطاقة شريطها (بلا إطارٍ ولا عنوانٍ هنا — طلب المستخدم 2026-10-26)، قوائمُ قصيرة لا كلُّ الطلاب: من غاب كثيراً هذا الشهر،
  * ومن لم يُرصد له في شهر الرصد، والمستحقّون للاختبار. كلُّ اسمٍ يفتح ملفَّ الطالب، والزائدُ «و N آخرون».
  */
 import { ABSENCE_ATTENTION_DAYS, ATTENTION_LIST_MAX } from '~/constants/teacherDashboard'
@@ -34,11 +34,8 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
 <template>
   <section
     class="att"
-    aria-labelledby="att-title"
+    aria-label="طلاب يحتاجون متابعتك"
   >
-    <h2 id="att-title">
-      طلاب يحتاجون انتباهك
-    </h2>
     <p
       v-if="!groups.length"
       class="none"
@@ -97,8 +94,7 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
 </template>
 
 <style scoped>
-.att { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
-h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.att { display: flex; flex-direction: column; gap: 16px; }
 .none { margin: 0; font-size: 14.5px; color: var(--ink-3); }
 .grp { padding-top: 14px; border-top: 1px solid var(--line); }
 .grp:first-of-type { padding-top: 0; border-top: none; }

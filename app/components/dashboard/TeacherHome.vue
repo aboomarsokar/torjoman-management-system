@@ -115,35 +115,40 @@ const attentionOpen = ref(false)
 
       <DashboardTeacherActions :actions="actions" />
 
-      <!-- من يحتاج متابعةً: سطرٌ واحدٌ يُفتح عند الطلب -->
-      <button
+      <!-- من يحتاج متابعةً: شريطٌ يُفتح عند الطلب، وقائمتُه في البطاقة نفسِها -->
+      <section
         v-if="attentionCount"
-        type="button"
-        class="card att-line"
-        :aria-expanded="attentionOpen"
-        @click="attentionOpen = !attentionOpen"
+        class="card att-box"
       >
-        <span class="att-ico"><UIcon
-          name="i-lucide-users-round"
-          class="size-5"
-        /></span>
-        <span class="att-text">طلاب يحتاجون متابعتك</span>
-        <span class="att-count">{{ attentionCount }}</span>
-        <UIcon
-          name="i-lucide-chevron-down"
-          class="size-5 att-chev"
-          :class="{ open: attentionOpen }"
+        <button
+          type="button"
+          class="att-line"
+          :aria-expanded="attentionOpen"
+          @click="attentionOpen = !attentionOpen"
+        >
+          <span class="att-ico"><UIcon
+            name="i-lucide-users-round"
+            class="size-5"
+          /></span>
+          <span class="att-text">طلاب يحتاجون متابعتك</span>
+          <span class="att-count">{{ attentionCount }}</span>
+          <UIcon
+            name="i-lucide-chevron-down"
+            class="size-5 att-chev"
+            :class="{ open: attentionOpen }"
+          />
+        </button>
+        <DashboardTeacherAttention
+          v-if="attentionOpen"
+          class="att-body"
+          :absentees="d.absentees"
+          :unrecorded="d.unrecorded"
+          :show-unrecorded="showUnrecorded"
+          :recording-label="d.recording.label"
+          :eligible="d.eligible"
+          :reading-behind="d.readingBehind"
         />
-      </button>
-      <DashboardTeacherAttention
-        v-if="attentionOpen"
-        :absentees="d.absentees"
-        :unrecorded="d.unrecorded"
-        :show-unrecorded="showUnrecorded"
-        :recording-label="d.recording.label"
-        :eligible="d.eligible"
-        :reading-behind="d.readingBehind"
-      />
+      </section>
     </template>
   </div>
 </template>
@@ -171,7 +176,10 @@ const attentionOpen = ref(false)
 .q:active { transform: scale(.98); }
 .q:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 
-.att-line { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; font: inherit; text-align: start; cursor: pointer; padding: 14px 18px; }
+.att-box { padding: 14px 18px; }
+.att-line { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: none; background: none; font: inherit; text-align: start; cursor: pointer; }
+.att-line:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); border-radius: 10px; }
+.att-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .att-ico { width: 38px; height: 38px; border-radius: 11px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--err-soft); color: var(--err); }
 .att-text { flex: 1; font-size: 16px; font-weight: 700; color: var(--ink); }
 .att-count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }

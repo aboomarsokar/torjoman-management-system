@@ -54,8 +54,7 @@ const attentionOpen = ref(false)
 <template>
   <div class="th">
     <template v-if="pending && !d">
-      <UiSkeletonBand :actions="0" />
-      <UiSkeletonLines :fields="4" />
+      <DashboardTeacherSkeleton />
     </template>
 
     <div

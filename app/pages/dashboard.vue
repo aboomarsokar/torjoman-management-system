@@ -5,6 +5,7 @@
  * (ومشرف المشروع يراها بلا تعديل). لوحة المدير الفني: المشرفون الميدانيون والتقارير المُرسلة للاطّلاع (يعتمدها المشرفون الميدانيون، لا هو).
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته. والمديرة الإدارية لوحةَ الفنيّ نفسَها لقسم البنات وبالمؤنّث (2026-10-22).
  */
+import { PROFILE_CACHE_KEY, readCache } from '~/utils/offlineCache'
 import type { Database } from '~/types/database.types'
 import { formatVisitMoment } from '~/utils/visitStatus'
 
@@ -214,6 +215,9 @@ const settingCards = [
   { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'المطلوب الشهريّ (صفحات)', unit: 'صفحة', desc: 'ما يُطالَب به كلُّ طالبٍ حفظاً في الشهر، ويُقسَّط بحضوره؛ عليه يُحكم بـ«أنجز» أو «مقصّر».' },
   { key: 'pass_mark' as const, icon: 'i-lucide-check-check', tone: 'green', title: 'علامة الاجتياز في الاختبار', unit: '%', desc: 'الحدّ الأدنى من 100 لاجتياز اختبار الطالب — يسري على الاختبارات اللاحقة.' }
 ]
+
+/** الدورُ من الملفّ المحفوظ على الجهاز — يختار هيكلَ التحميل قبل وصول الملفّ. */
+const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CACHE_KEY)?.role ?? null : null
 </script>
 
 <template>
@@ -224,7 +228,9 @@ const settingCards = [
     </div>
 
     <ClientOnly>
-      <template v-if="profilePending">
+      <!-- المعلّمُ (من ملفّه المحفوظ على الجهاز) يرى هيكلَ لوحته لا مربّعاتِ الإحصاء -->
+      <DashboardTeacherSkeleton v-if="profilePending && cachedRole === 'teacher'" />
+      <template v-else-if="profilePending">
         <div class="stats">
           <UiSkeletonCard
             v-for="i in 4"

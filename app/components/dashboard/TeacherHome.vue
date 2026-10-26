@@ -189,7 +189,9 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
 .placeholder { font-size: 15px; color: var(--ink-2); }
 .head { display: flex; align-items: center; gap: 14px; }
 .h-ico { width: 48px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
-.h-info { min-width: 0; flex: 1; }
+.h-info { min-width: 0; flex: 1 1 220px; }
+/* زرُّ الموعد يأخذ سطرَه تحت الاسم حين يضيق العرض — كان يعصر الاسمَ عموداً كلمةً كلمة (لقطة المستخدم 2026-10-26) */
+.h-time { margin-inline-start: auto; }
 .head { flex-wrap: wrap; }
 .h-info h2 { margin: 0; font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
@@ -214,5 +216,6 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
   .tiles { gap: 12px; }
   .tile { padding: 14px; }
   .t-num { font-size: 26px; }
+  .h-time { flex: 1 1 100%; }
 }
 </style>

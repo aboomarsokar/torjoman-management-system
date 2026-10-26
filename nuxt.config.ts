@@ -84,7 +84,11 @@ export default defineNuxtConfig({
       lang: 'ar',
       dir: 'rtl',
       display: 'standalone',
-      start_url: '/',
+      // التطبيقُ المثبَّت يُقلع على حضور المعلّم مباشرةً (طلب المستخدم 2026-10-26: كانت تظهر الرئيسيةُ ثمّ يُحوَّل)
+      // — وهي تعمل بلا اتصال، وغيرُ المعلّم متّصلاً يُحوَّل منها إلى لوحته. `id` ثابتٌ كي يبقى التطبيقُ المثبَّت نفسَه
+      id: '/',
+      start_url: '/t',
+      scope: '/',
       theme_color: '#094064',
       background_color: '#FFFFFF',
       icons: [

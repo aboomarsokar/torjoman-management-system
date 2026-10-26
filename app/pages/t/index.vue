@@ -18,6 +18,10 @@ const {
 } = useOfflineAttendance()
 const { state: readiness } = useOfflineReadiness()
 onMounted(start)
+// التطبيقُ المثبَّت يُقلع هنا لكلّ الأدوار: غيرُ المعلّم متّصلاً يذهب إلى لوحته بلا شاشةٍ بينهما
+watch(access, (a) => {
+  if (a === 'other') navigateTo('/dashboard', { replace: true })
+})
 
 const toast = useToast()
 const { handle } = useErrorHandler()

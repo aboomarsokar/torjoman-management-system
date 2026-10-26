@@ -215,11 +215,12 @@ const dayState = computed(() => shown.value.pending
 .tp-main { max-width: 760px; display: flex; flex-direction: column; gap: 14px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
 .main { display: flex; flex-direction: column; gap: 18px; }
-.halqa { display: flex; align-items: center; gap: 12px; }
+.halqa { display: flex; align-items: flex-start; gap: 12px; }
+.halqa-ico, .halqa-n { margin-top: 2px; }
 .halqa-ico { width: 42px; height: 42px; border-radius: 13px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
 .halqa > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .halqa small, .day-label small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
-.halqa b { font-size: 16px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.halqa b { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.5; overflow-wrap: anywhere; }
 .halqa-n { padding: 4px 11px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 600; white-space: nowrap; }
 .day { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
 .day-label { display: flex; flex-direction: column; }

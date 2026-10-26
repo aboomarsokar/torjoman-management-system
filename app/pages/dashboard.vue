@@ -224,7 +224,10 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
   <div class="dash">
     <div class="welcome">
       <h2>أهلاً، {{ fullName }} 👋</h2>
-      <p>{{ isTeacher ? 'ما ينتظرك اليوم، وأرقام حلقتك هذا الشهر.' : isExaminer ? 'ما ينتظر رصدَك، وأرقام اختباراتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}</p>
+      <!-- المعلّمُ بلا سطرٍ فرعيّ: لوحتُه أزرارٌ ومطلوبٌ لا أرقام (طلب المستخدم 2026-10-26) -->
+      <p v-if="!isTeacher">
+        {{ isExaminer ? 'ما ينتظر رصدَك، وأرقام اختباراتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}
+      </p>
     </div>
 
     <ClientOnly>

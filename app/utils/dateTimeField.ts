@@ -15,6 +15,12 @@ export function joinDateTime(date: string, time: string): string {
   return date && time ? `${date}T${time}` : ''
 }
 
+/** الوقتُ المقترح بصيغة `HH:MM` (وتُقبل الثواني فتُقصّ)؛ وغيرُها — كـ«4:00 م» — فارغ كي لا تفسد القيمة. */
+export function normalizeSuggestedTime(value: string | null | undefined): string {
+  const t = (value ?? '').slice(0, 5)
+  return /^\d{2}:\d{2}$/.test(t) ? t : ''
+}
+
 /** «16:30» ← «4:30 م» (اثنتا عشرة ساعة بالعربية، أرقام لاتينية). */
 export function timeLabel(hhmm: string): string {
   const [h = 0, m = 0] = hhmm.split(':').map(Number)

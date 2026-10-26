@@ -46,10 +46,9 @@ const halqaItems = computed(() => props.halqat.map(h => ({
   label: h.teacher?.full_name ? `${h.name} — ${h.teacher.full_name}` : h.name,
   value: h.id
 })))
-const selectedHalqaTime = computed(() => {
-  const h = props.halqat.find(x => x.id === form.halaqa_id)
-  return formatTime12(h?.daily_time)
-})
+const selectedHalqaRawTime = computed(() => props.halqat.find(x => x.id === form.halaqa_id)?.daily_time?.slice(0, 5) ?? '')
+// للعرض «4:00 م»؛ والحقلُ يُقترح له `HH:MM` (كان يُمرَّر «4:00 م» فيصير الموعدُ غيرَ صالح ويفشل الحفظ قبل الإرسال)
+const selectedHalqaTime = computed(() => formatTime12(selectedHalqaRawTime.value))
 const visitorName = computed(() => (isEdit.value ? props.visit?.supervisor?.full_name : profile.value?.full_name) ?? '')
 
 function validate(s: typeof form) {
@@ -63,7 +62,9 @@ function validate(s: typeof form) {
 async function save() {
   saving.value = true
   try {
-    const when = new Date(form.scheduled_at).toISOString()
+    const moment = new Date(form.scheduled_at)
+    if (Number.isNaN(moment.getTime())) throw new Error('موعد الزيارة غير صالح — اختر اليوم والوقت من جديد.')
+    const when = moment.toISOString()
     if (props.visit) {
       const { error } = await supabase.rpc('reschedule_visit', { p_visit: props.visit.id, p_new_time: when, p_reason: form.reason.trim() })
       if (error) throw error
@@ -136,7 +137,7 @@ async function save() {
         >
           <UiDateTimeField
             v-model="form.scheduled_at"
-            :suggested-time="selectedHalqaTime || null"
+            :suggested-time="selectedHalqaRawTime || null"
           />
         </UFormField>
         <UFormField

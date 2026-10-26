@@ -3,13 +3,13 @@
  * حضورُ حلقتي — شاشةُ المعلّم التي تعمل بلا إنترنت (البند 14 — نمطُ الصحابة، 2026-10-26).
  * تُصيَّر في المتصفّح وتُخزَّن في عامل الخدمة، والبياناتُ من نسخة الجهاز: الحلقةُ وطلابُها وآخرُ أربعين يوماً.
  * شريطُ حالةٍ يقول ما ينتظر الرفعَ بعدده، وشريطُ آخر 15 يومَ دوامٍ يُري ما لم يُسجَّل، و«حفظ الحضور» يُكتب على الجهاز
- * فوراً ويُرفع في الخلفية يوماً يوماً؛ وما رفضته الإدارةُ يُعرض للمعلّم بإعادةٍ أو ترك. بلا قالب اللوحة: لا شيءَ فيها
- * يحتاج الشبكةَ ليظهر.
+ * فوراً ويُرفع في الخلفية يوماً يوماً؛ وما رفضته الإدارةُ يُعرض للمعلّم بإعادةٍ أو ترك. في قالب اللوحة (القائمةُ والجرسُ
+ * والصورة — طلب المستخدم 2026-10-26)، والقالبُ يقرأ بلا إنترنت آخرَ ما عُرف (`offlineCache`).
  */
 import { formatDay, isFriday } from '~/utils/reportWindow'
 import { weekdayName } from '~/utils/recordingStatus'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'حضور حلقتي — ترجمان', robots: 'noindex' })
 
 const {
@@ -50,198 +50,169 @@ const dayState = computed(() => shown.value.pending
 </script>
 
 <template>
-  <div class="tp">
-    <header class="tp-head">
-      <img
-        src="/brand/turjuman-mark.png"
-        alt="ترجمان"
-        class="mark"
-      >
-      <div class="who">
-        <h1>حضور حلقتي</h1>
-        <span v-if="mirror?.fullName">{{ mirror.fullName }}</span>
-      </div>
+  <div class="tp-main">
+    <OfflineSyncStatus
+      v-if="access === 'teacher'"
+      :text="statusText"
+      :online="outbox.online.value"
+      :pending="outbox.pending.value.length"
+      :syncing="outbox.syncing.value"
+      :retrying="retrying"
+      :readiness="readiness"
+      @retry="outbox.flush()"
+    />
+    <OfflineRejectedDays
+      v-if="outbox.rejected.value.length"
+      :entries="outbox.rejected.value"
+      @retry="outbox.retry"
+      @discard="outbox.discard"
+    />
+
+    <div
+      v-if="!ready"
+      class="stack"
+      aria-busy="true"
+    >
+      <UiSkeletonRow
+        v-for="i in 4"
+        :key="i"
+        :desc="false"
+        :action="false"
+      />
+    </div>
+    <UiEmptyState
+      v-else-if="access === 'other'"
+      icon="i-lucide-user-round"
+      title="هذه الشاشةُ لحضور المعلّم"
+      description="الحضورُ لغير المعلّم في «الحضور اليوميّ» من اللوحة."
+    >
       <UButton
-        v-if="outbox.online.value"
-        to="/dashboard"
-        label="اللوحة"
-        icon="i-lucide-layout-dashboard"
-        color="neutral"
-        variant="soft"
+        to="/attendance"
+        label="الحضور اليوميّ"
+        color="primary"
         :ui="{ base: 'rounded-xl min-h-11' }"
       />
-    </header>
+    </UiEmptyState>
+    <UiEmptyState
+      v-else-if="!mirror"
+      icon="i-lucide-wifi-off"
+      title="افتح هذه الشاشة مرّةً وأنت متّصل"
+      description="تُحفظ حلقتُك وطلابُك على جهازك عند أوّل فتحٍ متّصل، ثمّ تعمل بلا إنترنت."
+    >
+      <UButton
+        v-if="outbox.online.value"
+        to="/login"
+        label="تسجيل الدخول"
+        color="primary"
+        :ui="{ base: 'rounded-xl min-h-11' }"
+      />
+    </UiEmptyState>
+    <UiEmptyState
+      v-else-if="!mirror.halaqa"
+      icon="i-lucide-book-open"
+      title="لا حلقة معيّنة لك"
+    />
 
-    <main class="tp-main">
-      <OfflineSyncStatus
-        v-if="access === 'teacher'"
-        :text="statusText"
-        :online="outbox.online.value"
-        :pending="outbox.pending.value.length"
-        :syncing="outbox.syncing.value"
-        :retrying="retrying"
-        :readiness="readiness"
-        @retry="outbox.flush()"
-      />
-      <OfflineRejectedDays
-        v-if="outbox.rejected.value.length"
-        :entries="outbox.rejected.value"
-        @retry="outbox.retry"
-        @discard="outbox.discard"
-      />
+    <template v-else>
+      <section class="card main">
+        <div class="halqa">
+          <span class="halqa-ico"><UIcon
+            name="i-lucide-book-open"
+            class="size-5"
+          /></span>
+          <div>
+            <small>حلقتي</small>
+            <b>{{ mirror.halaqa.name }}</b>
+          </div>
+          <span class="halqa-n">{{ mirror.students.length }} طالباً</span>
+        </div>
+        <div class="day">
+          <div class="day-label">
+            <small>اليوم</small>
+            <b>{{ weekdayName(day) }} · <bdi>{{ formatDay(day) }}</bdi></b>
+          </div>
+          <AttendanceDayPicker
+            v-model="dayModel"
+            :max="today"
+          />
+        </div>
+        <AttendanceWindowStrip
+          :days="strip.days"
+          :missing="strip.missing"
+          :selected="day"
+          @select="dayModel = $event"
+        />
+      </section>
 
       <div
-        v-if="!ready"
-        class="stack"
-        aria-busy="true"
+        v-if="locked"
+        class="note"
       >
-        <UiSkeletonRow
-          v-for="i in 4"
-          :key="i"
-          :desc="false"
-          :action="false"
-        />
+        <UIcon
+          name="i-lucide-lock"
+          class="size-5 shrink-0"
+        />رصدُ هذا الشهر معتمَد فلا تُعدَّل أيامُه.
       </div>
       <UiEmptyState
-        v-else-if="access === 'other'"
-        icon="i-lucide-user-round"
-        title="هذه الشاشةُ لحضور المعلّم"
-        description="الحضورُ لغير المعلّم في «الحضور اليوميّ» من اللوحة."
-      >
-        <UButton
-          to="/attendance"
-          label="الحضور اليوميّ"
-          color="primary"
-          :ui="{ base: 'rounded-xl min-h-11' }"
-        />
-      </UiEmptyState>
-      <UiEmptyState
-        v-else-if="!mirror"
-        icon="i-lucide-wifi-off"
-        title="افتح هذه الشاشة مرّةً وأنت متّصل"
-        description="تُحفظ حلقتُك وطلابُك على جهازك عند أوّل فتحٍ متّصل، ثمّ تعمل بلا إنترنت."
-      >
-        <UButton
-          v-if="outbox.online.value"
-          to="/login"
-          label="تسجيل الدخول"
-          color="primary"
-          :ui="{ base: 'rounded-xl min-h-11' }"
-        />
-      </UiEmptyState>
-      <UiEmptyState
-        v-else-if="!mirror.halaqa"
-        icon="i-lucide-book-open"
-        title="لا حلقة معيّنة لك"
+        v-if="isFriday(day)"
+        icon="i-lucide-calendar-off"
+        title="الجمعة عطلة — لا يُسجَّل فيها حضور"
       />
-
+      <UiEmptyState
+        v-else-if="dayUnknown"
+        icon="i-lucide-cloud-off"
+        title="هذا اليومُ أقدمُ ممّا حُفظ على جهازك"
+        description="اتّصل بالإنترنت لعرضه أو تعديله."
+      />
+      <UiEmptyState
+        v-else-if="!students.length"
+        icon="i-lucide-users"
+        title="لا طلاب ملتحقون في هذا اليوم"
+      />
       <template v-else>
-        <section class="card main">
-          <div class="halqa">
-            <span class="halqa-ico"><UIcon
-              name="i-lucide-book-open"
-              class="size-5"
-            /></span>
-            <div>
-              <small>حلقتي</small>
-              <b>{{ mirror.halaqa.name }}</b>
-            </div>
-            <span class="halqa-n">{{ mirror.students.length }} طالباً</span>
-          </div>
-          <div class="day">
-            <div class="day-label">
-              <small>اليوم</small>
-              <b>{{ weekdayName(day) }} · <bdi>{{ formatDay(day) }}</bdi></b>
-            </div>
-            <AttendanceDayPicker
-              v-model="dayModel"
-              :max="today"
-            />
-          </div>
-          <AttendanceWindowStrip
-            :days="strip.days"
-            :missing="strip.missing"
-            :selected="day"
-            @select="dayModel = $event"
-          />
-        </section>
-
         <div
-          v-if="locked"
-          class="note"
+          class="day-state"
+          :class="dayState.cls"
         >
           <UIcon
-            name="i-lucide-lock"
+            :name="dayState.icon"
             class="size-5 shrink-0"
-          />رصدُ هذا الشهر معتمَد فلا تُعدَّل أيامُه.
-        </div>
-        <UiEmptyState
-          v-if="isFriday(day)"
-          icon="i-lucide-calendar-off"
-          title="الجمعة عطلة — لا يُسجَّل فيها حضور"
-        />
-        <UiEmptyState
-          v-else-if="dayUnknown"
-          icon="i-lucide-cloud-off"
-          title="هذا اليومُ أقدمُ ممّا حُفظ على جهازك"
-          description="اتّصل بالإنترنت لعرضه أو تعديله."
-        />
-        <UiEmptyState
-          v-else-if="!students.length"
-          icon="i-lucide-users"
-          title="لا طلاب ملتحقون في هذا اليوم"
-        />
-        <template v-else>
-          <div
-            class="day-state"
-            :class="dayState.cls"
-          >
-            <UIcon
-              :name="dayState.icon"
-              class="size-5 shrink-0"
-            />
-            <span>{{ dayState.text }}</span>
-          </div>
-          <OfflineAttendanceList
-            :students="students"
-            :draft="draft"
-            :summary="summary"
-            :disabled="!canWrite"
-            @set="setChoice"
           />
-          <div
-            v-if="canWrite"
-            class="save-bar"
-          >
-            <span
-              class="save-note"
-              :class="{ warn: dirty }"
-            >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
-            <UButton
-              label="حفظ الحضور"
-              icon="i-lucide-save"
-              color="primary"
-              size="lg"
-              :loading="saving"
-              :disabled="!canSave"
-              :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
-              @click="onSave"
-            />
-          </div>
-        </template>
+          <span>{{ dayState.text }}</span>
+        </div>
+        <OfflineAttendanceList
+          :students="students"
+          :draft="draft"
+          :summary="summary"
+          :disabled="!canWrite"
+          @set="setChoice"
+        />
+        <div
+          v-if="canWrite"
+          class="save-bar"
+        >
+          <span
+            class="save-note"
+            :class="{ warn: dirty }"
+          >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
+          <UButton
+            label="حفظ الحضور"
+            icon="i-lucide-save"
+            color="primary"
+            size="lg"
+            :loading="saving"
+            :disabled="!canSave"
+            :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
+            @click="onSave"
+          />
+        </div>
       </template>
-    </main>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.tp { min-height: 100dvh; background: var(--bg); }
-.tp-head { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-.mark { width: 40px; height: 40px; object-fit: contain; filter: var(--logo-filter); }
-.who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.who h1 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
-.who span { font-size: 13px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tp-main { max-width: 760px; margin: 0 auto; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+.tp-main { max-width: 760px; display: flex; flex-direction: column; gap: 14px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
 .main { display: flex; flex-direction: column; gap: 18px; }
 .halqa { display: flex; align-items: center; gap: 12px; }

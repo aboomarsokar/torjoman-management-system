@@ -7,6 +7,9 @@
  * والأنثى بلا صورة دائماً (`displayPhotoPath`).
  */
 import { displayPhotoPath } from '~/constants/profilePhoto'
+import { PHOTO_CACHE_KEY, readCache, toDataUrl, writeCache } from '~/utils/offlineCache'
+
+type CachedPhoto = { path: string, data: string }
 
 /** ما تحتاجه `refreshMyPhoto` — مفصولٌ كي يُختبر الترتيبُ بلا Nuxt. */
 export interface MyPhotoRefreshSteps {
@@ -48,7 +51,22 @@ export function useMyPhoto() {
     })
   }
 
-  const url = computed(() => urlFor(path.value))
+  // نسخةٌ من الصورة على الجهاز تُعرض بلا إنترنت (البند 14 — رأسُ تطبيق المعلّم): تُحفظ مرّةً لكلّ مسار
+  const signed = computed(() => urlFor(path.value))
+  const cached = ref<CachedPhoto | null>(import.meta.client ? readCache<CachedPhoto>(PHOTO_CACHE_KEY) : null)
+  watch(signed, async (link) => {
+    const p = path.value
+    if (!link || !p || cached.value?.path === p) return
+    try {
+      const res = await fetch(link)
+      const data = res.ok ? await toDataUrl(await res.blob()) : null
+      if (data && path.value === p) {
+        cached.value = { path: p, data }
+        writeCache(PHOTO_CACHE_KEY, cached.value)
+      }
+    } catch { /* بلا شبكة: يبقى ما كان */ }
+  }, { immediate: true })
+  const url = computed(() => signed.value ?? (path.value && cached.value?.path === path.value ? cached.value.data : null))
 
   return { url, refresh }
 }

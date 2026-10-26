@@ -19,12 +19,14 @@ const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isFieldSupervisor, isTeacher } = usePermissions()
-const canSchedule = computed(() => isFieldSupervisor.value)
+const { isAdmin, isFieldSupervisor, isTeacher, isTechnical } = usePermissions()
+// والمديرُ الفنيّ يجدول ويزور حلقاتِ البنين بنفسه (طلب المستخدم 2026-10-26) — زيارتُه للاطّلاع لا لسجلّ التقييم
+const isVisitor = computed(() => isFieldSupervisor.value || isTechnical.value)
+const canSchedule = isVisitor
 /** التقييم: مجموعُ النموذج «35 / 42»، وللزيارة القديمة تقييمُها النصّيّ. */
 const ratingText = (v: VisitRow) => v.score != null ? `${v.score} / ${VISIT_MAX}` : v.flow_rating || '—'
-/** موعدُ الزيارة ونتيجتُها لصاحبها المشرف الميداني وحده (visits_update) — المديران يطّلعون. */
-const canEditVisit = (v: VisitRow) => isFieldSupervisor.value && v.supervisor_id === profile.value?.id
+/** موعدُ الزيارة ونتيجتُها لصاحبها الزائر وحده (visits_update) — المشرفُ الميدانيّ أو المديرُ الفنيّ. */
+const canEditVisit = (v: VisitRow) => isVisitor.value && v.supervisor_id === profile.value?.id
 
 const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>('visits-list', async () => {
   const { data, error } = await supabase
@@ -107,7 +109,8 @@ const requiredHalqat = computed(() => (halqat.value ?? []).filter(h =>
 const monthsShown = computed(() => period.value === 'all' ? new Set(scoped.value.map(periodOf)).size : 1)
 const stats = computed(() => {
   const list = scoped.value.map(display)
-  const c = visitCompletion(scoped.value, requiredHalqat.value, monthsShown.value)
+  // نسبةُ الإنجاز على زيارات المشرفين الميدانيّين — زيارةُ المدير الفنيّ لا تُتمّ المطلوبَ منهم
+  const c = visitCompletion(scoped.value.filter(v => v.supervisor?.role !== 'technical_manager'), requiredHalqat.value, monthsShown.value)
   return {
     scheduled: list.filter(s => s === 'scheduled').length,
     done: list.filter(s => s === 'done').length,

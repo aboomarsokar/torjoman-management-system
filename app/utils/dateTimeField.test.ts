@@ -2,7 +2,7 @@
  * حقل التاريخ والوقت — الفصل والجمع، وصيغة الوقت العربية، وخيارات الوقت.
  */
 import { describe, expect, it } from 'vitest'
-import { joinDateTime, splitDateTime, timeLabel, timeOptions } from './dateTimeField'
+import { joinDateTime, normalizeSuggestedTime, splitDateTime, timeLabel, timeOptions } from './dateTimeField'
 
 describe('splitDateTime / joinDateTime', () => {
   it('يفصل قيمة datetime-local ويجمعها', () => {
@@ -34,5 +34,17 @@ describe('timeOptions', () => {
   it('يُدرج وقتاً خارج الشبكة ولا يكرّر ما عليها', () => {
     expect(timeOptions(['16:10']).map(o => o.value)).toContain('16:10')
     expect(timeOptions(['16:00'])).toHaveLength(65)
+  })
+})
+
+describe('normalizeSuggestedTime', () => {
+  it('يقبل HH:MM ويقصّ الثواني', () => {
+    expect(normalizeSuggestedTime('16:00')).toBe('16:00')
+    expect(normalizeSuggestedTime('16:00:00')).toBe('16:00')
+  })
+  it('يرفض صيغة العرض «4:00 م» والفارغ — كانت تُفسد موعد الزيارة', () => {
+    expect(normalizeSuggestedTime('4:00 م')).toBe('')
+    expect(normalizeSuggestedTime(null)).toBe('')
+    expect(joinDateTime('2026-10-13', normalizeSuggestedTime('4:00 م'))).toBe('')
   })
 })

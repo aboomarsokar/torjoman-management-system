@@ -12,12 +12,23 @@ import type { Database } from '~/types/database.types'
 import { CHANGE_PASSWORD_PATH } from '~/constants/auth'
 import { accountGateDecision, type GateProfile } from '~/utils/accountGate'
 import { isSessionSwitching } from '~/utils/impersonation'
+import { OFFLINE_HOME } from '~/constants/offline'
+import { hasOfflineTeacher } from '~/utils/offlineDb'
+import { isOnlineNow } from '~/utils/reachability'
 
 const PUBLIC_PATHS = ['/', '/login']
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  // بلا إنترنت (البند 14): لا يعمل إلا حضورُ المعلّم — يُفتح بلا جلسةٍ ولا ملفّ (لا شبكةَ تؤكّدهما)، وكلُّ شاشةٍ
+  // محميّةٍ تُحوَّل إليه؛ والرئيسيةُ كذلك إن كان على الجهاز معلّمٌ فتحه من قبل (التطبيقُ المثبَّت يُقلع عليها)
+  if (import.meta.client && !isOnlineNow()) {
+    if (to.path === OFFLINE_HOME) return
+    const publicRead = to.path.startsWith('/s/') || to.path.startsWith('/news/') || to.path.startsWith('/auth')
+    if (!publicRead && (to.path !== '/' || await hasOfflineTeacher())) return navigateTo(OFFLINE_HOME)
+  }
+
   const user = useSupabaseUser()
   // /s/<token> صفحة اطّلاع الطالب العامّة (بلا حساب) — /news/<id> شاشة قراءة الخبر العامّة (§4.26)
   const isPublic = PUBLIC_PATHS.includes(to.path) || to.path.startsWith('/auth') || to.path.startsWith('/s/') || to.path.startsWith('/news/')

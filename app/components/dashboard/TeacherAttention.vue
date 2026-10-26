@@ -21,7 +21,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const groups = computed(() => [
-  { key: 'abs', icon: 'i-lucide-user-x', tone: 'err', title: `غاب ${ABSENCE_ATTENTION_DAYS} أيام فأكثر هذا الشهر`, people: props.absentees, to: '/attendance', cta: 'الحضور' },
+  { key: 'abs', icon: 'i-lucide-user-x', tone: 'err', title: `غاب ${ABSENCE_ATTENTION_DAYS} أيام فأكثر هذا الشهر`, people: props.absentees, to: '/t', cta: 'الحضور' },
   ...(props.showUnrecorded ? [{ key: 'rec', icon: 'i-lucide-book-dashed', tone: 'blue', title: `لم يُرصد له في شهر ${isolateLtr(props.recordingLabel)}`, people: props.unrecorded, to: '/reports', cta: 'الرصد' }] : []),
   { key: 'exam', icon: 'i-lucide-clipboard-check', tone: 'green', title: 'مستحقّون للاختبار ولم يُرشَّحوا', people: props.eligible, to: '/exams', cta: 'رشّح' },
   { key: 'read', icon: 'i-lucide-book-open-text', tone: 'blue', title: 'متأخّرون في البرامج المصاحبة', people: props.readingBehind, to: '/students', cta: 'الطلاب' }

@@ -39,7 +39,10 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/': { prerender: true }
+    '/': { prerender: true },
+    // حضورُ المعلّم بلا إنترنت (البند 14 — نمطُ الصحابة): يُصيَّر في المتصفّح ويُولَّد مسبقاً ملفّاً يخزّنه عاملُ الخدمة،
+    // فيُفتح بلا شبكة (والهيكلُ بلا بيانات — لا يُخبَّأ فيه اسمُ معلّمٍ ولا طلابُه)
+    '/t': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -84,12 +87,23 @@ export default defineNuxtConfig({
         { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
       ]
     },
-    // التنقّلُ من الشبكة دائماً (لا رجوعَ إلى نسخةٍ محفوظة من «/»): كانت كلُّ صفحةٍ تُقدَّم من هيكل النشر
-    // السابق حتى ينزل عاملُ الخدمة الجديد ويعيد التحميل — فيرى المستخدم الشاشةَ القديمة ثم الجديدة بعد التحديث،
-    // وتُبنى الصفحات على هيكل «/» فلا تطابق (Hydration mismatch). العملُ بلا إنترنت غيرُ مبنيٍّ أصلاً (ROADMAP #14).
-    // `null` لا حذفُ المفتاح: @vite-pwa/nuxt يضع «/» إن غاب.
+    // التنقّلُ من الشبكة دائماً إلا `/t`: كانت كلُّ صفحةٍ تُقدَّم من هيكل «/» المحفوظ فيرى المستخدمُ الشاشةَ القديمة
+    // بعد كلّ نشر (Hydration mismatch). فالسقوطُ إلى المخزَّن لشاشة حضور المعلّم وحدها (البند 14 — تُصيَّر في
+    // المتصفّح فلا هيكلَ خادمٍ يتقادم)، وغيرُها من الشبكة كما كان.
     workbox: {
-      navigateFallback: null
+      globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'],
+      navigateFallback: '/t',
+      navigateFallbackAllowlist: [/^\/t$/],
+      // التطبيقُ المثبَّت يُقلع على «/» والمستخدمُ يفتح الدخولَ واللوحة: بلا اتصالٍ وحده تُقدَّم شاشةُ الحضور بدل
+      // صفحة «لا يتوفر اتصال» — ومتّصلاً لا يتغيّر شيء (NetworkOnly)
+      runtimeCaching: [
+        {
+          urlPattern: ({ request, url }: { request: Request, url: URL }) =>
+            request.mode === 'navigate' && ['/login', '/dashboard', '/attendance'].includes(url.pathname),
+          handler: 'NetworkOnly',
+          options: { precacheFallback: { fallbackURL: '/t' } }
+        }
+      ]
     },
     // فحصُ نسخةٍ جديدة كلَّ ساعة (وعند العودة إلى التبويب — plugins/pwa-update.client.ts)، و autoUpdate يعيد التحميل
     client: {

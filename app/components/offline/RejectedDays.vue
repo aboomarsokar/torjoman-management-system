@@ -1,0 +1,60 @@
+<script setup lang="ts">
+/**
+ * أيامٌ رفضتها القاعدةُ من صندوق الجهاز (شهرٌ اعتُمد في أثناء الانقطاع، جمعة…) — البند 14. لا تُعاد تلقائياً لأنّ
+ * الإعادةَ لا تُصلحها: المعلّمُ يعيد المحاولةَ بعد أن تفتح الإدارةُ الشهر، أو يتركها فيعود اليومُ كما في القاعدة.
+ */
+import type { OutboxEntry } from '~/utils/attendanceOutbox'
+import { formatDay } from '~/utils/reportWindow'
+
+defineProps<{ entries: OutboxEntry[] }>()
+const emit = defineEmits<{ retry: [key: string], discard: [key: string] }>()
+</script>
+
+<template>
+  <section
+    class="rej"
+    aria-label="أيامٌ لم تُقبل"
+  >
+    <h2>أيامٌ لم تقبلها الإدارة</h2>
+    <ul>
+      <li
+        v-for="e in entries"
+        :key="e.key"
+      >
+        <div class="what">
+          <b><bdi>{{ formatDay(e.day) }}</bdi></b>
+          <span>{{ e.error || 'رُفض الحفظ.' }}</span>
+        </div>
+        <div class="acts">
+          <UButton
+            label="أعد المحاولة"
+            icon="i-lucide-rotate-ccw"
+            color="neutral"
+            variant="outline"
+            :ui="{ base: 'rounded-[11px] min-h-11' }"
+            @click="emit('retry', e.key)"
+          />
+          <UButton
+            label="اتركه"
+            color="neutral"
+            variant="ghost"
+            :ui="{ base: 'rounded-[11px] min-h-11' }"
+            @click="emit('discard', e.key)"
+          />
+        </div>
+      </li>
+    </ul>
+  </section>
+</template>
+
+<style scoped>
+.rej { padding: 16px 18px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--err) 35%, var(--line)); background: var(--surface); }
+.rej h2 { margin: 0 0 8px; font-size: 15.5px; font-weight: 700; color: var(--err); }
+.rej ul { list-style: none; margin: 0; padding: 0; }
+.rej li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; }
+.rej li + li { border-top: 1px solid var(--line); }
+.what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.what b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.what span { font-size: 13.5px; color: var(--ink-2); }
+.acts { display: flex; gap: 6px; }
+</style>

@@ -166,8 +166,8 @@ export function teacherActions(i: ActionsInput): TeacherAction[] {
   // حضور اليوم (الجمعة بلا حلقة)
   if (!i.todayAttendance.isFriday) {
     out.push(i.todayAttendance.held
-      ? { key: 'att', tone: 'done', icon: 'i-lucide-calendar-check', title: 'سُجّل حضور اليوم', detail: i.todayAttendance.absent ? `غاب ${i.todayAttendance.absent}` : 'الجميع حاضر', to: '/attendance' }
-      : { key: 'att', tone: 'todo', icon: 'i-lucide-calendar-plus', title: 'لم تسجّل حضور اليوم بعد', detail: 'علّم الغائبين ثم اضغط «حفظ الحضور».', to: '/attendance', cta: 'سجّل الحضور' })
+      ? { key: 'att', tone: 'done', icon: 'i-lucide-calendar-check', title: 'سُجّل حضور اليوم', detail: i.todayAttendance.absent ? `غاب ${i.todayAttendance.absent}` : 'الجميع حاضر', to: '/t' }
+      : { key: 'att', tone: 'todo', icon: 'i-lucide-calendar-plus', title: 'لم تسجّل حضور اليوم بعد', detail: 'علّم الغائبين ثم اضغط «حفظ الحضور».', to: '/t', cta: 'سجّل الحضور' })
   }
 
   // رصد الشهر

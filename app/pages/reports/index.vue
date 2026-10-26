@@ -169,7 +169,6 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
   <div class="qa">
     <UiPageHeader
       title="الإنجاز القرآني"
-      subtitle="رصدُ حفظ الشهر لكلّ طالب من سورةٍ وآيةٍ إلى سورةٍ وآية، ثم إرسالُه للاعتماد."
     >
       <template #actions>
         <!-- حاضرٌ من أوّل رسمٍ (خادماً ومتصفّحاً) ومعطّلٌ حتى تصل الصفوف — فلا يقفز ولا يخالف التهيئة -->

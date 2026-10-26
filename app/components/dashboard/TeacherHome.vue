@@ -181,6 +181,5 @@ const attentionOpen = ref(false)
   .th { gap: 14px; }
   .card { padding: 16px; }
   .q { min-height: 100px; }
-  .h-time { flex: 1 1 100%; }
 }
 </style>

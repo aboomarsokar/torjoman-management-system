@@ -161,18 +161,21 @@ export type Database = {
           created_at: string
           day: string
           halaqa_id: string
+          recorded_at: string | null
           recorded_by: string | null
         }
         Insert: {
           created_at?: string
           day: string
           halaqa_id: string
+          recorded_at?: string | null
           recorded_by?: string | null
         }
         Update: {
           created_at?: string
           day?: string
           halaqa_id?: string
+          recorded_at?: string | null
           recorded_by?: string | null
         }
         Relationships: [
@@ -2332,6 +2335,15 @@ export type Database = {
       return_statement: {
         Args: { p_note: string; p_statement: string }
         Returns: undefined
+      }
+      save_attendance_day: {
+        Args: {
+          p_absences: Json
+          p_day: string
+          p_halaqa: string
+          p_recorded_at?: string
+        }
+        Returns: Json
       }
       save_quality_month: {
         Args: {

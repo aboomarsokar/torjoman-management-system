@@ -3,7 +3,7 @@
  * «تغيير الموعد» في لوحة المعلّم (طلب المستخدم 2026-10-25): المعلّمُ يغيّر موعدَ حلقته بنفسه عبر
  * `set_my_halaqa_time` — الدالّةُ تتحقّق أنّه معلّمُها وتُشعر المشرفَ والمديرَ الإداريّ والفنيّ (البنين)
  * أو المديرةَ الإدارية (البنات). والموعدُ بدايةُ الحلقة (والنهايةُ بعدها بساعتين في العرض).
- * والزرُّ صغيرٌ هادئٌ بلا إبراز (طلب المستخدم 2026-10-26 — كان بإطارٍ ذهبيٍّ وشارة «جديد» وسطرِ تعريف).
+ * والزرُّ صغيرٌ بإطارٍ غامقٍ واضح بلا إبراز (طلب المستخدم 2026-10-26 — كان بإطارٍ ذهبيٍّ وشارة «جديد» وسطرِ تعريف).
  */
 const props = defineProps<{ halaqaId: string, time: string | null, female?: boolean }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -42,9 +42,10 @@ async function save() {
       label="تغيير الموعد"
       icon="i-lucide-clock"
       color="neutral"
-      variant="ghost"
+      variant="outline"
       size="sm"
-      :ui="{ base: 'rounded-[10px] min-h-11 px-2.5 text-[13px] text-(--ink-2)', leadingIcon: 'size-4' }"
+      class="hte-btn"
+      :ui="{ base: 'rounded-[10px] min-h-10 px-3 text-[13px] font-semibold', leadingIcon: 'size-4' }"
       @click="openModal"
     />
     <UModal
@@ -89,4 +90,8 @@ async function save() {
 
 <style scoped>
 .hte { display: flex; }
+.hte :deep(.hte-btn) { border: 1.5px solid var(--navy); color: var(--navy); background: transparent; box-shadow: none; }
+.hte :deep(.hte-btn:hover) { background: var(--blue-soft); }
+/* في الليليّ الكحليُّ يذوب في الخلفية */
+:global(.dark) .hte :deep(.hte-btn) { border-color: var(--blue); color: var(--blue); }
 </style>

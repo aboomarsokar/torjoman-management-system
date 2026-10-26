@@ -161,13 +161,10 @@ const attentionOpen = ref(false)
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 
 .quick { display: flex; flex-direction: column; gap: 10px; }
-.q { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 18px; border-radius: 16px; background: var(--surface); border: 2px solid var(--navy); box-shadow: var(--shadow); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
+.q { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 18px; border-radius: 16px; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--blue) 35%, var(--line)); box-shadow: var(--shadow); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
 .q:hover { background: var(--blue-soft); }
 .q-label { flex: 1; }
-.q-chev { color: var(--navy); }
-/* في الليليّ الكحليُّ يذوب في الخلفية — فالإطارُ أزرقُ فاتح */
-:global(.dark) .q:not(.primary) { border-color: var(--blue); }
-:global(.dark) .q-chev { color: var(--blue); }
+.q-chev { color: var(--ink-3); }
 .q.primary .q-chev { color: var(--on-primary); opacity: .8; }
 .q.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); min-height: 64px; font-size: 17.5px; box-shadow: var(--shadow); }
 .q.primary:hover { background: var(--primary-hover); }

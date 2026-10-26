@@ -82,7 +82,11 @@ const attentionOpen = ref(false)
             :name="q.icon"
             class="size-6"
           />
-          <span>{{ q.label }}</span>
+          <span class="q-label">{{ q.label }}</span>
+          <UIcon
+            name="i-lucide-chevron-left"
+            class="size-5 q-chev"
+          />
         </NuxtLink>
       </nav>
 
@@ -157,8 +161,11 @@ const attentionOpen = ref(false)
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 
 .quick { display: flex; flex-direction: column; gap: 10px; }
-.q { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 58px; padding: 0 16px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
-.q:hover { background: var(--surface-3); }
+.q { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 18px; border-radius: 16px; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--blue) 35%, var(--line)); box-shadow: var(--shadow); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
+.q:hover { background: var(--blue-soft); }
+.q-label { flex: 1; }
+.q-chev { color: var(--ink-3); }
+.q.primary .q-chev { color: var(--on-primary); opacity: .8; }
 .q.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); min-height: 64px; font-size: 17.5px; box-shadow: var(--shadow); }
 .q.primary:hover { background: var(--primary-hover); }
 .q:active { transform: scale(.98); }

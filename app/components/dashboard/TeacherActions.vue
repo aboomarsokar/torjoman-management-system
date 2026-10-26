@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * «المطلوب منك» في لوحة المعلم — **المعلّقُ وحده** (أُعيد إليك ← ينتظرك)، والمنجَزُ لا يُعرض (طلب المستخدم 2026-10-26:
- * «لوحة التحكم ما يكون فيها تفاصيل كتير»)؛ وبلا معلّقٍ جملةٌ واحدة. البطاقةُ كلُّها رابطٌ إلى شاشتها بزرٍّ ظاهر.
+ * «لوحة التحكم ما يكون فيها تفاصيل كتير»). شريطٌ بعدده يُفتح عند الضغط (طلب المستخدم 2026-10-26) — ويُفتح وحده إن كان
+ * فيه ما أُعيد إليه (العاجلُ لا يُخفى)؛ وبلا معلّقٍ جملةٌ واحدة. البطاقةُ كلُّها رابطٌ إلى شاشتها بزرٍّ ظاهر.
  * تُبنى خارجه بـ`teacherActions` (utils/teacherDashboard.ts، مختبَرة).
  */
 import { NuxtLink } from '#components'
@@ -14,6 +15,10 @@ interface Props {
 const props = defineProps<Props>()
 const open = computed(() => props.actions.filter(a => a.tone !== 'done'))
 const pendingCount = computed(() => open.value.length)
+const expanded = ref(false)
+watch(() => open.value.some(a => a.tone === 'urgent'), (urgent) => {
+  if (urgent) expanded.value = true
+}, { immediate: true })
 </script>
 
 <template>
@@ -21,12 +26,31 @@ const pendingCount = computed(() => open.value.length)
     class="acts"
     aria-labelledby="acts-title"
   >
-    <h2 id="acts-title">
-      المطلوب منك
-      <span
-        v-if="pendingCount"
-        class="count"
-      >{{ pendingCount }}</span>
+    <h2>
+      <button
+        id="acts-title"
+        type="button"
+        class="bar"
+        :disabled="!pendingCount"
+        :aria-expanded="pendingCount ? expanded : undefined"
+        @click="expanded = !expanded"
+      >
+        <span class="bar-ico"><UIcon
+          name="i-lucide-list-checks"
+          class="size-5"
+        /></span>
+        <span class="bar-text">المطلوب منك</span>
+        <span
+          v-if="pendingCount"
+          class="count"
+        >{{ pendingCount }}</span>
+        <UIcon
+          v-if="pendingCount"
+          name="i-lucide-chevron-down"
+          class="size-5 chev"
+          :class="{ open: expanded }"
+        />
+      </button>
     </h2>
     <p
       v-if="!pendingCount"
@@ -38,7 +62,7 @@ const pendingCount = computed(() => open.value.length)
       />
       لا شيء مطلوب منك الآن — أحسنت.
     </p>
-    <ul v-if="pendingCount">
+    <ul v-if="pendingCount && expanded">
       <li
         v-for="a in open"
         :key="a.key"
@@ -78,11 +102,18 @@ const pendingCount = computed(() => open.value.length)
 </template>
 
 <style scoped>
-.acts { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; }
-h2 { margin: 0 0 14px; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }
+.acts { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 14px 18px; }
+h2 { margin: 0; }
+.bar { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: none; background: none; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); text-align: start; cursor: pointer; }
+.bar:disabled { cursor: default; }
+.bar:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); border-radius: 10px; }
+.bar-ico { width: 38px; height: 38px; border-radius: 11px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
+.bar-text { flex: 1; }
+.chev { color: var(--ink-3); transition: transform .15s; }
+.chev.open { transform: rotate(180deg); }
 .count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
-.clear { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--green-ink); }
-ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.clear { margin: 10px 0 0; display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--green-ink); }
+ul { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .act { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: inherit; text-decoration: none; }
 .act.urgent { background: var(--err-soft); border-color: color-mix(in oklab, var(--err) 30%, transparent); }
 .act.done { background: transparent; }

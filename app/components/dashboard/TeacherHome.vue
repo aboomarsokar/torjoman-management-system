@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * لوحة المعلم — بسيطةٌ عن قصد (طلب المستخدم 2026-10-26: «لوحة التحكم ما يكون فيها تفاصيل كتير»، و«الأزرار الهامة في
- * مقدّمة الصفحة» كتطبيق الصحابة): أزرارٌ عريضةٌ أوّلاً (الحضورُ ممتلئاً، وغيرُه هادئاً) ← «المطلوب منك» المعلّقُ وحده ←
- * سطرُ الحلقة (اسمُها وعددُها وموعدُها وتغييرُه).
+ * مقدّمة الصفحة» كتطبيق الصحابة): بطاقةُ الحلقة (اسمُها وعددُها وموعدُها وتغييرُه) ← أزرارٌ عريضة (الحضورُ ممتلئاً، وغيرُه
+ * هادئاً) ← «المطلوب منك» و«طلابٌ يحتاجون متابعتك» شريطان بعدديهما يُفتحان عند الضغط.
  * و«طلابٌ يحتاجون متابعتك» سطرٌ واحدٌ يُفتح عند الطلب. الأرقامُ والتفاصيلُ في صفحاتها. البياناتُ من `useTeacherDashboard`.
  */
 import { formatAmount, isolateLtr } from '~/utils/transport'
@@ -65,6 +65,30 @@ const attentionOpen = ref(false)
     </div>
 
     <template v-else-if="d">
+      <!-- سطرُ الحلقة -->
+      <div class="card head">
+        <span class="h-ico"><UIcon
+          name="i-lucide-book-open"
+          class="size-6"
+        /></span>
+        <div class="h-info">
+          <h2>{{ d.halaqa.name }}</h2>
+          <p>
+            {{ d.studentCount }} طالب<template v-if="d.halaqa.daily_time">
+              · الموعد {{ formatHalaqaTime(d.halaqa.daily_time) }}
+            </template>
+          </p>
+        </div>
+        <!-- المعلّمُ يغيّر موعدَ حلقته وتُشعَر الإدارة (2026-10-25) -->
+        <DashboardHalaqaTimeEdit
+          :halaqa-id="d.halaqa.id"
+          :time="d.halaqa.daily_time"
+          :female="d.halaqa.gender === 'female'"
+          class="h-time"
+          @changed="refresh"
+        />
+      </div>
+
       <!-- أكثرُ الشاشات استعمالاً -->
       <nav
         class="quick"
@@ -91,30 +115,6 @@ const attentionOpen = ref(false)
 
       <DashboardTeacherActions :actions="actions" />
 
-      <!-- سطرُ الحلقة -->
-      <div class="card head">
-        <span class="h-ico"><UIcon
-          name="i-lucide-book-open"
-          class="size-6"
-        /></span>
-        <div class="h-info">
-          <h2>{{ d.halaqa.name }}</h2>
-          <p>
-            {{ d.studentCount }} طالب<template v-if="d.halaqa.daily_time">
-              · الموعد {{ formatHalaqaTime(d.halaqa.daily_time) }}
-            </template>
-          </p>
-        </div>
-        <!-- المعلّمُ يغيّر موعدَ حلقته وتُشعَر الإدارة (2026-10-25) -->
-        <DashboardHalaqaTimeEdit
-          :halaqa-id="d.halaqa.id"
-          :time="d.halaqa.daily_time"
-          :female="d.halaqa.gender === 'female'"
-          class="h-time"
-          @changed="refresh"
-        />
-      </div>
-
       <!-- من يحتاج متابعةً: سطرٌ واحدٌ يُفتح عند الطلب -->
       <button
         v-if="attentionCount"
@@ -127,7 +127,8 @@ const attentionOpen = ref(false)
           name="i-lucide-users-round"
           class="size-5"
         /></span>
-        <span class="att-text"><b>{{ attentionCount }}</b> {{ attentionCount === 1 ? 'طالبٌ يحتاج' : attentionCount === 2 ? 'طالبان يحتاجان' : 'طلاب يحتاجون' }} متابعتك</span>
+        <span class="att-text">طلاب يحتاجون متابعتك</span>
+        <span class="att-count">{{ attentionCount }}</span>
         <UIcon
           name="i-lucide-chevron-down"
           class="size-5 att-chev"
@@ -170,10 +171,10 @@ const attentionOpen = ref(false)
 .q:active { transform: scale(.98); }
 .q:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 
-.att-line { display: flex; align-items: center; gap: 12px; width: 100%; font: inherit; text-align: start; cursor: pointer; padding: 14px 18px; }
+.att-line { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; font: inherit; text-align: start; cursor: pointer; padding: 14px 18px; }
 .att-ico { width: 38px; height: 38px; border-radius: 11px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--err-soft); color: var(--err); }
-.att-text { flex: 1; font-size: 15px; font-weight: 600; color: var(--ink); }
-.att-text b { font-variant-numeric: tabular-nums; }
+.att-text { flex: 1; font-size: 16px; font-weight: 700; color: var(--ink); }
+.att-count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .att-chev { color: var(--ink-3); transition: transform .15s; }
 .att-chev.open { transform: rotate(180deg); }
 

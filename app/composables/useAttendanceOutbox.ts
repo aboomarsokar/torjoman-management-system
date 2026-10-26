@@ -8,7 +8,8 @@
 import type { Database } from '~/types/database.types'
 import { classifySyncError, newEntry, nextRetryDelay, type Absences, type OutboxEntry } from '~/utils/attendanceOutbox'
 import { idbDelete, idbGet, idbGetAll, idbPut } from '~/utils/offlineDb'
-import { isOnlineNow } from '~/utils/reachability'
+import { RETRY_DELAYS_MS } from '~/constants/offline'
+import { isOnlineNow, noteNetworkSuccess } from '~/utils/reachability'
 
 export type UploadedHandler = (entry: OutboxEntry, skipped: string[]) => Promise<void> | void
 
@@ -70,7 +71,11 @@ export function useAttendanceOutbox(uid: Ref<string | null>, onUploaded: Uploade
 
   async function runFlush() {
     online.value = isOnlineNow()
-    if (!online.value) return
+    if (!online.value) {
+      // منقطع: يُعاد الفحصُ بعد مهلةٍ ولا ينتظر حدثاً قد لا يقع (عودةُ الشبكة لا تُعلَن دائماً) — بلا طلبٍ إلى الخادم
+      if (pending.value.length) schedule(RETRY_DELAYS_MS[0])
+      return
+    }
     syncing.value = true
     try {
       // الأقدمُ يوماً أوّلاً
@@ -129,6 +134,12 @@ export function useAttendanceOutbox(uid: Ref<string | null>, onUploaded: Uploade
     online.value = isOnlineNow()
     if (pending.value.length) void flush()
   }
+  // النظامُ أعلن عودةَ الشبكة: يُمحى أثرُ فشل الانقطاع فوراً (كان يحجب الرفعَ ثلاثين ثانيةً بعد العودة، ولا موعدَ
+  // يعيده — فيبقى «بانتظار الاتصال» حتى تحديث الصفحة؛ بلاغُ المستخدم 2026-10-26)
+  const onOnline = () => {
+    noteNetworkSuccess()
+    wake()
+  }
   const onVisible = () => {
     if (document.visibilityState === 'visible') wake()
   }
@@ -136,12 +147,12 @@ export function useAttendanceOutbox(uid: Ref<string | null>, onUploaded: Uploade
     online.value = false
   }
   onMounted(() => {
-    window.addEventListener('online', wake)
+    window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
     document.addEventListener('visibilitychange', onVisible)
   })
   onBeforeUnmount(() => {
-    window.removeEventListener('online', wake)
+    window.removeEventListener('online', onOnline)
     window.removeEventListener('offline', onOffline)
     document.removeEventListener('visibilitychange', onVisible)
     if (timer) clearTimeout(timer)

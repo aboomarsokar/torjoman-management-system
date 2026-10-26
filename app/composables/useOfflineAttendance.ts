@@ -44,7 +44,13 @@ export function useOfflineAttendance() {
     await outbox.load()
     access.value = mirror.value ? 'teacher' : 'unknown'
     ready.value = true
-    const me = user.value?.sub
+    await syncFromServer()
+  }
+
+  /** متّصلاً: يُعرف الدورُ وتُحدَّث النسخةُ ويُرفع الصندوق — عند الإقلاع، وعند كلّ عودةٍ للاتصال. */
+  async function syncFromServer() {
+    // بلا شبكةٍ عند الإقلاع قد لا تُعرف الجلسةُ بعد عودتها، والنسخةُ تحمل صاحبَها
+    const me = user.value?.sub ?? mirror.value?.uid
     if (!me || !isOnlineNow()) return
     const { data } = await supabase.from('profiles').select('role, full_name').eq('id', me).maybeSingle()
     if (!data) return
@@ -61,6 +67,11 @@ export function useOfflineAttendance() {
       // تعذّر التحديث: تبقى نسخةُ الجهاز كما هي
     }
   }
+
+  // عودةُ الاتصال بعد إقلاعٍ منقطع: تحديثُ النسخة ورفعُ الصندوق بلا تحديثٍ للصفحة
+  watch(() => outbox.online.value, (now, before) => {
+    if (now && !before && ready.value) void syncFromServer()
+  })
 
   // ── اليومُ المعروض ──
   const today = gazaToday()

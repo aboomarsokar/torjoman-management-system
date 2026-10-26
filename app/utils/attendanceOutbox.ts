@@ -67,11 +67,22 @@ export function nextRetryDelay(attempt: number): number {
   return RETRY_DELAYS_MS[Math.min(Math.max(attempt, 0), RETRY_DELAYS_MS.length - 1)]!
 }
 
-/** سطرُ الحالة للمعلّم. */
-export function syncStatusText(pending: number, rejected: number, online: boolean, syncing: boolean): string {
-  if (rejected) return `${rejected === 1 ? 'يومٌ' : `${rejected} أيام`} لم تقبله الإدارة — راجِعه`
-  if (!pending) return online ? 'كلُّ الحضور مرفوع' : 'لا اتصال — ما تسجّله يُحفظ على جهازك'
-  const days = pending === 1 ? 'يومٌ واحد' : pending === 2 ? 'يومان' : `${pending} أيام`
-  if (!online) return `محفوظ على جهازك — ${days} بانتظار الاتصال`
-  return syncing ? `يجري الرفع — ${days}…` : `${days} بانتظار الرفع`
+/** عددُ الأيام بالعربية: يومٌ واحد · يومان · 3 أيام · 11 يوماً. */
+export function daysCount(n: number): string {
+  if (n === 1) return 'يومٌ واحد'
+  if (n === 2) return 'يومان'
+  return n <= 10 ? `${n} أيام` : `${n} يوماً`
+}
+
+/**
+ * سطرُ الحالة للمعلّم (نمطُ الصحابة): ما ينتظر الرفعَ بعدده، وإلا نضارةُ البيانات. `syncedAt` وقتٌ معروض (`HH:MM`).
+ */
+export function syncStatusLine(s: { online: boolean, pending: number, rejected: number, syncing: boolean, syncedAt: string | null }): string {
+  if (s.rejected) return `${daysCount(s.rejected)} لم تقبله الإدارة — راجِعه أدناه`
+  if (s.pending) {
+    if (!s.online) return `${daysCount(s.pending)} محفوظ على جهازك — يُرفع حين يعود الاتصال`
+    return s.syncing ? `يجري رفع ${daysCount(s.pending)}…` : `${daysCount(s.pending)} بانتظار الرفع — يُرفع تلقائياً`
+  }
+  const fresh = s.syncedAt ? ` · البيانات محدَّثة ${s.syncedAt}` : ''
+  return s.online ? `كلُّ شيءٍ مرفوع${fresh}` : `بلا اتصال${fresh} — ما تسجّله يُحفظ على جهازك`
 }

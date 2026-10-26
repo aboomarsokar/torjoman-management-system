@@ -64,8 +64,14 @@ export default defineNuxtConfig({
 
   // أيقوناتُ الوضع في حزمة العميل (2026-10-22): حين تُجلب «moon-star» و«monitor» في طلبٍ واحد يبني @nuxt/icon 2.2.2
   // قاعدةَ الأولى بصورة الثانية فيظهر القمرُ شاشة — والمضمَّنةُ لا تُجلب أصلاً.
+  // وكلُّ أيقونات التطبيق في الحزمة منذ 2026-10-26 (الحضورُ بلا إنترنت — بلاغُ المستخدم بلقطة: الأسهمُ والأيقوناتُ
+  // غائبةٌ بلا اتصال): كانت تُجلب من الخادم عند العرض فتسقط حين لا شبكة. المسحُ يجمع ما في الشيفرة (نمطُ الصحابة).
   icon: {
-    clientBundle: { icons: ['lucide:sun', 'lucide:moon-star', 'lucide:monitor'] }
+    clientBundle: {
+      icons: ['lucide:sun', 'lucide:moon-star', 'lucide:monitor'],
+      scan: { globInclude: ['app/**/*.{vue,ts}'] },
+      sizeLimitKb: 512
+    }
   },
 
   // PWA: التطبيق قابل للتثبيت (مانيفست + service worker لهيكل التطبيق فقط).

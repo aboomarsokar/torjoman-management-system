@@ -17,6 +17,8 @@ export interface AttendanceMirror {
   halaqa: { id: string, name: string, gender: string | null } | null
   students: MirrorStudent[]
   days: Record<string, MirrorDay>
+  /** أوّلُ يومٍ في النسخة — ما قبله لا يُعرف بلا اتصال، وما بعده يومٌ غائبٌ عنها لم يُسجَّل. */
+  from: string
   /** شهورٌ رصدُها معتمَد (`YYYY-MM`) — أيامُها للقراءة. */
   approvedMonths: string[]
   /** آخرُ تحديثٍ من القاعدة (ISO). */
@@ -63,8 +65,8 @@ export function useOfflineMirror() {
       let students: MirrorStudent[] = []
       let days: Record<string, MirrorDay> = {}
       let approvedMonths: string[] = []
+      const from = mirrorFrom(today, projectStart)
       if (halaqa) {
-        const from = mirrorFrom(today, projectStart)
         const [st, ds, ab, rp] = await Promise.all([
           supabase.from('students').select('id, full_name, enrollment_date').eq('halaqa_id', halaqa.id).eq('status', 'active').order('full_name'),
           supabase.from('attendance_days').select('day').eq('halaqa_id', halaqa.id).gte('day', from),
@@ -77,7 +79,7 @@ export function useOfflineMirror() {
         days = buildMirrorDays(ds.data ?? [], ab.data ?? [])
         approvedMonths = (rp.data ?? []).map(r => `${r.report_year}-${String(r.report_month).padStart(2, '0')}`)
       }
-      const next: AttendanceMirror = { uid, fullName, halaqa: halaqa ?? null, students, days, approvedMonths, syncedAt: new Date().toISOString() }
+      const next: AttendanceMirror = { uid, fullName, halaqa: halaqa ?? null, students, days, from, approvedMonths, syncedAt: new Date().toISOString() }
       await idbPut('mirror', next)
       await idbPut('meta', uid, 'current')
       mirror.value = next

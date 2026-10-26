@@ -6,7 +6,8 @@
 import type { Database } from '~/types/database.types'
 import { PROJECT_START_DATE } from '~/constants/project'
 import type { AttendanceChoice } from '~/composables/useAttendanceDay'
-import { absencesFor, effectiveDay, syncStatusText, type Absences } from '~/utils/attendanceOutbox'
+import { absencesFor, effectiveDay, syncStatusLine, type Absences } from '~/utils/attendanceOutbox'
+import { attendanceStrip, lastSchoolDays } from '~/utils/attendanceStrip'
 import { isOnlineNow } from '~/utils/reachability'
 import { gazaToday, isFriday, schoolDayOnOrBefore } from '~/utils/reportWindow'
 
@@ -68,7 +69,7 @@ export function useOfflineAttendance() {
   const students = computed(() => (mirror.value?.students ?? []).filter(s => !s.enrollment_date || s.enrollment_date <= day.value))
   const studentIds = computed(() => students.value.map(s => s.id))
   const entry = computed(() => (halaqaId.value ? outbox.entryFor(halaqaId.value, day.value) : undefined))
-  const inMirror = computed(() => !!mirror.value && day.value in mirror.value.days)
+  const inMirror = computed(() => !!mirror.value && (day.value in mirror.value.days || (!!mirror.value.from && day.value >= mirror.value.from)))
   const shown = computed(() => effectiveDay(mirror.value?.days[day.value], entry.value))
   const locked = computed(() => !!mirror.value?.approvedMonths.includes(day.value.slice(0, 7)))
 
@@ -84,7 +85,8 @@ export function useOfflineAttendance() {
     dayUnknown.value = false
     if (!halaqaId.value || inMirror.value || entry.value) return
     if (!isOnlineNow()) {
-      dayUnknown.value = day.value < (Object.keys(mirror.value?.days ?? {}).sort()[0] ?? day.value)
+      // يومٌ داخل النسخة غائبٌ عنها = لم يُسجَّل؛ وما قبل أوّلها لا يُعرف (كان يُقاس بأوّل يومٍ مسجَّل فيُخفي الأيامَ غيرَ المسجَّلة)
+      dayUnknown.value = day.value < (mirror.value?.from ?? day.value)
       return
     }
     await loadDay(halaqaId.value, day.value).catch(() => undefined)
@@ -105,10 +107,26 @@ export function useOfflineAttendance() {
     return true
   }
 
-  const statusText = computed(() => syncStatusText(outbox.pending.value.length, outbox.rejected.value.length, outbox.online.value, outbox.syncing.value))
+  const syncedAt = computed(() => mirror.value?.syncedAt
+    ? new Date(mirror.value.syncedAt).toLocaleTimeString('en-GB', { timeZone: 'Asia/Gaza', hour: '2-digit', minute: '2-digit', hour12: false })
+    : null)
+  const statusText = computed(() => syncStatusLine({
+    online: outbox.online.value, pending: outbox.pending.value.length, rejected: outbox.rejected.value.length,
+    syncing: outbox.syncing.value, syncedAt: syncedAt.value
+  }))
+  /** تعثّرت محاولةٌ وستُعاد — فيظهر «أعد المحاولة الآن» (لا قبلها: الرفعُ تلقائيّ). */
+  const retrying = computed(() => outbox.pending.value.some(e => e.attempts > 0))
+
+  // شريطُ آخر 15 يومَ دوام
+  const strip = computed(() => attendanceStrip({
+    days: lastSchoolDays(today, PROJECT_START_DATE),
+    mirror: mirror.value?.days ?? {},
+    queued: new Set(outbox.pending.value.filter(e => e.halaqaId === halaqaId.value).map(e => e.day)),
+    approvedMonths: mirror.value?.approvedMonths ?? []
+  }))
 
   return {
     ready, access, mirror, refreshing, outbox, start, today, day, students, shown, locked, draft, dirty,
-    dayUnknown, canWrite, setChoice, save, statusText
+    dayUnknown, canWrite, setChoice, save, statusText, retrying, strip
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { absencesFor, classifySyncError, effectiveDay, entryKey, newEntry, nextRetryDelay, syncStatusText } from './attendanceOutbox'
+import { absencesFor, classifySyncError, effectiveDay, entryKey, newEntry, nextRetryDelay, syncStatusLine } from './attendanceOutbox'
 
 describe('newEntry / entryKey', () => {
   it('يومٌ واحدٌ لكلّ معلّمٍ وحلقة، بوقت الحفظ على الجهاز', () => {
@@ -53,11 +53,20 @@ describe('nextRetryDelay', () => {
   })
 })
 
-describe('syncStatusText', () => {
-  it('يصف الصندوقَ والاتصال', () => {
-    expect(syncStatusText(0, 0, true, false)).toBe('كلُّ الحضور مرفوع')
-    expect(syncStatusText(2, 0, false, false)).toBe('محفوظ على جهازك — يومان بانتظار الاتصال')
-    expect(syncStatusText(1, 0, true, true)).toBe('يجري الرفع — يومٌ واحد…')
-    expect(syncStatusText(0, 1, true, false)).toBe('يومٌ لم تقبله الإدارة — راجِعه')
+describe('syncStatusLine', () => {
+  const base = { online: true, pending: 0, rejected: 0, syncing: false, syncedAt: '13:18' }
+  it('ما ينتظر الرفعَ بعدده', () => {
+    expect(syncStatusLine({ ...base, online: false, pending: 2 })).toBe('يومان محفوظ على جهازك — يُرفع حين يعود الاتصال')
+    expect(syncStatusLine({ ...base, pending: 3, syncing: true })).toBe('يجري رفع 3 أيام…')
+    expect(syncStatusLine({ ...base, pending: 12 })).toBe('12 يوماً بانتظار الرفع — يُرفع تلقائياً')
+  })
+
+  it('وإلا نضارةُ البيانات', () => {
+    expect(syncStatusLine(base)).toBe('كلُّ شيءٍ مرفوع · البيانات محدَّثة 13:18')
+    expect(syncStatusLine({ ...base, online: false })).toBe('بلا اتصال · البيانات محدَّثة 13:18 — ما تسجّله يُحفظ على جهازك')
+  })
+
+  it('المرفوضُ أوّلاً', () => {
+    expect(syncStatusLine({ ...base, pending: 1, rejected: 1 })).toBe('يومٌ واحد لم تقبله الإدارة — راجِعه أدناه')
   })
 })

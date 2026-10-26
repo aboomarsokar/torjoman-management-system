@@ -2,18 +2,21 @@
 /**
  * حضورُ حلقتي — شاشةُ المعلّم التي تعمل بلا إنترنت (البند 14 — نمطُ الصحابة، 2026-10-26).
  * تُصيَّر في المتصفّح وتُخزَّن في عامل الخدمة، والبياناتُ من نسخة الجهاز: الحلقةُ وطلابُها وآخرُ أربعين يوماً.
- * «حفظ الحضور» يُكتب على الجهاز فوراً ويُرفع في الخلفية حين يعود الاتصال، يوماً يوماً؛ وما رفضته الإدارةُ يُعرض
- * للمعلّم بإعادةٍ أو ترك. وبلا نافذةٍ مشتركةٍ مع اللوحة: لا شيءَ فيها يحتاج الشبكةَ ليظهر.
+ * شريطُ حالةٍ يقول ما ينتظر الرفعَ بعدده، وشريطُ آخر 15 يومَ دوامٍ يُري ما لم يُسجَّل، و«حفظ الحضور» يُكتب على الجهاز
+ * فوراً ويُرفع في الخلفية يوماً يوماً؛ وما رفضته الإدارةُ يُعرض للمعلّم بإعادةٍ أو ترك. بلا قالب اللوحة: لا شيءَ فيها
+ * يحتاج الشبكةَ ليظهر.
  */
 import { formatDay, isFriday } from '~/utils/reportWindow'
+import { weekdayName } from '~/utils/recordingStatus'
 
 definePageMeta({ layout: false })
 useSeoMeta({ title: 'حضور حلقتي — ترجمان', robots: 'noindex' })
 
 const {
   ready, access, mirror, outbox, start, today, day, students, shown, locked, draft, dirty,
-  dayUnknown, canWrite, setChoice, save, statusText
+  dayUnknown, canWrite, setChoice, save, statusText, retrying, strip
 } = useOfflineAttendance()
+const { state: readiness } = useOfflineReadiness()
 onMounted(start)
 
 const toast = useToast()
@@ -39,9 +42,11 @@ const dayModel = computed<string>({
     if (!keepsEdits()) day.value = v
   }
 })
-const syncedAt = computed(() => mirror.value?.syncedAt
-  ? new Date(mirror.value.syncedAt).toLocaleString('en-GB', { timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ' ·')
-  : null)
+const dayState = computed(() => shown.value.pending
+  ? { cls: 'queued', icon: 'i-lucide-cloud-upload', text: `حضور ${formatDay(day.value)} محفوظ على جهازك — بانتظار الرفع.` }
+  : shown.value.held
+    ? { cls: 'on', icon: 'i-lucide-calendar-check', text: 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' }
+    : { cls: '', icon: 'i-lucide-calendar-clock', text: 'لم يُسجَّل حضور هذا اليوم — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' })
 </script>
 
 <template>
@@ -54,7 +59,7 @@ const syncedAt = computed(() => mirror.value?.syncedAt
       >
       <div class="who">
         <h1>حضور حلقتي</h1>
-        <span v-if="mirror?.halaqa">{{ mirror.halaqa.name }}</span>
+        <span v-if="mirror?.fullName">{{ mirror.fullName }}</span>
       </div>
       <UButton
         v-if="outbox.online.value"
@@ -62,20 +67,21 @@ const syncedAt = computed(() => mirror.value?.syncedAt
         label="اللوحة"
         icon="i-lucide-layout-dashboard"
         color="neutral"
-        variant="ghost"
+        variant="soft"
         :ui="{ base: 'rounded-xl min-h-11' }"
       />
     </header>
 
     <main class="tp-main">
-      <OfflineSyncChip
+      <OfflineSyncStatus
         v-if="access === 'teacher'"
         :text="statusText"
         :online="outbox.online.value"
         :pending="outbox.pending.value.length"
-        :rejected="outbox.rejected.value.length"
         :syncing="outbox.syncing.value"
-        @sync="outbox.flush()"
+        :retrying="retrying"
+        :readiness="readiness"
+        @retry="outbox.flush()"
       />
       <OfflineRejectedDays
         v-if="outbox.rejected.value.length"
@@ -130,14 +136,35 @@ const syncedAt = computed(() => mirror.value?.syncedAt
       />
 
       <template v-else>
-        <div class="card pick">
-          <label>اليوم</label>
-          <AttendanceDayPicker
-            v-model="dayModel"
-            :max="today"
+        <section class="card main">
+          <div class="halqa">
+            <span class="halqa-ico"><UIcon
+              name="i-lucide-book-open"
+              class="size-5"
+            /></span>
+            <div>
+              <small>حلقتي</small>
+              <b>{{ mirror.halaqa.name }}</b>
+            </div>
+            <span class="halqa-n">{{ mirror.students.length }} طالباً</span>
+          </div>
+          <div class="day">
+            <div class="day-label">
+              <small>اليوم</small>
+              <b>{{ weekdayName(day) }} · <bdi>{{ formatDay(day) }}</bdi></b>
+            </div>
+            <AttendanceDayPicker
+              v-model="dayModel"
+              :max="today"
+            />
+          </div>
+          <AttendanceWindowStrip
+            :days="strip.days"
+            :missing="strip.missing"
+            :selected="day"
+            @select="dayModel = $event"
           />
-          <small v-if="syncedAt">آخرُ تحديثٍ من الإدارة: <bdi>{{ syncedAt }}</bdi></small>
-        </div>
+        </section>
 
         <div
           v-if="locked"
@@ -167,35 +194,21 @@ const syncedAt = computed(() => mirror.value?.syncedAt
         <template v-else>
           <div
             class="day-state"
-            :class="{ on: shown.held }"
+            :class="dayState.cls"
           >
             <UIcon
-              :name="shown.pending ? 'i-lucide-cloud-upload' : shown.held ? 'i-lucide-calendar-check' : 'i-lucide-calendar-clock'"
+              :name="dayState.icon"
               class="size-5 shrink-0"
             />
-            <span>{{ shown.pending ? `حضور ${formatDay(day)} محفوظ على جهازك — لم يُرفع بعد.` : shown.held ? 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' : 'لم يُسجَّل حضور هذا اليوم — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' }}</span>
+            <span>{{ dayState.text }}</span>
           </div>
-          <p
-            class="summary"
-            aria-live="polite"
-          >
-            حضر {{ summary.present }} · بعذر {{ summary.excused }} · بلا عذر {{ summary.unexcused }}
-          </p>
-          <ul class="card list">
-            <li
-              v-for="s in students"
-              :key="s.id"
-              class="row"
-            >
-              <span class="name">{{ s.full_name }}</span>
-              <AttendanceStatusSegment
-                :model-value="draft[s.id] ?? 'present'"
-                :name="s.full_name"
-                :disabled="!canWrite"
-                @update:model-value="setChoice(s.id, $event)"
-              />
-            </li>
-          </ul>
+          <OfflineAttendanceList
+            :students="students"
+            :draft="draft"
+            :summary="summary"
+            :disabled="!canWrite"
+            @set="setChoice"
+          />
           <div
             v-if="canWrite"
             class="save-bar"
@@ -223,31 +236,33 @@ const syncedAt = computed(() => mirror.value?.syncedAt
 
 <style scoped>
 .tp { min-height: 100dvh; background: var(--bg); }
-.tp-head { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tp-head { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .mark { width: 40px; height: 40px; object-fit: contain; filter: var(--logo-filter); }
 .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .who h1 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
-.who span { font-size: 13.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tp-main { max-width: 760px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 18px; }
-.pick { display: flex; flex-direction: column; gap: 8px; }
-.pick label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.pick small { font-size: 12.5px; color: var(--ink-3); }
-.pick small bdi { font-variant-numeric: tabular-nums; }
-.note { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.who span { font-size: 13px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-main { max-width: 760px; margin: 0 auto; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
+.main { display: flex; flex-direction: column; gap: 18px; }
+.halqa { display: flex; align-items: center; gap: 12px; }
+.halqa-ico { width: 42px; height: 42px; border-radius: 13px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
+.halqa > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.halqa small, .day-label small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
+.halqa b { font-size: 16px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.halqa-n { padding: 4px 11px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.day { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.day-label { display: flex; flex-direction: column; }
+.day-label b { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.day-label bdi { font-variant-numeric: tabular-nums; }
+.note { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); font-size: 14px; font-weight: 600; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
-.day-state { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--blue-soft); color: var(--blue-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
+.day-state { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 14px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
 .day-state.on { background: var(--green-soft); color: var(--green-ink); }
-.summary { margin: 0 4px; font-size: 15px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.list { list-style: none; margin: 0; padding: 6px 18px; }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 10px 0; }
-.row + .row { border-top: 1px solid var(--line); }
-.name { font-size: 15.5px; font-weight: 600; color: var(--ink); min-width: 0; }
-.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
+.day-state.queued { background: var(--blue-soft); color: var(--blue-ink); }
+.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
 .save-note { font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .save-note.warn { color: var(--err); }
 @media (max-width: 520px) {
-  .row { flex-direction: column; align-items: stretch; gap: 8px; }
   .save-bar :deep(button) { flex: 1 1 100%; }
 }
 </style>

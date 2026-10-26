@@ -1,15 +1,12 @@
 <script setup lang="ts">
 /**
- * لوحة المعلم (طلبُ المستخدم 2026-10-20: «الأمور الهامة فقط بالأرقام») — تجيب عن سؤالين:
- * ما المطلوب منّي الآن؟ وكيف حالُ حلقتي؟ بالترتيب: ترويسةُ الحلقة ← «المطلوب منك الآن» ← أربعةُ أرقام
- * (حضورُ الشهر، وحفظُ آخر شهرٍ رُصد مع تقييمه بالخطة، والمستحقّون للاختبار، ونتائجُ اختبارات الشهر) ← «طلاب يحتاجون انتباهك».
- * قائمةُ كلّ الطلاب مكانُها شاشة «الطلاب». البياناتُ من `useTeacherDashboard` (خطوتا جلب).
+ * لوحة المعلم — بسيطةٌ عن قصد (طلب المستخدم 2026-10-26: «لوحة التحكم ما يكون فيها تفاصيل كتير»). ثلاثةُ أجزاء:
+ * سطرُ الحلقة (اسمُها وعددُها وموعدُها وتغييرُه) ← «المطلوب منك» المعلّقُ وحده ← أربعةُ أزرارٍ كبيرة لأكثر الشاشات استعمالاً.
+ * و«طلابٌ يحتاجون متابعتك» سطرٌ واحدٌ يُفتح عند الطلب. الأرقامُ والتفاصيلُ في صفحاتها. البياناتُ من `useTeacherDashboard`.
  */
 import { formatAmount, isolateLtr } from '~/utils/transport'
-import { formatDay, gazaToday, periodLabel } from '~/utils/reportWindow'
-import { MONTH_STATE_LABELS, teacherActions, type MonthSummary } from '~/utils/teacherDashboard'
-import { OUTCOME_LABELS } from '~/utils/quran/plan'
-import { OUTCOME_COLORS } from '~/utils/quran/screen'
+import { formatDay, gazaToday } from '~/utils/reportWindow'
+import { teacherActions } from '~/utils/teacherDashboard'
 import { formatHalaqaTime } from '~/utils/time'
 
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
@@ -19,10 +16,6 @@ const { dash, pending, refresh } = useTeacherDashboard()
 
 const d = computed(() => (dash.value && dash.value.halaqa ? dash.value : null))
 const noHalaqa = computed(() => !pending.value && dash.value?.halaqa === null)
-const monthLabel = computed(() => {
-  const t = gazaToday()
-  return isolateLtr(periodLabel(Number(t.slice(0, 4)), Number(t.slice(5, 7))))
-})
 
 const actions = computed(() => d.value
   ? teacherActions({
@@ -38,50 +31,23 @@ const actions = computed(() => d.value
     })
   : [])
 
-interface Tile {
-  key: string
-  icon: string
-  tone: 'green' | 'blue' | 'navy'
-  label: string
-  value: string
-  unit?: string
-  sub: string
-  /** تقييمُ الشهر بالخطة — شاراتٌ تحت الرقم، والصفرُ لا يُعرض. */
-  chips?: { label: string, color: 'success' | 'warning' | 'neutral' | 'info' }[]
-}
-
-/** «تقييم آخر شهر» (آخرُ شهرٍ رُصد بأيّ حالة) بالخطة كشاشة الإنجاز القرآني — التقييمُ وحده بلا عدد الصفحات (طلب المستخدم 2026-10-21). */
-function lastMonthTile(m: MonthSummary | null): Tile {
-  const base = { key: 'pages', icon: 'i-lucide-book-open-check', tone: 'blue' as const, label: 'تقييم آخر شهر' }
-  if (!m) return { ...base, value: '—', sub: 'لم يُرصد شهرٌ بعد' }
-  const chips = ([
-    { n: m.done, label: `${m.done} ${OUTCOME_LABELS.done}`, color: OUTCOME_COLORS.done },
-    { n: m.short, label: `${m.short} ${OUTCOME_LABELS.short}`, color: OUTCOME_COLORS.short },
-    { n: m.unmeasured, label: `${m.unmeasured} ${OUTCOME_LABELS.unmeasured}`, color: OUTCOME_COLORS.unmeasured },
-    { n: m.unrecorded, label: `${m.unrecorded} ${OUTCOME_LABELS.unrecorded}`, color: OUTCOME_COLORS.unrecorded }
-  ]).filter(c => c.n > 0).map(({ label, color }) => ({ label, color }))
-  const total = m.done + m.short + m.unmeasured + m.unrecorded
-  return {
-    ...base,
-    value: String(m.done),
-    unit: `${OUTCOME_LABELS.done} من ${total}`,
-    sub: `${isolateLtr(m.label)} · ${MONTH_STATE_LABELS[m.state]}`,
-    chips
-  }
-}
-
-const tiles = computed<Tile[]>(() => {
-  const v = d.value
-  if (!v) return []
-  return [
-    { key: 'att', icon: 'i-lucide-calendar-check', tone: 'green', label: 'حضور الشهر', value: v.attendance.pct != null ? `${v.attendance.pct}٪` : '—', sub: v.attendance.held ? `${v.attendance.attended} من ${v.attendance.held} · ${monthLabel.value}` : `لم تنعقد الحلقة بعد · ${monthLabel.value}` },
-    lastMonthTile(v.lastMonth),
-    { key: 'elig', icon: 'i-lucide-clipboard-check', tone: 'navy', label: 'مستحقّون للاختبار', value: String(v.eligible.length), sub: v.eligible.length ? 'أتمّوا نطاق دورتهم ولم يُرشَّحوا' : 'لا أحد ينتظر ترشيحاً' },
-    { key: 'exams', icon: 'i-lucide-award', tone: 'green', label: 'اختبارات الشهر', value: String(v.exams.passed), unit: 'ناجح', sub: `${v.exams.failed} يعيد · ${monthLabel.value}` }
-  ]
-})
+/** أكثرُ الشاشات استعمالاً — أزرارٌ كبيرةٌ تُضغط بالإبهام، وبقيّتُها في القائمة. */
+const QUICK = [
+  { to: '/t', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', tone: 'green' },
+  { to: '/reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-open-check', tone: 'blue' },
+  { to: '/students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', tone: 'navy' },
+  { to: '/my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', tone: 'gold' }
+] as const
 
 const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned'].includes(d.value.recording.state))
+/** من يحتاج متابعةً (بلا تكرار من في أكثر من قائمة) — سطرٌ واحدٌ يُفتح عند الطلب. */
+const attentionCount = computed(() => {
+  const v = d.value
+  if (!v) return 0
+  const ids = new Set([...v.absentees, ...(showUnrecorded.value ? v.unrecorded : []), ...v.eligible, ...v.readingBehind].map(p => p.id))
+  return ids.size
+})
+const attentionOpen = ref(false)
 </script>
 
 <template>
@@ -99,7 +65,7 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
     </div>
 
     <template v-else-if="d">
-      <!-- ترويسة الحلقة -->
+      <!-- سطرُ الحلقة -->
       <div class="card head">
         <span class="h-ico"><UIcon
           name="i-lucide-book-open"
@@ -125,53 +91,49 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
 
       <DashboardTeacherActions :actions="actions" />
 
-      <!-- أرقام الحلقة -->
-      <div class="tiles">
-        <section
-          v-for="t in tiles"
-          :key="t.key"
-          class="tile"
+      <!-- أكثرُ الشاشات استعمالاً -->
+      <nav
+        class="quick"
+        aria-label="الوصول السريع"
+      >
+        <NuxtLink
+          v-for="q in QUICK"
+          :key="q.to"
+          :to="q.to"
+          class="q"
         >
-          <div class="t-head">
-            <span
-              class="t-ico"
-              :class="t.tone"
-            ><UIcon
-              :name="t.icon"
-              class="size-5"
-            /></span>
-            <span class="t-label">{{ t.label }}</span>
-          </div>
-          <div class="t-num">
-            {{ t.value }}<span
-              v-if="t.unit"
-              class="t-unit"
-            >{{ t.unit }}</span>
-          </div>
-          <div
-            v-if="t.chips?.length"
-            class="t-chips"
-          >
-            <UBadge
-              v-for="c in t.chips"
-              :key="c.label"
-              :label="c.label"
-              :color="c.color"
-              variant="soft"
-            />
-          </div>
-          <div class="t-sub">
-            {{ t.sub }}
-          </div>
-        </section>
-      </div>
+          <span
+            class="q-ico"
+            :class="q.tone"
+          ><UIcon
+            :name="q.icon"
+            class="size-6"
+          /></span>
+          <span class="q-label">{{ q.label }}</span>
+        </NuxtLink>
+      </nav>
 
-      <DashboardTeacherBooklets
-        :halaqa-id="d.halaqa.id"
-        :halaqa-name="d.halaqa.name"
-      />
-
+      <!-- من يحتاج متابعةً: سطرٌ واحدٌ يُفتح عند الطلب -->
+      <button
+        v-if="attentionCount"
+        type="button"
+        class="card att-line"
+        :aria-expanded="attentionOpen"
+        @click="attentionOpen = !attentionOpen"
+      >
+        <span class="att-ico"><UIcon
+          name="i-lucide-users-round"
+          class="size-5"
+        /></span>
+        <span class="att-text"><b>{{ attentionCount }}</b> {{ attentionCount === 1 ? 'طالبٌ يحتاج' : attentionCount === 2 ? 'طالبان يحتاجان' : 'طلاب يحتاجون' }} متابعتك</span>
+        <UIcon
+          name="i-lucide-chevron-down"
+          class="size-5 att-chev"
+          :class="{ open: attentionOpen }"
+        />
+      </button>
       <DashboardTeacherAttention
+        v-if="attentionOpen"
         :absentees="d.absentees"
         :unrecorded="d.unrecorded"
         :show-unrecorded="showUnrecorded"
@@ -184,38 +146,41 @@ const showUnrecorded = computed(() => !!d.value && ['none', 'draft', 'returned']
 </template>
 
 <style scoped>
-.th { display: flex; flex-direction: column; gap: 18px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; }
+.th { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; }
 .placeholder { font-size: 15px; color: var(--ink-2); }
-.head { display: flex; align-items: center; gap: 14px; }
+.head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .h-ico { width: 48px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
 .h-info { min-width: 0; flex: 1 1 220px; }
 /* زرُّ الموعد يأخذ سطرَه تحت الاسم حين يضيق العرض — كان يعصر الاسمَ عموداً كلمةً كلمة (لقطة المستخدم 2026-10-26) */
 .h-time { margin-inline-start: auto; }
-.head { flex-wrap: wrap; }
 .h-info h2 { margin: 0; font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.t-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.t-ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
-.t-ico.green { background: var(--green-soft); color: var(--green-ink); }
-.t-ico.blue { background: var(--blue-soft); color: var(--blue-ink); }
-.t-ico.navy { background: var(--surface-3); color: var(--ink); }
-.t-label { font-size: 14px; font-weight: 700; color: var(--ink); }
-.t-num { font-size: 32px; font-weight: 800; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
-.t-unit { font-size: 15px; font-weight: 600; color: var(--ink-3); margin-inline-start: 6px; }
-.t-sub { font-size: 13px; color: var(--ink-2); line-height: 1.6; }
-.t-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.q { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 112px; padding: 16px 10px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--ink); text-decoration: none; transition: border-color .15s, transform .12s; }
+.q:hover { border-color: var(--blue); }
+.q:active { transform: scale(.97); }
+.q:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+.q-ico { width: 48px; height: 48px; border-radius: 15px; display: inline-flex; align-items: center; justify-content: center; }
+.q-ico.green { background: var(--green-soft); color: var(--green-ink); }
+.q-ico.blue { background: var(--blue-soft); color: var(--blue-ink); }
+.q-ico.navy { background: var(--surface-3); color: var(--ink); }
+.q-ico.gold { background: var(--chip-warn-bg); color: var(--chip-warn-ink); }
+.q-label { font-size: 15px; font-weight: 700; text-align: center; }
 
-@media (max-width: 1100px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.att-line { display: flex; align-items: center; gap: 12px; width: 100%; font: inherit; text-align: start; cursor: pointer; padding: 14px 18px; }
+.att-ico { width: 38px; height: 38px; border-radius: 11px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--err-soft); color: var(--err); }
+.att-text { flex: 1; font-size: 15px; font-weight: 600; color: var(--ink); }
+.att-text b { font-variant-numeric: tabular-nums; }
+.att-chev { color: var(--ink-3); transition: transform .15s; }
+.att-chev.open { transform: rotate(180deg); }
+
+@media (max-width: 760px) { .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {
   .th { gap: 14px; }
   .card { padding: 16px; }
-  .tiles { gap: 12px; }
-  .tile { padding: 14px; }
-  .t-num { font-size: 26px; }
+  .q { min-height: 100px; }
   .h-time { flex: 1 1 100%; }
 }
 </style>

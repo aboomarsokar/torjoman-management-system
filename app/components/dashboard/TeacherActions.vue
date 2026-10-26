@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * «المطلوب منك الآن» في لوحة المعلم — بنودٌ مرتّبة بالأولوية (أُعيد إليك ← ينتظرك ← أُنجز)، والبطاقةُ كلُّها
- * رابطٌ إلى شاشتها (بزرٍّ ظاهرٍ للمعلّق، وسهمٍ للمُنجَز). تُبنى خارجه بـ`teacherActions` (utils/teacherDashboard.ts، مختبَرة).
+ * «المطلوب منك» في لوحة المعلم — **المعلّقُ وحده** (أُعيد إليك ← ينتظرك)، والمنجَزُ لا يُعرض (طلب المستخدم 2026-10-26:
+ * «لوحة التحكم ما يكون فيها تفاصيل كتير»)؛ وبلا معلّقٍ جملةٌ واحدة. البطاقةُ كلُّها رابطٌ إلى شاشتها بزرٍّ ظاهر.
+ * تُبنى خارجه بـ`teacherActions` (utils/teacherDashboard.ts، مختبَرة).
  */
 import { NuxtLink } from '#components'
 import type { TeacherAction } from '~/utils/teacherDashboard'
@@ -11,7 +12,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const pendingCount = computed(() => props.actions.filter(a => a.tone !== 'done').length)
+const open = computed(() => props.actions.filter(a => a.tone !== 'done'))
+const pendingCount = computed(() => open.value.length)
 </script>
 
 <template>
@@ -20,7 +22,7 @@ const pendingCount = computed(() => props.actions.filter(a => a.tone !== 'done')
     aria-labelledby="acts-title"
   >
     <h2 id="acts-title">
-      المطلوب منك الآن
+      المطلوب منك
       <span
         v-if="pendingCount"
         class="count"
@@ -34,11 +36,11 @@ const pendingCount = computed(() => props.actions.filter(a => a.tone !== 'done')
         name="i-lucide-circle-check"
         class="size-5"
       />
-      لا شيء معلّق — أحسنت.
+      لا شيء مطلوب منك الآن — أحسنت.
     </p>
-    <ul>
+    <ul v-if="pendingCount">
       <li
-        v-for="a in actions"
+        v-for="a in open"
         :key="a.key"
       >
         <!-- البطاقةُ كلُّها رابطٌ واحد (طلب المستخدم 2026-10-21: الضغطُ في أيّ مكانٍ منها لا على السهم وحده)،
@@ -79,7 +81,7 @@ const pendingCount = computed(() => props.actions.filter(a => a.tone !== 'done')
 .acts { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; }
 h2 { margin: 0 0 14px; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }
 .count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
-.clear { margin: 0 0 12px; display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--green-ink); }
+.clear { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--green-ink); }
 ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .act { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: inherit; text-decoration: none; }
 .act.urgent { background: var(--err-soft); border-color: color-mix(in oklab, var(--err) 30%, transparent); }

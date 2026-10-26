@@ -2,7 +2,7 @@
 /**
  * حضورُ حلقتي — شاشةُ المعلّم التي تعمل بلا إنترنت (البند 14 — نمطُ الصحابة، 2026-10-26).
  * تُصيَّر في المتصفّح وتُخزَّن في عامل الخدمة، والبياناتُ من نسخة الجهاز: الحلقةُ وطلابُها وآخرُ أربعين يوماً.
- * شريطُ حالةٍ يقول ما ينتظر الرفعَ بعدده، وشريطُ آخر 15 يومَ دوامٍ يُري ما لم يُسجَّل، و«حفظ الحضور» يُكتب على الجهاز
+ * بسيطةٌ عن قصد (طلب المستخدم 2026-10-26): لا بطاقةَ للحلقة، وسطرُ حالةٍ رفيعٌ يقول ما ينتظر الرفعَ بعدده، وشريطُ آخر 15 يومَ دوامٍ يُري ما لم يُسجَّل، و«حفظ الحضور» يُكتب على الجهاز
  * فوراً ويُرفع في الخلفية يوماً يوماً؛ وما رفضته الإدارةُ يُعرض للمعلّم بإعادةٍ أو ترك. في قالب اللوحة (القائمةُ والجرسُ
  * والصورة — طلب المستخدم 2026-10-26)، والقالبُ يقرأ بلا إنترنت آخرَ ما عُرف (`offlineCache`).
  */
@@ -119,20 +119,9 @@ const dayState = computed(() => shown.value.pending
 
     <template v-else>
       <section class="card main">
-        <div class="halqa">
-          <span class="halqa-ico"><UIcon
-            name="i-lucide-book-open"
-            class="size-5"
-          /></span>
-          <div>
-            <small>حلقتي</small>
-            <b>{{ mirror.halaqa.name }}</b>
-          </div>
-          <span class="halqa-n">{{ mirror.students.length }} طالباً</span>
-        </div>
         <div class="day">
           <div class="day-label">
-            <small>اليوم</small>
+            <small>{{ mirror.halaqa.name }}</small>
             <b>{{ weekdayName(day) }} · <bdi>{{ formatDay(day) }}</bdi></b>
           </div>
           <AttendanceDayPicker
@@ -219,14 +208,8 @@ const dayState = computed(() => shown.value.pending
 .tp-main { max-width: 760px; display: flex; flex-direction: column; gap: 14px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
 .main { display: flex; flex-direction: column; gap: 18px; }
-.halqa { display: flex; align-items: flex-start; gap: 12px; }
-.halqa-ico, .halqa-n { margin-top: 2px; }
-.halqa-ico { width: 42px; height: 42px; border-radius: 13px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
-.halqa > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.halqa small, .day-label small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
-.halqa b { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.5; overflow-wrap: anywhere; }
-.halqa-n { padding: 4px 11px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 600; white-space: nowrap; }
-.day { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.day-label small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
+.day { display: flex; flex-direction: column; gap: 10px; }
 .day-label { display: flex; flex-direction: column; }
 .day-label b { font-size: 15.5px; font-weight: 700; color: var(--ink); }
 .day-label bdi { font-variant-numeric: tabular-nums; }

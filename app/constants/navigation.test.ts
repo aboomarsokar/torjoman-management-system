@@ -8,6 +8,6 @@ describe('orderByKeys', () => {
   })
 
   it('الحضورُ ثاني بنود المعلّم بعد اللوحة', () => {
-    expect(TEACHER_NAV_ORDER.slice(0, 2)).toEqual(['dashboard', 'attendance-offline'])
+    expect(TEACHER_NAV_ORDER.slice(0, 2)).toEqual(['dashboard-teacher', 'attendance-offline'])
   })
 })

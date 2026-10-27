@@ -6,7 +6,7 @@
  */
 import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 import { queryFromTab, tabFromQuery, type StudentTab } from '~/composables/useStudentTab'
-import { OFFLINE_PATHS, orderByKeys, TEACHER_NAV_ORDER } from '~/constants/navigation'
+import { orderByKeys, TEACHER_NAV_ORDER } from '~/constants/navigation'
 
 const { profile, role, status, fullName, pending: profilePending } = useProfile()
 // صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
@@ -70,7 +70,9 @@ const mainNav: Item[] = [
   { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
-  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'teacher', 'examiner'] },
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'examiner'] },
+  // لوحةُ المعلّم تعمل بلا إنترنت، والتطبيقُ يُقلع عليها (البند 14، 2026-10-27)
+  { key: 'dashboard-teacher', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/t/home', roles: ['teacher'] },
   // ما أرسلته الإدارة، وبجانبه عددُ غير المقروء (طلب المستخدم 2026-10-25)
   { key: 'messages', label: 'رسائل الإدارة', icon: 'i-lucide-mail', to: '/messages', roles: [FIELD, 'teacher', 'examiner'], isNew: true },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
@@ -182,15 +184,11 @@ const navTitle = computed(() => {
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
-// بلا إنترنت لا يعمل إلا الحضور: غيرُه يُعتَم في القائمة، وضغطُه يقول ذلك بدل أن يُحوَّل صامتاً إلى الحضور
-const { online, check: checkOnline } = useNetworkStatus()
-const needsNetwork = (item: Item) => !online.value && !OFFLINE_PATHS.includes(item.to ?? '')
+// بلا إنترنت لا تعمل إلا شاشاتُ المعلّم المخزَّنة: غيرُها يُعتَم في القائمة، وضغطُه يقول ذلك بدل أن يُحوَّل صامتاً
+const offlineNav = useOfflineNav()
+const needsNetwork = (item: Item) => offlineNav.needsNetwork(item.to)
 function go(item: Item) {
-  checkOnline()
-  if (needsNetwork(item)) {
-    toast.add({ title: 'هذه الشاشة تحتاج اتصالاً — بلا إنترنت يعمل «الحضور اليوميّ» وحده.', icon: 'i-lucide-wifi-off', color: 'warning' })
-    return
-  }
+  if (offlineNav.blockIfOffline(item.to)) return
   drawerOpen.value = false
   if (item.to && item.tab) navigateTo({ path: item.to, query: { tab: queryFromTab(item.tab) } })
   else if (item.to && item.qtab) navigateTo({ path: item.to, query: { tab: item.qtab } })

@@ -13,7 +13,12 @@ import { formatHalaqaTime } from '~/utils/time'
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
 const day = (iso: string) => isolateLtr(formatDay(iso))
 
-const { dash, pending, refresh } = useTeacherDashboard()
+const { dash, pending, refresh, savedAt } = useTeacherDashboard()
+// بلا إنترنت (2026-10-27): آخرُ نسخةٍ محفوظة بوقتها، وما لا يعمل بلا اتصالٍ يُعتَم ويقول ذلك عند ضغطه
+const { online, needsNetwork, blockIfOffline } = useOfflineNav()
+const savedTime = computed(() => savedAt.value
+  ? new Date(savedAt.value).toLocaleString('en-GB', { timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace('/', '-').replace(',', ' ·')
+  : null)
 
 const d = computed(() => (dash.value && dash.value.halaqa ? dash.value : null))
 const noHalaqa = computed(() => !pending.value && dash.value?.halaqa === null)
@@ -81,6 +86,7 @@ const attentionOpen = ref(false)
         </div>
         <!-- المعلّمُ يغيّر موعدَ حلقته وتُشعَر الإدارة (2026-10-25) -->
         <DashboardHalaqaTimeEdit
+          v-if="online"
           :halaqa-id="d.halaqa.id"
           :time="d.halaqa.daily_time"
           :female="d.halaqa.gender === 'female'"
@@ -88,6 +94,16 @@ const attentionOpen = ref(false)
           @changed="refresh"
         />
       </div>
+
+      <p
+        v-if="savedTime"
+        class="saved"
+      >
+        <UIcon
+          name="i-lucide-cloud-off"
+          class="size-4"
+        />آخرُ تحديثٍ <bdi>{{ savedTime }}</bdi> — يُحدَّث حين يعود الاتصال
+      </p>
 
       <!-- أكثرُ الشاشات استعمالاً -->
       <nav
@@ -99,7 +115,8 @@ const attentionOpen = ref(false)
           :key="q.to"
           :to="q.to"
           class="q"
-          :class="{ primary: q.primary }"
+          :class="{ 'primary': q.primary, 'needs-net': needsNetwork(q.to) }"
+          @click="blockIfOffline(q.to, $event)"
         >
           <UIcon
             :name="q.icon"
@@ -175,6 +192,9 @@ const attentionOpen = ref(false)
 .q.primary:hover { background: var(--primary-hover); }
 .q:active { transform: scale(.98); }
 .q:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+.q.needs-net { opacity: .5; }
+.saved { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
+.saved bdi { font-variant-numeric: tabular-nums; }
 
 .att-box { padding: 14px 18px; }
 .att-line { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: none; background: none; font: inherit; text-align: start; cursor: pointer; }

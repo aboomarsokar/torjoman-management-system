@@ -3,7 +3,7 @@
  * «ما بدي قوائم منسدلة… وأعد ترتيبهم»). مفاتيحُ بنود القالب؛ وبندٌ لم يُذكر هنا يأتي بعدها بترتيبه.
  */
 export const TEACHER_NAV_ORDER = [
-  'dashboard', 'attendance-offline', 'quran-offline', 'students', 'exams', 'examplan', 'programs',
+  'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students', 'exams', 'examplan', 'programs',
   'incentives', 'my-booklets', 'messages', 'visits', 'quality-mine', 'alerts', 'profile'
 ] as const
 
@@ -17,4 +17,4 @@ export function orderByKeys<T extends { key: string }>(items: T[], order: readon
 }
 
 /** الشاشاتُ التي تعمل بلا إنترنت — غيرُها يُعتَم في القائمة ويُنبَّه عند ضغطه. */
-export const OFFLINE_PATHS = ['/t', '/t/quran']
+export const OFFLINE_PATHS = ['/t/home', '/t', '/t/quran']

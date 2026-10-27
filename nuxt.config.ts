@@ -43,8 +43,9 @@ export default defineNuxtConfig({
     // حضورُ المعلّم بلا إنترنت (البند 14 — نمطُ الصحابة): يُصيَّر في المتصفّح ويُولَّد مسبقاً ملفّاً يخزّنه عاملُ الخدمة،
     // فيُفتح بلا شبكة (والهيكلُ بلا بيانات — لا يُخبَّأ فيه اسمُ معلّمٍ ولا طلابُه)
     '/t': { ssr: false, prerender: true },
-    // والإنجازُ القرآنيّ للمعلّم بلا إنترنت كذلك (2026-10-27)
-    '/t/quran': { ssr: false, prerender: true }
+    // والإنجازُ القرآنيّ ولوحةُ المعلّم بلا إنترنت كذلك (2026-10-27)
+    '/t/quran': { ssr: false, prerender: true },
+    '/t/home': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -86,10 +87,10 @@ export default defineNuxtConfig({
       lang: 'ar',
       dir: 'rtl',
       display: 'standalone',
-      // التطبيقُ المثبَّت يُقلع على حضور المعلّم مباشرةً (طلب المستخدم 2026-10-26: كانت تظهر الرئيسيةُ ثمّ يُحوَّل)
+      // التطبيقُ المثبَّت يُقلع على لوحة المعلّم مباشرةً (طلب المستخدم 2026-10-27؛ وكان على الحضور منذ 2026-10-26)
       // — وهي تعمل بلا اتصال، وغيرُ المعلّم متّصلاً يُحوَّل منها إلى لوحته. `id` ثابتٌ كي يبقى التطبيقُ المثبَّت نفسَه
       id: '/',
-      start_url: '/t',
+      start_url: '/t/home',
       scope: '/',
       theme_color: '#094064',
       background_color: '#FFFFFF',
@@ -104,14 +105,19 @@ export default defineNuxtConfig({
     // المتصفّح فلا هيكلَ خادمٍ يتقادم)، وغيرُها من الشبكة كما كان.
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'],
-      navigateFallback: '/t',
-      navigateFallbackAllowlist: [/^\/t$/],
-      // التطبيقُ المثبَّت يُقلع على «/» والمستخدمُ يفتح الدخولَ واللوحة: بلا اتصالٍ وحده تُقدَّم شاشةُ الحضور بدل
-      // صفحة «لا يتوفر اتصال» — ومتّصلاً لا يتغيّر شيء (NetworkOnly)
+      navigateFallback: '/t/home',
+      navigateFallbackAllowlist: [/^\/t(\/home|\/quran)?$/],
+      // المستخدمُ يفتح الدخولَ واللوحة والحضور: بلا اتصالٍ وحده تُقدَّم شاشةُ المعلّم المخزَّنة بدل صفحة «لا يتوفر
+      // اتصال» — ومتّصلاً لا يتغيّر شيء (NetworkOnly)
       runtimeCaching: [
         {
           urlPattern: ({ request, url }: { request: Request, url: URL }) =>
-            request.mode === 'navigate' && ['/login', '/dashboard', '/attendance'].includes(url.pathname),
+            request.mode === 'navigate' && ['/login', '/dashboard'].includes(url.pathname),
+          handler: 'NetworkOnly',
+          options: { precacheFallback: { fallbackURL: '/t/home' } }
+        },
+        {
+          urlPattern: ({ request, url }: { request: Request, url: URL }) => request.mode === 'navigate' && url.pathname === '/attendance',
           handler: 'NetworkOnly',
           options: { precacheFallback: { fallbackURL: '/t' } }
         },

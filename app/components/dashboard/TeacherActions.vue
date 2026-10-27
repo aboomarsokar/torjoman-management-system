@@ -13,6 +13,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+// بلا إنترنت: بطاقةٌ إلى شاشةٍ تحتاج اتصالاً تُعتَم وتقول ذلك عند ضغطها
+const { needsNetwork, blockIfOffline } = useOfflineNav()
 const open = computed(() => props.actions.filter(a => a.tone !== 'done'))
 const pendingCount = computed(() => open.value.length)
 const expanded = ref(false)
@@ -73,7 +75,8 @@ watch(() => open.value.some(a => a.tone === 'urgent'), (urgent) => {
           :is="a.to ? NuxtLink : 'div'"
           :to="a.to"
           class="act"
-          :class="[a.tone, { linked: !!a.to }]"
+          :class="[a.tone, { 'linked': !!a.to, 'needs-net': !!a.to && needsNetwork(a.to) }]"
+          @click="a.to && blockIfOffline(a.to, $event)"
         >
           <span class="a-ico"><UIcon
             :name="a.icon"
@@ -117,6 +120,7 @@ ul { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-directi
 .act { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: inherit; text-decoration: none; }
 .act.urgent { background: var(--err-soft); border-color: color-mix(in oklab, var(--err) 30%, transparent); }
 .act.done { background: transparent; }
+.act.needs-net { opacity: .5; }
 .act.linked { cursor: pointer; transition: border-color .15s, background-color .15s; }
 .act.linked:hover { border-color: var(--blue); }
 .act.done.linked:hover { background: var(--surface-2); }

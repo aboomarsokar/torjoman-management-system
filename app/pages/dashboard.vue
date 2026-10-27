@@ -28,8 +28,10 @@ const showOverview = computed(() => isAdmin.value || isReadOnly.value)
 
 // للمختبِر لوحتُه منذ 2026-10-22 (`DashboardExaminerHome`)؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)؛
 // والمديرةُ الإدارية لها لوحةُ قسمها منذ 2026-10-22 (كانت تُحوَّل إلى الحلقات)
+// والمعلّمُ لوحتُه `/t/home` التي تعمل بلا إنترنت (2026-10-27)
 watch(role, (r) => {
   if (r === 'student') navigateTo('/me', { replace: true })
+  if (r === 'teacher') navigateTo('/t/home', { replace: true })
 }, { immediate: true })
 
 // ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) — قسمُ البنين وقسمُ البنات منفصلَين (طلب المستخدم 2026-10-22) ──

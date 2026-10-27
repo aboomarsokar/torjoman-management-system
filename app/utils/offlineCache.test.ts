@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clearOfflineCaches, PROFILE_CACHE_KEY, readCache, writeCache } from './offlineCache'
+import { clearOfflineCaches, PROFILE_CACHE_KEY, readCache, TEACHER_DASH_CACHE_KEY, writeCache } from './offlineCache'
 
 function fakeStorage() {
   const map = new Map<string, string>()
@@ -16,9 +16,12 @@ describe('offlineCache', () => {
   it('يكتب ويقرأ ويمحو عند الخروج', () => {
     vi.stubGlobal('localStorage', fakeStorage())
     writeCache(PROFILE_CACHE_KEY, { id: 'u', role: 'teacher' })
+    writeCache(TEACHER_DASH_CACHE_KEY, { uid: 'u' })
     expect(readCache(PROFILE_CACHE_KEY)).toEqual({ id: 'u', role: 'teacher' })
     clearOfflineCaches()
     expect(readCache(PROFILE_CACHE_KEY)).toBeNull()
+    // لوحةُ المعلّم لا يراها مستخدمٌ تالٍ على الجهاز
+    expect(readCache(TEACHER_DASH_CACHE_KEY)).toBeNull()
   })
 
   it('التخزينُ المحجوب لا يرمي', () => {

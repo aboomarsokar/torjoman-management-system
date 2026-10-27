@@ -18,6 +18,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+// بلا إنترنت: روابطُ الشاشات التي تحتاج اتصالاً تُعتَم وتقول ذلك عند ضغطها
+const { needsNetwork, blockIfOffline } = useOfflineNav()
 
 /** `when`: تاريخٌ يُعرض بعد العنوان في سطرٍ لا ينكسر (كان «10-2026» ينقسم بين سطرين). */
 type Group = { key: string, icon: string, tone: string, title: string, when?: string, people: Person[], to: string, cta: string }
@@ -70,7 +72,9 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
           size="sm"
           trailing-icon="i-lucide-chevron-left"
           class="g-cta"
+          :class="{ 'needs-net': needsNetwork(g.to) }"
           :ui="{ base: 'min-h-10 rounded-[10px]' }"
+          @click="blockIfOffline(g.to, $event)"
         />
       </div>
       <ul class="chips">
@@ -81,6 +85,8 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
           <NuxtLink
             :to="`/students/${p.id}`"
             class="chip"
+            :class="{ 'needs-net': needsNetwork(`/students/${p.id}`) }"
+            @click="blockIfOffline(`/students/${p.id}`, $event)"
           >
             {{ p.name }}<span
               v-if="p.count"
@@ -114,6 +120,7 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
 .g-n { font-weight: 500; color: var(--ink-3); }
 .g-cta { flex: none; }
 .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip.needs-net, .g-cta.needs-net { opacity: .5; }
 .chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink); text-decoration: none; }
 .chip:hover { border-color: var(--line-2); background: var(--surface-3); }
 .chip-n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err-soft); color: var(--err); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }

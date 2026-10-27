@@ -45,7 +45,9 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
     v-if="!shown.length"
     :icon="view === 'open' ? 'i-lucide-circle-check-big' : 'i-lucide-inbox'"
     :title="view === 'open' ? 'لا طلباتٍ بانتظار الإدارة' : 'لا طلباتٍ مُغلقة بعد'"
-    :description="view === 'open' ? 'ما يُرسله المعلّمون يظهر هنا ويصل إشعارُه.' : 'ما أُضيف أو رُفض يظهر هنا.'"
+    :description="view === 'open'
+      ? (showTeacher ? 'ما يُرسله المعلّمون يظهر هنا ويصل إشعارُه.' : 'ما ترسله يظهر هنا حتى تبتّ فيه الإدارة.')
+      : 'ما أُضيف أو رُفض يظهر هنا.'"
   />
   <UiDataTable
     v-else

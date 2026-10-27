@@ -3,6 +3,7 @@
  * طلباتُ الملازم في أرشيف الملازم (المدير الإداري — طلب المستخدم 2026-10-25): المفتوحةُ أوّلاً بشارة «جديد»،
  * والمعلّمُ وحلقتُه والملزمةُ وعددُ النسخ والملاحظةُ والتاريخ. «تمّ التسليم» يفتح مربّعَ تأكيدٍ بتاريخ التسليم (اليومُ افتراضاً)،
  * فيُسجَّل التسليمُ في الأرشيف ويُغلَق الطلبُ ويُشعَر المعلّم (طلب المستخدم 2026-10-25). مشرفُ المشروع يقرأ.
+ * تبويبان يفصلان «بانتظار التسليم» عن «تمّ التسليم»، وزرُّ «تسليم» أخضرُ ممتلئ (طلب المستخدم 2026-10-27).
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { BookletRequest } from '~/composables/useBookletRequests'
@@ -10,8 +11,18 @@ import { deliveryDate } from '~/utils/booklets'
 import { gazaToday } from '~/utils/reportWindow'
 import { PROJECT_START_DATE } from '~/constants/project'
 
-defineProps<{ rows: BookletRequest[], canClose: boolean, busy: boolean }>()
+const props = defineProps<{ rows: BookletRequest[], canClose: boolean, busy: boolean }>()
 const emit = defineEmits<{ deliver: [id: string, deliveredOn: string] }>()
+
+type View = 'open' | 'done'
+const view = ref<View>('open')
+const openRows = computed(() => props.rows.filter(r => r.status === 'open'))
+const doneRows = computed(() => props.rows.filter(r => r.status !== 'open'))
+const shown = computed(() => (view.value === 'open' ? openRows.value : doneRows.value))
+const viewTabs = computed(() => [
+  { key: 'open' as const, label: 'بانتظار التسليم', icon: 'i-lucide-hourglass', count: openRows.value.length },
+  { key: 'done' as const, label: 'تمّ التسليم', icon: 'i-lucide-package-check', count: doneRows.value.length }
+])
 
 const label = (n: number) => BOOKLETS.find(b => b.no === n)?.label ?? `الملزمة ${n}`
 
@@ -43,10 +54,26 @@ const columns = [
     title="لا طلباتِ ملازم بعد"
     description="يطلب المعلّمون الملازمَ من لوحاتهم، فتظهر طلباتُهم هنا ويصلك إشعار."
   />
-  <UiDataTable
+  <div
     v-else
+    class="req-view"
+  >
+    <UiSegmentTabs
+      v-model="view"
+      :tabs="viewTabs"
+      label="حالة طلبات الملازم"
+    />
+  </div>
+  <UiEmptyState
+    v-if="rows.length && !shown.length"
+    :icon="view === 'open' ? 'i-lucide-circle-check-big' : 'i-lucide-inbox'"
+    :title="view === 'open' ? 'لا طلباتٍ بانتظار التسليم' : 'لا طلباتٍ مسلَّمة بعد'"
+    :description="view === 'open' ? 'سُلِّمت الطلباتُ كلُّها — ما يُسلَّم يظهر في «تمّ التسليم».' : 'ما تسلّمه يظهر هنا بتاريخه.'"
+  />
+  <UiDataTable
+    v-else-if="shown.length"
     :columns="columns"
-    :rows="rows"
+    :rows="shown"
     row-key="id"
     :row-class="(r: BookletRequest) => r.status === 'open' ? 'is-new' : undefined"
   >
@@ -92,13 +119,13 @@ const columns = [
     <template #actions="{ row }">
       <UButton
         v-if="canClose && row.status === 'open'"
-        label="تمّ التسليم"
-        icon="i-lucide-check"
-        color="neutral"
-        variant="outline"
-        size="sm"
+        label="تسليم"
+        icon="i-lucide-package-check"
+        color="success"
+        variant="solid"
+        size="md"
         :loading="busy"
-        :ui="{ base: 'rounded-[10px]' }"
+        :ui="{ base: 'rounded-[11px] min-h-10 px-4 font-semibold shadow-sm' }"
         @click="toClose = row"
       />
     </template>
@@ -127,12 +154,13 @@ const columns = [
           #actions
         >
           <UButton
-            label="تمّ التسليم"
-            icon="i-lucide-check"
-            color="neutral"
-            variant="outline"
+            label="تسليم"
+            icon="i-lucide-package-check"
+            color="success"
+            variant="solid"
+            block
             :loading="busy"
-            :ui="{ base: 'rounded-[11px]' }"
+            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
             @click="toClose = row"
           />
         </template>
@@ -191,6 +219,7 @@ const columns = [
 </template>
 
 <style scoped>
+.req-view { margin-bottom: 14px; }
 .seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .dl { display: flex; flex-direction: column; gap: 14px; }
 .dl p { margin: 0; color: var(--ink); line-height: 1.8; }

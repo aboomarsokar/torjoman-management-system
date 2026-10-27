@@ -259,7 +259,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                 :name="item.icon"
                 class="size-5"
               />
-              <span>{{ labelOf(item) }}</span>
+              <span class="nav-label">{{ labelOf(item) }}</span>
               <span
                 v-if="onlineOnly(item)"
                 class="nav-net"
@@ -334,7 +334,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     :name="item.icon"
                     class="size-5"
                   />
-                  <span>{{ labelOf(item) }}</span>
+                  <span class="nav-label">{{ labelOf(item) }}</span>
                   <span
                     v-if="onlineOnly(item)"
                     class="nav-net"
@@ -486,6 +486,8 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 /* «تحتاج اتصالاً»: أيقونةٌ هادئةٌ في طرف البند، وما بعدها من الشارات يلاصقها */
 .nav-item > .nav-net { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: var(--side-active); color: var(--side-ink); }
 .nav-item > .nav-net ~ .nav-new, .nav-item > .nav-net ~ .nav-count { margin-inline-start: 6px; }
+/* التسميةُ الطويلة تنكسر سطرين ولا تُقصّ حين تجتمع الشاراتُ بجانبها (لقطة المستخدم 2026-10-27: «طلبات إضاف…») */
+.nav-item > .nav-label { white-space: normal; text-overflow: clip; line-height: 1.4; padding-block: 7px; }
 .nav-group > .nav-g-count { margin-inline-start: auto; margin-inline-end: 8px; flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 12.5px; font-weight: 700; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }

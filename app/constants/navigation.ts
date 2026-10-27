@@ -1,10 +1,19 @@
 /**
- * ترتيبُ قائمة المعلّم — مسطّحةٌ بلا مجموعاتٍ تُطوى، بترتيب الاستعمال اليوميّ (طلب المستخدم 2026-10-26:
- * «ما بدي قوائم منسدلة… وأعد ترتيبهم»). مفاتيحُ بنود القالب؛ وبندٌ لم يُذكر هنا يأتي بعدها بترتيبه.
+ * ترتيبُ قائمة المعلّم — مسطّحةٌ بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26: «ما بدي قوائم منسدلة… وأعد ترتيبهم»).
+ * أُعيد 2026-10-27 («أعد ترتيب التبويبات جيداً») على مسار العمل: عملُ اليوم ← الاختبارات والبرامج ← ما يصل من الإدارة ←
+ * الكشوفُ والطلبات (وفيها ما يحتاج اتصالاً فيجتمع آخرَ القائمة) ← الملفّ الشخصيّ. مفاتيحُ بنود القالب؛ وبندٌ لم يُذكر
+ * هنا يأتي بعدها بترتيبه.
  */
 export const TEACHER_NAV_ORDER = [
-  'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students-teacher', 'student-requests', 'exams', 'examplan', 'programs',
-  'incentives', 'my-booklets', 'messages', 'visits', 'quality-mine', 'alerts', 'profile'
+  // عملُ اليوم
+  'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students-teacher',
+  // الاختباراتُ والبرامج
+  'exams', 'examplan', 'programs',
+  // ما يصل من الإدارة
+  'messages', 'alerts', 'visits', 'quality-mine',
+  // الكشوفُ والطلبات
+  'incentives', 'my-booklets', 'student-requests',
+  'profile'
 ] as const
 
 /** يرتّب البنودَ بالترتيب المعطى، وما لم يُذكر يأتي بعدها بترتيبه الأصليّ. */

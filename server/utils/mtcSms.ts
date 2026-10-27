@@ -11,8 +11,11 @@ import { toInternational } from '~/utils/sms'
 const SEND_URL = 'https://api.mtcsms.com/sendsms.asmx'
 const SOAP_ACTION = '"http://tempuri.org/SendMessage"'
 const BALANCE_URL = 'https://api.mtcsms.com/balance.aspx'
-/** أرقامٌ في الطلب الواحد إلى المزوّد. */
-export const MTC_BATCH = 100
+/**
+ * رقمٌ واحدٌ في كلّ طلبٍ إلى المزوّد: خدمةُ SOAP تقبل أرقاماً بفواصل وتخصم ثمنَها وتردّ «Message Sent» ثم لا تسلّمها
+ * (جُرّب مع المستخدم 2026-10-27)، والرقمُ الواحد يصل. وهذا عددُ الطلبات المتزامنة.
+ */
+export const MTC_CONCURRENCY = 5
 
 const ERRORS: Record<string, string> = {
   10002: 'اسم المستخدم أو كلمة المرور لحساب الرسائل غير صحيحة.',
@@ -63,12 +66,12 @@ function creds(): MtcCreds {
   return { username, password, sender }
 }
 
-/** يرسل نصّاً واحداً لدفعةٍ من الأرقام المحلّية (05…) — المستدعي يقسّم إلى دفعات `MTC_BATCH`. */
-export async function mtcSendBatch(localPhones: string[], message: string): Promise<MtcResult> {
+/** يرسل النصَّ إلى رقمٍ محلّيٍّ واحد (05…). */
+export async function mtcSendOne(localPhone: string, message: string): Promise<MtcResult> {
   const { username, password, sender } = creds()
   const body = soapSendEnvelope({
     Username: username, Password: password, Sender: sender,
-    Mobile: localPhones.map(toInternational).join(','), Msg: message, Type: '0', Rule: ''
+    Mobile: toInternational(localPhone), Msg: message, Type: '0', Rule: ''
   })
   try {
     const raw = await $fetch<string>(SEND_URL, {

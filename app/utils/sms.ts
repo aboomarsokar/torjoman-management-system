@@ -8,6 +8,8 @@ import { normalizeDigits } from '~/constants/identity'
 export const SMS_MAX_SEGMENTS = 6
 /** أقصى المستلمين في الإرسال الواحد. */
 export const SMS_MAX_RECIPIENTS = 600
+/** مستلمو الطلب الواحد إلى خادمنا — الواجهةُ تقسّم الإرسالَ الكبير كي لا يتجاوز الطلبُ مهلةَ الدالّة على Vercel. */
+export const SMS_REQUEST_CHUNK = 40
 
 /** «0599 123 456» أو «+970599123456» أو «970599123456» ← «0599123456»؛ وغيرُ الجوال الفلسطينيّ ← null. */
 export function normalizeLocalPhone(raw: string | null | undefined): string | null {

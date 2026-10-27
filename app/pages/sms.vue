@@ -12,7 +12,7 @@ useSeoMeta({ title: 'رسائل SMS — ترجمان' })
 
 const { role, isAdmin } = usePermissions()
 const canView = computed(() => ['admin_manager', 'project_supervisor'].includes(role.value ?? ''))
-const { staff, contacts, log, balance, balanceError, sending, refreshBalance, addContact, removeContact, send } = useSms()
+const { staff, contacts, log, balance, balanceError, sending, progress, refreshBalance, addContact, removeContact, send } = useSms()
 onMounted(() => {
   watch(isAdmin, (a) => {
     if (a) refreshBalance()
@@ -93,7 +93,8 @@ async function doSend() {
           </UFormField>
           <div class="meter">
             <span :class="{ bad: tooLong }">{{ seg.length }} حرف · {{ seg.segments }} مقطع ({{ seg.perSegment }} للمقطع)</span>
-            <span>المستلمون: <b>{{ all.length }}</b></span>
+            <span v-if="progress">جارٍ الإرسال: <b>{{ progress.done }}</b> من {{ progress.total }}</span>
+            <span v-else>المستلمون: <b>{{ all.length }}</b></span>
             <UButton
               label="إرسال"
               icon="i-lucide-send"

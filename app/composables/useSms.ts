@@ -3,7 +3,7 @@
  * ما أُرسل، ورصيدُ الحساب، والإرسالُ عبر `POST /api/sms/send`. للمدير الإداريّ، ومشرفُ المشروع يقرأ السجلّ.
  */
 import type { Database } from '~/types/database.types'
-import { normalizeLocalPhone } from '~/utils/sms'
+import { SMS_REQUEST_CHUNK, normalizeLocalPhone } from '~/utils/sms'
 
 export type Recipient = { key: string, name: string | null, phone: string }
 export type StaffRow = { id: string, full_name: string, role: string, gender: string | null, phone: string | null }
@@ -28,6 +28,8 @@ export function useSms() {
   const { handle } = useErrorHandler()
   const toast = useToast()
   const sending = ref(false)
+  /** تقدّمُ الإرسال الكبير: كم رقماً عولج من كم. */
+  const progress = ref<{ done: number, total: number } | null>(null)
 
   const { data: staff } = useLazyAsyncData<StaffRow[]>('sms-staff', async () => {
     const { data, error } = await supabase.from('profiles').select('id, full_name, role, gender, phone')
@@ -88,23 +90,40 @@ export function useSms() {
     else await refreshContacts()
   }
 
+  /** يرسل على أجزاءٍ من `SMS_REQUEST_CHUNK` متتابعة، ويتوقّف عند خطأ الحساب (لا رقمَ وصل في جزءٍ كامل). */
   async function send(message: string, recipients: { name: string | null, phone: string }[]): Promise<boolean> {
     sending.value = true
+    progress.value = { done: 0, total: recipients.length }
     try {
-      const r = await $fetch<{ sent: number, failed: number, invalid: number, error: string | null }>('/api/sms/send', {
-        method: 'POST', body: { message, recipients: recipients.map(x => ({ name: x.name, phone: x.phone })) }
-      })
-      if (r.sent) toast.add({ title: `أُرسلت الرسالة إلى ${r.sent}.`, color: 'success', icon: 'i-lucide-circle-check' })
-      if (r.failed) toast.add({ title: `تعذّر الإرسال إلى ${r.failed}: ${r.error ?? ''}`, color: 'error', icon: 'i-lucide-circle-alert' })
+      let sent = 0
+      let failed = 0
+      let error: string | null = null
+      for (let i = 0; i < recipients.length; i += SMS_REQUEST_CHUNK) {
+        const part = recipients.slice(i, i + SMS_REQUEST_CHUNK)
+        const r = await $fetch<{ sent: number, failed: number, invalid: number, error: string | null }>('/api/sms/send', {
+          method: 'POST', body: { message, recipients: part.map(x => ({ name: x.name, phone: x.phone })) }
+        })
+        sent += r.sent
+        failed += r.failed
+        error ??= r.error
+        progress.value = { done: Math.min(i + part.length, recipients.length), total: recipients.length }
+        if (!r.sent && r.failed) {
+          failed += recipients.length - (i + part.length)
+          break
+        }
+      }
+      if (sent) toast.add({ title: `أُرسلت الرسالة إلى ${sent}.`, color: 'success', icon: 'i-lucide-circle-check' })
+      if (failed) toast.add({ title: `تعذّر الإرسال إلى ${failed}: ${error ?? ''}`, color: 'error', icon: 'i-lucide-circle-alert' })
       await Promise.all([refreshLog(), refreshBalance()])
-      return r.sent > 0
+      return sent > 0
     } catch (err) {
       handle(err)
       return false
     } finally {
       sending.value = false
+      progress.value = null
     }
   }
 
-  return { staff, contacts, log, balance, balanceError, sending, refreshBalance, addContact, removeContact, send, refreshLog }
+  return { staff, contacts, log, balance, balanceError, sending, progress, refreshBalance, addContact, removeContact, send, refreshLog }
 }

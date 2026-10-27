@@ -41,7 +41,7 @@ const actions = computed(() => d.value
 const QUICK = [
   { to: '/t', label: 'تسجيل الحضور', icon: 'i-lucide-calendar-check', primary: true },
   { to: '/t/quran', label: 'الإنجاز القرآني', icon: 'i-lucide-book-open-check', primary: false },
-  { to: '/students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', primary: false },
+  { to: '/t/students', label: 'الطلاب', icon: 'i-lucide-graduation-cap', primary: false },
   { to: '/my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', primary: false }
 ] as const
 

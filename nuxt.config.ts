@@ -45,7 +45,9 @@ export default defineNuxtConfig({
     '/t': { ssr: false, prerender: true },
     // والإنجازُ القرآنيّ ولوحةُ المعلّم بلا إنترنت كذلك (2026-10-27)
     '/t/quran': { ssr: false, prerender: true },
-    '/t/home': { ssr: false, prerender: true }
+    '/t/home': { ssr: false, prerender: true },
+    '/t/students': { ssr: false, prerender: true },
+    '/t/students/view': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -106,7 +108,7 @@ export default defineNuxtConfig({
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'],
       navigateFallback: '/t/home',
-      navigateFallbackAllowlist: [/^\/t(\/home|\/quran)?$/],
+      navigateFallbackAllowlist: [/^\/t(\/home|\/quran|\/students|\/students\/view)?$/],
       // المستخدمُ يفتح الدخولَ واللوحة والحضور: بلا اتصالٍ وحده تُقدَّم شاشةُ المعلّم المخزَّنة بدل صفحة «لا يتوفر
       // اتصال» — ومتّصلاً لا يتغيّر شيء (NetworkOnly)
       runtimeCaching: [

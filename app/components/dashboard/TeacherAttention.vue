@@ -82,11 +82,10 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
           v-for="p in shown(g.people)"
           :key="p.id"
         >
+          <!-- ملفُّ الطالب الذي يعمل بلا إنترنت (2026-10-27) -->
           <NuxtLink
-            :to="`/students/${p.id}`"
+            :to="`/t/students/view?id=${p.id}`"
             class="chip"
-            :class="{ 'needs-net': needsNetwork(`/students/${p.id}`) }"
-            @click="blockIfOffline(`/students/${p.id}`, $event)"
           >
             {{ p.name }}<span
               v-if="p.count"

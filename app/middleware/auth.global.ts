@@ -28,7 +28,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.client && !isOnlineNow()) {
     if (OFFLINE_PATHS.includes(to.path)) return
     const publicRead = to.path.startsWith('/s/') || to.path.startsWith('/news/') || to.path.startsWith('/auth')
-    const target = to.path === '/reports' ? OFFLINE_QURAN : to.path === '/attendance' ? OFFLINE_HOME : OFFLINE_DASHBOARD
+    const target = to.path === '/reports'
+      ? OFFLINE_QURAN
+      : to.path === '/attendance' ? OFFLINE_HOME : to.path.startsWith('/students') ? '/t/students' : OFFLINE_DASHBOARD
     if (!publicRead && (to.path !== '/' || await hasOfflineTeacher())) return navigateTo(target)
   }
 

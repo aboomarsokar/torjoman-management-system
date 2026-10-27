@@ -62,6 +62,25 @@ export async function idbDelete(name: StoreName, key: IDBValidKey): Promise<void
   await request((await store(name, 'readwrite')).delete(key))
 }
 
+/**
+ * يمحو نُسخَ المعلّم عند الخروج (2026-10-27 — نسخةُ الطلاب فيها هوياتٌ وجوّالات): الحضورُ والإنجازُ والطلابُ وآخرُ
+ * معلّمٍ على الجهاز. **صناديقُ الرفع تبقى** (عملٌ لم يُرفع لا يضيع، ولا يُرفع إلا بجلسة صاحبه)، ومراجعُ المصحف تبقى.
+ * جهازٌ لم تُنشأ فيه القاعدةُ لا تُنشأ فيه (`databases()` أوّلاً — الفتحُ يُنشئها).
+ */
+export async function forgetOfflineTeacher(): Promise<void> {
+  try {
+    const dbs = await indexedDB.databases?.()
+    if (dbs && !dbs.some(d => d.name === OFFLINE_DB_NAME)) return
+    await request((await store('mirror', 'readwrite')).clear())
+    await request((await store('quran_mirror', 'readwrite')).clear())
+    const meta = await store('meta', 'readwrite')
+    const keys = await request(meta.getAllKeys())
+    for (const k of keys) if (k === 'current' || String(k).startsWith('students|')) meta.delete(k)
+  } catch {
+    // محجوبٌ أو غيرُ مدعوم: لا شيءَ يُمحى
+  }
+}
+
 /** هل فتح معلّمٌ شاشةَ الحضور على هذا الجهاز من قبل (فله نسخةٌ تعمل بلا إنترنت)؟ */
 export async function hasOfflineTeacher(): Promise<boolean> {
   try {

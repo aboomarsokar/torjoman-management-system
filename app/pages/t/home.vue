@@ -11,6 +11,12 @@ const { role, fullName, profile, pending } = useProfile()
 watch(role, (r) => {
   if (r && r !== 'teacher') navigateTo('/dashboard', { replace: true })
 }, { immediate: true })
+
+// متّصلاً: نُسخُ الحضور والإنجاز والطلاب تُحدَّث في الخلفية — فتعمل شاشاتُها بلا إنترنت ولو لم تُفتح قبلُ
+const { warm } = useWarmTeacherMirrors()
+watch(() => profile.value?.role === 'teacher' ? profile.value.id : null, (id) => {
+  if (id && import.meta.client) void warm(id, fullName.value)
+}, { immediate: true })
 </script>
 
 <template>

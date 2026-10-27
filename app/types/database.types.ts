@@ -161,18 +161,21 @@ export type Database = {
           created_at: string
           day: string
           halaqa_id: string
+          recorded_at: string | null
           recorded_by: string | null
         }
         Insert: {
           created_at?: string
           day: string
           halaqa_id: string
+          recorded_at?: string | null
           recorded_by?: string | null
         }
         Update: {
           created_at?: string
           day?: string
           halaqa_id?: string
+          recorded_at?: string | null
           recorded_by?: string | null
         }
         Relationships: [
@@ -1745,6 +1748,95 @@ export type Database = {
           },
         ]
       }
+      student_requests: {
+        Row: {
+          birth_date: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          full_name: string
+          guardian_phone: string | null
+          halaqa_id: string
+          id: string
+          national_id: string
+          nearest_mosque: string | null
+          note: string | null
+          reject_note: string | null
+          requested_by: string
+          residence: string | null
+          status: string
+          student_id: string | null
+          tajweed_level: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          full_name: string
+          guardian_phone?: string | null
+          halaqa_id: string
+          id?: string
+          national_id: string
+          nearest_mosque?: string | null
+          note?: string | null
+          reject_note?: string | null
+          requested_by?: string
+          residence?: string | null
+          status?: string
+          student_id?: string | null
+          tajweed_level?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          full_name?: string
+          guardian_phone?: string | null
+          halaqa_id?: string
+          id?: string
+          national_id?: string
+          nearest_mosque?: string | null
+          note?: string | null
+          reject_note?: string | null
+          requested_by?: string
+          residence?: string | null
+          status?: string
+          student_id?: string | null
+          tajweed_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_requests_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           avatar_url: string | null
@@ -2332,6 +2424,15 @@ export type Database = {
       return_statement: {
         Args: { p_note: string; p_statement: string }
         Returns: undefined
+      }
+      save_attendance_day: {
+        Args: {
+          p_absences: Json
+          p_day: string
+          p_halaqa: string
+          p_recorded_at?: string
+        }
+        Returns: Json
       }
       save_quality_month: {
         Args: {

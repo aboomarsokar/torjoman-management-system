@@ -1133,3 +1133,27 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 > **2026-10-25 — `deliver_booklet_request(p_request, p_delivered_on)`** (هجرة `20261025132515`): «تمّ التسليم» لطلب ملازم — المديرُ الإداريّ وحده، والطلبُ مفتوح — يُدرج صفَّ `booklet_deliveries` بملزمة الطلب ونُسخه وتاريخه ثم يُغلق الطلبَ ذرّيّاً؛ وإشعارُ `booklet_delivered` صار رابطُه `/my-booklets`.
 
 > **2026-10-26 — الزيارات والمدير الفنيّ** (هجرة `20261026081420`): `visits_insert`/`visits_update` و`guard_visit_visitor` تقبل الزائرَ المديرَ الفنيَّ في حلقات البنين (`halaqat.gender = 'male'`) إلى جانب مشرف الحلقة الميدانيّ؛ و`private.quality_month_compute` يعدّ زيارات المشرف الميدانيّ وحدها (`profiles.role = 'field_supervisor'`).
+
+## طلباتُ إضافة الطلاب: `student_requests` (2026-10-27)
+
+> هجرة `20261027090726_student_requests`. المعلّمُ يطلب إضافةَ طالبٍ لحلقته، والمديرُ الإداريّ يُنشئه من الطلب أو يرفضه.
+
+| العمود | النوع | ملاحظة |
+|---|---|---|
+| `id` | uuid PK | |
+| `halaqa_id` | uuid FK → halaqat (cascade) | حلقةُ المعلّم الطالب |
+| `full_name` | text | 6–120 حرفاً، تُوحَّد مسافاتُه في الحارس |
+| `national_id` | text | تسع خانات بخانة تحقّقٍ صحيحة (`private.valid_national_id`)، ولا تكون لطالبٍ مسجّل؛ فريدةٌ في الطلبات المفتوحة (`student_requests_open_identity`) |
+| `birth_date` | date | اختياريّ |
+| `guardian_phone` | text | `^05\d{8}$` أو null |
+| `tajweed_level` / `residence` / `nearest_mosque` | text | اختياريّة، تُنقل إلى صفّ الطالب عند الإضافة |
+| `note` | text | ≤ 300 |
+| `status` | text | `open` / `added` / `rejected` |
+| `reject_note` | text | إلزاميٌّ عند الرفض (≥ 3 أحرف) |
+| `student_id` | uuid FK → students (set null) | الطالبُ المُنشأ من الطلب |
+| `requested_by` | uuid FK → profiles | `auth.uid()` افتراضاً |
+| `created_at` / `closed_at` / `closed_by` | | |
+
+- **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع كلِّها، وللمديرة الإدارية والمعلّم ضمن `visible_halaqa_ids()`؛ الإدراجُ للمعلّم على حلقته وباسمه مفتوحاً؛ التعديلُ والحذفُ للمدير الإداريّ. حارسُ النيابة عليه.
+- **المشغّلات:** `student_requests_guard` (قبل الإدراج: الهويةُ والتكرار)، و`student_requests_notify` (يُشعر المديرَ الإداريّ، والمديرةَ الإدارية لحلقات البنات)، و`student_requests_notify_closed` (الإضافةُ أو الرفضُ يُشعر المعلّم). دوالُّها في `private` بلا منحٍ للعميل.
+- **الإضافة:** `POST /api/student-requests/:id/approve` (المدير الإداريّ، جلسةٌ كاتبة) يُنشئ الحسابَ بـ`createStudentAccount` ثم يُغلق الطلبَ `added`.

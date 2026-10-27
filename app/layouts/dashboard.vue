@@ -79,6 +79,8 @@ const mainNav: Item[] = [
   // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)
   { key: 'exam-students', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/exams/students', roles: ['examiner'], group: 'people' },
   { key: 'students', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'], group: 'people' },
+  // المعلّمُ يطلب إضافةَ طالب، والمديرُ الإداريّ يُضيفه أو يرفض (طلب المستخدم 2026-10-27)
+  { key: 'student-requests', label: 'طلبات إضافة طالب', labelF: 'طلبات إضافة طالبة', icon: 'i-lucide-user-plus', to: '/student-requests', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'people', isNew: true },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ

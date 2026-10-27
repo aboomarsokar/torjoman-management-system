@@ -8,6 +8,7 @@ import {
 } from '~/constants/announcements'
 import { roleLabel } from '~/constants/roles'
 import type { MessageDraft, StaffPerson } from '~/composables/useStaffMessages'
+import { rewriteAudience } from '~/composables/useAiRewrite'
 import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
 
 const props = defineProps<{ sections: Section[], people: StaffPerson[], busy: boolean }>()
@@ -32,6 +33,14 @@ const personItems = computed(() => props.people.map(p => ({
   label: p.full_name, value: p.id, description: roleLabel(p.role as never, p.gender as never)
 })))
 const linkItems = MESSAGE_LINKS.map(l => ({ label: l.label, value: l.to }))
+
+const ai = useAiRewrite(() => ({ title: form.title, body: form.body }), (d) => {
+  form.title = d.title.slice(0, MAX_MESSAGE_TITLE)
+  form.body = d.body.slice(0, MAX_MESSAGE_BODY)
+})
+const audience = computed(() => form.mode === 'group'
+  ? rewriteAudience(form.section)
+  : rewriteAudience(null, props.people.find(p => p.id === form.target)?.gender))
 </script>
 
 <template>
@@ -118,6 +127,13 @@ const linkItems = MESSAGE_LINKS.map(l => ({ label: l.label, value: l.to }))
         :maxlength="MAX_MESSAGE_BODY"
       />
     </UFormField>
+    <MessagesRewriteActions
+      :busy="ai.busy.value"
+      :can-undo="ai.canUndo.value"
+      :disabled="(!form.title.trim() && !form.body.trim()) || busy"
+      @rewrite="ai.rewrite('announcement', audience)"
+      @undo="ai.undo"
+    />
     <div class="cf-row">
       <UFormField label="زرٌّ يفتح صفحة (اختياريّ)">
         <UiSelect

@@ -37,6 +37,8 @@ export default defineNuxtConfig({
     mtcSmsUsername: '',
     mtcSmsPassword: '',
     mtcSmsSender: '',
+    // إعادةُ صياغة الرسائل بالذكاء الاصطناعي — خادميٌّ فقط (NUXT_ANTHROPIC_API_KEY على Vercel)
+    anthropicApiKey: '',
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://turjuman.vercel.app'
     }

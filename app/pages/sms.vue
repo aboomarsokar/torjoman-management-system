@@ -35,6 +35,10 @@ const tabs = computed(() => [
   { key: 'log' as const, label: 'السجلّ', icon: 'i-lucide-history' }
 ])
 
+const ai = useAiRewrite(() => ({ title: '', body: message.value }), (d) => {
+  message.value = d.body
+})
+
 const confirming = ref(false)
 async function doSend() {
   confirming.value = false
@@ -91,6 +95,13 @@ async function doSend() {
               placeholder="مثلاً: نذكّركم باجتماع المعلمين يوم السبت الساعة 4 عصراً في مقرّ المشروع."
             />
           </UFormField>
+          <MessagesRewriteActions
+            :busy="ai.busy.value"
+            :can-undo="ai.canUndo.value"
+            :disabled="!message.trim() || sending"
+            @rewrite="ai.rewrite('sms', 'mixed')"
+            @undo="ai.undo"
+          />
           <div class="meter">
             <span :class="{ bad: tooLong }">{{ seg.length }} حرف · {{ seg.segments }} مقطع ({{ seg.perSegment }} للمقطع)</span>
             <span v-if="progress">جارٍ الإرسال: <b>{{ progress.done }}</b> من {{ progress.total }}</span>

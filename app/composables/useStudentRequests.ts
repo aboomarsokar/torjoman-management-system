@@ -79,6 +79,31 @@ function whatsappFor(res: ApproveResult) {
 
 const SELECT = 'id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
 
+/**
+ * عددُ طلبات الإضافة المفتوحة لشارة القائمة (المدير الإداريّ كلُّها، والمديرةُ الإدارية طلباتُ البنات بـRLS) —
+ * يُحدَّث عند تغيّر الصفحة كعدّاد رسائل الإدارة.
+ */
+export function useOpenStudentRequestsCount() {
+  const supabase = useSupabaseClient<Database>()
+  const { profile } = useProfile()
+  const route = useRoute()
+  const open = useState<number>('student-requests-open', () => 0)
+
+  async function refreshOpen() {
+    if (!profile.value || !['admin_manager', 'women_admin'].includes(profile.value.role)) {
+      open.value = 0
+      return
+    }
+    const { count } = await supabase.from('student_requests').select('id', { count: 'exact', head: true }).eq('status', 'open')
+    open.value = count ?? 0
+  }
+
+  onMounted(() => {
+    watch([() => profile.value?.id, () => route.path], refreshOpen, { immediate: true })
+  })
+  return { open, refreshOpen }
+}
+
 export function useStudentRequests(halaqaId?: Ref<string | null | undefined>) {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()

@@ -159,8 +159,11 @@ const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const { unread: unreadMessages } = useUnreadMessages()
-/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة. */
-const countOf = (item: Item) => (item.key === 'messages' ? unreadMessages.value : 0)
+const { open: openStudentRequests } = useOpenStudentRequestsCount()
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27). */
+const countOf = (item: Item) => (item.key === 'messages'
+  ? unreadMessages.value
+  : item.key === 'student-requests' ? openStudentRequests.value : 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
 const newKeys = isNewFor(allItems)
 
@@ -298,6 +301,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     name="i-lucide-sparkles"
                     class="size-3.5"
                   />جديد</span>
+                  <span
+                    v-if="countOf(item)"
+                    class="nav-count"
+                    :aria-label="`${countOf(item)} بانتظارك`"
+                  >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
                 </button>
               </div>
             </section>

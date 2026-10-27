@@ -1392,6 +1392,7 @@ export type Database = {
           notes: string | null
           pages_memorized: number
           pages_reviewed: number | null
+          recorded_at: string | null
           recorded_by: string | null
           report_id: string
           student_id: string
@@ -1407,6 +1408,7 @@ export type Database = {
           notes?: string | null
           pages_memorized?: number
           pages_reviewed?: number | null
+          recorded_at?: string | null
           recorded_by?: string | null
           report_id: string
           student_id: string
@@ -1422,6 +1424,7 @@ export type Database = {
           notes?: string | null
           pages_memorized?: number
           pages_reviewed?: number | null
+          recorded_at?: string | null
           recorded_by?: string | null
           report_id?: string
           student_id?: string
@@ -1660,6 +1663,91 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      sms_contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          note: string | null
+          phone: string
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          phone: string
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string
+          tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_log: {
+        Row: {
+          body: string
+          code: string
+          created_at: string
+          id: string
+          ok: boolean
+          recipients: Json
+          recipients_count: number
+          result: string | null
+          segments: number
+          sent_by: string | null
+        }
+        Insert: {
+          body: string
+          code: string
+          created_at?: string
+          id?: string
+          ok: boolean
+          recipients: Json
+          recipients_count: number
+          result?: string | null
+          segments: number
+          sent_by?: string | null
+        }
+        Update: {
+          body?: string
+          code?: string
+          created_at?: string
+          id?: string
+          ok?: boolean
+          recipients?: Json
+          recipients_count?: number
+          result?: string | null
+          segments?: number
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_message_recipients: {
         Row: {
@@ -2440,6 +2528,23 @@ export type Database = {
           p_meetings: number
           p_month: number
           p_notes: string
+          p_year: number
+        }
+        Returns: string
+      }
+      save_quran_record: {
+        Args: {
+          p_from_ayah: number
+          p_from_surah: number
+          p_halaqa: string
+          p_month: number
+          p_notes: string
+          p_pages_memorized: number
+          p_pages_reviewed: number
+          p_recorded_at?: string
+          p_student: string
+          p_to_ayah: number
+          p_to_surah: number
           p_year: number
         }
         Returns: string

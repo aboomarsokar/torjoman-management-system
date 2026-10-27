@@ -103,6 +103,8 @@ const mainNav: Item[] = [
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
   { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' },
   // رسائلُ للكادر تصل أجراسَهم وصفحةَ «رسائل الإدارة» (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
+  // رسائلُ نصّية عبر MTC للكادر ولجهاتٍ خارجية (طلب المستخدم 2026-10-27) — الإرسالُ للمدير الإداريّ ومشرفُ المشروع يقرأ
+  { key: 'sms', label: 'رسائل SMS', icon: 'i-lucide-message-square-text', to: '/sms', roles: [PS, ADMIN], group: 'supervision', isNew: true },
   { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true }
 ]
 

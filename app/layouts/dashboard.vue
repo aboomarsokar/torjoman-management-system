@@ -116,6 +116,8 @@ const mainNav: Item[] = [
   // رسائلُ للكادر تصل أجراسَهم وصفحةَ «رسائل الإدارة» (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
   // رسائلُ نصّية عبر MTC للكادر ولجهاتٍ خارجية (طلب المستخدم 2026-10-27) — الإرسالُ للمدير الإداريّ ومشرفُ المشروع يقرأ
   { key: 'sms', label: 'رسائل SMS', icon: 'i-lucide-message-square-text', to: '/sms', roles: [PS, ADMIN], group: 'supervision', isNew: true },
+  // تذكيراتٌ تُرسَل وحدها في موعدها (طلب المستخدم 2026-10-27) — كلٌّ لقسمه، وSMS للمدير الإداريّ
+  { key: 'scheduled', label: 'الرسائل المجدولة', icon: 'i-lucide-calendar-clock', to: '/scheduled', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true },
   { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true }
 ]
 

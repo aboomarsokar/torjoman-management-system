@@ -1664,6 +1664,134 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_messages: {
+        Row: {
+          active: boolean
+          body: string | null
+          created_at: string
+          created_by: string
+          id: string
+          in_app: boolean
+          last_run_at: string | null
+          link: string | null
+          month_day: number | null
+          next_run_at: string | null
+          recurrence: string
+          roles: string[]
+          run_at: string | null
+          runs: number
+          section: string
+          sms: boolean
+          time_of_day: string | null
+          title: string
+          weekday: number | null
+        }
+        Insert: {
+          active?: boolean
+          body?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          in_app?: boolean
+          last_run_at?: string | null
+          link?: string | null
+          month_day?: number | null
+          next_run_at?: string | null
+          recurrence: string
+          roles: string[]
+          run_at?: string | null
+          runs?: number
+          section?: string
+          sms?: boolean
+          time_of_day?: string | null
+          title: string
+          weekday?: number | null
+        }
+        Update: {
+          active?: boolean
+          body?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          in_app?: boolean
+          last_run_at?: string | null
+          link?: string | null
+          month_day?: number | null
+          next_run_at?: string | null
+          recurrence?: string
+          roles?: string[]
+          run_at?: string | null
+          runs?: number
+          section?: string
+          sms?: boolean
+          time_of_day?: string | null
+          title?: string
+          weekday?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_sms_queue: {
+        Row: {
+          body: string
+          code: string | null
+          created_at: string
+          id: string
+          name: string | null
+          phone: string
+          schedule_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+        }
+        Insert: {
+          body: string
+          code?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          phone: string
+          schedule_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+        }
+        Update: {
+          body?: string
+          code?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          phone?: string
+          schedule_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_sms_queue_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_sms_queue_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_contacts: {
         Row: {
           created_at: string
@@ -2399,6 +2527,7 @@ export type Database = {
       can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_view_statements_in_halaqa: { Args: { hid: string }; Returns: boolean }
       claim_employee_number: { Args: never; Returns: string }
+      consume_cron_nonce: { Args: { p_nonce: string }; Returns: boolean }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]

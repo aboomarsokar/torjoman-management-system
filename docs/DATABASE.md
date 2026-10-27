@@ -1168,3 +1168,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 - **`sms_contacts`** — جهاتُ اتصالٍ خارجية: `name` (2–120)، `phone` (`^05\d{8}$`)، `tag` (≤ 40، يجمع مرشّحي المقابلات مثلاً)، `note` (≤ 200)، `created_by`، `created_at`؛ فريدٌ على (`phone`, `tag`). RLS: القراءةُ للمدير الإداريّ ومشرف المشروع، والكتابةُ للمدير الإداريّ. حارسُ النيابة عليه.
 - **`sms_log`** — سطرٌ لكلّ دفعة إرسال: `body`، `recipients` (jsonb `[{phone, name}]`)، `recipients_count`، `segments` (1–15)، `ok`، `code` (رمزُ المزوّد أو `net`)، `result`، `sent_by`، `created_at`. RLS: القراءةُ للمدير الإداريّ ومشرف المشروع، ولا سياسةَ كتابةٍ للعميل — يكتبه الخادمُ بعميل الخدمة. حارسُ النيابة عليه.
+
+## الرسائلُ المجدولة: `scheduled_messages` و`scheduled_sms_queue` (2026-10-27)
+
+> هجرات `20261027122459_scheduled_messages` و`20261027122645_scheduled_messages_inactive_no_next` و`20261027122851_scheduled_messages_session_guard`. الامتدادُ `pg_net` مفعَّل.
+
+- **`scheduled_messages`** — `title` (1–120)، `body` (≤ 600)، `link`، `roles` (من: المعلم، المشرف الميداني، المختبِر، مشرف المشروع، المدير الإداري، المدير الفني، المديرة الإدارية)، `section` (`all`/`male`/`female`)، `in_app`، `sms` (قناةٌ واحدةٌ على الأقلّ)، `recurrence` (`once` بـ`run_at` · `weekly` بـ`weekday` 0 الأحد … 6 السبت و`time_of_day` · `monthly` بـ`month_day` 1–28 و`time_of_day`)، `next_run_at` (يحسبه الحارس بتوقيت غزة، وnull للموقوفة)، `last_run_at`، `runs`، `active`، `created_by`.
+  - **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع، ولصاحبها، وللمدير الفنيّ قسمُ البنين وللمديرة الإدارية قسمُ البنات؛ والكتابةُ للمدير الإداريّ، وللفنيّ (البنين) والمديرة (البنات) بلا SMS. حارسُ النيابة عليه.
+  - **الحارس** `private.guard_scheduled_message`: القسمُ للفنيّ والمديرة، وSMS للمدير الإداريّ وحده، والموعدُ في الماضي مرفوض، و`next_run_at` بـ`private.scheduled_next_run`.
+- **`scheduled_sms_queue`** — رقمٌ لكلّ سطر: `schedule_id`، `body`، `name`، `phone` (`^05\d{8}$`)، `sent_by`، `status` (`pending`/`sending`/`sent`/`failed`)، `code`، `sent_at`. القراءةُ للمدير الإداريّ ومشرف المشروع؛ يكتبه المُطلِقُ والخادم. حارسُ النيابة عليه.
+- **`private.cron_nonces`** و`public.consume_cron_nonce(uuid)` (service_role وحده): رمزٌ لمرّةٍ واحدة يُثبت لمسار الخادم أنّ النداءَ من المجدوِل (يُنظَّف بعد 10 دقائق).
+- **المُطلِق** `private.dispatch_scheduled_messages()` — مهمّةُ `pg_cron` باسم `dispatch-scheduled-messages` (`*/5 * * * *`): لكلّ مستحَقّة يكتب رسالةَ الكادر (`staff_messages` + مستلموها + جرسُهم بنوع `announcement`) وجرسَ الإدارة بالنصّ، ويصفّ SMS لجوّالات المستلمين، ويحدّث `next_run_at`/`runs` ويُنهي المرّة؛ ثم إن كان في الصفّ معلّقٌ نادى `https://torjoman.org/api/cron/sms` بـ`net.http_post` ومعه رمز.

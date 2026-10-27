@@ -164,6 +164,8 @@ const { open: openStudentRequests } = useOpenStudentRequestsCount()
 const countOf = (item: Item) => (item.key === 'messages'
   ? unreadMessages.value
   : item.key === 'student-requests' ? openStudentRequests.value : 0)
+/** مجموعُ أعداد بنود المجموعة — يظهر على عنوانها أيضاً (طلب المستخدم 2026-10-27). */
+const groupCount = (items: Item[]) => items.reduce((n, i) => n + countOf(i), 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
 const newKeys = isNewFor(allItems)
 
@@ -272,6 +274,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     aria-label="فيها جديد"
                   />
                 </span>
+                <span
+                  v-if="groupCount(g.items)"
+                  class="nav-count nav-g-count"
+                  :aria-label="`${groupCount(g.items)} بانتظارك`"
+                >{{ groupCount(g.items) > 99 ? '99+' : groupCount(g.items) }}</span>
                 <UIcon
                   name="i-lucide-chevron-down"
                   class="size-4 nav-chev"
@@ -432,6 +439,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item > .nav-count { margin-inline-start: auto; flex-shrink: 0; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; line-height: 24px; text-align: center; font-variant-numeric: tabular-nums; overflow: visible; }
 .nav-new-star { color: var(--side-new-bg); }
 .nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
+.nav-group > .nav-g-count { margin-inline-start: auto; margin-inline-end: 8px; flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 12.5px; font-weight: 700; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }

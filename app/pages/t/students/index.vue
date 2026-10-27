@@ -160,7 +160,8 @@ const phoneOf = (s: { guardian_phone: string | null, phone: string | null }) => 
 .row + .row { border-top: 1px solid var(--line); }
 .who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 52px; color: inherit; text-decoration: none; border-radius: 12px; }
 .who:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
-.av { width: 42px; height: 42px; flex: none; border-radius: 12px; overflow: hidden; display: flex; }
+/* كصورة الطالب في `/students`: الحرفُ الأوّل على أخضر الهوية */
+.av { width: 42px; height: 42px; flex: none; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--green-ink); color: var(--on-primary); font-size: 16px; font-weight: 700; }
 .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .txt b { font-size: 15.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .txt small { font-size: 13px; color: var(--ink-3); }

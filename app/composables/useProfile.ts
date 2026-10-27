@@ -1,5 +1,7 @@
 import type { Database } from '~/types/database.types'
 import { once } from '~/utils/once'
+import { PROFILE_CACHE_KEY, readCache, writeCache } from '~/utils/offlineCache'
+import { isOnlineNow } from '~/utils/reachability'
 
 /** مفتاحُ مراقِب الهويّة الوحيد على تطبيق Nuxt. */
 const PROFILE_IDENTITY_WATCH = Symbol('profile-identity-watch')
@@ -16,15 +18,22 @@ type Role = Database['public']['Enums']['user_role']
  * داخل الدالة نفسها آمن — Nuxt يحافظ على سياق التطبيق عبر الجلب غير المتزامن.
  */
 async function fetchCurrentProfile(): Promise<Profile | null> {
+  // بلا إنترنت: آخرُ ملفٍّ عُرف على هذا الجهاز (البند 14 — رأسُ اللوحة والقائمةُ في تطبيق المعلّم)
+  if (import.meta.client && !isOnlineNow()) return readCache<Profile>(PROFILE_CACHE_KEY)
   const supabase = useSupabaseClient<Database>()
   const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) return null
+  if (!auth.user) return isOnlineNow() ? null : readCache<Profile>(PROFILE_CACHE_KEY)
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', auth.user.id)
     .single()
-  if (error) console.error('[useProfile] فشل جلب الملف:', error.message)
+  if (error) {
+    console.error('[useProfile] فشل جلب الملف:', error.message)
+    const cached = readCache<Profile>(PROFILE_CACHE_KEY)
+    return !isOnlineNow() && cached?.id === auth.user.id ? cached : data
+  }
+  if (data) writeCache(PROFILE_CACHE_KEY, data)
   return data
 }
 

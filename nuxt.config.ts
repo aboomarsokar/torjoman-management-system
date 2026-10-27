@@ -43,7 +43,15 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    '/': { prerender: true }
+    '/': { prerender: true },
+    // حضورُ المعلّم بلا إنترنت (البند 14 — نمطُ الصحابة): يُصيَّر في المتصفّح ويُولَّد مسبقاً ملفّاً يخزّنه عاملُ الخدمة،
+    // فيُفتح بلا شبكة (والهيكلُ بلا بيانات — لا يُخبَّأ فيه اسمُ معلّمٍ ولا طلابُه)
+    '/t': { ssr: false, prerender: true },
+    // والإنجازُ القرآنيّ ولوحةُ المعلّم بلا إنترنت كذلك (2026-10-27)
+    '/t/quran': { ssr: false, prerender: true },
+    '/t/home': { ssr: false, prerender: true },
+    '/t/students': { ssr: false, prerender: true },
+    '/t/students/view': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -65,8 +73,14 @@ export default defineNuxtConfig({
 
   // أيقوناتُ الوضع في حزمة العميل (2026-10-22): حين تُجلب «moon-star» و«monitor» في طلبٍ واحد يبني @nuxt/icon 2.2.2
   // قاعدةَ الأولى بصورة الثانية فيظهر القمرُ شاشة — والمضمَّنةُ لا تُجلب أصلاً.
+  // وكلُّ أيقونات التطبيق في الحزمة منذ 2026-10-26 (الحضورُ بلا إنترنت — بلاغُ المستخدم بلقطة: الأسهمُ والأيقوناتُ
+  // غائبةٌ بلا اتصال): كانت تُجلب من الخادم عند العرض فتسقط حين لا شبكة. المسحُ يجمع ما في الشيفرة (نمطُ الصحابة).
   icon: {
-    clientBundle: { icons: ['lucide:sun', 'lucide:moon-star', 'lucide:monitor'] }
+    clientBundle: {
+      icons: ['lucide:sun', 'lucide:moon-star', 'lucide:monitor'],
+      scan: { globInclude: ['app/**/*.{vue,ts}'] },
+      sizeLimitKb: 512
+    }
   },
 
   // PWA: التطبيق قابل للتثبيت (مانيفست + service worker لهيكل التطبيق فقط).
@@ -79,7 +93,11 @@ export default defineNuxtConfig({
       lang: 'ar',
       dir: 'rtl',
       display: 'standalone',
-      start_url: '/',
+      // التطبيقُ المثبَّت يُقلع على لوحة المعلّم مباشرةً (طلب المستخدم 2026-10-27؛ وكان على الحضور منذ 2026-10-26)
+      // — وهي تعمل بلا اتصال، وغيرُ المعلّم متّصلاً يُحوَّل منها إلى لوحته. `id` ثابتٌ كي يبقى التطبيقُ المثبَّت نفسَه
+      id: '/',
+      start_url: '/t/home',
+      scope: '/',
       theme_color: '#094064',
       background_color: '#FFFFFF',
       icons: [
@@ -88,12 +106,34 @@ export default defineNuxtConfig({
         { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
       ]
     },
-    // التنقّلُ من الشبكة دائماً (لا رجوعَ إلى نسخةٍ محفوظة من «/»): كانت كلُّ صفحةٍ تُقدَّم من هيكل النشر
-    // السابق حتى ينزل عاملُ الخدمة الجديد ويعيد التحميل — فيرى المستخدم الشاشةَ القديمة ثم الجديدة بعد التحديث،
-    // وتُبنى الصفحات على هيكل «/» فلا تطابق (Hydration mismatch). العملُ بلا إنترنت غيرُ مبنيٍّ أصلاً (ROADMAP #14).
-    // `null` لا حذفُ المفتاح: @vite-pwa/nuxt يضع «/» إن غاب.
+    // التنقّلُ من الشبكة دائماً إلا `/t`: كانت كلُّ صفحةٍ تُقدَّم من هيكل «/» المحفوظ فيرى المستخدمُ الشاشةَ القديمة
+    // بعد كلّ نشر (Hydration mismatch). فالسقوطُ إلى المخزَّن لشاشة حضور المعلّم وحدها (البند 14 — تُصيَّر في
+    // المتصفّح فلا هيكلَ خادمٍ يتقادم)، وغيرُها من الشبكة كما كان.
     workbox: {
-      navigateFallback: null
+      globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'],
+      navigateFallback: '/t/home',
+      navigateFallbackAllowlist: [/^\/t(\/home|\/quran|\/students|\/students\/view)?$/],
+      // المستخدمُ يفتح الدخولَ واللوحة والحضور: بلا اتصالٍ وحده تُقدَّم شاشةُ المعلّم المخزَّنة بدل صفحة «لا يتوفر
+      // اتصال» — ومتّصلاً لا يتغيّر شيء (NetworkOnly)
+      runtimeCaching: [
+        {
+          urlPattern: ({ request, url }: { request: Request, url: URL }) =>
+            request.mode === 'navigate' && ['/login', '/dashboard'].includes(url.pathname),
+          handler: 'NetworkOnly',
+          options: { precacheFallback: { fallbackURL: '/t/home' } }
+        },
+        {
+          urlPattern: ({ request, url }: { request: Request, url: URL }) => request.mode === 'navigate' && url.pathname === '/attendance',
+          handler: 'NetworkOnly',
+          options: { precacheFallback: { fallbackURL: '/t' } }
+        },
+        // «الإنجاز القرآني» بلا اتصال: شاشةُ المعلّم المخزَّنة (`/t/quran` نفسُها في الخبيئة فتُقدَّم منها مباشرةً)
+        {
+          urlPattern: ({ request, url }: { request: Request, url: URL }) => request.mode === 'navigate' && url.pathname === '/reports',
+          handler: 'NetworkOnly',
+          options: { precacheFallback: { fallbackURL: '/t/quran' } }
+        }
+      ]
     },
     // فحصُ نسخةٍ جديدة كلَّ ساعة (وعند العودة إلى التبويب — plugins/pwa-update.client.ts)، و autoUpdate يعيد التحميل
     client: {

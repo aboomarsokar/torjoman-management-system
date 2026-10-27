@@ -18,7 +18,7 @@ const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
 /** التعديل للمدير الإداري وحده كما يسمح RLS؛ وغيرُه للاطّلاع (قرار 2026-10-22). */
-const { isAdmin } = usePermissions()
+const { isAdmin, isTeacher } = usePermissions()
 const quran = useQuranReference()
 
 const tab = ref<'plan' | 'juz'>('plan')
@@ -142,8 +142,9 @@ const editTitle = computed(() => editing.value
         <UiSkeletonTable :columns="[{ key: 'a', label: 'الدورات' }, { key: 'b', label: 'عدد الأجزاء' }, { key: 'c', label: 'وصف السور' }]" />
       </template>
       <template v-else-if="tab === 'plan'">
+        <!-- المعلّمُ بلا بطاقات أرقام: الخطةُ نفسُها تكفيه (طلب المستخدم 2026-10-27) -->
         <UiStatStrip
-          v-if="cycles?.length"
+          v-if="cycles?.length && !isTeacher"
           :items="examPlanStats(cycles)"
           label="أرقام خطة الاختبارات"
         />

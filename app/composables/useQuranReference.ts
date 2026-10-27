@@ -2,12 +2,18 @@ import type { Database } from '~/types/database.types'
 import type { MushafPage } from '~/utils/quran/mushaf'
 import { toProgramJuz } from '~/utils/quran/position'
 import type { ProgramJuz } from '~/utils/quran/position'
+import { idbGet, idbPut } from '~/utils/offlineDb'
+import { isOnlineNow } from '~/utils/reachability'
 
 /**
  * مراجعُ القرآن في العميل: السورُ وفهرسُ صفحات المصحف وأجزاءُ البرنامج.
- * جداولُ صغيرةٌ ثابتة فتُجلب مرّةً واحدةً للجلسة وتُحفظ في `useState` (طلبٌ واحد لكلٍّ منها).
+ * جداولُ صغيرةٌ ثابتة فتُجلب مرّةً واحدةً للجلسة وتُحفظ في `useState` (طلبٌ واحد لكلٍّ منها)،
+ * ونسخةٌ منها على الجهاز تُقرأ بلا إنترنت (الإنجازُ القرآنيّ للمعلّم — 2026-10-27).
  */
 export interface SurahRef { number: number, name: string, ayahCount: number }
+
+interface CachedReference { surahs: SurahRef[], pages: MushafPage[], juz: ProgramJuz[] }
+const REFERENCE_KEY = 'quran-reference'
 
 // يعيش المحوِّل في utils كي يستعمله الخادم (الرابط العامّ) دون سحب composable الواجهة
 export { toProgramJuz }
@@ -31,17 +37,39 @@ export function useQuranReference() {
     ])
     const failure = s.error ?? p.error ?? j.error
     if (failure) throw failure
-    surahs.value = (s.data ?? []).map(r => ({ number: r.number, name: r.name, ayahCount: r.ayah_count }))
-    pages.value = p.data ?? []
-    juz.value = toProgramJuz(j.data ?? [])
+    const cached: CachedReference = {
+      surahs: (s.data ?? []).map(r => ({ number: r.number, name: r.name, ayahCount: r.ayah_count })),
+      pages: p.data ?? [],
+      juz: toProgramJuz(j.data ?? [])
+    }
+    apply(cached)
+    // نسخةٌ على الجهاز لشاشة الإنجاز بلا إنترنت (`/t/quran`)
+    if (import.meta.client) await idbPut('meta', cached, REFERENCE_KEY).catch(() => undefined)
+  }
+
+  function apply(cached: CachedReference) {
+    surahs.value = cached.surahs
+    pages.value = cached.pages
+    juz.value = cached.juz
     ready.value = true
+  }
+
+  /** نسخةُ الجهاز (بلا إنترنت) — true إن وُجدت. */
+  async function fromDevice(): Promise<boolean> {
+    if (!import.meta.client) return false
+    const cached = await idbGet<CachedReference>('meta', REFERENCE_KEY).catch(() => undefined)
+    if (cached?.surahs.length) apply(cached)
+    return !!cached?.surahs.length
   }
 
   /** يجلب الجداول الثلاثة مرّةً واحدة؛ الاستدعاءاتُ اللاحقة بعد النجاح لا تطلب شيئاً، وبعد الفشل تعيد المحاولة. */
   async function load(): Promise<void> {
     if (ready.value) return
-    inflight ??= fetchAll()
-      .catch((err) => { handle(err) })
+    inflight ??= (import.meta.client && !isOnlineNow() ? Promise.reject(new Error('offline')) : fetchAll())
+      .catch(async (err) => {
+        // منقطعٌ أو تعثّر الطلب: نسخةُ الجهاز إن وُجدت، وإلا يُعرض الخطأ
+        if (!await fromDevice()) handle(err)
+      })
       .finally(() => { inflight = null })
     await inflight
   }

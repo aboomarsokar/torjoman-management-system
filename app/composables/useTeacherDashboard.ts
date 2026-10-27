@@ -17,6 +17,15 @@ import {
 } from '~/utils/teacherDashboard'
 import { prorationApplies } from '~/constants/quran'
 import { buildStudentRows, type QuranRecordRow } from '~/utils/quran/month'
+import { queueOnline } from '~/composables/useOfflineQueue'
+import type { AttendanceMirror } from '~/composables/useOfflineMirror'
+import type { OutboxEntry } from '~/utils/attendanceOutbox'
+import { readCache, TEACHER_DASH_CACHE_KEY, writeCache } from '~/utils/offlineCache'
+import { idbGet } from '~/utils/offlineDb'
+import { ATTENDANCE_QUEUE, QURAN_QUEUE } from '~/utils/offlineQueues'
+import type { QuranEntry } from '~/utils/quranOutbox'
+import { isOnlineNow } from '~/utils/reachability'
+import { localDay, withLocalWork, type DashSnapshot } from '~/utils/teacherDashboardOffline'
 
 type StatementStatus = Database['public']['Enums']['statement_status']
 type RecordRow = HistoryRow & DashRecord
@@ -149,14 +158,67 @@ export function useTeacherDashboard() {
     }
   }
 
+  type Dash = Awaited<ReturnType<typeof load>>
+  /** وقتُ النسخة المعروضة من الجهاز (بلا إنترنت)؛ null = من القاعدة الآن. */
+  const savedAt = ref<string | null>(null)
+  const savedOn = ref(gazaToday())
+
+  /** النسخةُ المحفوظة لصاحب الجلسة — لا لغيره على الجهاز نفسه. */
+  function fromDevice(me: string | undefined): Dash | null {
+    const snap = readCache<DashSnapshot<Dash>>(TEACHER_DASH_CACHE_KEY)
+    if (!snap || snap.uid !== me) return null
+    savedAt.value = snap.savedAt
+    savedOn.value = snap.day
+    return snap.dash
+  }
+
   const { data, pending, refresh } = useLazyAsyncData('teacher-dashboard', async () => {
+    const me = profile.value?.id
+    if (!isOnlineNow()) return fromDevice(me)
     try {
-      return await load()
+      const fresh = await load()
+      if (fresh && me) {
+        const snap: DashSnapshot<Dash> = { uid: me, savedAt: new Date().toISOString(), day: gazaToday(), dash: fresh }
+        writeCache(TEACHER_DASH_CACHE_KEY, snap)
+      }
+      savedAt.value = null
+      savedOn.value = gazaToday()
+      return fresh
     } catch (err) {
-      handle(err, 'تعذّر تحميل لوحتك. حاول مجدداً.')
-      return null
+      // شبكةٌ متعثّرة: آخرُ نسخةٍ على الجهاز، وإلا يُعرض الخطأ
+      const cached = fromDevice(me)
+      if (!cached) handle(err, 'تعذّر تحميل لوحتك. حاول مجدداً.')
+      return cached
     }
   }, { server: false, default: () => null, watch: [() => profile.value?.id] })
 
-  return { dash: data, pending, refresh }
+  // ── ما سجّله المعلّمُ على جهازه بعد النسخة: حضورُ اليوم وإنجازُ شهر الرصد ──
+  const uid = computed(() => profile.value?.id ?? null)
+  const attendanceQueue = useOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, uid)
+  const quranQueue = useOfflineQueue<QuranEntry>(QURAN_QUEUE, uid)
+  const mirrorDays = ref<AttendanceMirror['days']>({})
+  watch([uid, () => attendanceQueue.lastUploaded.value], async () => {
+    const mirror = uid.value ? await idbGet<AttendanceMirror>('mirror', uid.value).catch(() => undefined) : undefined
+    mirrorDays.value = mirror?.days ?? {}
+  }, { immediate: true })
+
+  const dash = computed(() => {
+    const d = data.value
+    if (!d?.halaqa) return d
+    const today = gazaToday()
+    const queued = attendanceQueue.pending.value.find(e => e.halaqaId === d.halaqa.id && e.day === today)
+    return withLocalWork(d, {
+      today,
+      savedOn: savedOn.value,
+      day: localDay(queued?.absences ?? null, mirrorDays.value[today]),
+      quranPending: quranQueue.entries.value
+    })
+  })
+
+  // عودةُ الاتصال: بياناتٌ حيّة بدل النسخة
+  watch(() => queueOnline.value, (now, before) => {
+    if (now && !before) void refresh()
+  })
+
+  return { dash, pending, refresh, savedAt }
 }

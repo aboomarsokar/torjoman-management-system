@@ -236,19 +236,25 @@ function askWithdraw(r: NomineeRow) {
           </UiCardRow>
         </template>
       </UiDataTable>
-      <div class="send-bar">
-        <span>المحدّدون: <strong>{{ chosen.length }}</strong></span>
-        <UButton
-          label="إرسال للمختبِر"
-          color="primary"
-          size="lg"
-          icon="i-lucide-send"
-          :disabled="!chosen.length"
-          :loading="sending"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
-          @click="send"
-        />
-      </div>
+      <!-- زرٌّ عائمٌ يظهر متى حُدّد طالب (طلب المستخدم 2026-10-27): لا يُبحث عنه أسفلَ القائمة -->
+      <Transition name="float">
+        <div
+          v-if="chosen.length"
+          class="send-bar"
+          data-float-above
+        >
+          <span>المحدّدون: <strong>{{ chosen.length }}</strong></span>
+          <UButton
+            label="إرسال للمختبِر"
+            color="primary"
+            size="lg"
+            icon="i-lucide-send"
+            :loading="sending"
+            :ui="{ base: 'rounded-[13px] font-semibold justify-center px-6' }"
+            @click="send"
+          />
+        </div>
+      </Transition>
     </template>
     <ExamsWithdrawModal
       v-model:target="withdrawTarget"
@@ -265,7 +271,15 @@ function askWithdraw(r: NomineeRow) {
 .hint { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--chip-warn-ink); margin-top: 2px; }
 .status { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: var(--surface-3); color: var(--ink-3); white-space: nowrap; }
-.send-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 4px 0; flex-wrap: wrap; }
+.send-bar { position: sticky; bottom: 12px; z-index: 5; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); font-weight: 600; color: var(--ink-2); }
 .send-bar strong { color: var(--ink); }
-.send-bar :deep(button) { min-height: 44px; }
+.send-bar :deep(button) { min-height: 48px; }
+.float-enter-active, .float-leave-active { transition: opacity .18s ease, transform .18s ease; }
+.float-enter-from, .float-leave-to { opacity: 0; transform: translateY(12px); }
+@media (max-width: 520px) {
+  .send-bar :deep(button) { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .float-enter-active, .float-leave-active { transition: none; }
+}
 </style>

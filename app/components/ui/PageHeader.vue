@@ -3,23 +3,26 @@
  * رأس الصفحة الموحّد — صفّ أدواتٍ واحد: سطر الإرشاد (اختياري) والإجراءات (slot).
  * العنوان يحمله الشريط العلوي في التخطيط، فيبقى هنا عنواناً للقارئات الصوتية وحدها
  * (لا يتكرّر بصرياً، وتسلسل العناوين h1 ← h2 سليم).
+ * والمعلّمُ بلا سطر الإرشاد في كلّ الصفحات (طلب المستخدم 2026-10-26: «احذف كل هذه الوصوف عند المعلم»).
  */
-defineProps<{ title: string, subtitle?: string }>()
+const props = defineProps<{ title: string, subtitle?: string }>()
+const { isTeacher } = usePermissions()
+const hint = computed(() => (isTeacher.value ? undefined : props.subtitle))
 </script>
 
 <template>
   <div
     class="head"
-    :class="{ bare: !subtitle && !$slots.actions }"
+    :class="{ bare: !hint && !$slots.actions }"
   >
     <h2 class="sr-only">
       {{ title }}
     </h2>
     <p
-      v-if="subtitle"
+      v-if="hint"
       class="hint"
     >
-      {{ subtitle }}
+      {{ hint }}
     </p>
     <div
       v-if="$slots.actions"

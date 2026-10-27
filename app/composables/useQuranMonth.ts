@@ -8,10 +8,8 @@ import type { Database } from '~/types/database.types'
 import { prorationApplies } from '~/constants/quran'
 import type { Position } from '~/utils/quran/position'
 import { buildStudentRows } from '~/utils/quran/month'
-import type { QuranRecordRow, ReportHeader, StudentMonthRow } from '~/utils/quran/month'
-import { HISTORY_MONTHS, latestEnds, monthRange } from '~/utils/quran/monthHistory'
-import type { HistoryRow } from '~/utils/quran/monthHistory'
-import { shiftMonth } from '~/utils/reportWindow'
+import type { ReportHeader, StudentMonthRow } from '~/utils/quran/month'
+import { fetchMonthInputs, REPORT_COLUMNS } from '~/utils/quran/monthInputs'
 
 // الدوالُّ النقيّة والأنواع تعيش في utils (حدُّ 300 سطر) وتُعاد من هنا لمن يستوردها من الـcomposable
 export { buildStudentRows, canApproveReport, summarizeOutcomes } from '~/utils/quran/month'
@@ -28,8 +26,6 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
   const loading = ref(false)
   // آخرُ قراءةٍ تغلب ما سبقها (تبديلُ الحلقة/الشهر بسرعة)
   let generation = 0
-
-  const REPORT_COLUMNS = 'id, halaqa_id, report_month, report_year, status, return_note, submitted_at, approved_at, target_pages_snapshot'
 
   async function load(): Promise<void> {
     const hid = halaqaId.value
@@ -53,59 +49,12 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
         }
         return
       }
-      const range = monthRange(y, m)
-      const [students, reportRes, daysRes, absencesRes, settings] = await Promise.all([
-        supabase.from('students').select('id, full_name, enrollment_date, quran_parts')
-          .eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
-        supabase.from('monthly_reports').select(REPORT_COLUMNS)
-          .eq('halaqa_id', hid).eq('report_year', y).eq('report_month', m).maybeSingle(),
-        supabase.from('attendance_days').select('day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to).order('day'),
-        supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
-        supabase.from('app_settings').select('target_memorization_pages').limit(1).maybeSingle()
-      ])
-      const failure = students.error ?? reportRes.error ?? daysRes.error ?? absencesRes.error ?? settings.error
-      if (failure) throw failure
-      const ids = (students.data ?? []).map(s => s.id)
-
-      // استعلامٌ واحد لكلّ جدول: سجلّاتُ الشهر، وتاريخُ نهايات الطلاب، وسجلّاتُ الشهر نفسه في حلقاتٍ أخرى. التاريخُ محدودٌ
-      // بآخر HISTORY_MONTHS شهراً قبل الشهر المعروض على مستوى السنة (حدُّ سنةٍ كاملة يكفي لقصّ الخادم؛ `latestEnds` يحسم الأدقّ) ومرتّبٌ بالأحدث
-      const lowerYear = shiftMonth(y, m, -HISTORY_MONTHS).year
-      const [recordsRes, historyRes, elsewhereRes] = ids.length
-        ? await Promise.all([
-            reportRes.data
-              ? supabase.from('quran_records').select('*').eq('report_id', reportRes.data.id).in('student_id', ids)
-              : Promise.resolve({ data: [] as QuranRecordRow[], error: null }),
-            supabase.from('quran_records')
-              .select('student_id, to_surah, to_ayah, report:monthly_reports!inner(report_year, report_month, status)')
-              .in('student_id', ids).not('to_surah', 'is', null)
-              .gte('report.report_year', lowerYear)
-              .order('report(report_year)', { ascending: false })
-              .order('report(report_month)', { ascending: false }),
-            // طالبٌ نُقل إلى هذه الحلقة وله رصدٌ لهذا الشهر في تقرير حلقةٍ أخرى (بأيّ حالة: القاعدةُ ترفض رصدَه ثانيةً في أيّها)
-            supabase.from('quran_records')
-              .select('*, report:monthly_reports!inner(halaqa_id, report_year, report_month)')
-              .in('student_id', ids)
-              .eq('report.report_year', y).eq('report.report_month', m)
-              .neq('report.halaqa_id', hid)
-          ])
-        : [{ data: [] as QuranRecordRow[], error: null }, { data: [], error: null }, { data: [] as QuranRecordRow[], error: null }]
-      const failure2 = recordsRes.error ?? historyRes.error ?? elsewhereRes.error
-      if (failure2) throw failure2
+      const inputs = await fetchMonthInputs(supabase, hid, y, m)
       if (mine !== generation) return
-
-      const history = (historyRes.data ?? []) as HistoryRow[]
-      const before = { year: y, month: m }
-      report.value = reportRes.data
+      report.value = inputs.report
       rows.value = buildStudentRows({
-        students: students.data ?? [],
-        records: recordsRes.data ?? [],
-        elsewhereRecords: (elsewhereRes.data ?? []) as QuranRecordRow[],
-        previousEnds: latestEnds(history, before, false),
-        approvedEnds: latestEnds(history, { year: y, month: m + 1 }, true),
-        days: (daysRes.data ?? []).map(d => d.day),
+        ...inputs,
         prorate: prorationApplies(y, m),
-        absences: absencesRes.data ?? [],
-        target: reportRes.data?.target_pages_snapshot ?? settings.data?.target_memorization_pages ?? null,
         juz: reference.juz.value,
         ayahCountOf: reference.ayahCountOf
       })

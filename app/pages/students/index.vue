@@ -407,8 +407,9 @@ async function confirmDelete() {
         v-if="!noStudents && seesBoth"
         :items="splitStats"
       />
+      <!-- والمعلّمُ بلا بطاقات أرقام: صفحتُه قائمةُ طلابه (طلب المستخدم 2026-10-27) -->
       <UiStatStrip
-        v-else-if="!noStudents"
+        v-else-if="!noStudents && !isTeacher"
         :items="stats"
         label="أرقام الطلاب"
       />

@@ -6,16 +6,10 @@
 import type { Database } from '~/types/database.types'
 import { PROJECT_START_DATE } from '~/constants/project'
 import type { AttendanceChoice } from '~/composables/useAttendanceDay'
-import { absencesFor, effectiveDay, syncStatusLine, type Absences } from '~/utils/attendanceOutbox'
+import { absencesFor, effectiveDay, syncStatusLine, type Absences, type OutboxEntry } from '~/utils/attendanceOutbox'
 import { attendanceStrip, lastSchoolDays } from '~/utils/attendanceStrip'
 import { isOnlineNow } from '~/utils/reachability'
 import { gazaToday, isFriday, schoolDayOnOrBefore } from '~/utils/reportWindow'
-
-/** غياباتٌ بعد حذف من تخطّاهم الرفع (لم يعودوا في الحلقة). */
-export function keptAbsences(absences: Absences, skipped: string[]): Absences {
-  const drop = new Set(skipped)
-  return Object.fromEntries(Object.entries(absences).filter(([id]) => !drop.has(id)))
-}
 
 /** هل في المسوّدة تغييرٌ عن اليوم المعروض لطلاب القائمة. */
 export function draftChanged(shown: Absences, draft: Absences, studentIds: string[]): boolean {
@@ -27,12 +21,17 @@ export function useOfflineAttendance() {
   const user = useSupabaseUser()
   const toast = useToast()
   const { isReadOnlyNow } = useImpersonation()
-  const { mirror, refreshing, loadLocal, refresh, loadDay, setDay } = useOfflineMirror()
+  const { mirror, refreshing, loadLocal, refresh, loadDay } = useOfflineMirror()
 
   const uid = computed(() => mirror.value?.uid ?? user.value?.sub ?? null)
-  const outbox = useAttendanceOutbox(uid, async (entry, skipped) => {
-    await setDay(entry.day, { held: true, absences: keptAbsences(entry.absences, skipped) })
-    if (skipped.length) toast.add({ title: `رُفع حضور ${entry.day} — وتُخطّي ${skipped.length} لم يعد في الحلقة.`, color: 'warning', icon: 'i-lucide-info' })
+  const outbox = useAttendanceOutbox(uid)
+  // يومٌ رُفع (من هذه الشاشة أو غيرها): الصندوقُ كتبه في نسخة الجهاز، فتُقرأ ثانيةً — ويُخبَر المعلّمُ بمن تُخطّي
+  watch(() => outbox.lastUploaded.value, async (up) => {
+    const e = up?.entry as OutboxEntry | undefined
+    if (!e || e.uid !== uid.value) return
+    await loadLocal(e.uid)
+    const skipped = (up?.data as { skipped?: string[] } | null)?.skipped ?? []
+    if (skipped.length) toast.add({ title: `رُفع حضور ${e.day} — وتُخطّي ${skipped.length} لم يعد في الحلقة.`, color: 'warning', icon: 'i-lucide-info' })
   })
 
   const ready = ref(false)

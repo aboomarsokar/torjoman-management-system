@@ -47,6 +47,12 @@ export function absencesFor(draft: Absences, studentIds: string[]): Absences {
   return Object.fromEntries(Object.entries(draft).filter(([id]) => keep.has(id)))
 }
 
+/** غياباتٌ بعد حذف من تخطّاهم الرفع (لم يعودوا في الحلقة). */
+export function keptAbsences(absences: Absences, skipped: string[]): Absences {
+  const drop = new Set(skipped)
+  return Object.fromEntries(Object.entries(absences).filter(([id]) => !drop.has(id)))
+}
+
 /** رموزُ أخطاء القاعدة التي لا تُصلحها الإعادة: حارسٌ رفض، أو صلاحية، أو صيغة. */
 const PERMANENT_CODES = new Set(['P0001', '42501', '22023', '23514', '23503', '23505', '22007', '22P02', 'PGRST202'])
 /** انتهاءُ الرمز — يُجدَّد ثمّ يُعاد. */

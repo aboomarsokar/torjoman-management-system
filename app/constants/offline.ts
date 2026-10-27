@@ -4,7 +4,7 @@
 
 /** قاعدةُ الجهاز (IndexedDB) ونسختُها — رفعُ النسخة يعيد بناء المخازن. */
 export const OFFLINE_DB_NAME = 'torjoman-offline'
-export const OFFLINE_DB_VERSION = 1
+export const OFFLINE_DB_VERSION = 2
 
 /** كم يوماً من الحضور تُحفظ على الجهاز — يكفي انقطاعاً لأيّام وتصحيحَ الأسابيع الماضية. */
 export const MIRROR_DAYS = 40

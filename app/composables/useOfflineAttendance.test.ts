@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { draftChanged, keptAbsences } from './useOfflineAttendance'
+import { draftChanged } from './useOfflineAttendance'
+import { keptAbsences } from '~/utils/attendanceOutbox'
 
 describe('keptAbsences', () => {
   it('يحذف من تخطّاهم الرفع', () => {

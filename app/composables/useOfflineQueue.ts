@@ -95,12 +95,17 @@ async function runFlush(name: string, supabase: Client) {
   const s = stateOf(name)
   const def = defOf(name)
   queueOnline.value = isOnlineNow()
-  const pending = s.entries.value.filter(e => e.status === 'pending')
   if (!queueOnline.value) {
     // منقطع: يُعاد الفحصُ بعد مهلةٍ ولا ينتظر حدثاً قد لا يقع — بلا طلبٍ إلى الخادم
-    if (pending.length) schedule(name, supabase, RETRY_DELAYS_MS[0])
+    if (s.entries.value.some(e => e.status === 'pending')) schedule(name, supabase, RETRY_DELAYS_MS[0])
     return
   }
+  // لا يُرفع سطرٌ إلا بجلسة صاحبه: بلا جلسةٍ (صفحةُ الدخول) يُنادى بدور anon فيُرفض فيُعلَّم «لم تقبله الإدارة» خطأً
+  // (بلاغ المستخدم بلقطة 2026-10-27)، وبجلسة معلّمٍ آخر على الجهاز نفسه تردّه الصلاحيات. الدخولُ يوقظ الصندوق (offline-sync)
+  const { data: { session } } = await supabase.auth.getSession()
+  const me = session?.user.id
+  if (!me) return
+  const pending = s.entries.value.filter(e => e.status === 'pending' && e.uid === me)
   s.syncing.value = true
   try {
     for (const entry of [...pending].sort(def.order)) {

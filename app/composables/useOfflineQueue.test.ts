@@ -36,8 +36,14 @@ defineOfflineQueue<E>('t', {
     settled.push(e.n)
   }
 })
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- الرفعُ محاكًى فلا يُمسّ العميل
-const supabase = { auth: { refreshSession: async () => ({}) } } as any
+let sessionUid: string | null = 'u'
+// الرفعُ محاكًى فلا يُمسّ العميل: جلسةٌ وتجديدٌ فقط
+const supabase = {
+  auth: {
+    refreshSession: async () => ({}),
+    getSession: async () => ({ data: { session: sessionUid ? { user: { id: sessionUid } } : null } })
+  }
+} as unknown as Parameters<typeof flushQueue>[1]
 
 async function seed(...es: E[]) {
   db.clear()
@@ -48,6 +54,7 @@ async function seed(...es: E[]) {
 beforeEach(() => {
   vi.useFakeTimers()
   online = true
+  sessionUid = 'u'
   replies = {}
   settled.length = 0
   uploaded.length = 0
@@ -86,6 +93,21 @@ describe('flushQueue', () => {
     await flushQueue('t', supabase)
     expect(uploaded).toEqual([])
     expect(vi.getTimerCount()).toBe(1)
+  })
+
+  it('بلا جلسةٍ لا يُرفع شيءٌ ولا يُعلَّم مرفوضاً (صفحةُ الدخول)', async () => {
+    sessionUid = null
+    await seed(entry(1))
+    await flushQueue('t', supabase)
+    expect(uploaded).toEqual([])
+    expect(db.get('k1')?.status).toBe('pending')
+  })
+
+  it('لا يُرفع سطرُ معلّمٍ آخر بجلسةٍ ليست له', async () => {
+    sessionUid = 'other'
+    await seed(entry(1))
+    await flushQueue('t', supabase)
+    expect(uploaded).toEqual([])
   })
 
   it('سطرٌ أُعيد حفظُه أثناء الرفع لا يُمحى بنجاح نسخته القديمة', async () => {

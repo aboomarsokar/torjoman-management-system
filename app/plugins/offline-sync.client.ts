@@ -32,5 +32,9 @@ export default defineNuxtPlugin({
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') wake()
     })
+    // الرفعُ بجلسة صاحب السطر وحدها: الدخولُ يوقظ ما انتظره
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') wake()
+    })
   }
 })

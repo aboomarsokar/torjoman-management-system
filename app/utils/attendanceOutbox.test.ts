@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { absencesFor, classifySyncError, effectiveDay, entryKey, newEntry, nextRetryDelay, syncStatusLine } from './attendanceOutbox'
+import { absencesFor, classifySyncError, effectiveDay, entryKey, newEntry, nextRetryDelay, rejectionText, syncStatusLine } from './attendanceOutbox'
 
 describe('newEntry / entryKey', () => {
   it('يومٌ واحدٌ لكلّ معلّمٍ وحلقة، بوقت الحفظ على الجهاز', () => {
@@ -37,6 +37,14 @@ describe('classifySyncError', () => {
   it('انتهاءُ الرمز يُجدَّد ثمّ يُعاد', () => {
     expect(classifySyncError({ code: 'PGRST301' })).toBe('reauth')
     expect(classifySyncError({ message: 'JWT expired' })).toBe('reauth')
+    // نداءٌ بلا جلسة (anon) — لا رفضٌ للمعلّم
+    expect(classifySyncError({ code: '42501', message: 'permission denied for function save_attendance_day' })).toBe('reauth')
+  })
+
+  it('سببُ الرفض بالعربية', () => {
+    expect(rejectionText('أُرسل رصدُ هذا الشهر للاعتماد')).toBe('أُرسل رصدُ هذا الشهر للاعتماد')
+    expect(rejectionText('new row violates row-level security policy')).toMatch(/^لم تقبل القاعدةُ/)
+    expect(rejectionText(undefined)).toMatch(/^لم تقبل القاعدةُ/)
   })
 
   it('رفضُ الحارس والصلاحيةُ نهائيّان', () => {

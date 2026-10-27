@@ -4,6 +4,8 @@
  * وسجلّاتُ الإنجاز القرآنيّ. لا تُعاد تلقائياً لأنّ الإعادةَ لا تُصلحها: المعلّمُ يعيد المحاولةَ بعد أن تفتح الإدارةُ
  * الشهر، أو يتركها فيعود ما في القاعدة.
  */
+import { rejectionText } from '~/utils/attendanceOutbox'
+
 defineProps<{
   title: string
   /** `label` ما رُفض (يومٌ أو اسمُ طالب)، و`error` سببُ الرفض من القاعدة. */
@@ -25,7 +27,7 @@ const emit = defineEmits<{ retry: [key: string], discard: [key: string] }>()
       >
         <div class="what">
           <b><bdi>{{ e.label }}</bdi></b>
-          <span>{{ e.error || 'رُفض الحفظ.' }}</span>
+          <span>{{ rejectionText(e.error) }}</span>
         </div>
         <div class="acts">
           <UButton

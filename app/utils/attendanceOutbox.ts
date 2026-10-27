@@ -53,6 +53,11 @@ export function keptAbsences(absences: Absences, skipped: string[]): Absences {
   return Object.fromEntries(Object.entries(absences).filter(([id]) => !drop.has(id)))
 }
 
+/** سببُ الرفض للمعلّم: رسائلُ حرّاس القاعدة عربيّة فتُعرض كما هي، وغيرُها (رسائلُ Postgres الإنجليزية) بجملةٍ عامّة. */
+export function rejectionText(error: string | undefined): string {
+  return error && /[؀-ۿ]/.test(error) ? error : 'لم تقبل القاعدةُ هذا الحفظ — أعد المحاولة، فإن تكرّر فتواصل مع الإدارة.'
+}
+
 /** رموزُ أخطاء القاعدة التي لا تُصلحها الإعادة: حارسٌ رفض، أو صلاحية، أو صيغة. */
 const PERMANENT_CODES = new Set(['P0001', '42501', '22023', '23514', '23503', '23505', '22007', '22P02', 'PGRST202'])
 /** انتهاءُ الرمز — يُجدَّد ثمّ يُعاد. */
@@ -63,7 +68,9 @@ export type SyncFailure = 'retry' | 'reauth' | 'reject'
 /** كيف يُعامَل خطأُ الرفع: يُعاد لاحقاً (شبكة/خادم)، أو يُجدَّد الدخولُ ثمّ يُعاد، أو يُرفض نهائياً. */
 export function classifySyncError(err: { code?: string | null, message?: string | null } | null | undefined): SyncFailure {
   const code = err?.code ?? ''
-  if (AUTH_CODES.has(code) || /jwt expired|invalid jwt/i.test(err?.message ?? '')) return 'reauth'
+  // «permission denied for function» = نداءٌ بلا جلسة (الدالّةُ ممنوحةٌ لـauthenticated وحده) لا رفضٌ للمعلّم
+  // (بلاغ المستخدم بلقطة 2026-10-27: يومٌ «لم تقبله الإدارة» رُفع وصفحةُ الدخول مفتوحة)
+  if (AUTH_CODES.has(code) || /jwt expired|invalid jwt|permission denied for function/i.test(err?.message ?? '')) return 'reauth'
   if (PERMANENT_CODES.has(code)) return 'reject'
   return 'retry'
 }

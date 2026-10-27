@@ -1392,6 +1392,7 @@ export type Database = {
           notes: string | null
           pages_memorized: number
           pages_reviewed: number | null
+          recorded_at: string | null
           recorded_by: string | null
           report_id: string
           student_id: string
@@ -1407,6 +1408,7 @@ export type Database = {
           notes?: string | null
           pages_memorized?: number
           pages_reviewed?: number | null
+          recorded_at?: string | null
           recorded_by?: string | null
           report_id: string
           student_id: string
@@ -1422,6 +1424,7 @@ export type Database = {
           notes?: string | null
           pages_memorized?: number
           pages_reviewed?: number | null
+          recorded_at?: string | null
           recorded_by?: string | null
           report_id?: string
           student_id?: string
@@ -1744,6 +1747,95 @@ export type Database = {
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_requests: {
+        Row: {
+          birth_date: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          full_name: string
+          guardian_phone: string | null
+          halaqa_id: string
+          id: string
+          national_id: string
+          nearest_mosque: string | null
+          note: string | null
+          reject_note: string | null
+          requested_by: string
+          residence: string | null
+          status: string
+          student_id: string | null
+          tajweed_level: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          full_name: string
+          guardian_phone?: string | null
+          halaqa_id: string
+          id?: string
+          national_id: string
+          nearest_mosque?: string | null
+          note?: string | null
+          reject_note?: string | null
+          requested_by?: string
+          residence?: string | null
+          status?: string
+          student_id?: string | null
+          tajweed_level?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          full_name?: string
+          guardian_phone?: string | null
+          halaqa_id?: string
+          id?: string
+          national_id?: string
+          nearest_mosque?: string | null
+          note?: string | null
+          reject_note?: string | null
+          requested_by?: string
+          residence?: string | null
+          status?: string
+          student_id?: string | null
+          tajweed_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_requests_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -2351,6 +2443,23 @@ export type Database = {
           p_meetings: number
           p_month: number
           p_notes: string
+          p_year: number
+        }
+        Returns: string
+      }
+      save_quran_record: {
+        Args: {
+          p_from_ayah: number
+          p_from_surah: number
+          p_halaqa: string
+          p_month: number
+          p_notes: string
+          p_pages_memorized: number
+          p_pages_reviewed: number
+          p_recorded_at?: string
+          p_student: string
+          p_to_ayah: number
+          p_to_surah: number
           p_year: number
         }
         Returns: string

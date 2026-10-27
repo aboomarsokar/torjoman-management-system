@@ -88,8 +88,10 @@ const mainNav: Item[] = [
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   // البرامجُ المصاحبة عنوانٌ مستقلّ تحته تبويبا صفحتها (طلب المستخدم 2026-10-22)
-  { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
-  { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
+  { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF], group: 'programs' },
+  { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF], group: 'programs' },
+  // قائمةُ المعلّم المسطّحة: بندٌ واحدٌ للصفحة وتبويباها داخلها (طلب المستخدم 2026-10-27)
+  { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['teacher'], group: 'programs' },
   { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF], group: 'quran' },
   // المعلّمُ يرصد في الشاشة التي تعمل بلا إنترنت (البند 14، 2026-10-27)
   { key: 'quran-offline', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/t/quran', roles: ['teacher'], group: 'quran', isNew: true },

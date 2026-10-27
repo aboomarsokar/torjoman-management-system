@@ -16,5 +16,11 @@ export function orderByKeys<T extends { key: string }>(items: T[], order: readon
   return items.map((item, i) => ({ item, i })).sort((a, b) => rank(a.item.key) - rank(b.item.key) || a.i - b.i).map(x => x.item)
 }
 
+/**
+ * بنودُ المعلّم التي لا تُبنى للعمل بلا إنترنت (قرار المستخدم 2026-10-27): نادرةُ الاستعمال، وطلبُ الطالب يُفحص في
+ * القاعدة فورَ إرساله — فعليها شارةٌ دائمةٌ في القائمة تقول إنها تحتاج اتصالاً.
+ */
+export const TEACHER_ONLINE_ONLY = ['my-booklets', 'student-requests'] as const
+
 /** الشاشاتُ التي تعمل بلا إنترنت — غيرُها يُعتَم في القائمة ويُنبَّه عند ضغطه. */
 export const OFFLINE_PATHS = ['/t/home', '/t', '/t/quran', '/t/students', '/t/students/view']

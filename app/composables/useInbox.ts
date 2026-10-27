@@ -5,6 +5,8 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { INBOX_LIMIT } from '~/constants/notifications'
 import type { Database } from '~/types/database.types'
+import { INBOX_CACHE_KEY, readCache, writeCache } from '~/utils/offlineCache'
+import { isOnlineNow } from '~/utils/reachability'
 
 export interface InboxRow {
   id: string
@@ -123,6 +125,16 @@ export function useInbox() {
   const impersonation = useImpersonation()
 
   async function load() {
+    // بلا إنترنت: آخرُ ما عُرف من الصندوق، بلا رسالة خطأ (البند 14)
+    if (import.meta.client && !isOnlineNow()) {
+      const cached = readCache<{ rows: InboxRow[], unread: number }>(INBOX_CACHE_KEY)
+      if (cached) {
+        rows.value = cached.rows
+        unread.value = cached.unread
+        loaded.value = true
+      }
+      return
+    }
     const uid = user.value?.sub
     if (!uid) {
       rows.value = []
@@ -151,6 +163,7 @@ export function useInbox() {
     rows.value = mergeRows(rows.value, list.data ?? [])
     unread.value = count.count ?? 0
     loaded.value = true
+    writeCache(INBOX_CACHE_KEY, { rows: rows.value, unread: unread.value })
   }
 
   async function markRead(ids: string[] | null) {

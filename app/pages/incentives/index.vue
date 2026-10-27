@@ -163,9 +163,18 @@ const fmt = (n: number) => n.toLocaleString('ar')
             <div>
               <strong>أُعيد إليك الكشف للتعديل</strong>
               <p>{{ statement.returnNote }}</p>
-              <small>صحّح البنود ثم اضغط «إرسال الكشف» أسفل الصفحة.</small>
+              <small>صحّح البنود ثم اضغط «إرسال الكشف».</small>
             </div>
           </div>
+
+          <!-- الإرسالُ أعلى البنود في بطاقته وحدَه (طلب المستخدم 2026-10-27)، بعيداً عن «إضافة بند» و«حفظ مسوّدة» -->
+          <IncentivesSendCard
+            v-if="canEdit && rows.length"
+            :count="rows.length"
+            :total="fmt(spent)"
+            :busy="submitting"
+            @send="submit"
+          />
 
           <!-- بنود المصروفات -->
           <div class="card items">
@@ -229,15 +238,6 @@ const fmt = (n: number) => n.toLocaleString('ar')
               />
             </div>
           </div>
-
-          <!-- الإرسالُ في بطاقته وحدَه، بعيداً عن «إضافة بند» و«حفظ مسوّدة» -->
-          <IncentivesSendCard
-            v-if="canEdit && rows.length"
-            :count="rows.length"
-            :total="fmt(spent)"
-            :busy="submitting"
-            @send="submit"
-          />
         </template>
       </ClientOnly>
     </template>

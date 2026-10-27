@@ -22,7 +22,9 @@ export const NOTIFICATION_KINDS = [
   'halaqa_time_changed',
   'booklet_delivered',
   'booklet_requested',
-  'announcement'
+  'announcement',
+  'student_requested',
+  'student_request_closed'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -47,7 +49,9 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   halaqa_time_changed: 'i-lucide-clock',
   booklet_delivered: 'i-lucide-book-copy',
   booklet_requested: 'i-lucide-package-plus',
-  announcement: 'i-lucide-megaphone'
+  announcement: 'i-lucide-megaphone',
+  student_requested: 'i-lucide-user-plus',
+  student_request_closed: 'i-lucide-user-check'
 }
 
 /** آخرُ ما يُعرض في لوحة الجرس. */

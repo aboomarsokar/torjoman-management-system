@@ -161,18 +161,21 @@ export type Database = {
           created_at: string
           day: string
           halaqa_id: string
+          recorded_at: string | null
           recorded_by: string | null
         }
         Insert: {
           created_at?: string
           day: string
           halaqa_id: string
+          recorded_at?: string | null
           recorded_by?: string | null
         }
         Update: {
           created_at?: string
           day?: string
           halaqa_id?: string
+          recorded_at?: string | null
           recorded_by?: string | null
         }
         Relationships: [
@@ -1389,6 +1392,7 @@ export type Database = {
           notes: string | null
           pages_memorized: number
           pages_reviewed: number | null
+          recorded_at: string | null
           recorded_by: string | null
           report_id: string
           student_id: string
@@ -1404,6 +1408,7 @@ export type Database = {
           notes?: string | null
           pages_memorized?: number
           pages_reviewed?: number | null
+          recorded_at?: string | null
           recorded_by?: string | null
           report_id: string
           student_id: string
@@ -1419,6 +1424,7 @@ export type Database = {
           notes?: string | null
           pages_memorized?: number
           pages_reviewed?: number | null
+          recorded_at?: string | null
           recorded_by?: string | null
           report_id?: string
           student_id?: string
@@ -1658,6 +1664,91 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          note: string | null
+          phone: string
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          phone: string
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string
+          tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_log: {
+        Row: {
+          body: string
+          code: string
+          created_at: string
+          id: string
+          ok: boolean
+          recipients: Json
+          recipients_count: number
+          result: string | null
+          segments: number
+          sent_by: string | null
+        }
+        Insert: {
+          body: string
+          code: string
+          created_at?: string
+          id?: string
+          ok: boolean
+          recipients: Json
+          recipients_count: number
+          result?: string | null
+          segments: number
+          sent_by?: string | null
+        }
+        Update: {
+          body?: string
+          code?: string
+          created_at?: string
+          id?: string
+          ok?: boolean
+          recipients?: Json
+          recipients_count?: number
+          result?: string | null
+          segments?: number
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_message_recipients: {
         Row: {
           message_id: string
@@ -1741,6 +1832,95 @@ export type Database = {
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_requests: {
+        Row: {
+          birth_date: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          full_name: string
+          guardian_phone: string | null
+          halaqa_id: string
+          id: string
+          national_id: string
+          nearest_mosque: string | null
+          note: string | null
+          reject_note: string | null
+          requested_by: string
+          residence: string | null
+          status: string
+          student_id: string | null
+          tajweed_level: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          full_name: string
+          guardian_phone?: string | null
+          halaqa_id: string
+          id?: string
+          national_id: string
+          nearest_mosque?: string | null
+          note?: string | null
+          reject_note?: string | null
+          requested_by?: string
+          residence?: string | null
+          status?: string
+          student_id?: string | null
+          tajweed_level?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          full_name?: string
+          guardian_phone?: string | null
+          halaqa_id?: string
+          id?: string
+          national_id?: string
+          nearest_mosque?: string | null
+          note?: string | null
+          reject_note?: string | null
+          requested_by?: string
+          residence?: string | null
+          status?: string
+          student_id?: string | null
+          tajweed_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_requests_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -2333,12 +2513,38 @@ export type Database = {
         Args: { p_note: string; p_statement: string }
         Returns: undefined
       }
+      save_attendance_day: {
+        Args: {
+          p_absences: Json
+          p_day: string
+          p_halaqa: string
+          p_recorded_at?: string
+        }
+        Returns: Json
+      }
       save_quality_month: {
         Args: {
           p_halaqa: string
           p_meetings: number
           p_month: number
           p_notes: string
+          p_year: number
+        }
+        Returns: string
+      }
+      save_quran_record: {
+        Args: {
+          p_from_ayah: number
+          p_from_surah: number
+          p_halaqa: string
+          p_month: number
+          p_notes: string
+          p_pages_memorized: number
+          p_pages_reviewed: number
+          p_recorded_at?: string
+          p_student: string
+          p_to_ayah: number
+          p_to_surah: number
           p_year: number
         }
         Returns: string

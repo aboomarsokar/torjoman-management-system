@@ -89,7 +89,7 @@ describe('لوحة المعلم — المطلوب منك الآن', () => {
       newAlerts: 1
     })
     expect(acts.map(a => `${a.key}:${a.tone}`)).toEqual(['rec:urgent', 'alerts:urgent', 'inc:todo', 'att:done'])
-    expect(acts.find(a => a.key === 'rec')).toMatchObject({ detail: 'راجع', to: '/reports?y=2026&m=10' })
+    expect(acts.find(a => a.key === 'rec')).toMatchObject({ detail: 'راجع', to: '/t/quran?y=2026&m=10' })
     expect(acts.find(a => a.key === 'att')?.detail).toBe('غاب 2')
   })
 

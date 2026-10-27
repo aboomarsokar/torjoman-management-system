@@ -11,6 +11,8 @@ export interface AccountCredentials {
   loginLabel: string
   loginId: string
   password: string
+  /** زرٌّ اختياريّ يفتح واتساب برسالةٍ جاهزة (بياناتُ الطالب لمعلّمه — 2026-10-27). */
+  whatsapp?: { label: string, url: string } | null
 }
 
 export type CredentialsEvent = 'created' | 'reset'

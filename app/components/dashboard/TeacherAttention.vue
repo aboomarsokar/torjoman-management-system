@@ -1,10 +1,9 @@
 <script setup lang="ts">
 /**
- * «طلاب يحتاجون انتباهك» في لوحة المعلم — ثلاث قوائم قصيرة لا كلُّ الطلاب: من غاب كثيراً هذا الشهر،
+ * «طلاب يحتاجون متابعتك» في لوحة المعلم — تُعرض داخل بطاقة شريطها (بلا إطارٍ ولا عنوانٍ هنا — طلب المستخدم 2026-10-26)، قوائمُ قصيرة لا كلُّ الطلاب: من غاب كثيراً هذا الشهر،
  * ومن لم يُرصد له في شهر الرصد، والمستحقّون للاختبار. كلُّ اسمٍ يفتح ملفَّ الطالب، والزائدُ «و N آخرون».
  */
 import { ABSENCE_ATTENTION_DAYS, ATTENTION_LIST_MAX } from '~/constants/teacherDashboard'
-import { isolateLtr } from '~/utils/transport'
 
 interface Person { id: string, name: string, count?: number }
 interface Props {
@@ -19,10 +18,15 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+// بلا إنترنت: روابطُ الشاشات التي تحتاج اتصالاً تُعتَم وتقول ذلك عند ضغطها
+const { needsNetwork, blockIfOffline } = useOfflineNav()
 
-const groups = computed(() => [
-  { key: 'abs', icon: 'i-lucide-user-x', tone: 'err', title: `غاب ${ABSENCE_ATTENTION_DAYS} أيام فأكثر هذا الشهر`, people: props.absentees, to: '/attendance', cta: 'الحضور' },
-  ...(props.showUnrecorded ? [{ key: 'rec', icon: 'i-lucide-book-dashed', tone: 'blue', title: `لم يُرصد له في شهر ${isolateLtr(props.recordingLabel)}`, people: props.unrecorded, to: '/reports', cta: 'الرصد' }] : []),
+/** `when`: تاريخٌ يُعرض بعد العنوان في سطرٍ لا ينكسر (كان «10-2026» ينقسم بين سطرين). */
+type Group = { key: string, icon: string, tone: string, title: string, when?: string, people: Person[], to: string, cta: string }
+
+const groups = computed<Group[]>(() => [
+  { key: 'abs', icon: 'i-lucide-user-x', tone: 'err', title: `غاب ${ABSENCE_ATTENTION_DAYS} أيام فأكثر هذا الشهر`, people: props.absentees, to: '/t', cta: 'الحضور' },
+  ...(props.showUnrecorded ? [{ key: 'rec', icon: 'i-lucide-book-dashed', tone: 'blue', title: 'لم يُدخَل إنجازهم القرآني — شهر', when: props.recordingLabel, people: props.unrecorded, to: '/t/quran', cta: 'أدخِل الإنجاز' }] : []),
   { key: 'exam', icon: 'i-lucide-clipboard-check', tone: 'green', title: 'مستحقّون للاختبار ولم يُرشَّحوا', people: props.eligible, to: '/exams', cta: 'رشّح' },
   { key: 'read', icon: 'i-lucide-book-open-text', tone: 'blue', title: 'متأخّرون في البرامج المصاحبة', people: props.readingBehind, to: '/students', cta: 'الطلاب' }
 ].filter(g => g.people.length))
@@ -34,11 +38,8 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
 <template>
   <section
     class="att"
-    aria-labelledby="att-title"
+    aria-label="طلاب يحتاجون متابعتك"
   >
-    <h2 id="att-title">
-      طلاب يحتاجون انتباهك
-    </h2>
     <p
       v-if="!groups.length"
       class="none"
@@ -58,7 +59,11 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
           :name="g.icon"
           class="size-[18px]"
         /></span>
-        <span class="g-title">{{ g.title }} <span class="g-n">({{ g.people.length }})</span></span>
+        <span class="g-title">{{ g.title }} <bdi
+          v-if="g.when"
+          dir="ltr"
+          class="g-when"
+        >{{ g.when }}</bdi> <span class="g-n">({{ g.people.length }})</span></span>
         <UButton
           :to="g.to"
           :label="g.cta"
@@ -67,7 +72,9 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
           size="sm"
           trailing-icon="i-lucide-chevron-left"
           class="g-cta"
+          :class="{ 'needs-net': needsNetwork(g.to) }"
           :ui="{ base: 'min-h-10 rounded-[10px]' }"
+          @click="blockIfOffline(g.to, $event)"
         />
       </div>
       <ul class="chips">
@@ -75,8 +82,9 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
           v-for="p in shown(g.people)"
           :key="p.id"
         >
+          <!-- ملفُّ الطالب الذي يعمل بلا إنترنت (2026-10-27) -->
           <NuxtLink
-            :to="`/students/${p.id}`"
+            :to="`/t/students/view?id=${p.id}`"
             class="chip"
           >
             {{ p.name }}<span
@@ -97,8 +105,7 @@ const rest = (people: Person[]) => Math.max(0, people.length - ATTENTION_LIST_MA
 </template>
 
 <style scoped>
-.att { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
-h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.att { display: flex; flex-direction: column; gap: 16px; }
 .none { margin: 0; font-size: 14.5px; color: var(--ink-3); }
 .grp { padding-top: 14px; border-top: 1px solid var(--line); }
 .grp:first-of-type { padding-top: 0; border-top: none; }
@@ -107,10 +114,12 @@ h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
 .g-ico.err { background: var(--err-soft); color: var(--err); }
 .g-ico.blue { background: var(--blue-soft); color: var(--blue-ink); }
 .g-ico.green { background: var(--green-soft); color: var(--green-ink); }
+.g-when { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .g-title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; color: var(--ink); }
 .g-n { font-weight: 500; color: var(--ink-3); }
 .g-cta { flex: none; }
 .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip.needs-net, .g-cta.needs-net { opacity: .5; }
 .chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink); text-decoration: none; }
 .chip:hover { border-color: var(--line-2); background: var(--surface-3); }
 .chip-n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err-soft); color: var(--err); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }

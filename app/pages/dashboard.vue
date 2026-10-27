@@ -5,6 +5,7 @@
  * (ومشرف المشروع يراها بلا تعديل). لوحة المدير الفني: المشرفون الميدانيون والتقارير المُرسلة للاطّلاع (يعتمدها المشرفون الميدانيون، لا هو).
  * المعلّم «حلقتي»، والمشرف الميداني حلقاته وزياراته. والمديرة الإدارية لوحةَ الفنيّ نفسَها لقسم البنات وبالمؤنّث (2026-10-22).
  */
+import { PROFILE_CACHE_KEY, readCache } from '~/utils/offlineCache'
 import type { Database } from '~/types/database.types'
 import { formatVisitMoment } from '~/utils/visitStatus'
 
@@ -27,8 +28,10 @@ const showOverview = computed(() => isAdmin.value || isReadOnly.value)
 
 // للمختبِر لوحتُه منذ 2026-10-22 (`DashboardExaminerHome`)؛ والطالب صفحته /me (الدخول يوجّه إلى /dashboard)؛
 // والمديرةُ الإدارية لها لوحةُ قسمها منذ 2026-10-22 (كانت تُحوَّل إلى الحلقات)
+// والمعلّمُ لوحتُه `/t/home` التي تعمل بلا إنترنت (2026-10-27)
 watch(role, (r) => {
   if (r === 'student') navigateTo('/me', { replace: true })
+  if (r === 'teacher') navigateTo('/t/home', { replace: true })
 }, { immediate: true })
 
 // ── أعداد البطاقات (للمدير الإداري ومشرف المشروع) — قسمُ البنين وقسمُ البنات منفصلَين (طلب المستخدم 2026-10-22) ──
@@ -214,17 +217,25 @@ const settingCards = [
   { key: 'target_memorization_pages' as const, icon: 'i-lucide-book-open', tone: 'blue', title: 'المطلوب الشهريّ (صفحات)', unit: 'صفحة', desc: 'ما يُطالَب به كلُّ طالبٍ حفظاً في الشهر، ويُقسَّط بحضوره؛ عليه يُحكم بـ«أنجز» أو «مقصّر».' },
   { key: 'pass_mark' as const, icon: 'i-lucide-check-check', tone: 'green', title: 'علامة الاجتياز في الاختبار', unit: '%', desc: 'الحدّ الأدنى من 100 لاجتياز اختبار الطالب — يسري على الاختبارات اللاحقة.' }
 ]
+
+/** الدورُ من الملفّ المحفوظ على الجهاز — يختار هيكلَ التحميل قبل وصول الملفّ. */
+const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CACHE_KEY)?.role ?? null : null
 </script>
 
 <template>
   <div class="dash">
     <div class="welcome">
       <h2>أهلاً، {{ fullName }} 👋</h2>
-      <p>{{ isTeacher ? 'ما ينتظرك اليوم، وأرقام حلقتك هذا الشهر.' : isExaminer ? 'ما ينتظر رصدَك، وأرقام اختباراتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}</p>
+      <!-- المعلّمُ بلا سطرٍ فرعيّ: لوحتُه أزرارٌ ومطلوبٌ لا أرقام (طلب المستخدم 2026-10-26) -->
+      <p v-if="!isTeacher">
+        {{ isExaminer ? 'ما ينتظر رصدَك، وأرقام اختباراتك هذا الشهر.' : 'إليك نظرة عامة على المشروع.' }}
+      </p>
     </div>
 
     <ClientOnly>
-      <template v-if="profilePending">
+      <!-- المعلّمُ (من ملفّه المحفوظ على الجهاز) يرى هيكلَ لوحته لا مربّعاتِ الإحصاء -->
+      <DashboardTeacherSkeleton v-if="profilePending && cachedRole === 'teacher'" />
+      <template v-else-if="profilePending">
         <div class="stats">
           <UiSkeletonCard
             v-for="i in 4"

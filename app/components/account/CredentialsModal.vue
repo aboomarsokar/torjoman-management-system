@@ -85,6 +85,17 @@ async function copy(value: string, label: string) {
         </p>
         <div class="creds-actions">
           <UButton
+            v-if="props.credentials.whatsapp"
+            :label="props.credentials.whatsapp.label"
+            :to="props.credentials.whatsapp.url"
+            target="_blank"
+            rel="noopener"
+            icon="i-simple-icons-whatsapp"
+            color="success"
+            size="lg"
+            :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"
+          />
+          <UButton
             label="تمّ"
             color="neutral"
             variant="outline"
@@ -107,5 +118,5 @@ async function copy(value: string, label: string) {
 .creds-value { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: .1em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .creds-pw { font-size: 22px; letter-spacing: .06em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .creds-warn { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
-.creds-actions { display: flex; justify-content: flex-end; }
+.creds-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 </style>

@@ -6,6 +6,7 @@
  */
 import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 import { queryFromTab, tabFromQuery, type StudentTab } from '~/composables/useStudentTab'
+import { orderByKeys, TEACHER_NAV_ORDER } from '~/constants/navigation'
 
 const { profile, role, status, fullName, pending: profilePending } = useProfile()
 // صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
@@ -69,7 +70,9 @@ const mainNav: Item[] = [
   { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
-  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'teacher', 'examiner'] },
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'examiner'] },
+  // لوحةُ المعلّم تعمل بلا إنترنت، والتطبيقُ يُقلع عليها (البند 14، 2026-10-27)
+  { key: 'dashboard-teacher', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/t/home', roles: ['teacher'] },
   // ما أرسلته الإدارة، وبجانبه عددُ غير المقروء (طلب المستخدم 2026-10-25)
   { key: 'messages', label: 'رسائل الإدارة', icon: 'i-lucide-mail', to: '/messages', roles: [FIELD, 'teacher', 'examiner'], isNew: true },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
@@ -78,7 +81,11 @@ const mainNav: Item[] = [
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },
   // المختبِر: «الحلقات» = اختباراتُ طلاب حلقاته وحدها بتفاصيلها (طلب المستخدم 2026-10-22)
   { key: 'exam-students', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/exams/students', roles: ['examiner'], group: 'people' },
-  { key: 'students', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF, 'teacher'], group: 'people' },
+  { key: 'students', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF], group: 'people' },
+  // طلابُ المعلّم يعملون بلا إنترنت (البند 14، 2026-10-27)؛ والإدارةُ في `/students` متّصلاً
+  { key: 'students-teacher', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/t/students', roles: ['teacher'], group: 'people' },
+  // المعلّمُ يطلب إضافةَ طالب، والمديرُ الإداريّ يُضيفه أو يرفض (طلب المستخدم 2026-10-27)
+  { key: 'student-requests', label: 'طلبات إضافة طالب', labelF: 'طلبات إضافة طالبة', icon: 'i-lucide-user-plus', to: '/student-requests', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'people', isNew: true },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ
@@ -87,12 +94,18 @@ const mainNav: Item[] = [
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   // البرامجُ المصاحبة عنوانٌ مستقلّ تحته تبويبا صفحتها (طلب المستخدم 2026-10-22)
-  { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
-  { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
-  { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
+  { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF], group: 'programs' },
+  { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF], group: 'programs' },
+  // قائمةُ المعلّم المسطّحة: بندٌ واحدٌ للصفحة وتبويباها داخلها (طلب المستخدم 2026-10-27)
+  { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['teacher'], group: 'programs' },
+  { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF], group: 'quran' },
+  // المعلّمُ يرصد في الشاشة التي تعمل بلا إنترنت (البند 14، 2026-10-27)
+  { key: 'quran-offline', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/t/quran', roles: ['teacher'], group: 'quran', isNew: true },
   // متابعةُ رصد الحضور والشهر القرآنيّ لمعرفة المقصّر (طلب المستخدم 2026-10-22)
   { key: 'follow-up', label: 'متابعة الرصد', icon: 'i-lucide-list-checks', to: '/follow-up', roles: [PS, ADMIN, TECH, WOMEN, FIELD], group: 'quran' },
-  { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor', 'teacher'], group: 'quran' },
+  { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor'], group: 'quran' },
+  // المعلّمُ يسجّل حضورَه في الشاشة التي تعمل بلا إنترنت (البند 14، 2026-10-26)
+  { key: 'attendance-offline', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/t', roles: ['teacher'], group: 'quran', isNew: true },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },
   { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'], group: 'sheets' },
@@ -101,6 +114,8 @@ const mainNav: Item[] = [
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
   { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' },
   // رسائلُ للكادر تصل أجراسَهم وصفحةَ «رسائل الإدارة» (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
+  // رسائلُ نصّية عبر MTC للكادر ولجهاتٍ خارجية (طلب المستخدم 2026-10-27) — الإرسالُ للمدير الإداريّ ومشرفُ المشروع يقرأ
+  { key: 'sms', label: 'رسائل SMS', icon: 'i-lucide-message-square-text', to: '/sms', roles: [PS, ADMIN], group: 'supervision', isNew: true },
   { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true }
 ]
 
@@ -118,10 +133,16 @@ const allItems = [...mainNav, ...managerNav, profileItem]
 const labelOf = (i: Item) => (role.value === 'women_admin' && i.labelF) || i.label
 const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.includes(role.value)))
 /** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
-const topItems = computed(() => visibleItems.value.filter(i => !i.group))
-const navGroups = computed(() => GROUPS
-  .map(g => ({ ...g, items: visibleItems.value.filter(i => i.group === g.key) }))
-  .filter(g => g.items.length))
+// المعلّمُ قائمةٌ مسطّحةٌ بترتيب الاستعمال بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26)
+const flatNav = computed(() => role.value === 'teacher')
+const topItems = computed(() => flatNav.value
+  ? orderByKeys(visibleItems.value, TEACHER_NAV_ORDER)
+  : visibleItems.value.filter(i => !i.group))
+const navGroups = computed(() => flatNav.value
+  ? []
+  : GROUPS
+      .map(g => ({ ...g, items: visibleItems.value.filter(i => i.group === g.key) }))
+      .filter(g => g.items.length))
 
 // الطيُّ لكلّ متصفّحٍ وحده (تفضيلٌ لا بيانات)؛ ومجموعةُ الصفحة الحاليّة تبقى مفتوحةً كي لا يختفي البارز
 const COLLAPSE_KEY = 'torjoman-nav-collapsed'
@@ -157,8 +178,13 @@ const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const { unread: unreadMessages } = useUnreadMessages()
-/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة. */
-const countOf = (item: Item) => (item.key === 'messages' ? unreadMessages.value : 0)
+const { open: openStudentRequests } = useOpenStudentRequestsCount()
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27). */
+const countOf = (item: Item) => (item.key === 'messages'
+  ? unreadMessages.value
+  : item.key === 'student-requests' ? openStudentRequests.value : 0)
+/** مجموعُ أعداد بنود المجموعة — يظهر على عنوانها أيضاً (طلب المستخدم 2026-10-27). */
+const groupCount = (items: Item[]) => items.reduce((n, i) => n + countOf(i), 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
 const newKeys = isNewFor(allItems)
 
@@ -169,7 +195,11 @@ const navTitle = computed(() => {
 
 const roleLabel = computed(() => (role.value ? roleLabelFor(role.value, profile.value?.gender ?? null) : ''))
 
+// بلا إنترنت لا تعمل إلا شاشاتُ المعلّم المخزَّنة: غيرُها يُعتَم في القائمة، وضغطُه يقول ذلك بدل أن يُحوَّل صامتاً
+const offlineNav = useOfflineNav()
+const needsNetwork = (item: Item) => offlineNav.needsNetwork(item.to)
 function go(item: Item) {
+  if (offlineNav.blockIfOffline(item.to)) return
   drawerOpen.value = false
   if (item.to && item.tab) navigateTo({ path: item.to, query: { tab: queryFromTab(item.tab) } })
   else if (item.to && item.qtab) navigateTo({ path: item.to, query: { tab: item.qtab } })
@@ -220,7 +250,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
               v-for="item in topItems"
               :key="item.key"
               class="nav-item"
-              :class="{ active: isActive(item) }"
+              :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
               @click="go(item)"
             >
               <UIcon
@@ -267,6 +297,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     aria-label="فيها جديد"
                   />
                 </span>
+                <span
+                  v-if="groupCount(g.items)"
+                  class="nav-count nav-g-count"
+                  :aria-label="`${groupCount(g.items)} بانتظارك`"
+                >{{ groupCount(g.items) > 99 ? '99+' : groupCount(g.items) }}</span>
                 <UIcon
                   name="i-lucide-chevron-down"
                   class="size-4 nav-chev"
@@ -281,7 +316,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                   v-for="item in g.items"
                   :key="item.key"
                   class="nav-item"
-                  :class="{ active: isActive(item) }"
+                  :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
                   @click="go(item)"
                 >
                   <UIcon
@@ -296,6 +331,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     name="i-lucide-sparkles"
                     class="size-3.5"
                   />جديد</span>
+                  <span
+                    v-if="countOf(item)"
+                    class="nav-count"
+                    :aria-label="`${countOf(item)} بانتظارك`"
+                  >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
                 </button>
               </div>
             </section>
@@ -421,7 +461,9 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-item > .nav-new { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; background: var(--side-new-bg); color: var(--side-new-ink); font-size: 13px; font-weight: 700; -webkit-text-stroke: .3px currentColor; line-height: 1.4; overflow: visible; }
 .nav-item > .nav-count { margin-inline-start: auto; flex-shrink: 0; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 13px; font-weight: 700; line-height: 24px; text-align: center; font-variant-numeric: tabular-nums; overflow: visible; }
 .nav-new-star { color: var(--side-new-bg); }
+.nav-item.needs-net { opacity: .45; }
 .nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
+.nav-group > .nav-g-count { margin-inline-start: auto; margin-inline-end: 8px; flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 12.5px; font-weight: 700; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }
@@ -477,13 +519,13 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
   .top-usertext { display: none; }
 }
 /* الجوال: كان العنوانُ (nowrap) يمتدّ تحت «ثبّت التطبيق» — 45px في «الحضور اليوميّ» بعرض 390 (2026-10-23).
-   فالصورةُ تُخفى (هي والاسمُ في أسفل القائمة الجانبية)، والفجواتُ تضيق، والعنوانُ يصغر ويأخذ ما بقي
-   ويُقصّ بنقاطٍ إن طال؛ وزرُّ التثبيت يبقى بحجمه ولونه ونبضه */
+   فالفجواتُ تضيق، والعنوانُ يصغر ويأخذ ما بقي ويُقصّ بنقاطٍ إن طال؛ وزرُّ التثبيت يبقى بحجمه ولونه ونبضه.
+   والصورةُ تبقى أصغرَ قليلاً (طلب المستخدم 2026-10-26: «بدي تظهر في تطبيق المعلم») — كانت تُخفى */
 @media (max-width: 480px) {
   .topbar { gap: 8px; }
   .top-start { flex: 1; gap: 8px; }
   .top-title { min-width: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; }
   .top-end { gap: 6px; flex-shrink: 0; }
-  .top-user { display: none; }
+  .top-av { width: 38px; height: 38px; border-radius: 11px; font-size: 15px; }
 }
 </style>

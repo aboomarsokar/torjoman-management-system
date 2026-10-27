@@ -1133,3 +1133,38 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 > **2026-10-25 — `deliver_booklet_request(p_request, p_delivered_on)`** (هجرة `20261025132515`): «تمّ التسليم» لطلب ملازم — المديرُ الإداريّ وحده، والطلبُ مفتوح — يُدرج صفَّ `booklet_deliveries` بملزمة الطلب ونُسخه وتاريخه ثم يُغلق الطلبَ ذرّيّاً؛ وإشعارُ `booklet_delivered` صار رابطُه `/my-booklets`.
 
 > **2026-10-26 — الزيارات والمدير الفنيّ** (هجرة `20261026081420`): `visits_insert`/`visits_update` و`guard_visit_visitor` تقبل الزائرَ المديرَ الفنيَّ في حلقات البنين (`halaqat.gender = 'male'`) إلى جانب مشرف الحلقة الميدانيّ؛ و`private.quality_month_compute` يعدّ زيارات المشرف الميدانيّ وحدها (`profiles.role = 'field_supervisor'`).
+
+> **2026-10-26 — `save_attendance_day(p_halaqa, p_day, p_absences jsonb, p_recorded_at)`** (هجرة `20261026095514`، الحضورُ بلا إنترنت): **بصلاحية المستدعي** (RLS والحارسان كما هما) يفتح اليومَ ويكتب غياباته ويمحو غيابَ من صار حاضراً في معاملةٍ واحدة؛ ويتخطّى من ليس في الحلقة أو لم يكن ملتحقاً يومَها ويُعيده في `skipped`. وعمودُ **`attendance_days.recorded_at`** وقتُ التسجيل على الجهاز (لا يتجاوز `now()`)، وnull لما سُجّل متّصلاً.
+
+> **2026-10-27 — `save_quran_record(p_halaqa, p_year, p_month, p_student, p_from_surah, p_from_ayah, p_to_surah, p_to_ayah, p_pages_memorized, p_pages_reviewed, p_notes, p_recorded_at)`** (هجرة `20261027093417`، الإنجازُ القرآنيّ بلا إنترنت): **بصلاحية المستدعي** (RLS وحرّاسُ السجلّ كما هي) يُنشئ رأسَ الشهر مسوّدةً إن لم يكن ثمّ يكتب سجلَّ الطالب أو يحدّثه في معاملةٍ واحدة، ويُعيد معرّفَ السجلّ؛ ويبدأ بـ`assert_session_writable`، ويرفض الشهرَ المُرسَل لغير المعتمِد برسالةٍ عربية (`P0001`). وعمودُ **`quran_records.recorded_at`** وقتُ الرصد على الجهاز (لا يتجاوز `now()`)، وnull لما رُصد متّصلاً. `grant execute … to authenticated` وحده.
+
+## طلباتُ إضافة الطلاب: `student_requests` (2026-10-27)
+
+> هجرة `20261027090726_student_requests`. المعلّمُ يطلب إضافةَ طالبٍ لحلقته، والمديرُ الإداريّ يُنشئه من الطلب أو يرفضه.
+
+| العمود | النوع | ملاحظة |
+|---|---|---|
+| `id` | uuid PK | |
+| `halaqa_id` | uuid FK → halaqat (cascade) | حلقةُ المعلّم الطالب |
+| `full_name` | text | 6–120 حرفاً، تُوحَّد مسافاتُه في الحارس |
+| `national_id` | text | تسع خانات بخانة تحقّقٍ صحيحة (`private.valid_national_id`)، ولا تكون لطالبٍ مسجّل؛ فريدةٌ في الطلبات المفتوحة (`student_requests_open_identity`) |
+| `birth_date` | date | اختياريّ |
+| `guardian_phone` | text | `^05\d{8}$` أو null |
+| `tajweed_level` / `residence` / `nearest_mosque` | text | اختياريّة، تُنقل إلى صفّ الطالب عند الإضافة |
+| `note` | text | ≤ 300 |
+| `status` | text | `open` / `added` / `rejected` |
+| `reject_note` | text | إلزاميٌّ عند الرفض (≥ 3 أحرف) |
+| `student_id` | uuid FK → students (set null) | الطالبُ المُنشأ من الطلب |
+| `requested_by` | uuid FK → profiles | `auth.uid()` افتراضاً |
+| `created_at` / `closed_at` / `closed_by` | | |
+
+- **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع كلِّها، وللمديرة الإدارية والمعلّم ضمن `visible_halaqa_ids()`؛ الإدراجُ للمعلّم على حلقته وباسمه مفتوحاً؛ التعديلُ والحذفُ للمدير الإداريّ. حارسُ النيابة عليه.
+- **المشغّلات:** `student_requests_guard` (قبل الإدراج: الهويةُ والتكرار)، و`student_requests_notify` (يُشعر المديرَ الإداريّ، والمديرةَ الإدارية لحلقات البنات)، و`student_requests_notify_closed` (الإضافةُ أو الرفضُ يُشعر المعلّم). دوالُّها في `private` بلا منحٍ للعميل.
+- **الإضافة:** `POST /api/student-requests/:id/approve` (المدير الإداريّ، جلسةٌ كاتبة) يُنشئ الحسابَ بـ`createStudentAccount` ثم يُغلق الطلبَ `added`.
+
+## رسائلُ SMS: `sms_contacts` و`sms_log` (2026-10-27)
+
+> هجرة `20261027104151_sms`. الإرسالُ نفسُه من مسار الخادم `POST /api/sms/send` عبر MTC، وبياناتُ الحساب في متغيّرات البيئة لا في القاعدة.
+
+- **`sms_contacts`** — جهاتُ اتصالٍ خارجية: `name` (2–120)، `phone` (`^05\d{8}$`)، `tag` (≤ 40، يجمع مرشّحي المقابلات مثلاً)، `note` (≤ 200)، `created_by`، `created_at`؛ فريدٌ على (`phone`, `tag`). RLS: القراءةُ للمدير الإداريّ ومشرف المشروع، والكتابةُ للمدير الإداريّ. حارسُ النيابة عليه.
+- **`sms_log`** — سطرٌ لكلّ دفعة إرسال: `body`، `recipients` (jsonb `[{phone, name}]`)، `recipients_count`، `segments` (1–15)، `ok`، `code` (رمزُ المزوّد أو `net`)، `result`، `sent_by`، `created_at`. RLS: القراءةُ للمدير الإداريّ ومشرف المشروع، ولا سياسةَ كتابةٍ للعميل — يكتبه الخادمُ بعميل الخدمة. حارسُ النيابة عليه.

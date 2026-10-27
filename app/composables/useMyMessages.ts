@@ -4,6 +4,8 @@
  */
 import type { Database } from '~/types/database.types'
 import { MESSAGE_RECIPIENT_ROLES } from '~/constants/announcements'
+import { isOnlineNow } from '~/utils/reachability'
+import { fetchMyMessages, SCREEN_KEYS } from '~/utils/teacherScreens'
 
 export type MyMessage = {
   seen_at: string | null
@@ -54,23 +56,27 @@ export function useMyMessages() {
   const { handle } = useErrorHandler()
   const unread = useState<number>('staff-messages-unread', () => 0)
 
-  const { data: messages, pending } = useLazyAsyncData<MyMessage[]>('my-staff-messages', async () => {
+  // والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
+  const { wrap } = useOfflineCopy()
+  const { data: messages, pending } = useLazyAsyncData<MyMessage[]>(SCREEN_KEYS.myMessages, wrap(SCREEN_KEYS.myMessages, async () => {
     const me = profile.value?.id
     if (!me) return []
-    const { data, error } = await supabase.from('staff_message_recipients')
-      .select('seen_at, message:message_id(id, title, body, link, created_at, sender:sent_by(full_name))')
-      .eq('recipient_id', me)
-      .returns<MyMessage[]>()
-    if (error) handle(error)
-    return newestFirst(data ?? [])
-  }, { server: false, default: () => [], watch: [() => profile.value?.id] })
+    try {
+      return newestFirst(await fetchMyMessages<MyMessage>(supabase, me))
+    } catch (err) {
+      handle(err)
+      return []
+    }
+  }), { server: false, default: () => [], watch: [() => profile.value?.id] })
 
   /** ما كان جديداً عند الفتح — يبقى بارزاً في هذه الزيارة ولو سُجّلت مشاهدتُه. */
   const freshIds = ref<Set<string>>(new Set())
 
   watch(messages, async (list) => {
     const unseen = (list ?? []).filter(m => !m.seen_at).map(m => m.message!.id)
-    if (!unseen.length) return
+    // بلا اتصال لا تُسجَّل المشاهدة (تُسجَّل عند أوّل فتحٍ متّصل) — ويبقى الجديدُ بارزاً
+    if (unseen.length && !isOnlineNow()) freshIds.value = new Set([...freshIds.value, ...unseen])
+    if (!unseen.length || !isOnlineNow()) return
     freshIds.value = new Set([...freshIds.value, ...unseen])
     const { data, error } = await supabase.rpc('mark_staff_messages_seen', { p_ids: unseen })
     if (error) return handle(error)

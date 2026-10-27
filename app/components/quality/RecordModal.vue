@@ -10,6 +10,7 @@
 import type { Database } from '~/types/database.types'
 import type { QualityHalaqa, QualityNumbers, QualityRow } from '~/utils/qualityRecord'
 import { MEETINGS_MAX, QUALITY_STATE_META, parseNumbers, qualityState } from '~/utils/qualityRecord'
+import { ACK_SAVED_MESSAGE } from '~/composables/useOfflineAck'
 
 const props = defineProps<{ halaqa: QualityHalaqa | null, year: number, month: number, record: QualityRow | null }>()
 const open = defineModel<boolean>('open', { default: false })
@@ -86,7 +87,17 @@ const save = () => run(() => supabase.rpc('save_quality_month', {
   p_halaqa: props.halaqa!.id, p_year: props.year, p_month: props.month, p_meetings: meetings.value, p_notes: supNotes.value
 }), 'حُفظ السجلّ وأُقفل — وصل المعلمَ إشعار.')
 const unlock = () => run(() => supabase.rpc('unlock_quality_month', { p_id: props.record!.id }), 'فُتح السجلّ للتعديل.')
-const ack = () => run(() => supabase.rpc('acknowledge_quality_month', { p_id: props.record!.id }), 'سُجّل اطّلاعك على سجلّك الشهريّ.')
+// المعلّمُ بلا اتصال: يُحفظ إقرارُه على جهازه ويُرفع لاحقاً (البند 14، 2026-10-27)
+const { queueIfOffline } = useOfflineAck()
+async function ack() {
+  if (await queueIfOffline('quality', props.record!.id, { year: props.year, month: props.month })) {
+    toast.add({ title: ACK_SAVED_MESSAGE, color: 'success', icon: 'i-lucide-cloud-upload' })
+    open.value = false
+    emit('changed')
+    return
+  }
+  await run(() => supabase.rpc('acknowledge_quality_month', { p_id: props.record!.id }), 'سُجّل اطّلاعك على سجلّك الشهريّ.')
+}
 const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', { p_id: props.record!.id, p_notes: adminNotes.value }), 'حُفظت ملاحظات الإدارة.', false)
 </script>
 

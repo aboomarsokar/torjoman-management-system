@@ -10,6 +10,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { roleLabel } from '~/constants/roles'
+import { fetchProfileView, SCREEN_KEYS } from '~/utils/teacherScreens'
 import { canHavePhoto, displayPhotoPath } from '~/constants/profilePhoto'
 import { maritalItems, maritalLabel } from '~/constants/maritalStatus'
 import { educationItems } from '~/constants/educationLevel'
@@ -42,31 +43,13 @@ const isSelf = computed(() => !!targetId.value && targetId.value === myProfile.v
 const canEdit = computed(() => isAdmin.value || isSelf.value)
 const canSeeId = computed(() => isAdmin.value || isSelf.value)
 
-type Profile = Database['public']['Tables']['profiles']['Row']
-type Scope = { label: string, value: string | number }
-
-// جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً
-const { data, pending, refresh } = useLazyAsyncData(() => `profile-${targetId.value}`, async () => {
-  if (!targetId.value) return null
-  const { data: p } = await supabase.from('profiles').select('*').eq('id', targetId.value).maybeSingle<Profile>()
-  if (!p) return null
-
-  const scope: Scope[] = []
-  if (p.role === 'teacher') {
-    const { data: h } = await supabase.from('halaqat').select('id, name').eq('teacher_id', p.id).limit(1).maybeSingle()
-    if (h) {
-      const { count } = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('halaqa_id', h.id).eq('status', 'active')
-      scope.push({ label: 'الحلقة', value: h.name }, { label: 'عدد الطلاب', value: count ?? 0 })
-    }
-  } else if (p.role === 'field_supervisor') {
-    const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('supervisor_id', p.id)
-    scope.push({ label: 'الحلقات المُسندة', value: count ?? 0 })
-  } else if (p.role === 'examiner') {
-    const { count } = await supabase.from('halaqat').select('*', { count: 'exact', head: true }).eq('examiner_id', p.id)
-    scope.push({ label: 'الحلقات المُسندة للاختبار', value: count ?? 0 })
-  }
-  return { p, scope }
-}, { server: false, default: () => null, watch: [targetId] })
+// جلب غير حاجز (useLazyAsyncData): الاستعلامان مستقلّان ويعملان بالتوازي تلقائياً. والمعلّمُ تُحفظ له نسخةُ ملفّه
+// تُعرض بلا إنترنت (البند 14، 2026-10-27)
+const { wrap } = useOfflineCopy()
+const profileKey = () => SCREEN_KEYS.profile(targetId.value)
+const { data, pending, refresh } = useLazyAsyncData(profileKey,
+  wrap(profileKey, () => fetchProfileView(supabase, targetId.value).catch(() => null)),
+  { server: false, default: () => null, watch: [targetId] })
 
 useSeoMeta({ title: () => data.value?.p ? `${data.value.p.full_name} — ترجمان` : 'الملف الشخصي — ترجمان' })
 
@@ -222,6 +205,7 @@ const pwOpen = ref(false)
 
 <template>
   <div class="profile">
+    <OfflineSavedNote :keys="[profileKey()]" />
     <ClientOnly>
       <template v-if="pending || isStudent">
         <UiSkeletonBand :actions="2" />

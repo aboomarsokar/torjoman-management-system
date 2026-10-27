@@ -4,6 +4,7 @@
  * الزيارة. فتحُ الصفحة يسجّل المشاهدةَ فيعرف المرسِلُ مَن شاهد ومتى (`useMyMessages`)؛ والجرسُ ينبّه فقط.
  */
 import { MESSAGE_LINKS, MESSAGE_RECIPIENT_ROLES } from '~/constants/announcements'
+import { SCREEN_KEYS } from '~/utils/teacherScreens'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'رسائل الإدارة — ترجمان' })
@@ -24,6 +25,7 @@ const sentAt = (iso: string) => new Date(iso).toLocaleString('en-GB', {
       title="رسائل الإدارة"
       subtitle="ما أرسلته إليك إدارةُ المشروع، الأحدثُ أوّلاً."
     />
+    <OfflineSavedNote :keys="[SCREEN_KEYS.myMessages]" />
     <ClientOnly>
       <UiEmptyState
         v-if="profile && !isRecipient"

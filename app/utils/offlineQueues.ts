@@ -7,9 +7,11 @@ import type { AttendanceMirror } from '~/composables/useOfflineMirror'
 import { keptAbsences, type OutboxEntry } from '~/utils/attendanceOutbox'
 import { idbGet, idbPut } from '~/utils/offlineDb'
 import { entryAsRecord, quranMirrorKey, type QuranEntry, type QuranMirror } from '~/utils/quranOutbox'
+import type { AckEntry } from '~/utils/ackOutbox'
 
 export const ATTENDANCE_QUEUE = 'attendance'
 export const QURAN_QUEUE = 'quran'
+export const ACK_QUEUE = 'acks'
 
 defineOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, {
   store: 'outbox',
@@ -49,4 +51,15 @@ defineOfflineQueue<QuranEntry>(QURAN_QUEUE, {
     mirror.inputs.records = [...records.filter(r => r.student_id !== e.studentId), next]
     await idbPut('quran_mirror', mirror)
   }
+})
+
+defineOfflineQueue<AckEntry>(ACK_QUEUE, {
+  store: 'ack_outbox',
+  order: (a, b) => a.recordedAt.localeCompare(b.recordedAt),
+  // دوالُّ الإقرار تقبل التكرار (المُقَرُّ عليه لا يُرفض)، ونسخةُ الشاشة عُدّلت عند الحفظ — فلا `settle`
+  upload: (supabase, e) => e.kind === 'visit'
+    ? supabase.rpc('acknowledge_visit', { p_visit: e.id })
+    : e.kind === 'quality'
+      ? supabase.rpc('acknowledge_quality_month', { p_id: e.id })
+      : supabase.from('admin_alerts').update({ status: 'acknowledged', acknowledged_at: e.recordedAt }).eq('id', e.id)
 })

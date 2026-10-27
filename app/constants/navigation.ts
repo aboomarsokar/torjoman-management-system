@@ -32,4 +32,8 @@ export function orderByKeys<T extends { key: string }>(items: T[], order: readon
 export const TEACHER_ONLINE_ONLY = ['my-booklets', 'student-requests'] as const
 
 /** الشاشاتُ التي تعمل بلا إنترنت — غيرُها يُعتَم في القائمة ويُنبَّه عند ضغطه. */
-export const OFFLINE_PATHS = ['/t/home', '/t', '/t/quran', '/t/students', '/t/students/view']
+export const OFFLINE_PATHS = [
+  '/t/home', '/t', '/t/quran', '/t/students', '/t/students/view',
+  // الدفعةُ الأولى (2026-10-27): شاشاتٌ تُقرأ من نسخة الجهاز (`useOfflineCopy`) — مشتركةٌ مع الأدوار الأخرى
+  '/exam-plan', '/programs', '/visits', '/quality', '/alerts', '/messages', '/profile/me'
+]

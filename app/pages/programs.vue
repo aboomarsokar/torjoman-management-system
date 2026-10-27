@@ -33,6 +33,7 @@ const tab = computed<Tab>({
       title="البرامج المصاحبة"
       :subtitle="isStudent ? 'مقرّرُك الشهري: نزّله واقرأه، ثم تقدّم لاختباره.' : 'المقرّراتُ الشهرية بكتبها وصفحاتها وملفّاتها.'"
     />
+    <OfflineSavedNote :keys="['reading-units', 'reading-progress-*']" />
     <ClientOnly>
       <template v-if="isStudent">
         <template v-if="me">

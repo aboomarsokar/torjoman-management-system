@@ -51,7 +51,16 @@ export default defineNuxtConfig({
     '/t/quran': { ssr: false, prerender: true },
     '/t/home': { ssr: false, prerender: true },
     '/t/students': { ssr: false, prerender: true },
-    '/t/students/view': { ssr: false, prerender: true }
+    '/t/students/view': { ssr: false, prerender: true },
+    // الدفعةُ الأولى من شاشات المعلّم بلا إنترنت (2026-10-27): مشتركةٌ مع الأدوار الأخرى فتُصيَّر في المتصفّح لهم جميعاً
+    // (قرار المستخدم)، والبياناتُ من نسخة الجهاز للمعلّم (`useOfflineCopy`)
+    '/exam-plan': { ssr: false, prerender: true },
+    '/programs': { ssr: false, prerender: true },
+    '/visits': { ssr: false, prerender: true },
+    '/quality': { ssr: false, prerender: true },
+    '/alerts': { ssr: false, prerender: true },
+    '/messages': { ssr: false, prerender: true },
+    '/profile/me': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -112,7 +121,13 @@ export default defineNuxtConfig({
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'],
       navigateFallback: '/t/home',
-      navigateFallbackAllowlist: [/^\/t(\/home|\/quran|\/students|\/students\/view)?$/],
+      navigateFallbackAllowlist: [
+        /^\/t(\/home|\/quran|\/students|\/students\/view)?$/,
+        /^\/(exam-plan|programs|visits|quality|alerts|messages|profile\/me)$/
+      ],
+      // الشاشاتُ المخزَّنة تُطابَق بلا استعلام الرابط (`/quality?y=…&m=…`، `/programs?tab=units`): هياكلُ تُصيَّر في
+      // المتصفّح، والاستعلامُ يقرؤه الموجِّه لا الخادم
+      ignoreURLParametersMatching: [/.*/],
       // المستخدمُ يفتح الدخولَ واللوحة والحضور: بلا اتصالٍ وحده تُقدَّم شاشةُ المعلّم المخزَّنة بدل صفحة «لا يتوفر
       // اتصال» — ومتّصلاً لا يتغيّر شيء (NetworkOnly)
       runtimeCaching: [

@@ -8,6 +8,7 @@ import type { AccountCredentials } from '~/composables/useAccountAdmin'
 import { normalizeDigits } from '~/constants/identity'
 import { REJECT_NOTE_MIN, REQUEST_NAME_MAX, REQUEST_NAME_MIN, REQUEST_NOTE_MAX, type StudentRequestStatus } from '~/constants/studentRequests'
 import { hasValidCheckDigit } from '~/utils/nationalId'
+import { teacherCredentialsMessage, whatsappMessageLink } from '~/utils/credentialsMessage'
 
 export type StudentRequest = {
   id: string
@@ -54,6 +55,26 @@ export function studentRequestError(d: StudentRequestDraft): string | null {
   if (phone && !/^05\d{8}$/.test(phone)) return 'جوال وليّ الأمر عشر خانات يبدأ بـ05.'
   if (d.note.trim().length > REQUEST_NOTE_MAX) return `الملاحظة لا تتجاوز ${REQUEST_NOTE_MAX} حرف.`
   return null
+}
+
+/** زرُّ «أرسلها للمعلّم» برسالة بيانات الدخول، أو null إن لم يكن للمعلّم رقم. */
+/** ردُّ `POST /api/student-requests/:id/approve`. */
+interface ApproveResult {
+  temp_password: string
+  full_name: string
+  national_id: string
+  female: boolean
+  teacher_name: string | null
+  teacher_phone: string | null
+  request_closed: boolean
+}
+
+function whatsappFor(res: ApproveResult) {
+  const text = teacherCredentialsMessage({
+    teacherName: res.teacher_name, studentName: res.full_name, nationalId: res.national_id, password: res.temp_password, female: res.female
+  })
+  const url = whatsappMessageLink(res.teacher_phone, text)
+  return url ? { label: res.female ? 'أرسلها للمعلّمة على واتساب' : 'أرسلها للمعلّم على واتساب', url } : null
 }
 
 const SELECT = 'id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
@@ -112,8 +133,7 @@ export function useStudentRequests(halaqaId?: Ref<string | null | undefined>) {
   async function approve(r: StudentRequest): Promise<AccountCredentials | null> {
     busy.value = true
     try {
-      const res = await $fetch<{ temp_password: string, full_name: string, national_id: string, request_closed: boolean }>(
-        `/api/student-requests/${r.id}/approve`, { method: 'POST' })
+      const res = await $fetch<ApproveResult>(`/api/student-requests/${r.id}/approve`, { method: 'POST' })
       if (!res.request_closed) toast.add({ title: 'أُنشئ الحساب، وتعذّر إغلاقُ الطلب — أغلقه بالرفض أو أعد التحميل.', color: 'warning', icon: 'i-lucide-circle-alert' })
       await refresh()
       return {
@@ -121,7 +141,8 @@ export function useStudentRequests(halaqaId?: Ref<string | null | undefined>) {
         message: `أُنشئ حسابُ ${res.full_name} في حلقته، وأُشعر المعلّم.`,
         loginLabel: 'رقم الهوية',
         loginId: res.national_id,
-        password: res.temp_password
+        password: res.temp_password,
+        whatsapp: whatsappFor(res)
       }
     } catch (err) {
       handle(err)

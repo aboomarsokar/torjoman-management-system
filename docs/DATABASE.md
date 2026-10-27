@@ -1134,6 +1134,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-10-26 — الزيارات والمدير الفنيّ** (هجرة `20261026081420`): `visits_insert`/`visits_update` و`guard_visit_visitor` تقبل الزائرَ المديرَ الفنيَّ في حلقات البنين (`halaqat.gender = 'male'`) إلى جانب مشرف الحلقة الميدانيّ؛ و`private.quality_month_compute` يعدّ زيارات المشرف الميدانيّ وحدها (`profiles.role = 'field_supervisor'`).
 
+> **2026-10-26 — `save_attendance_day(p_halaqa, p_day, p_absences jsonb, p_recorded_at)`** (هجرة `20261026095514`، الحضورُ بلا إنترنت): **بصلاحية المستدعي** (RLS والحارسان كما هما) يفتح اليومَ ويكتب غياباته ويمحو غيابَ من صار حاضراً في معاملةٍ واحدة؛ ويتخطّى من ليس في الحلقة أو لم يكن ملتحقاً يومَها ويُعيده في `skipped`. وعمودُ **`attendance_days.recorded_at`** وقتُ التسجيل على الجهاز (لا يتجاوز `now()`)، وnull لما سُجّل متّصلاً.
+
+> **2026-10-27 — `save_quran_record(p_halaqa, p_year, p_month, p_student, p_from_surah, p_from_ayah, p_to_surah, p_to_ayah, p_pages_memorized, p_pages_reviewed, p_notes, p_recorded_at)`** (هجرة `20261027093417`، الإنجازُ القرآنيّ بلا إنترنت): **بصلاحية المستدعي** (RLS وحرّاسُ السجلّ كما هي) يُنشئ رأسَ الشهر مسوّدةً إن لم يكن ثمّ يكتب سجلَّ الطالب أو يحدّثه في معاملةٍ واحدة، ويُعيد معرّفَ السجلّ؛ ويبدأ بـ`assert_session_writable`، ويرفض الشهرَ المُرسَل لغير المعتمِد برسالةٍ عربية (`P0001`). وعمودُ **`quran_records.recorded_at`** وقتُ الرصد على الجهاز (لا يتجاوز `now()`)، وnull لما رُصد متّصلاً. `grant execute … to authenticated` وحده.
+
 ## طلباتُ إضافة الطلاب: `student_requests` (2026-10-27)
 
 > هجرة `20261027090726_student_requests`. المعلّمُ يطلب إضافةَ طالبٍ لحلقته، والمديرُ الإداريّ يُنشئه من الطلب أو يرفضه.

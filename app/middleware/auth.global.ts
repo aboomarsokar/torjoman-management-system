@@ -12,12 +12,28 @@ import type { Database } from '~/types/database.types'
 import { CHANGE_PASSWORD_PATH } from '~/constants/auth'
 import { accountGateDecision, type GateProfile } from '~/utils/accountGate'
 import { isSessionSwitching } from '~/utils/impersonation'
+import { OFFLINE_DASHBOARD, OFFLINE_HOME, OFFLINE_QURAN } from '~/constants/offline'
+import { OFFLINE_PATHS } from '~/constants/navigation'
+import { hasOfflineTeacher } from '~/utils/offlineDb'
+import { isOnlineNow } from '~/utils/reachability'
 
 const PUBLIC_PATHS = ['/', '/login']
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
 export default defineNuxtRouteMiddleware(async (to) => {
+  // بلا إنترنت (البند 14): لا تعمل إلا شاشاتُ المعلّم المخزَّنة (لوحتُه وحضورُه وإنجازُه) — تُفتح بلا جلسةٍ ولا ملفّ
+  // (لا شبكةَ تؤكّدهما)، وكلُّ شاشةٍ محميّةٍ تُحوَّل إلى اللوحة («الحضور اليوميّ» و«الإنجاز القرآني» إلى شاشتيهما)؛
+  // والرئيسيةُ كذلك إن كان على الجهاز معلّمٌ فتحه من قبل
+  if (import.meta.client && !isOnlineNow()) {
+    if (OFFLINE_PATHS.includes(to.path)) return
+    const publicRead = to.path.startsWith('/s/') || to.path.startsWith('/news/') || to.path.startsWith('/auth')
+    const target = to.path === '/reports'
+      ? OFFLINE_QURAN
+      : to.path === '/attendance' ? OFFLINE_HOME : to.path.startsWith('/students') ? '/t/students' : OFFLINE_DASHBOARD
+    if (!publicRead && (to.path !== '/' || await hasOfflineTeacher())) return navigateTo(target)
+  }
+
   const user = useSupabaseUser()
   // /s/<token> صفحة اطّلاع الطالب العامّة (بلا حساب) — /news/<id> شاشة قراءة الخبر العامّة (§4.26)
   const isPublic = PUBLIC_PATHS.includes(to.path) || to.path.startsWith('/auth') || to.path.startsWith('/s/') || to.path.startsWith('/news/')

@@ -4,6 +4,8 @@ import { staffEmailFromNumber, studentEmailFromIdentity } from '~/constants/acco
 import { LOGIN_REJECTION } from '~/constants/auth'
 import { loginErrorMessage } from '~/utils/loginError'
 import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
+import { clearOfflineCaches } from '~/utils/offlineCache'
+import { forgetOfflineTeacher } from '~/utils/offlineDb'
 
 /**
  * المصادقة — الموظف برقمه الوظيفي والطالب برقم هويته، كلاهما من المتصفّح مباشرةً ببريدٍ داخليّ مشتقّ.
@@ -58,6 +60,8 @@ export function useAuth() {
     impersonation.isChecked.value = false
     // تفريغٌ لا محو: `clearNuxtState` يجعل الحالةَ undefined فيسقط أوّلُ قارئٍ لصورةٍ بعد الدخول التالي
     // («Cannot read properties of undefined» في urlFrom)
+    clearOfflineCaches()
+    await forgetOfflineTeacher()
     useState(PROFILE_PHOTOS_SIGNED_KEY).value = {}
     useState(PROFILE_PHOTOS_GENERATIONS_KEY).value = {}
     await navigateTo('/login')

@@ -18,6 +18,10 @@ const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
 const { isTeacher, canApprove, isReadOnly } = usePermissions()
+// المعلّمُ يسجّل حضورَه في `/t` التي تعمل بلا إنترنت (البند 14) — شاشةٌ واحدةٌ له كي لا يتسابق حفظان على اليوم نفسه
+watch(isTeacher, (teacher) => {
+  if (teacher) navigateTo('/t', { replace: true })
+}, { immediate: true })
 
 const today = gazaToday()
 // الجمعةُ عطلة (الدوامُ من السبت إلى الخميس — قرار المستخدم 2026-10-24): الشاشةُ تفتح يومَها على الخميس

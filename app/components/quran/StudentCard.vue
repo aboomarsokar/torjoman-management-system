@@ -15,6 +15,8 @@ const props = defineProps<{
   status: ReportStatus | null
   action: CardAction | null
   surahName: (n: number) => string
+  /** رصدُه محفوظٌ على الجهاز ينتظر الرفع (شاشةُ المعلّم بلا إنترنت `/t/quran`). */
+  queued?: boolean
 }>()
 const emit = defineEmits<{ open: [] }>()
 
@@ -84,6 +86,14 @@ const button = computed(() => props.action ? ACTIONS[props.action] : null)
         size="lg"
         icon="i-lucide-history"
         label="رُصد في حلقته السابقة"
+      />
+      <UBadge
+        v-else-if="queued"
+        color="warning"
+        variant="subtle"
+        size="lg"
+        icon="i-lucide-cloud-upload"
+        label="على جهازك — بانتظار الرفع"
       />
       <UBadge
         v-else-if="record"

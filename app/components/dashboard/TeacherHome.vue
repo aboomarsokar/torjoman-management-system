@@ -130,48 +130,53 @@ const attentionOpen = ref(false)
         </NuxtLink>
       </nav>
 
-      <DashboardTeacherActions :actions="actions" />
+      <!-- «المطلوب منك» و«طلاب يحتاجون متابعتك» متجاوران على الشاشة الكبيرة -->
+      <div class="pair">
+        <DashboardTeacherActions :actions="actions" />
 
-      <!-- من يحتاج متابعةً: شريطٌ يُفتح عند الطلب، وقائمتُه في البطاقة نفسِها -->
-      <section
-        v-if="attentionCount"
-        class="card att-box"
-      >
-        <button
-          type="button"
-          class="att-line"
-          :aria-expanded="attentionOpen"
-          @click="attentionOpen = !attentionOpen"
+        <!-- من يحتاج متابعةً: شريطٌ يُفتح عند الطلب، وقائمتُه في البطاقة نفسِها -->
+        <section
+          v-if="attentionCount"
+          class="card att-box"
         >
-          <span class="att-ico"><UIcon
-            name="i-lucide-users-round"
-            class="size-5"
-          /></span>
-          <span class="att-text">طلاب يحتاجون متابعتك</span>
-          <span class="att-count">{{ attentionCount }}</span>
-          <UIcon
-            name="i-lucide-chevron-down"
-            class="size-5 att-chev"
-            :class="{ open: attentionOpen }"
+          <button
+            type="button"
+            class="att-line"
+            :aria-expanded="attentionOpen"
+            @click="attentionOpen = !attentionOpen"
+          >
+            <span class="att-ico"><UIcon
+              name="i-lucide-users-round"
+              class="size-5"
+            /></span>
+            <span class="att-text">طلاب يحتاجون متابعتك</span>
+            <span class="att-count">{{ attentionCount }}</span>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-5 att-chev"
+              :class="{ open: attentionOpen }"
+            />
+          </button>
+          <DashboardTeacherAttention
+            v-if="attentionOpen"
+            class="att-body"
+            :absentees="d.absentees"
+            :unrecorded="d.unrecorded"
+            :show-unrecorded="showUnrecorded"
+            :recording-label="d.recording.label"
+            :eligible="d.eligible"
+            :reading-behind="d.readingBehind"
           />
-        </button>
-        <DashboardTeacherAttention
-          v-if="attentionOpen"
-          class="att-body"
-          :absentees="d.absentees"
-          :unrecorded="d.unrecorded"
-          :show-unrecorded="showUnrecorded"
-          :recording-label="d.recording.label"
-          :eligible="d.eligible"
-          :reading-behind="d.readingBehind"
-        />
-      </section>
+        </section>
+      </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.th { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+/* يملأ عرضَ المحتوى كسائر الصفحات (لقطة المستخدم 2026-10-27: كانت عموداً ضيّقاً إلى اليمين على الشاشة الكبيرة) */
+.th { display: flex; flex-direction: column; gap: 16px; }
+.pair { display: flex; flex-direction: column; gap: 16px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; }
 .placeholder { font-size: 15px; color: var(--ink-2); }
 .head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -206,6 +211,17 @@ const attentionOpen = ref(false)
 .att-chev { color: var(--ink-3); transition: transform .15s; }
 .att-chev.open { transform: rotate(180deg); }
 
+/* الشاشةُ الكبيرة: الأزرارُ عمودان ثمّ أربعةٌ في صفّ، و«المطلوب» و«المتابعة» متجاوران */
+@media (min-width: 900px) {
+  .quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .q.primary { min-height: 58px; font-size: 16.5px; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  /* لا متابعةَ: «المطلوب» يأخذ العرضَ كلَّه */
+  .pair:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 1280px) {
+  .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 @media (max-width: 560px) {
   .th { gap: 14px; }
   .card { padding: 16px; }

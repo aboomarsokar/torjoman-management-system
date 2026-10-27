@@ -118,7 +118,11 @@ const dayState = computed(() => shown.value.pending
       title="لا حلقة معيّنة لك"
     />
 
-    <template v-else>
+    <!-- الشاشةُ الكبيرة: اليومُ وشريطُه عمودٌ ثابت، والقائمةُ بجانبه (لقطة المستخدم 2026-10-27) -->
+    <div
+      v-else
+      class="att-grid"
+    >
       <section class="card main">
         <div class="day">
           <div class="day-label">
@@ -138,75 +142,83 @@ const dayState = computed(() => shown.value.pending
         />
       </section>
 
-      <div
-        v-if="locked"
-        class="note"
-      >
-        <UIcon
-          name="i-lucide-lock"
-          class="size-5 shrink-0"
-        />رصدُ هذا الشهر معتمَد فلا تُعدَّل أيامُه.
-      </div>
-      <UiEmptyState
-        v-if="isFriday(day)"
-        icon="i-lucide-calendar-off"
-        title="الجمعة عطلة — لا يُسجَّل فيها حضور"
-      />
-      <UiEmptyState
-        v-else-if="dayUnknown"
-        icon="i-lucide-cloud-off"
-        title="هذا اليومُ أقدمُ ممّا حُفظ على جهازك"
-        description="اتّصل بالإنترنت لعرضه أو تعديله."
-      />
-      <UiEmptyState
-        v-else-if="!students.length"
-        icon="i-lucide-users"
-        title="لا طلاب ملتحقون في هذا اليوم"
-      />
-      <template v-else>
+      <div class="att-body">
         <div
-          class="day-state"
-          :class="dayState.cls"
+          v-if="locked"
+          class="note"
         >
           <UIcon
-            :name="dayState.icon"
+            name="i-lucide-lock"
             class="size-5 shrink-0"
-          />
-          <span>{{ dayState.text }}</span>
+          />رصدُ هذا الشهر معتمَد فلا تُعدَّل أيامُه.
         </div>
-        <OfflineAttendanceList
-          :students="students"
-          :draft="draft"
-          :summary="summary"
-          :disabled="!canWrite"
-          @set="setChoice"
+        <UiEmptyState
+          v-if="isFriday(day)"
+          icon="i-lucide-calendar-off"
+          title="الجمعة عطلة — لا يُسجَّل فيها حضور"
         />
-        <div
-          v-if="canWrite"
-          class="save-bar"
-        >
-          <span
-            class="save-note"
-            :class="{ warn: dirty }"
-          >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
-          <UButton
-            label="حفظ الحضور"
-            icon="i-lucide-save"
-            color="primary"
-            size="lg"
-            :loading="saving"
-            :disabled="!canSave"
-            :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
-            @click="onSave"
+        <UiEmptyState
+          v-else-if="dayUnknown"
+          icon="i-lucide-cloud-off"
+          title="هذا اليومُ أقدمُ ممّا حُفظ على جهازك"
+          description="اتّصل بالإنترنت لعرضه أو تعديله."
+        />
+        <UiEmptyState
+          v-else-if="!students.length"
+          icon="i-lucide-users"
+          title="لا طلاب ملتحقون في هذا اليوم"
+        />
+        <template v-else>
+          <div
+            class="day-state"
+            :class="dayState.cls"
+          >
+            <UIcon
+              :name="dayState.icon"
+              class="size-5 shrink-0"
+            />
+            <span>{{ dayState.text }}</span>
+          </div>
+          <OfflineAttendanceList
+            :students="students"
+            :draft="draft"
+            :summary="summary"
+            :disabled="!canWrite"
+            @set="setChoice"
           />
-        </div>
-      </template>
-    </template>
+          <div
+            v-if="canWrite"
+            class="save-bar"
+          >
+            <span
+              class="save-note"
+              :class="{ warn: dirty }"
+            >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
+            <UButton
+              label="حفظ الحضور"
+              icon="i-lucide-save"
+              color="primary"
+              size="lg"
+              :loading="saving"
+              :disabled="!canSave"
+              :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
+              @click="onSave"
+            />
+          </div>
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.tp-main { max-width: 760px; display: flex; flex-direction: column; gap: 14px; }
+/* يملأ عرضَ المحتوى كسائر الصفحات (لقطة المستخدم 2026-10-27: كان عموداً ضيّقاً إلى اليمين على الشاشة الكبيرة) */
+.tp-main { display: flex; flex-direction: column; gap: 14px; }
+.att-grid, .att-body { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 1100px) {
+  .att-grid { display: grid; grid-template-columns: minmax(340px, 400px) minmax(0, 1fr); align-items: start; }
+  .att-grid > .main { position: sticky; top: 16px; }
+}
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
 .main { display: flex; flex-direction: column; gap: 18px; }
 .day-label small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }

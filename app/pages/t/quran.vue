@@ -247,7 +247,8 @@ const noDecision = () => Promise.resolve(false)
 </template>
 
 <style scoped>
-.tq { max-width: 1100px; display: flex; flex-direction: column; gap: 14px; }
+/* يملأ عرضَ المحتوى كسائر شاشات المعلّم (2026-10-27) */
+.tq { display: flex; flex-direction: column; gap: 14px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 18px; }
 .pick { display: flex; flex-direction: column; gap: 14px; }

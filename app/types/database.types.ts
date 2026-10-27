@@ -1664,6 +1664,91 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          note: string | null
+          phone: string
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          phone: string
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string
+          tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_contacts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_log: {
+        Row: {
+          body: string
+          code: string
+          created_at: string
+          id: string
+          ok: boolean
+          recipients: Json
+          recipients_count: number
+          result: string | null
+          segments: number
+          sent_by: string | null
+        }
+        Insert: {
+          body: string
+          code: string
+          created_at?: string
+          id?: string
+          ok: boolean
+          recipients: Json
+          recipients_count: number
+          result?: string | null
+          segments: number
+          sent_by?: string | null
+        }
+        Update: {
+          body?: string
+          code?: string
+          created_at?: string
+          id?: string
+          ok?: boolean
+          recipients?: Json
+          recipients_count?: number
+          result?: string | null
+          segments?: number
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_message_recipients: {
         Row: {
           message_id: string

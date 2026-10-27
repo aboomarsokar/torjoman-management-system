@@ -84,6 +84,8 @@ const mainNav: Item[] = [
   { key: 'students', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/students', roles: [...SCOPED_STAFF], group: 'people' },
   // طلابُ المعلّم يعملون بلا إنترنت (البند 14، 2026-10-27)؛ والإدارةُ في `/students` متّصلاً
   { key: 'students-teacher', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/t/students', roles: ['teacher'], group: 'people' },
+  // المعلّمُ يطلب إضافةَ طالب، والمديرُ الإداريّ يُضيفه أو يرفض (طلب المستخدم 2026-10-27)
+  { key: 'student-requests', label: 'طلبات إضافة طالب', labelF: 'طلبات إضافة طالبة', icon: 'i-lucide-user-plus', to: '/student-requests', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'people', isNew: true },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ
@@ -112,6 +114,8 @@ const mainNav: Item[] = [
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)
   { key: 'alerts', label: 'التنبيهات الإدارية', icon: 'i-lucide-bell', to: '/alerts', roles: [...LEADERS, WOMEN, 'teacher'], group: 'supervision' },
   // رسائلُ للكادر تصل أجراسَهم وصفحةَ «رسائل الإدارة» (طلب المستخدم 2026-10-25) — كلٌّ لقسمه، ومشرفُ المشروع يقرأ السجلّ
+  // رسائلُ نصّية عبر MTC للكادر ولجهاتٍ خارجية (طلب المستخدم 2026-10-27) — الإرسالُ للمدير الإداريّ ومشرفُ المشروع يقرأ
+  { key: 'sms', label: 'رسائل SMS', icon: 'i-lucide-message-square-text', to: '/sms', roles: [PS, ADMIN], group: 'supervision', isNew: true },
   { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true }
 ]
 
@@ -174,8 +178,13 @@ const activeItem = computed(() => visibleItems.value
   .filter(matches)
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const { unread: unreadMessages } = useUnreadMessages()
-/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة. */
-const countOf = (item: Item) => (item.key === 'messages' ? unreadMessages.value : 0)
+const { open: openStudentRequests } = useOpenStudentRequestsCount()
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27). */
+const countOf = (item: Item) => (item.key === 'messages'
+  ? unreadMessages.value
+  : item.key === 'student-requests' ? openStudentRequests.value : 0)
+/** مجموعُ أعداد بنود المجموعة — يظهر على عنوانها أيضاً (طلب المستخدم 2026-10-27). */
+const groupCount = (items: Item[]) => items.reduce((n, i) => n + countOf(i), 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
 const newKeys = isNewFor(allItems)
 
@@ -288,6 +297,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     aria-label="فيها جديد"
                   />
                 </span>
+                <span
+                  v-if="groupCount(g.items)"
+                  class="nav-count nav-g-count"
+                  :aria-label="`${groupCount(g.items)} بانتظارك`"
+                >{{ groupCount(g.items) > 99 ? '99+' : groupCount(g.items) }}</span>
                 <UIcon
                   name="i-lucide-chevron-down"
                   class="size-4 nav-chev"
@@ -317,6 +331,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     name="i-lucide-sparkles"
                     class="size-3.5"
                   />جديد</span>
+                  <span
+                    v-if="countOf(item)"
+                    class="nav-count"
+                    :aria-label="`${countOf(item)} بانتظارك`"
+                  >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
                 </button>
               </div>
             </section>
@@ -444,6 +463,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-new-star { color: var(--side-new-bg); }
 .nav-item.needs-net { opacity: .45; }
 .nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
+.nav-group > .nav-g-count { margin-inline-start: auto; margin-inline-end: 8px; flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 12.5px; font-weight: 700; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .06); }

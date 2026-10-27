@@ -33,6 +33,10 @@ export default defineNuxtConfig({
   // النطاق العامّ للموقع (canonical / og:url / sitemap / robots).
   // اضبطه عند معرفة النطاق عبر متغيّر البيئة NUXT_PUBLIC_SITE_URL على Vercel.
   runtimeConfig: {
+    // حسابُ رسائل SMS عند MTC — خادميٌّ فقط (NUXT_MTC_SMS_USERNAME / _PASSWORD / _SENDER على Vercel)
+    mtcSmsUsername: '',
+    mtcSmsPassword: '',
+    mtcSmsSender: '',
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://turjuman.vercel.app'
     }

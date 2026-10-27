@@ -3,7 +3,7 @@
  * «ما بدي قوائم منسدلة… وأعد ترتيبهم»). مفاتيحُ بنود القالب؛ وبندٌ لم يُذكر هنا يأتي بعدها بترتيبه.
  */
 export const TEACHER_NAV_ORDER = [
-  'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students-teacher', 'exams', 'examplan', 'programs',
+  'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students-teacher', 'student-requests', 'exams', 'examplan', 'programs',
   'incentives', 'my-booklets', 'messages', 'visits', 'quality-mine', 'alerts', 'profile'
 ] as const
 

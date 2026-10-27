@@ -241,6 +241,7 @@ function askWithdraw(r: NomineeRow) {
         <div
           v-if="chosen.length"
           class="send-bar"
+          data-float-above
         >
           <span>المحدّدون: <strong>{{ chosen.length }}</strong></span>
           <UButton

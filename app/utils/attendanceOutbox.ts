@@ -82,12 +82,16 @@ export function daysCount(n: number): string {
 
 /**
  * سطرُ الحالة للمعلّم (نمطُ الصحابة): ما ينتظر الرفعَ بعدده، وإلا نضارةُ البيانات. `syncedAt` وقتٌ معروض (`HH:MM`).
+ * `count` يعدّ ما في الصندوق (الأيامُ افتراضاً، والسجلّاتُ في الإنجاز القرآنيّ).
  */
-export function syncStatusLine(s: { online: boolean, pending: number, rejected: number, syncing: boolean, syncedAt: string | null }): string {
-  if (s.rejected) return `${daysCount(s.rejected)} لم تقبله الإدارة — راجِعه أدناه`
+export function syncStatusLine(
+  s: { online: boolean, pending: number, rejected: number, syncing: boolean, syncedAt: string | null },
+  count: (n: number) => string = daysCount
+): string {
+  if (s.rejected) return `${count(s.rejected)} لم تقبله الإدارة — راجِعه أدناه`
   if (s.pending) {
-    if (!s.online) return `${daysCount(s.pending)} محفوظ على جهازك — يُرفع حين يعود الاتصال`
-    return s.syncing ? `يجري رفع ${daysCount(s.pending)}…` : `${daysCount(s.pending)} بانتظار الرفع — يُرفع تلقائياً`
+    if (!s.online) return `${count(s.pending)} محفوظ على جهازك — يُرفع حين يعود الاتصال`
+    return s.syncing ? `يجري رفع ${count(s.pending)}…` : `${count(s.pending)} بانتظار الرفع — يُرفع تلقائياً`
   }
   const fresh = s.syncedAt ? ` · البيانات محدَّثة ${s.syncedAt}` : ''
   return s.online ? `كلُّ شيءٍ مرفوع${fresh}` : `بلا اتصال${fresh} — ما تسجّله يُحفظ على جهازك`

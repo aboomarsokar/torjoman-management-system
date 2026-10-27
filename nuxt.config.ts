@@ -42,7 +42,9 @@ export default defineNuxtConfig({
     '/': { prerender: true },
     // حضورُ المعلّم بلا إنترنت (البند 14 — نمطُ الصحابة): يُصيَّر في المتصفّح ويُولَّد مسبقاً ملفّاً يخزّنه عاملُ الخدمة،
     // فيُفتح بلا شبكة (والهيكلُ بلا بيانات — لا يُخبَّأ فيه اسمُ معلّمٍ ولا طلابُه)
-    '/t': { ssr: false, prerender: true }
+    '/t': { ssr: false, prerender: true },
+    // والإنجازُ القرآنيّ للمعلّم بلا إنترنت كذلك (2026-10-27)
+    '/t/quran': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -112,6 +114,12 @@ export default defineNuxtConfig({
             request.mode === 'navigate' && ['/login', '/dashboard', '/attendance'].includes(url.pathname),
           handler: 'NetworkOnly',
           options: { precacheFallback: { fallbackURL: '/t' } }
+        },
+        // «الإنجاز القرآني» بلا اتصال: شاشةُ المعلّم المخزَّنة (`/t/quran` نفسُها في الخبيئة فتُقدَّم منها مباشرةً)
+        {
+          urlPattern: ({ request, url }: { request: Request, url: URL }) => request.mode === 'navigate' && url.pathname === '/reports',
+          handler: 'NetworkOnly',
+          options: { precacheFallback: { fallbackURL: '/t/quran' } }
         }
       ]
     },

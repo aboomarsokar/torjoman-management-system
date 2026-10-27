@@ -1,28 +1,30 @@
 <script setup lang="ts">
 /**
- * أيامٌ رفضتها القاعدةُ من صندوق الجهاز (شهرٌ اعتُمد في أثناء الانقطاع، جمعة…) — البند 14. لا تُعاد تلقائياً لأنّ
- * الإعادةَ لا تُصلحها: المعلّمُ يعيد المحاولةَ بعد أن تفتح الإدارةُ الشهر، أو يتركها فيعود اليومُ كما في القاعدة.
+ * ما رفضته القاعدةُ من صندوق الجهاز (شهرٌ اعتُمد أو أُرسل في أثناء الانقطاع، جمعة…) — البند 14: أيامُ الحضور
+ * وسجلّاتُ الإنجاز القرآنيّ. لا تُعاد تلقائياً لأنّ الإعادةَ لا تُصلحها: المعلّمُ يعيد المحاولةَ بعد أن تفتح الإدارةُ
+ * الشهر، أو يتركها فيعود ما في القاعدة.
  */
-import type { OutboxEntry } from '~/utils/attendanceOutbox'
-import { formatDay } from '~/utils/reportWindow'
-
-defineProps<{ entries: OutboxEntry[] }>()
+defineProps<{
+  title: string
+  /** `label` ما رُفض (يومٌ أو اسمُ طالب)، و`error` سببُ الرفض من القاعدة. */
+  entries: { key: string, label: string, error?: string }[]
+}>()
 const emit = defineEmits<{ retry: [key: string], discard: [key: string] }>()
 </script>
 
 <template>
   <section
     class="rej"
-    aria-label="أيامٌ لم تُقبل"
+    :aria-label="title"
   >
-    <h2>أيامٌ لم تقبلها الإدارة</h2>
+    <h2>{{ title }}</h2>
     <ul>
       <li
         v-for="e in entries"
         :key="e.key"
       >
         <div class="what">
-          <b><bdi>{{ formatDay(e.day) }}</bdi></b>
+          <b><bdi>{{ e.label }}</bdi></b>
           <span>{{ e.error || 'رُفض الحفظ.' }}</span>
         </div>
         <div class="acts">

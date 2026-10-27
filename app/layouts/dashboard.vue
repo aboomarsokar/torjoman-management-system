@@ -90,7 +90,9 @@ const mainNav: Item[] = [
   // البرامجُ المصاحبة عنوانٌ مستقلّ تحته تبويبا صفحتها (طلب المستخدم 2026-10-22)
   { key: 'programs-progress', label: 'إنجاز الطلاب', labelF: 'إنجاز الطالبات', icon: 'i-lucide-chart-no-axes-column-increasing', to: '/programs', qtab: null, title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
   { key: 'programs-units', label: 'المقرّرات', icon: 'i-lucide-book-copy', to: '/programs', qtab: 'units', title: 'البرامج المصاحبة', roles: [...SCOPED_STAFF, 'teacher'], group: 'programs' },
-  { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF, 'teacher'], group: 'quran' },
+  { key: 'reports', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/reports', roles: [...SCOPED_STAFF], group: 'quran' },
+  // المعلّمُ يرصد في الشاشة التي تعمل بلا إنترنت (البند 14، 2026-10-27)
+  { key: 'quran-offline', label: 'الإنجاز القرآني', icon: 'i-lucide-book-marked', to: '/t/quran', roles: ['teacher'], group: 'quran', isNew: true },
   // متابعةُ رصد الحضور والشهر القرآنيّ لمعرفة المقصّر (طلب المستخدم 2026-10-22)
   { key: 'follow-up', label: 'متابعة الرصد', icon: 'i-lucide-list-checks', to: '/follow-up', roles: [PS, ADMIN, TECH, WOMEN, FIELD], group: 'quran' },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor'], group: 'quran' },

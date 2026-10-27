@@ -20,3 +20,6 @@ export const NETWORK_FAILURE_WINDOW_MS = 30_000
 
 /** الشاشةُ التي تعمل بلا إنترنت — يُقلع إليها التطبيقُ حين لا اتصال. */
 export const OFFLINE_HOME = '/t'
+
+/** الإنجازُ القرآنيّ للمعلّم بلا إنترنت (2026-10-27). */
+export const OFFLINE_QURAN = '/t/quran'

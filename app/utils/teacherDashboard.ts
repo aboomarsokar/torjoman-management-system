@@ -159,7 +159,8 @@ const TONE_ORDER = { urgent: 0, todo: 1, done: 2 } as const
 export function teacherActions(i: ActionsInput): TeacherAction[] {
   const out: TeacherAction[] = []
   const r = i.recording
-  const reportLink = `/reports?y=${r.period.year}&m=${r.period.month}`
+  // شاشةُ المعلّم التي تعمل بلا إنترنت (2026-10-27)
+  const reportLink = `/t/quran?y=${r.period.year}&m=${r.period.month}`
   // «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10» (الشَّرطةُ لا تصل أرقاماً تلي حروفاً عربية) — تُعزل لاتينيّاً
   const month = isolateLtr(r.label)
 

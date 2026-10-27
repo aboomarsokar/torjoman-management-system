@@ -67,7 +67,8 @@ const dayState = computed(() => shown.value.pending
     />
     <OfflineRejectedDays
       v-if="outbox.rejected.value.length"
-      :entries="outbox.rejected.value"
+      title="أيامٌ لم تقبلها الإدارة"
+      :entries="outbox.rejected.value.map(e => ({ key: e.key, label: formatDay(e.day), error: e.error }))"
       @retry="outbox.retry"
       @discard="outbox.discard"
     />

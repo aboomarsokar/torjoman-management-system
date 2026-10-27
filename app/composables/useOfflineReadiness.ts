@@ -12,12 +12,13 @@ export async function isOfflineShellCached(path: string = OFFLINE_HOME): Promise
   return !!(await caches.match(path, { ignoreSearch: true }))
 }
 
-export function useOfflineReadiness() {
+/** `path` الشاشةُ المنتظَرة في الخبيئة (الحضورُ افتراضاً، و`/t/quran` للإنجاز). */
+export function useOfflineReadiness(path: string = OFFLINE_HOME) {
   const state = ref<Readiness>('unsupported')
   let timer: ReturnType<typeof setInterval> | null = null
 
   async function check() {
-    if (await isOfflineShellCached()) {
+    if (await isOfflineShellCached(path)) {
       state.value = 'ready'
       if (timer) clearInterval(timer)
       timer = null

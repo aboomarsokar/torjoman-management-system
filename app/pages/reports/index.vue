@@ -29,6 +29,10 @@ const today = gazaToday()
 const now = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }
 // `?y=YYYY&m=MM` يفتح شهراً بعينه ويغلب كلَّ شيء، وإلا فالشهرُ المنتظَر (`defaultPeriod`)
 const route = useRoute()
+// المعلّمُ يرصد في الشاشة التي تعمل بلا إنترنت (2026-10-27) — والروابطُ القديمة (إشعارُ الإعادة) تصلها بشهرها
+watch(isTeacher, (teacher) => {
+  if (teacher) navigateTo({ path: '/t/quran', query: route.query }, { replace: true })
+}, { immediate: true })
 const linked = periodFromQuery(route.query.y, route.query.m, today)
 const initial = linked ?? defaultPeriod(today, { previousStatus: null })
 const year = ref(initial.year)

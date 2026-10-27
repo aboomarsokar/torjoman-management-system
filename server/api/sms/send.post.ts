@@ -1,4 +1,5 @@
-import { requireAdminManager } from '../../utils/supabaseAdmin'
+import { requireSmsSender } from '../../utils/smsSender'
+import { phonesOutsideSection } from '../../utils/smsScope'
 import { requireWritableSession } from '../../utils/impersonationGuard'
 import { MTC_CONCURRENCY, mtcErrorMessage, mtcSendOne, type MtcResult } from '../../utils/mtcSms'
 import { SMS_MAX_SEGMENTS, SMS_REQUEST_CHUNK, dedupeRecipients, smsSegments } from '~/utils/sms'
@@ -7,12 +8,12 @@ import { SMS_MAX_SEGMENTS, SMS_REQUEST_CHUNK, dedupeRecipients, smsSegments } fr
 const ACCOUNT_ERRORS = ['10002', '10004', '10005', '10008', '10011']
 
 /**
- * إرسالُ رسالة SMS (المدير الإداري فقط — طلب المستخدم 2026-10-27): النصُّ ومستلمون `{ name?, phone }` (حتى
+ * إرسالُ رسالة SMS (المدير الإداري لأيّ رقم، والمدير الفنيّ والمديرة الإدارية لكادر قسمهما — طلب المستخدم 2026-10-27): النصُّ ومستلمون `{ name?, phone }` (حتى
  * `SMS_REQUEST_CHUNK` في الطلب — والواجهةُ تقسّم ما زاد). تُطبَّع الأرقام ويُسقط المكرَّر، ويُرسَل لكلّ رقمٍ طلبٌ مستقلّ
  * (`MTC_CONCURRENCY` متزامنة)، ويُسجَّل الطلبُ في `sms_log` بنتيجة كلّ رقم. يُعيد من وصلهم ومن تعثّر وأوّلَ خطأٍ بالعربية.
  */
 export default defineEventHandler(async (event) => {
-  const { admin, user, caller } = await requireAdminManager(event)
+  const { admin, caller, section } = await requireSmsSender(event)
   requireWritableSession(caller)
   const body = await readBody<{ message?: unknown, recipients?: unknown }>(event)
   const message = typeof body?.message === 'string' ? body.message.trim() : ''
@@ -27,6 +28,14 @@ export default defineEventHandler(async (event) => {
   })))
   if (!valid.length) throw createError({ statusCode: 400, statusMessage: 'لا رقمَ جوالٍ صالح بين المستلمين.' })
   if (valid.length > SMS_REQUEST_CHUNK) throw createError({ statusCode: 400, statusMessage: `المستلمون في الطلب الواحد حتى ${SMS_REQUEST_CHUNK}.` })
+  if (section) {
+    const { data: staff, error: staffError } = await admin.from('profiles').select('phone')
+      .eq('status', 'active').neq('role', 'student').eq('gender', section)
+    if (staffError) throw createError({ statusCode: 500, statusMessage: 'تعذّر التحقّق من المستلمين.' })
+    if (phonesOutsideSection(valid.map(r => r.phone), (staff ?? []).map(s => s.phone)).length) {
+      throw createError({ statusCode: 403, statusMessage: `ترسل لكادر ${section === 'male' ? 'البنين' : 'البنات'} وحدهم.` })
+    }
+  }
 
   const results: (MtcResult | null)[] = Array.from({ length: valid.length }, () => null)
   let stop = false
@@ -54,7 +63,7 @@ export default defineEventHandler(async (event) => {
     ok: failed === 0,
     code: (firstBad?.code ?? (failed ? 'skipped' : '0')).slice(0, 20),
     result: `${sent} من ${valid.length}${error ? ` — ${error}` : ''}`.slice(0, 300),
-    sent_by: user.id
+    sent_by: caller.id
   })
 
   return { sent, failed, invalid, segments: seg.segments, error }

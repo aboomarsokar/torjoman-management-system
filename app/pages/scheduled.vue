@@ -179,7 +179,7 @@ async function confirmDelete() {
       :busy="busy"
       :initial="initial"
       :editing="!!editingId"
-      :can-sms="isAdmin"
+      :can-sms="canEdit"
       :fixed-section="fixedSection"
       @save="onSave"
     />

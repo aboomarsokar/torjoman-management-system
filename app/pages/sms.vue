@@ -1,20 +1,25 @@
 <script setup lang="ts">
 /**
  * «رسائل SMS» (طلب المستخدم 2026-10-27): المديرُ الإداريّ يكتب رسالةً ويختار مستلميها من الكادر أو جهاتِ الاتصال
- * الخارجية أو أرقاماً يدوية، فيرى عددَ المقاطع والرصيد ويؤكّد ثم يُرسل عبر MTC. ومشرفُ المشروع يقرأ السجلّ.
+ * الخارجية أو أرقاماً يدوية، فيرى عددَ المقاطع والرصيد ويؤكّد ثم يُرسل عبر MTC. والمديرُ الفنيّ والمديرةُ الإدارية
+ * لكادر قسمهما وحده ويريان ما أرسلاه، ومشرفُ المشروع يقرأ السجلّ.
  */
 import type { Recipient } from '~/composables/useSms'
 import { parseManualNumbers } from '~/composables/useSms'
+import { rewriteAudience } from '~/composables/useAiRewrite'
 import { SMS_MAX_SEGMENTS, dedupeRecipients, smsSegments } from '~/utils/sms'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'رسائل SMS — ترجمان' })
 
-const { role, isAdmin } = usePermissions()
-const canView = computed(() => ['admin_manager', 'project_supervisor'].includes(role.value ?? ''))
+const { role, isAdmin, isTechnical, isWomenAdmin } = usePermissions()
+const canView = computed(() => ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor'].includes(role.value ?? ''))
+/** من يرسل: المديرُ الإداريّ لأيّ رقم، والفنيّ لكادر البنين، والمديرةُ لكادر البنات. */
+const canSend = computed(() => isAdmin.value || isTechnical.value || isWomenAdmin.value)
+const section = computed(() => (isTechnical.value ? 'male' : isWomenAdmin.value ? 'female' : null))
 const { staff, contacts, log, balance, balanceError, sending, progress, refreshBalance, addContact, removeContact, send } = useSms()
 onMounted(() => {
-  watch(isAdmin, (a) => {
+  watch(canSend, (a) => {
     if (a) refreshBalance()
   }, { immediate: true })
 })
@@ -26,6 +31,7 @@ const staffPicked = ref<Recipient[]>([])
 const contactsPicked = ref<Recipient[]>([])
 const manual = ref('')
 
+const sectionStaff = computed(() => (section.value ? staff.value.filter(s => s.gender === section.value) : staff.value))
 const all = computed(() => dedupeRecipients([...staffPicked.value, ...contactsPicked.value, ...parseManualNumbers(manual.value).list]).valid)
 const seg = computed(() => smsSegments(message.value))
 const tooLong = computed(() => seg.value.segments > SMS_MAX_SEGMENTS)
@@ -35,6 +41,7 @@ const tabs = computed(() => [
   { key: 'log' as const, label: 'السجلّ', icon: 'i-lucide-history' }
 ])
 
+const audience = computed(() => rewriteAudience(section.value))
 const ai = useAiRewrite(() => ({ title: '', body: message.value }), (d) => {
   message.value = d.body
 })
@@ -55,10 +62,10 @@ async function doSend() {
   <div class="sms">
     <UiPageHeader
       title="رسائل SMS"
-      subtitle="رسائلُ نصّيةٌ إلى جوّالات الكادر ومن تحفظه من خارجه — المرشّحين للمقابلات وغيرِهم."
+      :subtitle="section ? `رسائلُ نصّيةٌ إلى جوّالات كادر ${section === 'male' ? 'البنين' : 'البنات'}.` : 'رسائلُ نصّيةٌ إلى جوّالات الكادر ومن تحفظه من خارجه — المرشّحين للمقابلات وغيرِهم.'"
     >
       <template
-        v-if="isAdmin"
+        v-if="canSend"
         #actions
       >
         <div class="bal">
@@ -79,11 +86,11 @@ async function doSend() {
       <UiEmptyState
         v-if="role && !canView"
         icon="i-lucide-lock"
-        title="هذه الصفحة للمدير الإداري."
+        title="هذه الصفحة للإدارة."
       />
       <template v-else>
         <section
-          v-if="isAdmin"
+          v-if="canSend"
           class="card compose"
         >
           <UFormField label="نصّ الرسالة">
@@ -99,7 +106,7 @@ async function doSend() {
             :busy="ai.busy.value"
             :can-undo="ai.canUndo.value"
             :disabled="!message.trim() || sending"
-            @rewrite="ai.rewrite('sms', 'mixed')"
+            @rewrite="ai.rewrite('sms', audience)"
             @undo="ai.undo"
           />
           <div class="meter">
@@ -121,14 +128,14 @@ async function doSend() {
 
         <UiSegmentTabs
           v-model="tab"
-          :tabs="isAdmin ? tabs : tabs.filter(t => t.key === 'log')"
+          :tabs="isAdmin ? tabs : canSend ? tabs.filter(t => t.key !== 'contacts') : tabs.filter(t => t.key === 'log')"
           label="مستلمو الرسالة وسجلّها"
         />
         <section class="card">
           <SmsStaffPicker
-            v-if="tab === 'staff' && isAdmin"
+            v-if="tab === 'staff' && canSend"
             v-model="staffPicked"
-            :staff="staff"
+            :staff="sectionStaff"
           />
           <SmsContactsPicker
             v-else-if="tab === 'contacts' && isAdmin"

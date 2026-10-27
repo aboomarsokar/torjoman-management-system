@@ -1,9 +1,9 @@
 import { requireCaller } from '../../utils/caller'
 import { REWRITE_MAX_INPUT, rewriteMessage, type RewriteAudience, type RewriteKind } from '../../utils/aiRewrite'
 
-/** من يكتب رسائل الإدارة: SMS للمدير الإداريّ، ورسائلُ الكادر له وللمدير الفنيّ والمديرة الإدارية. */
+/** من يكتب رسائل الإدارة: SMS ورسائلُ الكادر للمدير الإداريّ والمدير الفنيّ والمديرة الإدارية. */
 const ALLOWED: Record<RewriteKind, readonly string[]> = {
-  sms: ['admin_manager'],
+  sms: ['admin_manager', 'technical_manager', 'women_admin'],
   announcement: ['admin_manager', 'technical_manager', 'women_admin']
 }
 const AUDIENCES: readonly RewriteAudience[] = ['male', 'female', 'mixed']

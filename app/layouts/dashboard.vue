@@ -6,7 +6,7 @@
  */
 import { roleLabel as roleLabelFor, type Role } from '~/constants/roles'
 import { queryFromTab, tabFromQuery, type StudentTab } from '~/composables/useStudentTab'
-import { orderByKeys, TEACHER_NAV_ORDER } from '~/constants/navigation'
+import { orderByKeys, TEACHER_NAV_ORDER, TEACHER_ONLINE_ONLY } from '~/constants/navigation'
 
 const { profile, role, status, fullName, pending: profilePending } = useProfile()
 // صورة صاحب الحساب في الشريطين — أو الحرف الأول (ودائماً الحرف لحساب أنثى)
@@ -137,6 +137,8 @@ const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.i
 /** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
 // المعلّمُ قائمةٌ مسطّحةٌ بترتيب الاستعمال بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26)
 const flatNav = computed(() => role.value === 'teacher')
+/** شارةُ «يحتاج اتصالاً» الدائمة على بنود المعلّم التي لا تعمل بلا إنترنت. */
+const onlineOnly = (item: Item) => flatNav.value && (TEACHER_ONLINE_ONLY as readonly string[]).includes(item.key)
 const topItems = computed(() => flatNav.value
   ? orderByKeys(visibleItems.value, TEACHER_NAV_ORDER)
   : visibleItems.value.filter(i => !i.group))
@@ -259,7 +261,16 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                 :name="item.icon"
                 class="size-5"
               />
-              <span>{{ labelOf(item) }}</span>
+              <span class="nav-label">{{ labelOf(item) }}</span>
+              <span
+                v-if="onlineOnly(item)"
+                class="nav-net"
+                title="تحتاج اتصالاً بالإنترنت"
+              ><UIcon
+                name="i-lucide-wifi-off"
+                class="size-4"
+                aria-label="تحتاج اتصالاً بالإنترنت"
+              /></span>
               <span
                 v-if="newKeys.has(item.key)"
                 class="nav-new"
@@ -325,7 +336,16 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
                     :name="item.icon"
                     class="size-5"
                   />
-                  <span>{{ labelOf(item) }}</span>
+                  <span class="nav-label">{{ labelOf(item) }}</span>
+                  <span
+                    v-if="onlineOnly(item)"
+                    class="nav-net"
+                    title="تحتاج اتصالاً بالإنترنت"
+                  ><UIcon
+                    name="i-lucide-wifi-off"
+                    class="size-4"
+                    aria-label="تحتاج اتصالاً بالإنترنت"
+                  /></span>
                   <span
                     v-if="newKeys.has(item.key)"
                     class="nav-new"
@@ -465,6 +485,11 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 .nav-new-star { color: var(--side-new-bg); }
 .nav-item.needs-net { opacity: .45; }
 .nav-item > .nav-new + .nav-count { margin-inline-start: 0; }
+/* «تحتاج اتصالاً»: أيقونةٌ هادئةٌ في طرف البند، وما بعدها من الشارات يلاصقها */
+.nav-item > .nav-net { margin-inline-start: auto; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: var(--side-active); color: var(--side-ink); }
+.nav-item > .nav-net ~ .nav-new, .nav-item > .nav-net ~ .nav-count { margin-inline-start: 6px; }
+/* التسميةُ الطويلة تنكسر سطرين ولا تُقصّ حين تجتمع الشاراتُ بجانبها (لقطة المستخدم 2026-10-27: «طلبات إضاف…») */
+.nav-item > .nav-label { white-space: normal; text-overflow: clip; line-height: 1.4; padding-block: 7px; }
 .nav-group > .nav-g-count { margin-inline-start: auto; margin-inline-end: 8px; flex-shrink: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--err); color: var(--on-primary); font-size: 12.5px; font-weight: 700; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
 .nav-skel { height: 44px; border-radius: 11px; margin: 1.5px 0; }
 .side-foot { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--side-line); display: flex; flex-direction: column; gap: 6px; }

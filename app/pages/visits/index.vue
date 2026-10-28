@@ -11,6 +11,7 @@ import type { VisitHalqaOption, VisitRow } from '~/types/visits'
 import type { VisitDisplayStatus } from '~/utils/visitStatus'
 import { roleLabel } from '~/constants/roles'
 import { VISIT_MAX } from '~/utils/visitForm'
+import { fetchVisitHalqat, fetchVisits, SCREEN_KEYS } from '~/utils/teacherScreens'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
@@ -28,21 +29,18 @@ const ratingText = (v: VisitRow) => v.score != null ? `${v.score} / ${VISIT_MAX}
 /** موعدُ الزيارة ونتيجتُها لصاحبها الزائر وحده (visits_update) — المشرفُ الميدانيّ أو المديرُ الفنيّ. */
 const canEditVisit = (v: VisitRow) => isVisitor.value && v.supervisor_id === profile.value?.id
 
-const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>('visits-list', async () => {
-  const { data, error } = await supabase
-    .from('supervision_visits')
-    .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
-    .order('scheduled_at', { ascending: false })
-    .returns<VisitRow[]>()
-  if (error) handle(error)
-  return data ?? []
-}, { server: false, default: () => [] })
-const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>('visits-halqat', async () => {
-  const { data } = await supabase.from('halaqat')
-    .select('id, name, daily_time, supervisor_id, status, teacher:teacher_id(full_name)').order('name')
-    .returns<VisitHalqaOption[]>()
-  return data ?? []
-}, { server: false, default: () => [] })
+// والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
+const { wrap } = useOfflineCopy()
+const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(SCREEN_KEYS.visits, wrap(SCREEN_KEYS.visits, async () => {
+  try {
+    return await fetchVisits(supabase)
+  } catch (err) {
+    handle(err)
+    return []
+  }
+}), { server: false, default: () => [] })
+const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>(SCREEN_KEYS.visitHalqat,
+  wrap(SCREEN_KEYS.visitHalqat, () => fetchVisitHalqat(supabase).catch(() => [])), { server: false, default: () => [] })
 
 const today = gazaToday()
 const display = (v: VisitRow) => visitDisplayStatus(v, today)
@@ -190,6 +188,7 @@ async function confirmDelete() {
         />
       </template>
     </UiPageHeader>
+    <OfflineSavedNote :keys="[SCREEN_KEYS.visits]" />
 
     <div class="filters">
       <UiSelect

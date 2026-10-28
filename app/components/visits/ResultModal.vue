@@ -13,6 +13,7 @@ import type { Database } from '~/types/database.types'
 import type { VisitRow } from '~/types/visits'
 import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
 import { cleanCounts, groupCriteria, parseCounts } from '~/utils/visitForm'
+import { ACK_SAVED_MESSAGE } from '~/composables/useOfflineAck'
 
 interface Props {
   open: boolean
@@ -95,11 +96,20 @@ async function save() {
   }
 }
 
+const { queueIfOffline } = useOfflineAck()
+
 async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: string) {
   const v = props.visit
   if (!v) return
   busy.value = true
   try {
+    // المعلّمُ بلا اتصال: يُحفظ إقرارُه على جهازه ويُرفع لاحقاً (البند 14، 2026-10-27)
+    if (fn === 'acknowledge_visit' && await queueIfOffline('visit', v.id)) {
+      toast.add({ title: ACK_SAVED_MESSAGE, color: 'success', icon: 'i-lucide-cloud-upload' })
+      emit('update:open', false)
+      emit('saved')
+      return
+    }
     const { error } = await supabase.rpc(fn, { p_visit: v.id })
     if (error) throw error
     toast.add({ title: done, color: 'success', icon: 'i-lucide-circle-check' })

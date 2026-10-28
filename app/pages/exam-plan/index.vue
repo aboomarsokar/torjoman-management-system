@@ -6,7 +6,8 @@
  * البيانات: قيدُ الاحتواء (دورة 2 ⊇ 1، 4 ⊇ 3، 5 ⊇ 1–4 داخل المرحلة) تردّ رسالتَه العربيّة فتُعرض كما هي.
  */
 import type { Database } from '~/types/database.types'
-import { CYCLE_COLUMNS, CYCLE_LABELS, STAGE_LABELS, toExamCycle } from '~/utils/exams/cycles'
+import { CYCLE_LABELS, STAGE_LABELS } from '~/utils/exams/cycles'
+import { fetchExamCycles, SCREEN_KEYS } from '~/utils/teacherScreens'
 import type { ExamCycle } from '~/utils/exams/cycles'
 import { examPlanStats } from '~/utils/pageStats'
 import type { ProgramJuz } from '~/utils/quran/position'
@@ -28,21 +29,18 @@ const tabs = [
 ]
 const STAGES = [1, 2, 3]
 
-// جلب غير حاجز: السكيلتون يغطّي الانتظار
+// جلب غير حاجز: السكيلتون يغطّي الانتظار. والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
+const { wrap } = useOfflineCopy()
 const { data: cycles, refresh, pending } = useLazyAsyncData<ExamCycle[]>(
-  'exam-cycles',
-  async () => {
-    const { data, error } = await supabase
-      .from('exam_cycles')
-      .select(CYCLE_COLUMNS)
-      .order('stage_number')
-      .order('cycle_number')
-    if (error) {
-      handle(error)
+  SCREEN_KEYS.examCycles,
+  wrap(SCREEN_KEYS.examCycles, async () => {
+    try {
+      return await fetchExamCycles(supabase)
+    } catch (err) {
+      handle(err)
       return []
     }
-    return (data ?? []).map(toExamCycle)
-  },
+  }),
   { server: false, default: () => [] }
 )
 // فشلُ مراجع القرآن (يُعرض خطؤه من useQuranReference) لا يُدوِّر الهيكلَ للأبد:
@@ -130,6 +128,7 @@ const editTitle = computed(() => editing.value
       title="خطة الاختبارات"
       subtitle="ثلاث مراحل، لكلٍّ منها خمس دورات؛ والدورة الخامسة تجمع الأربع قبلها. حدودُ كلّ دورةٍ تُحسب من تقسيمة الأجزاء."
     />
+    <OfflineSavedNote :keys="[SCREEN_KEYS.examCycles]" />
 
     <UiFilterChips
       v-model="tab"

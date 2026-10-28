@@ -18,7 +18,7 @@ useSeoMeta({ title: 'إنجاز حلقتي — ترجمان', robots: 'noindex' 
 
 const {
   ready, access, months, queue, reference, start, year, month, halaqa, rows, report, status, canEdit,
-  pendingStudents, save, submitBlock, submit, statusText, retrying
+  openingNote, pendingStudents, save, submitBlock, submit, statusText, retrying
 } = useOfflineQuran()
 const { state: readiness } = useOfflineReadiness(OFFLINE_QURAN)
 const { isReadOnly } = usePermissions()
@@ -187,6 +187,19 @@ const noDecision = () => Promise.resolve(false)
         />
       </section>
 
+      <!-- قبل يوم فتح الشهر لا يُدخل المعلّمُ إنجازَه (قرار المستخدم 2026-10-28) -->
+      <div
+        v-if="openingNote"
+        class="opening"
+        role="status"
+      >
+        <UIcon
+          name="i-lucide-calendar-clock"
+          class="size-5 shrink-0"
+        />
+        <span>{{ openingNote }}</span>
+      </div>
+
       <QuranMonthBar
         :status="status"
         :return-note="report?.return_note ?? null"
@@ -252,6 +265,7 @@ const noDecision = () => Promise.resolve(false)
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 18px; }
 .pick { display: flex; flex-direction: column; gap: 14px; }
+.opening { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 14px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .head small { font-size: 14px; color: var(--ink-2); font-weight: 600; }
 .head b { font-size: 15.5px; font-weight: 700; color: var(--ink); }

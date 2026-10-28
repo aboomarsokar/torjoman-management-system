@@ -3,7 +3,9 @@
  * المقرّراتُ والإعداداتُ مفتاحٌ واحدٌ للجلسة، والمحاولاتُ بالطالب (RLS: الطالبُ محاولاتِه، والعاملُ نطاقَه).
  * الحسابُ في `readingJourney` (utils/reading.ts، مختبَر).
  */
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
+import { isOnlineNow } from '~/utils/reachability'
 import { readingJourney, type ReadingAttempt, type ReadingUnit } from '~/utils/reading'
 
 type UnitRow = { id: number, sort_order: number, title: string, pdf_path?: string | null, cover_path?: string | null, parts: { page_from: number, page_to: number, sort_order: number, book: { title: string, author: string | null } | null }[] }
@@ -23,26 +25,45 @@ export function toReadingUnits(rows: UnitRow[]): ReadingUnit[] {
     .sort((a, b) => a.sort_order - b.sort_order)
 }
 
+export const READING_UNITS_KEY = 'reading-units'
+export const READING_SETTINGS_KEY = 'reading-settings'
+const DEFAULT_READING_SETTINGS = { reading_pass_mark: 80, reading_test_questions: 20, reading_test_minutes: 20, reading_retry_days: 7 }
+
+/** المقرّراتُ بأجزائها وكتبها (تناديها الصفحةُ وتجهيزُ نُسخ المعلّم اليوميّ — `useWarmTeacherMirrors`). */
+export async function fetchReadingUnits(supabase: SupabaseClient<Database>): Promise<ReadingUnit[]> {
+  const { data, error } = await supabase.from('reading_units')
+    .select('id, sort_order, title, pdf_path, cover_path, parts:reading_unit_parts(page_from, page_to, sort_order, book:reading_books(title, author))')
+    .returns<UnitRow[]>()
+  if (error) throw error
+  return toReadingUnits(data ?? [])
+}
+
+export async function fetchReadingSettings(supabase: SupabaseClient<Database>) {
+  const { data } = await supabase.from('app_settings')
+    .select('reading_pass_mark, reading_test_questions, reading_test_minutes, reading_retry_days').eq('id', 1).maybeSingle()
+  return data ?? DEFAULT_READING_SETTINGS
+}
+
 export function useReadingUnits() {
   const supabase = useSupabaseClient<Database>()
-  const { data: units, refresh: refreshUnits } = useLazyAsyncData<ReadingUnit[]>('reading-units', async () => {
-    const { data, error } = await supabase.from('reading_units')
-      .select('id, sort_order, title, pdf_path, cover_path, parts:reading_unit_parts(page_from, page_to, sort_order, book:reading_books(title, author))')
-      .returns<UnitRow[]>()
-    if (error) console.error('[reading] فشل جلب المقرّرات:', error.message)
-    return toReadingUnits(data ?? [])
-  }, { server: false, default: () => [] })
+  // والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
+  const { wrap } = useOfflineCopy()
+  const { data: units, refresh: refreshUnits } = useLazyAsyncData<ReadingUnit[]>(READING_UNITS_KEY, wrap(READING_UNITS_KEY, async () => {
+    try {
+      return await fetchReadingUnits(supabase)
+    } catch (err) {
+      console.error('[reading] فشل جلب المقرّرات:', (err as Error).message)
+      return []
+    }
+  }), { server: false, default: () => [] })
 
-  const { data: settings } = useLazyAsyncData('reading-settings', async () => {
-    const { data } = await supabase.from('app_settings')
-      .select('reading_pass_mark, reading_test_questions, reading_test_minutes, reading_retry_days').eq('id', 1).maybeSingle()
-    return data ?? { reading_pass_mark: 80, reading_test_questions: 20, reading_test_minutes: 20, reading_retry_days: 7 }
-  }, { server: false, default: () => ({ reading_pass_mark: 80, reading_test_questions: 20, reading_test_minutes: 20, reading_retry_days: 7 }) })
+  const { data: settings } = useLazyAsyncData(READING_SETTINGS_KEY, wrap(READING_SETTINGS_KEY, () => fetchReadingSettings(supabase)),
+    { server: false, default: () => DEFAULT_READING_SETTINGS })
 
-  // روابطُ الأغلفة الموقَّتة (ساعة) — طلبٌ واحدٌ لكلّ الأغلفة، ويتجدّد بتجدّد المقرّرات
+  // روابطُ الأغلفة الموقَّتة (ساعة) — طلبٌ واحدٌ لكلّ الأغلفة، ويتجدّد بتجدّد المقرّرات (وبلا اتصالٍ لا أغلفة)
   const { data: coverUrls } = useLazyAsyncData<Record<number, string>>('reading-covers', async () => {
     const withCover = (units.value ?? []).filter(u => u.coverPath)
-    if (!withCover.length) return {}
+    if (!withCover.length || !isOnlineNow()) return {}
     const { data } = await supabase.storage.from('reading-books').createSignedUrls(withCover.map(u => u.coverPath!), 3600)
     return Object.fromEntries(withCover.flatMap((u, i) => (data?.[i]?.signedUrl ? [[u.id, data[i].signedUrl]] : [])))
   }, { server: false, default: () => ({}), watch: [units] })

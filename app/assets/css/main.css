@@ -170,6 +170,12 @@
   --green: #54BF99;
   --green-ink: #1F9D70;
   --green-soft: #E4F6EF;
+  /* زرُّ «حاضر» الممتلئ في الحضور (2026-10-28): أخضرُ أغمق كي يُقرأ النصُّ الأبيض عليه (≈ 4.6:1) */
+  --present-bg: #17845E;
+  --present-ink: #FFFFFF;
+  /* وزرُّ «غائب» الممتلئ (طلب المستخدم 2026-10-28: الخلفيةُ كلُّها بلون الحدود) — أحمرُ أغمق ليُقرأ الأبيضُ عليه */
+  --absent-bg: #B9473B;
+  --absent-ink: #FFFFFF;
   --err: #D26458;
   --err-soft: #FBEAE7;
 
@@ -267,6 +273,10 @@
   --green: #5FCBA4;
   --green-ink: #6FD3AF;
   --green-soft: rgba(84, 191, 153, .14);
+  --present-bg: #5FCBA4;
+  --present-ink: #062A1D;
+  --absent-bg: #E58579;
+  --absent-ink: #2A0B07;
   --err: #E58579;
   --err-soft: rgba(210, 100, 88, .16);
 

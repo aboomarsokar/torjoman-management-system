@@ -5,7 +5,7 @@
  */
 import { MUSHAF_PAGES } from '~/constants/quran'
 import { arabicFold } from '~/utils/arabicSearch'
-import { openingDay, shiftMonth } from '~/utils/reportWindow'
+import { formatDay, isSubmittable, openingDay, shiftMonth } from '~/utils/reportWindow'
 import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
 import type { StudentMonthRow } from './month'
 import type { Outcome } from './plan'
@@ -83,10 +83,17 @@ export function canEditMonth(input: {
   canApprove: boolean
   status: ReportStatus | null
   isFieldSupervisor?: boolean
+  /** الشهرُ قبل يوم فتحه (`isSubmittable`): المعلّمُ لا يُدخل إنجازَه بعدُ (قرار المستخدم 2026-10-28 — وحارسُ القاعدة كذلك). */
+  beforeOpening?: boolean
 }): boolean {
   if (input.readOnly || input.isFieldSupervisor) return false
   if (input.canApprove) return input.status !== 'approved'
-  return input.isTeacher && (input.status === null || input.status === 'draft')
+  return input.isTeacher && !input.beforeOpening && (input.status === null || input.status === 'draft')
+}
+
+/** «يُفتح الإدخال في 31-10-2026» — للمعلّم قبل يوم فتح الشهر، وإلا null. */
+export function teacherOpeningNote(year: number, month: number, today: string): string | null {
+  return isSubmittable(year, month, today) ? null : `يُفتح إدخالُ إنجاز الشهر ${String(month).padStart(2, '0')} في ${formatDay(openingDay(year, month))}.`
 }
 
 export type CardAction = 'record' | 'edit' | 'view'

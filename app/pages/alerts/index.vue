@@ -8,6 +8,8 @@
 import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import { alertStats } from '~/utils/pageStats'
+import { fetchAlerts, SCREEN_KEYS } from '~/utils/teacherScreens'
+import { ACK_SAVED_MESSAGE } from '~/composables/useOfflineAck'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'التنبيهات الإدارية — ترجمان' })
@@ -59,16 +61,12 @@ type AlertRow = {
 // المعلم لا يرى مُصدِر التنبيه (قرار 2026-10-19): يظهر له «إدارة المشروع»، ولا يُطلب الاسم من القاعدة أصلاً
 // فلا يصل إلى متصفّحه. الإدارة ترى المُصدِر صراحةً. الدور شرطٌ للجلب، فيُنتظر (role) ثم يُعاد.
 const ISSUER_FOR_TEACHER = 'إدارة المشروع'
-const { data: alerts, refresh, pending } = useLazyAsyncData<AlertRow[]>('alerts-list', async () => {
+// والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
+const { wrap } = useOfflineCopy()
+const { data: alerts, refresh, pending } = useLazyAsyncData<AlertRow[]>(SCREEN_KEYS.alerts, wrap(SCREEN_KEYS.alerts, async () => {
   if (!role.value || isFieldSupervisor.value) return []
-  const cols = 'id, alert_date, violation_type, description, severity, status, acknowledged_at, teacher:teacher_id(full_name)'
-  const { data } = await supabase
-    .from('admin_alerts')
-    .select(isTeacher.value ? cols : `${cols}, issuer:issuer_id(full_name)`)
-    .order('alert_date', { ascending: false })
-    .returns<AlertRow[]>()
-  return data ?? []
-}, { server: false, default: () => [], watch: [role] })
+  return fetchAlerts<AlertRow>(supabase, isTeacher.value).catch(() => [])
+}), { server: false, default: () => [], watch: [role] })
 
 // المعلم ومعه اسم حلقته (لتمييز المعلمين وتسريع الاختيار) — حلقته النشطة، وإلا «بلا حلقة»
 const { data: teachers } = useLazyAsyncData('alert-teachers', async () => {
@@ -130,9 +128,16 @@ async function save() {
 
 // ── تأكيد الاطّلاع (المعلّم) ──
 const acking = ref<string | null>(null)
+// المعلّمُ بلا اتصال: يُحفظ إقرارُه على جهازه ويُرفع لاحقاً (البند 14، 2026-10-27)
+const { queueIfOffline } = useOfflineAck()
 async function acknowledge(a: AlertRow) {
   acking.value = a.id
   try {
+    if (await queueIfOffline('alert', a.id)) {
+      a.status = 'acknowledged'
+      toast.add({ title: ACK_SAVED_MESSAGE, color: 'success', icon: 'i-lucide-cloud-upload' })
+      return
+    }
     const { error } = await supabase.from('admin_alerts').update({ status: 'acknowledged', acknowledged_at: new Date().toISOString() }).eq('id', a.id)
     if (error) throw error
     a.status = 'acknowledged'
@@ -168,6 +173,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
         />
       </template>
     </UiPageHeader>
+    <OfflineSavedNote :keys="[SCREEN_KEYS.alerts]" />
 
     <UiEmptyState
       v-if="isFieldSupervisor"

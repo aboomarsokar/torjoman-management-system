@@ -100,14 +100,26 @@ const open = (r: Row) => {
           <span class="muted">{{ row.sender ?? '—' }}</span>
         </template>
         <template #actions="{ row }">
-          <UButton
-            label="عرض"
-            icon="i-lucide-eye"
-            color="neutral"
-            variant="outline"
-            :ui="{ base: 'rounded-[10px] min-h-10' }"
-            @click="open(row)"
-          />
+          <span class="acts">
+            <!-- رابطُ الرسالة بجوار «عرض» (طلب المستخدم 2026-10-28) -->
+            <UButton
+              v-if="row.link"
+              :to="row.link"
+              :label="linkLabel(row.link)"
+              trailing-icon="i-lucide-arrow-left"
+              color="primary"
+              variant="soft"
+              :ui="{ base: 'rounded-[10px] min-h-10' }"
+            />
+            <UButton
+              label="عرض"
+              icon="i-lucide-eye"
+              color="neutral"
+              variant="outline"
+              :ui="{ base: 'rounded-[10px] min-h-10' }"
+              @click="open(row)"
+            />
+          </span>
         </template>
         <template #card="{ row }">
           <UiCardRow
@@ -127,15 +139,25 @@ const open = (r: Row) => {
               />
             </template>
             <template #actions>
-              <UButton
-                label="عرض"
-                icon="i-lucide-eye"
-                color="neutral"
-                variant="outline"
-                block
-                :ui="{ base: 'rounded-[12px] min-h-11 justify-center' }"
-                @click="open(row)"
-              />
+              <div class="card-acts">
+                <UButton
+                  label="عرض"
+                  icon="i-lucide-eye"
+                  color="neutral"
+                  variant="outline"
+                  :ui="{ base: 'rounded-[12px] min-h-11 justify-center' }"
+                  @click="open(row)"
+                />
+                <UButton
+                  v-if="row.link"
+                  :to="row.link"
+                  :label="linkLabel(row.link)"
+                  trailing-icon="i-lucide-arrow-left"
+                  color="primary"
+                  variant="soft"
+                  :ui="{ base: 'rounded-[12px] min-h-11 justify-center' }"
+                />
+              </div>
             </template>
           </UiCardRow>
         </template>
@@ -187,6 +209,10 @@ const open = (r: Row) => {
 .t-title { font-weight: 600; color: var(--ink); }
 .t-date { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .muted { color: var(--ink-3); }
+.acts { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+/* البطاقة: «عرض» ورابطُ الرسالة متجاوران يتقاسمان العرض */
+.card-acts { display: flex; gap: 8px; width: 100%; }
+.card-acts > :deep(*) { flex: 1 1 0; min-width: 0; }
 .mm :deep(tr.is-fresh) { background: color-mix(in srgb, var(--ui-warning) 7%, transparent); }
 /* المرسِلُ يسقط على العرض المتوسّط: العنوانُ والتاريخُ أولى */
 @container dt (max-width: 820px) {

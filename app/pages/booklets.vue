@@ -11,6 +11,7 @@ import { bookletStats, halaqaBooklets, totalsByBooklet } from '~/utils/booklets'
 import type { StockAction, StockDraft, StockMove } from '~/composables/useBookletStock'
 import { stockItems } from '~/utils/bookletStock'
 import { bookletReadyDraft } from '~/utils/chatDrafts'
+import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
 import type { BookletRequest } from '~/composables/useBookletRequests'
 
 definePageMeta({ layout: 'dashboard' })
@@ -60,12 +61,13 @@ async function saveMove(id: string, note: string, movedOn: string | null) {
 
 const route = useRoute()
 const view = ref<View>(route.query.view === 'requests' ? 'requests' : route.query.view === 'stock' ? 'stock' : 'halaqa')
-const viewOptions = computed(() => [
-  { value: 'halaqa' as const, label: 'حسب الحلقة' },
-  { value: 'booklet' as const, label: 'حسب الملزمة' },
-  { value: 'log' as const, label: 'السجلّ', count: deliveries.value.length },
-  { value: 'requests' as const, label: 'الطلبات', count: openCount.value || undefined },
-  { value: 'stock' as const, label: 'المخزون', count: lowCount.value || undefined }
+/** عروضُ الصفحة تبويباتٍ مقطّعةً بأيقوناتها (طلب المستخدم 2026-10-28: بدل شرائح الفلترة). */
+const viewTabs = computed<SegmentTab<View>[]>(() => [
+  { key: 'halaqa', label: 'حسب الحلقة', icon: 'i-lucide-users-round' },
+  { key: 'booklet', label: 'حسب الملزمة', icon: 'i-lucide-book-copy' },
+  { key: 'log', label: 'السجلّ', icon: 'i-lucide-history', count: deliveries.value.length },
+  { key: 'requests', label: 'الطلبات', icon: 'i-lucide-inbox', count: openCount.value || undefined },
+  { key: 'stock', label: 'المخزون', icon: 'i-lucide-package', count: lowCount.value || undefined }
 ])
 
 const stats = computed(() => bookletStats(deliveries.value, halaqat.value.length))
@@ -91,7 +93,10 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div class="booklets">
+  <div
+    class="booklets"
+    :class="{ fit: view === 'log' && deliveries.length > 0 }"
+  >
     <UiPageHeader
       title="أرشيف الملازم"
       subtitle="ما استلمته كلّ حلقة من ملازم المشروع، من الجزء 29 + 30 إلى الجزء 1 + 2."
@@ -133,9 +138,10 @@ async function confirmDelete() {
           :items="stats"
           label="أرقام الملازم"
         />
-        <UiFilterChips
+        <UiSegmentTabs
           v-model="view"
-          :options="viewOptions"
+          :tabs="viewTabs"
+          label="عروض أرشيف الملازم"
           class="views"
         />
         <BookletsByHalaqa
@@ -219,5 +225,23 @@ async function confirmDelete() {
 
 <style scoped>
 .stack { display: flex; flex-direction: column; gap: 14px; }
+/* عرضُ السجلّ يملأ الشاشة بالضبط فلا تمريرَ للصفحة — الجدولُ وحده يُمرَّر وأرقامُ الصفحات ثابتةٌ في أسفله
+   (طلب المستخدم 2026-10-28). الشريطُ العلويّ 76px وحشوةُ المحتوى أعلى وأسفل (والأسفلُ يزيد 60px). على الجوال
+   تبقى الصفحةُ تُمرَّر: البطاقاتُ والأرقامُ أطولُ من أن تُحشر */
+@media (min-width: 761px) {
+  .booklets.fit { display: flex; flex-direction: column; height: calc(100dvh - 76px - 2 * var(--content-pad, 24px) - 60px); min-height: 480px; }
+  .booklets.fit > * { flex: none; }
+  .booklets.fit :deep(.log) { flex: 1; min-height: 0; }
+  /* الأرقامُ مضغوطةٌ في صفٍّ واحد لكلّ بطاقة فيتّسع الجدول */
+  .booklets.fit :deep(.stat.stacked) { flex-direction: row; align-items: center; gap: 14px; padding: 14px 18px; }
+  .booklets.fit :deep(.stat.stacked .ico) { margin-bottom: 0; width: 42px; height: 42px; }
+  .booklets.fit :deep(.stat.stacked .num) { font-size: 26px; }
+  .booklets.fit :deep(.stat.stacked .lbl) { margin-top: 4px; font-size: 14px; }
+}
 .views { margin-bottom: 16px; }
+/* خمسةُ تبويباتٍ لا تتّسع لعرض الجوال: تُمرَّر أفقياً بدل أن تنضغط */
+@media (max-width: 760px) {
+  .views { overflow-x: auto; scrollbar-width: none; }
+  .views :deep(.tab) { flex: none; padding: 0 12px; }
+}
 </style>

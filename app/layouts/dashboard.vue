@@ -124,6 +124,7 @@ const mainNav: Item[] = [
 
 const managerNav: Item[] = [
   { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: [PS, ADMIN], group: 'project' },
+  { key: 'export', label: 'تصدير البيانات', icon: 'i-lucide-file-spreadsheet', to: '/export', roles: [ADMIN], group: 'project', isNew: true },
   { key: 'booklets', label: 'أرشيف الملازم', icon: 'i-lucide-book-copy', to: '/booklets', roles: [PS, ADMIN], group: 'project' },
   { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN], group: 'project' },
   { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN], group: 'project' }
@@ -133,11 +134,13 @@ const managerNav: Item[] = [
 const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'account' }
 
 const allItems = [...mainNav, ...managerNav, profileItem]
-const labelOf = (i: Item) => (role.value === 'women_admin' && i.labelF) || i.label
-const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.includes(role.value)))
+const labelOf = (i: Item) => (navRole.value === 'women_admin' && i.labelF) || i.label
+// القائمةُ بالدور المحفوظ على الجهاز حتى يصل الملفّ — فلا تومض هياكلُ تحميلٍ مكانَ أسماء البنود (2026-10-28)
+const { navRole } = useNavRole()
+const visibleItems = computed(() => allItems.filter(i => navRole.value && i.roles.includes(navRole.value)))
 /** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
 // المعلّمُ قائمةٌ مسطّحةٌ بترتيب الاستعمال بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26)
-const flatNav = computed(() => role.value === 'teacher')
+const flatNav = computed(() => navRole.value === 'teacher')
 /** شارةُ «يحتاج اتصالاً» الدائمة على بنود المعلّم التي لا تعمل بلا إنترنت. */
 const onlineOnly = (item: Item) => flatNav.value && (TEACHER_ONLINE_ONLY as readonly string[]).includes(item.key)
 const topItems = computed(() => flatNav.value
@@ -150,23 +153,15 @@ const navGroups = computed(() => flatNav.value
       .filter(g => g.items.length))
 
 // الطيُّ لكلّ متصفّحٍ وحده (تفضيلٌ لا بيانات)؛ ومجموعةُ الصفحة الحاليّة تبقى مفتوحةً كي لا يختفي البارز
-const COLLAPSE_KEY = 'torjoman-nav-collapsed'
-const collapsed = ref<Set<GroupKey>>(new Set())
-onMounted(() => {
-  try {
-    const saved = JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? '[]') as GroupKey[]
-    collapsed.value = new Set(saved)
-  } catch { /* تخزينٌ محجوب: كلُّ المجموعات مفتوحة */ }
-})
+// في كوكي لا في التخزين المحلّيّ: يقرؤه الخادمُ فتأتي القائمةُ مطويّةً كما تركها المستخدم بلا قفزٍ بعد التحميل (2026-10-28)
+const collapsedCookie = useCookie<GroupKey[]>('torjoman-nav-collapsed', { maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', default: () => [] })
+const collapsed = computed(() => new Set(collapsedCookie.value ?? []))
 const isOpen = (g: GroupKey) => !collapsed.value.has(g) || activeItem.value?.group === g
 function toggleGroup(g: GroupKey) {
   const next = new Set(collapsed.value)
   if (isOpen(g)) next.add(g)
   else next.delete(g)
-  collapsed.value = next
-  try {
-    localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next]))
-  } catch { /* لا يُحفظ — يبقى للجلسة */ }
+  collapsedCookie.value = [...next]
 }
 
 // المسار أو ما تحته: صفحات التفاصيل (/halqat/<id>، /students/<id>…) تحمل عنوان قسمها وتُبرزه في القائمة
@@ -251,128 +246,127 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
       </div>
 
       <nav class="side-nav">
-        <ClientOnly>
-          <template v-if="profilePending">
-            <USkeleton
-              v-for="i in 7"
-              :key="i"
-              class="nav-skel bg-white/10"
+        <!-- بلا ClientOnly: البنودُ تأتي مرسومةً مع الصفحة بالدور المحفوظ في الكوكي (2026-10-28) -->
+        <template v-if="profilePending && !navRole">
+          <USkeleton
+            v-for="i in 7"
+            :key="i"
+            class="nav-skel bg-white/10"
+          />
+        </template>
+        <template v-else>
+          <button
+            v-for="item in topItems"
+            :key="item.key"
+            class="nav-item"
+            :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
+            @click="go(item)"
+          >
+            <UIcon
+              :name="item.icon"
+              class="size-5"
             />
-          </template>
-          <template v-else>
-            <button
-              v-for="item in topItems"
-              :key="item.key"
-              class="nav-item"
-              :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
-              @click="go(item)"
-            >
-              <UIcon
-                :name="item.icon"
-                class="size-5"
-              />
-              <span class="nav-label">{{ labelOf(item) }}</span>
-              <span
-                v-if="onlineOnly(item)"
-                class="nav-net"
-                title="تحتاج اتصالاً بالإنترنت"
-              ><UIcon
-                name="i-lucide-wifi-off"
-                class="size-4"
-                aria-label="تحتاج اتصالاً بالإنترنت"
-              /></span>
-              <span
-                v-if="newKeys.has(item.key)"
-                class="nav-new"
-              ><UIcon
-                name="i-lucide-sparkles"
-                class="size-3.5"
-              />جديد</span>
-              <span
-                v-if="countOf(item)"
-                class="nav-count"
-                :aria-label="`${countOf(item)} غير مقروءة`"
-              >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
-            </button>
+            <span class="nav-label">{{ labelOf(item) }}</span>
+            <span
+              v-if="onlineOnly(item)"
+              class="nav-net"
+              title="تحتاج اتصالاً بالإنترنت"
+            ><UIcon
+              name="i-lucide-wifi-off"
+              class="size-4"
+              aria-label="تحتاج اتصالاً بالإنترنت"
+            /></span>
+            <span
+              v-if="newKeys.has(item.key)"
+              class="nav-new"
+            ><UIcon
+              name="i-lucide-sparkles"
+              class="size-3.5"
+            />جديد</span>
+            <span
+              v-if="countOf(item)"
+              class="nav-count"
+              :aria-label="`${countOf(item)} غير مقروءة`"
+            >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
+          </button>
 
-            <section
-              v-for="g in navGroups"
-              :key="g.key"
-              class="nav-sec"
+          <section
+            v-for="g in navGroups"
+            :key="g.key"
+            class="nav-sec"
+          >
+            <button
+              type="button"
+              class="nav-group"
+              :aria-expanded="isOpen(g.key)"
+              :aria-controls="`nav-${g.key}`"
+              @click="toggleGroup(g.key)"
+            >
+              <span class="nav-g-label">
+                <UIcon
+                  :name="g.icon"
+                  class="size-5"
+                />
+                {{ g.label }}
+                <UIcon
+                  v-if="!isOpen(g.key) && g.items.some(i => newKeys.has(i.key))"
+                  name="i-lucide-sparkles"
+                  class="size-4 nav-new-star"
+                  aria-label="فيها جديد"
+                />
+              </span>
+              <span
+                v-if="groupCount(g.items)"
+                class="nav-count nav-g-count"
+                :aria-label="`${groupCount(g.items)} بانتظارك`"
+              >{{ groupCount(g.items) > 99 ? '99+' : groupCount(g.items) }}</span>
+              <UIcon
+                name="i-lucide-chevron-down"
+                class="size-4 nav-chev"
+                :class="{ shut: !isOpen(g.key) }"
+              />
+            </button>
+            <div
+              v-show="isOpen(g.key)"
+              :id="`nav-${g.key}`"
             >
               <button
-                type="button"
-                class="nav-group"
-                :aria-expanded="isOpen(g.key)"
-                :aria-controls="`nav-${g.key}`"
-                @click="toggleGroup(g.key)"
+                v-for="item in g.items"
+                :key="item.key"
+                class="nav-item"
+                :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
+                @click="go(item)"
               >
-                <span class="nav-g-label">
-                  <UIcon
-                    :name="g.icon"
-                    class="size-5"
-                  />
-                  {{ g.label }}
-                  <UIcon
-                    v-if="!isOpen(g.key) && g.items.some(i => newKeys.has(i.key))"
-                    name="i-lucide-sparkles"
-                    class="size-4 nav-new-star"
-                    aria-label="فيها جديد"
-                  />
-                </span>
-                <span
-                  v-if="groupCount(g.items)"
-                  class="nav-count nav-g-count"
-                  :aria-label="`${groupCount(g.items)} بانتظارك`"
-                >{{ groupCount(g.items) > 99 ? '99+' : groupCount(g.items) }}</span>
                 <UIcon
-                  name="i-lucide-chevron-down"
-                  class="size-4 nav-chev"
-                  :class="{ shut: !isOpen(g.key) }"
+                  :name="item.icon"
+                  class="size-5"
                 />
+                <span class="nav-label">{{ labelOf(item) }}</span>
+                <span
+                  v-if="onlineOnly(item)"
+                  class="nav-net"
+                  title="تحتاج اتصالاً بالإنترنت"
+                ><UIcon
+                  name="i-lucide-wifi-off"
+                  class="size-4"
+                  aria-label="تحتاج اتصالاً بالإنترنت"
+                /></span>
+                <span
+                  v-if="newKeys.has(item.key)"
+                  class="nav-new"
+                ><UIcon
+                  name="i-lucide-sparkles"
+                  class="size-3.5"
+                />جديد</span>
+                <span
+                  v-if="countOf(item)"
+                  class="nav-count"
+                  :aria-label="`${countOf(item)} بانتظارك`"
+                >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
               </button>
-              <div
-                v-show="isOpen(g.key)"
-                :id="`nav-${g.key}`"
-              >
-                <button
-                  v-for="item in g.items"
-                  :key="item.key"
-                  class="nav-item"
-                  :class="{ 'active': isActive(item), 'needs-net': needsNetwork(item) }"
-                  @click="go(item)"
-                >
-                  <UIcon
-                    :name="item.icon"
-                    class="size-5"
-                  />
-                  <span class="nav-label">{{ labelOf(item) }}</span>
-                  <span
-                    v-if="onlineOnly(item)"
-                    class="nav-net"
-                    title="تحتاج اتصالاً بالإنترنت"
-                  ><UIcon
-                    name="i-lucide-wifi-off"
-                    class="size-4"
-                    aria-label="تحتاج اتصالاً بالإنترنت"
-                  /></span>
-                  <span
-                    v-if="newKeys.has(item.key)"
-                    class="nav-new"
-                  ><UIcon
-                    name="i-lucide-sparkles"
-                    class="size-3.5"
-                  />جديد</span>
-                  <span
-                    v-if="countOf(item)"
-                    class="nav-count"
-                    :aria-label="`${countOf(item)} بانتظارك`"
-                  >{{ countOf(item) > 99 ? '99+' : countOf(item) }}</span>
-                </button>
-              </div>
-            </section>
-          </template>
-        </ClientOnly>
+            </div>
+          </section>
+        </template>
       </nav>
 
       <div class="side-foot">

@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   if (!parsedId.ok) throw createError({ statusCode: 400, statusMessage: parsedId.message })
 
   const { data: req, error: readErr } = await admin.from('student_requests')
-    .select('id, status, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, halaqa:halaqa_id(id, gender, teacher:profiles!halaqat_teacher_id_fkey(full_name, phone, whatsapp))')
+    .select('id, status, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, halaqa:halaqa_id(id, gender, teacher:profiles!halaqat_teacher_id_fkey(id, full_name, phone, whatsapp))')
     .eq('id', parsedId.value).maybeSingle()
   if (readErr) throw createError({ statusCode: 500, statusMessage: 'تعذّرت قراءة الطلب.' })
   if (!req) throw createError({ statusCode: 404, statusMessage: 'الطلب غير موجود.' })
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
   const halaqa = req.halaqa as {
     id: string
     gender: 'male' | 'female' | null
-    teacher: { full_name: string, phone: string | null, whatsapp: string | null } | null
+    teacher: { id: string, full_name: string, phone: string | null, whatsapp: string | null } | null
   } | null
   if (!halaqa?.gender) throw createError({ statusCode: 400, statusMessage: 'حلقة الطلب غير موجودة.' })
 
@@ -46,7 +46,8 @@ export default defineEventHandler(async (event) => {
     full_name: req.full_name,
     national_id: req.national_id,
     female: halaqa.gender === 'female',
-    // لزرّ «أرسلها للمعلّم على واتساب» في نافذة بيانات الدخول
+    // لزرّي «أرسلها للمعلّم على واتساب» و«عبر المحادثة» في نافذة بيانات الدخول
+    teacher_id: halaqa.teacher?.id ?? null,
     teacher_name: halaqa.teacher?.full_name ?? null,
     teacher_phone: halaqa.teacher?.whatsapp || halaqa.teacher?.phone || null,
     request_closed: !closeErr

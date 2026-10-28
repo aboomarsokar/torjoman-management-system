@@ -10,6 +10,8 @@ import type { DeliveryRow } from '~/utils/booklets'
 import { bookletStats, halaqaBooklets, totalsByBooklet } from '~/utils/booklets'
 import type { StockAction, StockDraft, StockMove } from '~/composables/useBookletStock'
 import { stockItems } from '~/utils/bookletStock'
+import { bookletReadyDraft } from '~/utils/chatDrafts'
+import type { BookletRequest } from '~/composables/useBookletRequests'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'أرشيف الملازم — ترجمان' })
@@ -30,6 +32,7 @@ async function deliver(id: string, deliveredOn: string) {
   }
 }
 
+const { openWithDraft } = useChatList()
 const stockApi = useBookletStock()
 const { stock, moves, busy: stockBusy, lowCount } = stockApi
 onMounted(() => {
@@ -158,6 +161,7 @@ async function confirmDelete() {
           :can-close="isAdmin"
           :busy="reqBusy"
           @deliver="deliver"
+          @chat="(r: BookletRequest) => openWithDraft(r.requested_by, bookletReadyDraft(r.halaqa?.teacher?.full_name, r.booklet, r.copies, r.halaqa?.gender === 'female'))"
         />
         <template v-else>
           <UiEmptyState

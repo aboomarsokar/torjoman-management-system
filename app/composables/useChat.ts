@@ -20,10 +20,14 @@ export function totalUnread(rows: Pick<ChatRow, 'unread'>[]): number {
   return rows.reduce((n, r) => n + (r.unread ?? 0), 0)
 }
 
-/** يضيف رسالةً واردةً مرّةً واحدةً بترتيب وقتها (قد تصل بالبثّ وبالقراءة معاً). */
+/**
+ * يضيف رسالةً مرّةً واحدةً بترتيب وقتها، ويستبدل نسختَها إن وُجدت (قد تصل بالبثّ وبالقراءة معاً).
+ * الاستبدالُ يُصلح نسخةً معروضةً بوقتٍ غيرِ دقيق — الوقتُ الصحيح من الخادم وحده (ساعةُ الجهاز قد تختلف).
+ */
 export function mergeMessage(list: ChatMessage[], msg: ChatMessage): ChatMessage[] {
-  if (list.some(m => m.id === msg.id)) return list
-  return [...list, msg].sort((a, b) => a.created_at.localeCompare(b.created_at))
+  const old = list.find(m => m.id === msg.id)
+  if (old && old.created_at === msg.created_at && old.body === msg.body) return list
+  return [...list.filter(m => m.id !== msg.id), msg].sort((a, b) => a.created_at.localeCompare(b.created_at))
 }
 
 export function useChatList() {
@@ -31,6 +35,7 @@ export function useChatList() {
   const { handle } = useErrorHandler()
   const chats = useState<ChatRow[]>('chat-list', () => [])
   const loaded = useState<boolean>('chat-list-loaded', () => false)
+  const router = useRouter()
   const unread = computed(() => totalUnread(chats.value))
 
   async function refresh() {
@@ -63,5 +68,26 @@ export function useChatList() {
     return data
   }
 
-  return { chats, loaded, unread, refresh, clearUnread, contacts, startWith }
+  /** يرسل نصّاً في محادثةٍ خاصّةٍ مع شخص (يبدؤها إن لم تكن) ويُعيد معرّفَها، أو null عند الخطأ. */
+  async function sendDirect(otherId: string, text: string): Promise<string | null> {
+    const id = await startWith(otherId)
+    if (!id) return null
+    const { error } = await supabase.rpc('send_chat_message', { p_conversation: id, p_body: text })
+    if (error) {
+      handle(error)
+      return null
+    }
+    void refresh()
+    return id
+  }
+
+  /** يفتح محادثةً خاصّةً مع شخص ومعه مسوّدةٌ في خانة الكتابة (لا تُرسَل) — من صفحات الطلبات (2026-10-28). */
+  async function openWithDraft(otherId: string, draft: string): Promise<boolean> {
+    const id = await startWith(otherId)
+    if (!id) return false
+    await router.push({ path: '/chat', query: { c: id, d: draft } })
+    return true
+  }
+
+  return { chats, loaded, unread, refresh, clearUnread, contacts, startWith, sendDirect, openWithDraft }
 }

@@ -13,6 +13,8 @@ export interface AccountCredentials {
   password: string
   /** زرٌّ اختياريّ يفتح واتساب برسالةٍ جاهزة (بياناتُ الطالب لمعلّمه — 2026-10-27). */
   whatsapp?: { label: string, url: string } | null
+  /** زرٌّ اختياريّ يرسل الرسالةَ نفسها في محادثةٍ خاصّة مع المعلّم داخل المنصّة (2026-10-28). */
+  chat?: { label: string, recipientId: string, text: string } | null
 }
 
 export type CredentialsEvent = 'created' | 'reset'

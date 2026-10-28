@@ -3,6 +3,7 @@
  * بيانات الدخول بعد إنشاء حسابٍ أو إعادة تعيين كلمته — معرّف الدخول (الرقم الوظيفي أو الهوية)
  * وكلمة المرور المؤقّتة التي ولّدها الخادم، كلٌّ منهما قابلٌ للنسخ.
  * ⚠️ الكلمة تظهر هنا مرّةً واحدة: لا تُحفظ في الواجهة ولا يمكن استرجاعها بعد الإغلاق (تُعاد التعيين عند الحاجة).
+ * وزرّا الإرسال للمعلّم: واتساب، أو محادثةٌ خاصّة داخل المنصّة (2026-10-28 — الكلمةُ مؤقّتةٌ تبطل بعد أوّل دخول).
  */
 import type { AccountCredentials } from '~/composables/useAccountAdmin'
 
@@ -14,6 +15,28 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: [] }>()
 const toast = useToast()
+const router = useRouter()
+const { sendDirect } = useChatList()
+const sendingChat = ref(false)
+const sentChat = ref<string | null>(null)
+watch(() => props.credentials, () => {
+  sentChat.value = null
+})
+
+/** يرسل بياناتِ الدخول في محادثةٍ خاصّةٍ مع المعلّم مرّةً واحدة. */
+async function sendByChat() {
+  const chat = props.credentials?.chat
+  if (!chat || sendingChat.value || sentChat.value) return
+  sendingChat.value = true
+  sentChat.value = await sendDirect(chat.recipientId, chat.text)
+  sendingChat.value = false
+  if (sentChat.value) toast.add({ title: 'أُرسلت بياناتُ الدخول في المحادثة.', color: 'success', icon: 'i-lucide-message-circle' })
+}
+function openChat() {
+  const id = sentChat.value
+  emit('close')
+  if (id) void router.push({ path: '/chat', query: { c: id } })
+}
 
 async function copy(value: string, label: string) {
   try {
@@ -94,6 +117,26 @@ async function copy(value: string, label: string) {
             color="success"
             size="lg"
             :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"
+          />
+          <UButton
+            v-if="props.credentials.chat && !sentChat"
+            :label="props.credentials.chat.label"
+            icon="i-lucide-message-circle"
+            color="secondary"
+            size="lg"
+            :loading="sendingChat"
+            :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"
+            @click="sendByChat"
+          />
+          <UButton
+            v-else-if="sentChat"
+            label="أُرسلت — افتح المحادثة"
+            icon="i-lucide-check-check"
+            color="secondary"
+            variant="soft"
+            size="lg"
+            :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"
+            @click="openChat"
           />
           <UButton
             label="تمّ"

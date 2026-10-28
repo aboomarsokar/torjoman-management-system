@@ -8,8 +8,8 @@ import { STUDENT_REQUEST_STATUS } from '~/constants/studentRequests'
 import type { StudentRequest } from '~/composables/useStudentRequests'
 import { deliveryDate } from '~/utils/booklets'
 
-const props = defineProps<{ rows: StudentRequest[], canDecide: boolean, busy: boolean, showTeacher: boolean }>()
-const emit = defineEmits<{ approve: [row: StudentRequest], reject: [row: StudentRequest] }>()
+const props = defineProps<{ rows: StudentRequest[], canDecide: boolean, busy: boolean, showTeacher: boolean, canChat?: boolean }>()
+const emit = defineEmits<{ approve: [row: StudentRequest], reject: [row: StudentRequest], chat: [row: StudentRequest] }>()
 
 type View = 'open' | 'closed'
 const view = ref<View>('open')
@@ -94,27 +94,42 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
     </template>
     <template #actions="{ row }">
       <div
-        v-if="canDecide && row.status === 'open'"
+        v-if="canChat || (canDecide && row.status === 'open')"
         class="acts"
       >
-        <UButton
-          label="إضافة"
-          icon="i-lucide-user-plus"
-          color="success"
-          variant="solid"
-          :loading="busy"
-          :ui="{ base: 'rounded-[11px] min-h-10 px-4 font-semibold shadow-sm' }"
-          @click="emit('approve', row)"
-        />
-        <UButton
-          label="رفض"
-          icon="i-lucide-x"
-          color="neutral"
-          variant="outline"
-          :disabled="busy"
-          :ui="{ base: 'rounded-[11px] min-h-10' }"
-          @click="emit('reject', row)"
-        />
+        <UTooltip
+          v-if="canChat"
+          text="محادثة المعلّم"
+        >
+          <UButton
+            icon="i-lucide-message-circle"
+            color="secondary"
+            variant="soft"
+            :aria-label="`محادثة ${row.halaqa?.teacher?.full_name ?? 'المعلّم'}`"
+            :ui="{ base: 'rounded-[11px] min-h-10 min-w-10 justify-center' }"
+            @click="emit('chat', row)"
+          />
+        </UTooltip>
+        <template v-if="canDecide && row.status === 'open'">
+          <UButton
+            label="إضافة"
+            icon="i-lucide-user-plus"
+            color="success"
+            variant="solid"
+            :loading="busy"
+            :ui="{ base: 'rounded-[11px] min-h-10 px-4 font-semibold shadow-sm' }"
+            @click="emit('approve', row)"
+          />
+          <UButton
+            label="رفض"
+            icon="i-lucide-x"
+            color="neutral"
+            variant="outline"
+            :disabled="busy"
+            :ui="{ base: 'rounded-[11px] min-h-10' }"
+            @click="emit('reject', row)"
+          />
+        </template>
       </div>
     </template>
     <template #card="{ row, index }">
@@ -140,11 +155,22 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
           />
         </template>
         <template
-          v-if="canDecide && row.status === 'open'"
+          v-if="canChat || (canDecide && row.status === 'open')"
           #actions
         >
           <div class="acts acts-card">
             <UButton
+              v-if="canChat"
+              label="محادثة"
+              icon="i-lucide-message-circle"
+              color="secondary"
+              variant="soft"
+              block
+              :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+              @click="emit('chat', row)"
+            />
+            <UButton
+              v-if="canDecide && row.status === 'open'"
               label="إضافة"
               icon="i-lucide-user-plus"
               color="success"
@@ -154,6 +180,7 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
               @click="emit('approve', row)"
             />
             <UButton
+              v-if="canDecide && row.status === 'open'"
               label="رفض"
               icon="i-lucide-x"
               color="neutral"

@@ -143,9 +143,11 @@ const open = (r: Row) => {
     </ClientOnly>
 
     <!-- الرسالةُ كاملةً -->
+    <!-- العنوانُ الطويلُ يفسح لزرّ الإغلاق (لقطة الجوال 2026-10-28: كان «✕» فوق آخره) -->
     <UModal
       v-model:open="viewOpen"
       :title="viewing?.title ?? ''"
+      :ui="{ title: 'pe-10 leading-relaxed' }"
     >
       <template #body>
         <div

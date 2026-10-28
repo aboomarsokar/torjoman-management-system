@@ -1,49 +1,34 @@
 /**
- * دورُ القائمة الجانبية ثابتٌ من أوّل لحظة (طلب المستخدم 2026-10-28: «ما بدي أسماء التبويبات يصير فيها تحميل»):
- * يُحفظ آخرُ دورٍ عُرف لهذا المستخدم على الجهاز، فتُرسم البنودُ به فوراً حتى يصل الملفّ ثم يُصحَّح إن تغيّر.
- * المفتاحُ مقرونٌ بمعرّف المستخدم كي لا يرى حسابٌ آخرُ على الجهاز نفسه قائمةَ غيره. القائمةُ عرضٌ فقط — RLS تحكم.
+ * دورُ القائمة الجانبية ثابتٌ من أوّل لحظة (طلب المستخدم 2026-10-28: «ما بدي أسماء التبويبات يصير فيها تحميل»
+ * و«لمن أحدث بتختفي كلها»): آخرُ دورٍ عُرف لهذا المستخدم محفوظٌ في كوكي يقرؤه الخادمُ أيضاً، فتأتي البنودُ مرسومةً
+ * مع الصفحة نفسها قبل تحميل الكود، ثم تُصحَّح إن تغيّر الدور. مقرونٌ بمعرّف المستخدم متى عُرف، كي لا يرى حسابٌ آخرُ
+ * على الجهاز نفسه قائمةَ غيره. القائمةُ عرضٌ فقط — RLS تحكم.
  */
 import type { Role } from '~/constants/roles'
 
-export const NAV_ROLE_KEY = 'torjoman:nav-role'
+export const NAV_ROLE_COOKIE = 'torjoman-nav-role'
+const ONE_YEAR = 60 * 60 * 24 * 365
 
-/** الدورُ المحفوظ إن كان لهذا المستخدم نفسه، وإلا null. */
-export function readCachedRole(raw: string | null, sub: string | null | undefined): Role | null {
-  if (!raw || !sub) return null
-  try {
-    const v = JSON.parse(raw) as { sub?: string, role?: Role }
-    return v.sub === sub && typeof v.role === 'string' ? v.role : null
-  } catch {
-    return null
-  }
+export interface CachedNavRole { sub?: string, role?: Role }
+
+/** الدورُ المحفوظ: لهذا المستخدم إن عُرف معرّفُه، وإلا كما هو (الخادمُ قد لا يعرف المعرّف — والعميلُ يصحّح). */
+export function readCachedRole(v: CachedNavRole | null | undefined, sub: string | null | undefined): Role | null {
+  if (!v || typeof v.role !== 'string') return null
+  if (sub && v.sub && v.sub !== sub) return null
+  return v.role
 }
 
 export function useNavRole() {
   const user = useSupabaseUser()
   const { role } = useProfile()
-  const cached = ref<Role | null>(null)
+  const cookie = useCookie<CachedNavRole | null>(NAV_ROLE_COOKIE, { maxAge: ONE_YEAR, sameSite: 'lax', default: () => null })
 
-  onMounted(() => {
-    watch(() => user.value?.sub, (sub) => {
-      try {
-        cached.value = readCachedRole(localStorage.getItem(NAV_ROLE_KEY), sub)
-      } catch {
-        cached.value = null
-      }
-    }, { immediate: true })
-    watch(role, (r) => {
-      const sub = user.value?.sub
-      if (!r || !sub) return
-      cached.value = r
-      try {
-        localStorage.setItem(NAV_ROLE_KEY, JSON.stringify({ sub, role: r }))
-      } catch {
-        // التخزينُ محجوبٌ (نافذةٌ خاصّة): القائمةُ تنتظر الملفّ كما كانت
-      }
-    }, { immediate: true })
-  })
+  watch(role, (r) => {
+    const sub = user.value?.sub
+    if (r && sub && (cookie.value?.role !== r || cookie.value?.sub !== sub)) cookie.value = { sub, role: r }
+  }, { immediate: true })
 
   /** الدورُ الحقيقيّ متى وصل، وإلا المحفوظ. */
-  const navRole = computed<Role | null>(() => role.value ?? cached.value)
+  const navRole = computed<Role | null>(() => role.value ?? readCachedRole(cookie.value, user.value?.sub))
   return { navRole }
 }

@@ -134,11 +134,13 @@ const managerNav: Item[] = [
 const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'account' }
 
 const allItems = [...mainNav, ...managerNav, profileItem]
-const labelOf = (i: Item) => (role.value === 'women_admin' && i.labelF) || i.label
-const visibleItems = computed(() => allItems.filter(i => role.value && i.roles.includes(role.value)))
+const labelOf = (i: Item) => (navRole.value === 'women_admin' && i.labelF) || i.label
+// القائمةُ بالدور المحفوظ على الجهاز حتى يصل الملفّ — فلا تومض هياكلُ تحميلٍ مكانَ أسماء البنود (2026-10-28)
+const { navRole } = useNavRole()
+const visibleItems = computed(() => allItems.filter(i => navRole.value && i.roles.includes(navRole.value)))
 /** ما بلا مجموعة (لوحة التحكم وعناصرُ الطالب) في الأعلى، ثم المجموعاتُ التي فيها ما يظهر لهذا الدور بترتيبها. */
 // المعلّمُ قائمةٌ مسطّحةٌ بترتيب الاستعمال بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26)
-const flatNav = computed(() => role.value === 'teacher')
+const flatNav = computed(() => navRole.value === 'teacher')
 /** شارةُ «يحتاج اتصالاً» الدائمة على بنود المعلّم التي لا تعمل بلا إنترنت. */
 const onlineOnly = (item: Item) => flatNav.value && (TEACHER_ONLINE_ONLY as readonly string[]).includes(item.key)
 const topItems = computed(() => flatNav.value
@@ -253,7 +255,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
 
       <nav class="side-nav">
         <ClientOnly>
-          <template v-if="profilePending">
+          <template v-if="profilePending && !navRole">
             <USkeleton
               v-for="i in 7"
               :key="i"

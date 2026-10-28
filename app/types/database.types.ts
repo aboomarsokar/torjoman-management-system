@@ -294,6 +294,95 @@ export type Database = {
           },
         ]
       }
+      booklet_stock: {
+        Row: {
+          alert_at: number
+          booklet: number
+          quantity: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          alert_at?: number
+          booklet: number
+          quantity?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          alert_at?: number
+          booklet?: number
+          quantity?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booklet_stock_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booklet_stock_moves: {
+        Row: {
+          balance_after: number
+          booklet: number
+          created_at: string
+          created_by: string | null
+          delivery_id: string | null
+          delta: number
+          halaqa_id: string | null
+          id: string
+          moved_on: string
+          note: string | null
+          reason: string
+        }
+        Insert: {
+          balance_after: number
+          booklet: number
+          created_at?: string
+          created_by?: string | null
+          delivery_id?: string | null
+          delta: number
+          halaqa_id?: string | null
+          id?: string
+          moved_on?: string
+          note?: string | null
+          reason: string
+        }
+        Update: {
+          balance_after?: number
+          booklet?: number
+          created_at?: string
+          created_by?: string | null
+          delivery_id?: string | null
+          delta?: number
+          halaqa_id?: string | null
+          id?: string
+          moved_on?: string
+          note?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booklet_stock_moves_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booklet_stock_moves_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -2656,6 +2745,15 @@ export type Database = {
     Functions: {
       acknowledge_quality_month: { Args: { p_id: string }; Returns: undefined }
       acknowledge_visit: { Args: { p_visit: string }; Returns: undefined }
+      add_booklet_stock: {
+        Args: {
+          p_booklet: number
+          p_copies: number
+          p_moved_on?: string
+          p_note?: string
+        }
+        Returns: number
+      }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -2882,6 +2980,16 @@ export type Database = {
         }
         Returns: number
       }
+      set_booklet_stock: {
+        Args: {
+          p_alert_at: number
+          p_booklet: number
+          p_moved_on?: string
+          p_note?: string
+          p_quantity: number
+        }
+        Returns: number
+      }
       set_my_halaqa_time: {
         Args: { p_halaqa: string; p_time: string }
         Returns: undefined
@@ -2903,6 +3011,10 @@ export type Database = {
       touch_presence: { Args: never; Returns: undefined }
       unlock_quality_month: { Args: { p_id: string }; Returns: undefined }
       unlock_visit_result: { Args: { p_visit: string }; Returns: undefined }
+      update_booklet_stock_move: {
+        Args: { p_move: string; p_moved_on?: string; p_note: string }
+        Returns: undefined
+      }
       update_my_contact: {
         Args: {
           p_guardian_email: string

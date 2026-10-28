@@ -124,6 +124,7 @@ const mainNav: Item[] = [
 
 const managerNav: Item[] = [
   { key: 'minutes', label: 'محاضر الاجتماعات', icon: 'i-lucide-notebook-pen', to: '/minutes', roles: [PS, ADMIN], group: 'project' },
+  { key: 'export', label: 'تصدير البيانات', icon: 'i-lucide-file-spreadsheet', to: '/export', roles: [ADMIN], group: 'project', isNew: true },
   { key: 'booklets', label: 'أرشيف الملازم', icon: 'i-lucide-book-copy', to: '/booklets', roles: [PS, ADMIN], group: 'project' },
   { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN], group: 'project' },
   { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN], group: 'project' }

@@ -9,7 +9,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { PROJECT_START_DATE } from '~/constants/project'
-import { newestFirst, type MyMessage } from '~/composables/useMyMessages'
+import type { MyMessage } from '~/composables/useMyMessages'
 import { fetchReadingSettings, fetchReadingUnits, READING_SETTINGS_KEY, READING_UNITS_KEY } from '~/composables/useReadingPlan'
 import { fetchReadingProgress, READING_HALAQAT_KEY, readingProgressKey } from '~/composables/useReadingProgress'
 import { readCache, WARMED_CACHE_KEY as WARM_KEY, WARMED_SCREENS_CACHE_KEY, writeCache } from '~/utils/offlineCache'
@@ -55,7 +55,8 @@ export function useWarmTeacherMirrors() {
     await snap(uid, SCREEN_KEYS.qualityHalqat, () => fetchQualityHalqat(supabase))
     for (const p of [current, previous]) await snap(uid, SCREEN_KEYS.qualityRecords(p.year, p.month), () => fetchQualityRecords(supabase, p.year, p.month))
     await snap(uid, SCREEN_KEYS.alerts, () => fetchAlerts(supabase, true))
-    await snap(uid, SCREEN_KEYS.myMessages, async () => newestFirst(await fetchMyMessages<MyMessage>(supabase, uid)))
+    // الصفحةُ الأولى من رسائل الإدارة (الأحدث)؛ والصفحاتُ الأقدم تُحفظ حين تُفتح
+    await snap(uid, SCREEN_KEYS.myMessages(1), () => fetchMyMessages<MyMessage>(supabase, uid, 1))
     await snap(uid, SCREEN_KEYS.profile(uid), () => fetchProfileView(supabase, uid))
     await snap(uid, READING_UNITS_KEY, () => fetchReadingUnits(supabase))
     await snap(uid, READING_SETTINGS_KEY, () => fetchReadingSettings(supabase))

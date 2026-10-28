@@ -4,14 +4,16 @@
  * الزيارة. فتحُ الصفحة يسجّل المشاهدةَ فيعرف المرسِلُ مَن شاهد ومتى (`useMyMessages`)؛ والجرسُ ينبّه فقط.
  */
 import { MESSAGE_LINKS, MESSAGE_RECIPIENT_ROLES } from '~/constants/announcements'
-import { SCREEN_KEYS } from '~/utils/teacherScreens'
+import { MESSAGES_PAGE_SIZE } from '~/utils/teacherScreens'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'رسائل الإدارة — ترجمان' })
 
 const { profile } = useProfile()
 const isRecipient = computed(() => !!profile.value && MESSAGE_RECIPIENT_ROLES.includes(profile.value.role))
-const { messages, pending, freshIds } = useMyMessages()
+const { messages, pending, freshIds, page, total, pageCount } = useMyMessages()
+/** رقمُ الرسالة في القائمة كلّها لا في الصفحة وحدها. */
+const seq = (index: number) => (page.value - 1) * MESSAGES_PAGE_SIZE + index + 1
 
 const linkLabel = (to: string) => MESSAGE_LINKS.find(l => l.to === to)?.label ?? 'افتح الصفحة'
 const sentAt = (iso: string) => new Date(iso).toLocaleString('en-GB', {
@@ -55,7 +57,7 @@ const open = (r: Row) => {
       title="رسائل الإدارة"
       subtitle="ما أرسلته إليك إدارةُ المشروع، الأحدثُ أوّلاً."
     />
-    <OfflineSavedNote :keys="[SCREEN_KEYS.myMessages]" />
+    <OfflineSavedNote :keys="['my-staff-messages|*']" />
     <ClientOnly>
       <UiEmptyState
         v-if="profile && !isRecipient"
@@ -81,7 +83,7 @@ const open = (r: Row) => {
         :row-class="(r: Row) => (r.fresh ? 'is-fresh' : undefined)"
       >
         <template #num="{ index }">
-          <span class="seq">{{ index + 1 }}</span>
+          <span class="seq">{{ seq(index) }}</span>
         </template>
         <template #title="{ row }">
           <span class="t-cell">
@@ -133,7 +135,7 @@ const open = (r: Row) => {
             subtitle-dir="ltr"
           >
             <template #lead>
-              <span class="seq">{{ index + 1 }}</span>
+              <span class="seq">{{ seq(index) }}</span>
             </template>
             <template
               v-if="row.fresh"
@@ -170,6 +172,17 @@ const open = (r: Row) => {
           </UiCardRow>
         </template>
       </UiDataTable>
+      <!-- صفحاتٌ من السيرفر حين تكثر (طلب المستخدم 2026-10-28) -->
+      <UiPaginator
+        v-if="messages?.length && total > MESSAGES_PAGE_SIZE"
+        :page="page"
+        :page-count="pageCount"
+        :total="total"
+        :page-size="MESSAGES_PAGE_SIZE"
+        edges
+        refined
+        @update:page="page = $event"
+      />
     </ClientOnly>
 
     <!-- الرسالةُ كاملةً -->

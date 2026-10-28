@@ -5,7 +5,7 @@
 import type { Database } from '~/types/database.types'
 import { MESSAGE_RECIPIENT_ROLES } from '~/constants/announcements'
 import { isOnlineNow } from '~/utils/reachability'
-import { fetchMyMessages, SCREEN_KEYS } from '~/utils/teacherScreens'
+import { fetchMyMessages, MESSAGES_PAGE_SIZE, SCREEN_KEYS, type MessagesPage } from '~/utils/teacherScreens'
 
 export type MyMessage = {
   seen_at: string | null
@@ -56,18 +56,23 @@ export function useMyMessages() {
   const { handle } = useErrorHandler()
   const unread = useState<number>('staff-messages-unread', () => 0)
 
-  // والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
+  // صفحةً صفحة من السيرفر (طلب المستخدم 2026-10-28)، والمعلّمُ تُحفظ له نسخةُ كلّ صفحةٍ فتحها تُعرض بلا إنترنت
+  const page = ref(1)
   const { wrap } = useOfflineCopy()
-  const { data: messages, pending } = useLazyAsyncData<MyMessage[]>(SCREEN_KEYS.myMessages, wrap(SCREEN_KEYS.myMessages, async () => {
+  const pageKey = () => SCREEN_KEYS.myMessages(page.value)
+  const { data, pending } = useLazyAsyncData<MessagesPage<MyMessage>>(pageKey, wrap(pageKey, async () => {
     const me = profile.value?.id
-    if (!me) return []
+    if (!me) return { rows: [], total: 0 }
     try {
-      return newestFirst(await fetchMyMessages<MyMessage>(supabase, me))
+      return await fetchMyMessages<MyMessage>(supabase, me, page.value)
     } catch (err) {
       handle(err)
-      return []
+      return { rows: [], total: 0 }
     }
-  }), { server: false, default: () => [], watch: [() => profile.value?.id] })
+  }), { server: false, default: () => ({ rows: [], total: 0 }), watch: [() => profile.value?.id] })
+  const messages = computed(() => data.value?.rows ?? [])
+  const total = computed(() => data.value?.total ?? 0)
+  const pageCount = computed(() => Math.max(1, Math.ceil(total.value / MESSAGES_PAGE_SIZE)))
 
   /** ما كان جديداً عند الفتح — يبقى بارزاً في هذه الزيارة ولو سُجّلت مشاهدتُه. */
   const freshIds = ref<Set<string>>(new Set())
@@ -83,5 +88,5 @@ export function useMyMessages() {
     if (data) unread.value = Math.max(0, unread.value - data)
   })
 
-  return { messages, pending, freshIds }
+  return { messages, pending, freshIds, page, total, pageCount }
 }

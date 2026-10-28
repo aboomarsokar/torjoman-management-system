@@ -19,7 +19,8 @@ export const SCREEN_KEYS = {
   qualityHalqat: 'quality-halqat',
   qualityRecords: (year: number, month: number) => `quality-records|${year}-${month}`,
   alerts: 'alerts-list',
-  myMessages: 'my-staff-messages',
+  /** صفحةٌ من رسائل الإدارة — نسخةٌ لكلّ صفحةٍ فُتحت. */
+  myMessages: (page: number) => `my-staff-messages|${page}`,
   profile: (id: string) => `profile-${id}`
 } as const
 
@@ -73,13 +74,20 @@ export async function fetchAlerts<T>(supabase: Client, forTeacher: boolean): Pro
   return data ?? []
 }
 
-export async function fetchMyMessages<T>(supabase: Client, me: string): Promise<T[]> {
-  const { data, error } = await supabase.from('staff_message_recipients')
-    .select('seen_at, message:message_id(id, title, body, link, created_at, sender:sent_by(full_name))')
+/** رسائلُ الإدارة صفحةً صفحة من السيرفر (طلب المستخدم 2026-10-28): الأحدثُ أوّلاً، ومعها العددُ الكلّيّ. */
+export const MESSAGES_PAGE_SIZE = 20
+export type MessagesPage<T> = { rows: T[], total: number }
+
+export async function fetchMyMessages<T>(supabase: Client, me: string, page = 1, size = MESSAGES_PAGE_SIZE): Promise<MessagesPage<T>> {
+  const from = (page - 1) * size
+  const { data, error, count } = await supabase.from('staff_message_recipients')
+    .select('seen_at, message:message_id!inner(id, title, body, link, created_at, sender:sent_by(full_name))', { count: 'exact' })
     .eq('recipient_id', me)
+    .order('message(created_at)', { ascending: false })
+    .range(from, from + size - 1)
     .returns<T[]>()
   if (error) throw error
-  return data ?? []
+  return { rows: data ?? [], total: count ?? 0 }
 }
 
 export type ProfileScope = { label: string, value: string | number }

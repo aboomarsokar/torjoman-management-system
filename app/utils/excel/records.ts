@@ -4,7 +4,7 @@
  */
 import type { Database } from '~/types/database.types'
 import {
-  BOOKLET_REQUEST_STATUS_LABELS, SECTION_LABELS, STOCK_REASON_LABELS, STUDENT_REQUEST_STATUS_LABELS
+  BOOKLET_REQUEST_STATUS_LABELS, SECTION_LABELS, STOCK_REASON_LABELS, STUDENT_REQUEST_KIND_LABELS, STUDENT_REQUEST_STATUS_LABELS
 } from '~/constants/dataExport'
 import { BOOKLETS } from '~/constants/booklets'
 import { STAFF_ROLE_LABELS } from '~/constants/announcements'
@@ -117,15 +117,15 @@ export function staffMessagesSheet(rows: StaffMessageRow[], c: Ctx): SheetSpec {
 
 export function studentRequestsSheet(rows: StudentRequestRow[], c: Ctx): SheetSpec {
   return {
-    name: 'طلبات إضافة الطلاب',
+    name: 'طلبات الطلاب',
     columns: [
-      { header: 'تاريخ الطلب', key: 'date', width: 11 }, { header: 'الحلقة', key: 'halaqa', width: 22 }, { header: 'المعلّم', key: 'by', width: 24 },
-      { header: 'الطالب', key: 'name', width: 26 }, { header: 'رقم الهوية', key: 'nid', width: 12 }, { header: 'الحالة', key: 'status', width: 9 },
-      { header: 'سبب الرفض', key: 'reason', width: 24 }, { header: 'تاريخ الإغلاق', key: 'closed', width: 11 }
+      { header: 'تاريخ الطلب', key: 'date', width: 11 }, { header: 'النوع', key: 'kind', width: 8 }, { header: 'الحلقة', key: 'halaqa', width: 22 },
+      { header: 'المعلّم', key: 'by', width: 24 }, { header: 'الطالب', key: 'name', width: 26 }, { header: 'رقم الهوية', key: 'nid', width: 12 }, { header: 'الحالة', key: 'status', width: 9 },
+      { header: 'ملاحظة المعلّم / سبب الحذف', key: 'note', width: 26 }, { header: 'سبب الرفض', key: 'reason', width: 22 }, { header: 'تاريخ الإغلاق', key: 'closed', width: 11 }
     ],
     rows: newestFirst(rows, r => r.created_at).map(r => ({
-      date: dmy(r.created_at), halaqa: halaqaOf(c, r.halaqa_id), by: nameOf(c, r.requested_by), name: r.full_name, nid: r.national_id,
-      status: STUDENT_REQUEST_STATUS_LABELS[r.status] ?? r.status, reason: r.reject_note, closed: dmy(r.closed_at)
+      date: dmy(r.created_at), kind: STUDENT_REQUEST_KIND_LABELS[r.kind] ?? r.kind, halaqa: halaqaOf(c, r.halaqa_id), by: nameOf(c, r.requested_by), name: r.full_name, nid: r.national_id,
+      status: STUDENT_REQUEST_STATUS_LABELS[r.status] ?? r.status, note: r.note, reason: r.reject_note, closed: dmy(r.closed_at)
     }))
   }
 }

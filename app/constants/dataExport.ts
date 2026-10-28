@@ -13,7 +13,8 @@ export const STATEMENT_STATUS_LABELS: Record<string, string> = { draft: 'مسو�
 export const ACCOUNT_TYPE_LABELS: Record<string, string> = { jawwalpay: 'جوال باي', palpay: 'بال باي', bank_palestine: 'بنك فلسطين' }
 export const STOCK_REASON_LABELS: Record<string, string> = { count: 'جرد', supply: 'توريد', delivery: 'تسليم', delivery_removed: 'إرجاع' }
 export const BOOKLET_REQUEST_STATUS_LABELS: Record<string, string> = { open: 'بانتظار التسليم', done: 'سُلِّم' }
-export const STUDENT_REQUEST_STATUS_LABELS: Record<string, string> = { open: 'مفتوح', added: 'أُضيف', rejected: 'رُفض' }
+export const STUDENT_REQUEST_STATUS_LABELS: Record<string, string> = { open: 'مفتوح', added: 'أُضيف', removed: 'أُنهي التحاقه', rejected: 'رُفض' }
+export const STUDENT_REQUEST_KIND_LABELS: Record<string, string> = { add: 'إضافة', remove: 'حذف' }
 export const SECTION_LABELS: Record<string, string> = { all: 'القسمان', male: 'البنين', female: 'البنات' }
 
 /** خانةُ الحضور: حاضر · غائب بلا عذر · غائب بعذر · يومٌ لم تفتحه الحلقة. */

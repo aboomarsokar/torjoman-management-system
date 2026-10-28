@@ -336,6 +336,7 @@ export type Database = {
           delta: number
           halaqa_id: string | null
           id: string
+          moved_on: string
           note: string | null
           reason: string
         }
@@ -348,6 +349,7 @@ export type Database = {
           delta: number
           halaqa_id?: string | null
           id?: string
+          moved_on?: string
           note?: string | null
           reason: string
         }
@@ -360,6 +362,7 @@ export type Database = {
           delta?: number
           halaqa_id?: string | null
           id?: string
+          moved_on?: string
           note?: string | null
           reason?: string
         }
@@ -2743,7 +2746,12 @@ export type Database = {
       acknowledge_quality_month: { Args: { p_id: string }; Returns: undefined }
       acknowledge_visit: { Args: { p_visit: string }; Returns: undefined }
       add_booklet_stock: {
-        Args: { p_booklet: number; p_copies: number; p_note?: string }
+        Args: {
+          p_booklet: number
+          p_copies: number
+          p_moved_on?: string
+          p_note?: string
+        }
         Returns: number
       }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -2976,6 +2984,7 @@ export type Database = {
         Args: {
           p_alert_at: number
           p_booklet: number
+          p_moved_on?: string
           p_note?: string
           p_quantity: number
         }
@@ -3002,6 +3011,10 @@ export type Database = {
       touch_presence: { Args: never; Returns: undefined }
       unlock_quality_month: { Args: { p_id: string }; Returns: undefined }
       unlock_visit_result: { Args: { p_visit: string }; Returns: undefined }
+      update_booklet_stock_move: {
+        Args: { p_move: string; p_moved_on?: string; p_note: string }
+        Returns: undefined
+      }
       update_my_contact: {
         Args: {
           p_guardian_email: string

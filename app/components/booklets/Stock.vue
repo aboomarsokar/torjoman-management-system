@@ -8,7 +8,7 @@ import { BOOKLETS } from '~/constants/booklets'
 import type { StockItem, StockLevel } from '~/utils/bookletStock'
 
 defineProps<{ items: StockItem[], moves: StockMove[], halaqaNames: Record<string, string>, canEdit: boolean }>()
-const emit = defineEmits<{ act: [booklet: number, action: StockAction] }>()
+const emit = defineEmits<{ act: [booklet: number, action: StockAction], edit: [move: StockMove] }>()
 
 const LEVEL: Record<StockLevel, { label: string, color: 'error' | 'warning' | 'success' | 'neutral' }> = {
   out: { label: 'نفد', color: 'error' },
@@ -18,7 +18,8 @@ const LEVEL: Record<StockLevel, { label: string, color: 'error' | 'warning' | 's
 }
 const REASON: Record<string, string> = { supply: 'توريد', count: 'جرد', delivery: 'تسليم', delivery_removed: 'إرجاع' }
 const labelOf = (no: number) => BOOKLETS.find(b => b.no === no)?.label ?? ''
-const when = (iso: string) => new Intl.DateTimeFormat('ar-u-nu-latn', { timeZone: 'Asia/Gaza', day: 'numeric', month: 'numeric', year: 'numeric' }).format(new Date(iso))
+/** «28/10/2026» من `YYYY-MM-DD`. */
+const when = (day: string) => day.split('-').reverse().map(Number).join('/')
 </script>
 
 <template>
@@ -96,9 +97,19 @@ const when = (iso: string) => new Intl.DateTimeFormat('ar-u-nu-latn', { timeZone
           >{{ m.delta > 0 ? `+${m.delta}` : m.delta }}</span>
           <span class="w">
             <b>{{ REASON[m.reason] ?? m.reason }} · {{ labelOf(m.booklet) }}</b>
-            <small>{{ when(m.created_at) }}<template v-if="m.halaqa_id && halaqaNames[m.halaqa_id]"> · {{ halaqaNames[m.halaqa_id] }}</template><template v-if="m.note"> · {{ m.note }}</template></small>
+            <small>{{ when(m.moved_on) }}<template v-if="m.halaqa_id && halaqaNames[m.halaqa_id]"> · {{ halaqaNames[m.halaqa_id] }}</template><template v-if="m.note"> · {{ m.note }}</template></small>
           </span>
           <span class="b">الرصيد {{ m.balance_after }}</span>
+          <UButton
+            v-if="canEdit"
+            icon="i-lucide-pencil"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :aria-label="`تعديل حركة ${REASON[m.reason] ?? ''}`"
+            :ui="{ base: 'rounded-full min-h-10 min-w-10 justify-center' }"
+            @click="emit('edit', m)"
+          />
         </li>
       </ul>
     </section>

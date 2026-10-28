@@ -4,18 +4,22 @@
  */
 import type { StockAction, StockDraft } from '~/composables/useBookletStock'
 import { BOOKLETS } from '~/constants/booklets'
+import { PROJECT_START_DATE } from '~/constants/project'
+import { gazaToday } from '~/utils/reportWindow'
 
 const props = defineProps<{ booklet: number | null, action: StockAction, current: number | null, alertAt: number | null, busy: boolean }>()
 const emit = defineEmits<{ save: [d: StockDraft] }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const DEFAULT_ALERT = 20
-const form = reactive({ copies: '', alertAt: String(DEFAULT_ALERT), note: '' })
+const form = reactive({ copies: '', alertAt: String(DEFAULT_ALERT), note: '', movedOn: gazaToday() })
+const today = gazaToday()
 watch(open, (o) => {
   if (!o) return
   form.copies = props.action === 'count' && props.current !== null ? String(props.current) : ''
   form.alertAt = String(props.alertAt ?? DEFAULT_ALERT)
   form.note = ''
+  form.movedOn = gazaToday()
 })
 const label = computed(() => BOOKLETS.find(b => b.no === props.booklet)?.label ?? '')
 const title = computed(() => `${props.action === 'supply' ? 'توريد' : 'جرد'} — ملزمة ${label.value}`)
@@ -58,6 +62,18 @@ const title = computed(() => `${props.action === 'supply' ? 'توريد' : 'جر
             :ui="{ base: 'rounded-[12px] min-h-12' }"
           />
         </UFormField>
+        <UFormField :label="action === 'supply' ? 'تاريخ التوريد' : 'تاريخ الجرد'">
+          <UInput
+            v-model="form.movedOn"
+            type="date"
+            :min="PROJECT_START_DATE"
+            :max="today"
+            dir="ltr"
+            size="xl"
+            class="w-full"
+            :ui="{ base: 'rounded-[12px] min-h-12' }"
+          />
+        </UFormField>
         <UFormField label="ملاحظة (اختياريّة)">
           <UInput
             v-model="form.note"
@@ -84,7 +100,7 @@ const title = computed(() => `${props.action === 'supply' ? 'توريد' : 'جر
           color="primary"
           :loading="busy"
           :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
-          @click="booklet && emit('save', { booklet, action, copies: form.copies, alertAt: form.alertAt, note: form.note })"
+          @click="booklet && emit('save', { booklet, action, copies: form.copies, alertAt: form.alertAt, note: form.note, movedOn: form.movedOn })"
         />
       </div>
     </template>

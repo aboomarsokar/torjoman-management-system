@@ -8,7 +8,7 @@
 import type { DeliveryDraft } from '~/composables/useBooklets'
 import type { DeliveryRow } from '~/utils/booklets'
 import { bookletStats, halaqaBooklets, totalsByBooklet } from '~/utils/booklets'
-import type { StockAction, StockDraft } from '~/composables/useBookletStock'
+import type { StockAction, StockDraft, StockMove } from '~/composables/useBookletStock'
 import { stockItems } from '~/utils/bookletStock'
 
 definePageMeta({ layout: 'dashboard' })
@@ -44,6 +44,15 @@ function openStock(booklet: number, action: StockAction) {
 const stockItem = computed(() => items.value.find(i => i.no === stockModal.booklet))
 async function saveStock(d: StockDraft) {
   if (await stockApi.save(d)) stockModal.open = false
+}
+const editMove = ref<StockMove | null>(null)
+const editOpen = ref(false)
+function openEdit(m: StockMove) {
+  editMove.value = m
+  editOpen.value = true
+}
+async function saveMove(id: string, note: string, movedOn: string | null) {
+  if (await stockApi.updateMove(id, note, movedOn)) editOpen.value = false
 }
 
 const route = useRoute()
@@ -141,6 +150,7 @@ async function confirmDelete() {
           :halaqa-names="halaqaNames"
           :can-edit="isAdmin"
           @act="openStock"
+          @edit="openEdit"
         />
         <BookletsRequests
           v-else-if="view === 'requests'"
@@ -182,6 +192,13 @@ async function confirmDelete() {
       :alert-at="stockItem?.alertAt ?? null"
       :busy="stockBusy"
       @save="saveStock"
+    />
+
+    <BookletsMoveEditModal
+      v-model:open="editOpen"
+      :move="editMove"
+      :busy="stockBusy"
+      @save="saveMove"
     />
 
     <UiConfirmModal

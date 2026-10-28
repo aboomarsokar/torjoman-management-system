@@ -194,10 +194,12 @@ const dayState = computed(() => shown.value.pending
               class="save-note"
               :class="{ warn: dirty }"
             >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
+            <!-- لا جديدَ يُحفظ: إطارٌ هادئ لا زرٌّ ممتلئٌ باهت (طلب المستخدم 2026-10-28) -->
             <UButton
               label="حفظ الحضور"
               icon="i-lucide-save"
-              color="primary"
+              :color="canSave ? 'primary' : 'neutral'"
+              :variant="canSave ? 'solid' : 'outline'"
               size="lg"
               :loading="saving"
               :disabled="!canSave"

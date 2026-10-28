@@ -101,9 +101,10 @@ const status = computed<ReportStatus | null>(() => report.value?.status ?? null)
 const canApproveHere = computed(() => !!halaqa.value && canApproveReport(role.value, profile.value?.id ?? null, {
   gender: halaqa.value.gender ?? 'male', supervisor_id: halaqa.value.supervisor_id
 }))
+// والمعلّمُ لا يُدخل قبل يوم فتح الشهر (قرار المستخدم 2026-10-28 — وحارسُ القاعدة كذلك)
 const canEdit = computed(() => canEditMonth({
   readOnly: isReadOnly.value, isTeacher: isTeacher.value, canApprove: canApproveHere.value, status: status.value,
-  isFieldSupervisor: isFieldSupervisor.value
+  isFieldSupervisor: isFieldSupervisor.value, beforeOpening: !isSubmittable(year.value, month.value, today)
 }))
 
 // الترشيح: يُمسح مع تبديل الحلقة/الشهر، ويُرفع إن فرغت خانتُه

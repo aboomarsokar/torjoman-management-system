@@ -4,6 +4,8 @@
  */
 import type { Database } from '~/types/database.types'
 import { MESSAGE_RECIPIENT_ROLES } from '~/constants/announcements'
+import { isOnlineNow } from '~/utils/reachability'
+import { fetchMyMessages, MESSAGES_PAGE_SIZE, SCREEN_KEYS, type MessagesPage } from '~/utils/teacherScreens'
 
 export type MyMessage = {
   seen_at: string | null
@@ -54,28 +56,37 @@ export function useMyMessages() {
   const { handle } = useErrorHandler()
   const unread = useState<number>('staff-messages-unread', () => 0)
 
-  const { data: messages, pending } = useLazyAsyncData<MyMessage[]>('my-staff-messages', async () => {
+  // صفحةً صفحة من السيرفر (طلب المستخدم 2026-10-28)، والمعلّمُ تُحفظ له نسخةُ كلّ صفحةٍ فتحها تُعرض بلا إنترنت
+  const page = ref(1)
+  const { wrap } = useOfflineCopy()
+  const pageKey = () => SCREEN_KEYS.myMessages(page.value)
+  const { data, pending } = useLazyAsyncData<MessagesPage<MyMessage>>(pageKey, wrap(pageKey, async () => {
     const me = profile.value?.id
-    if (!me) return []
-    const { data, error } = await supabase.from('staff_message_recipients')
-      .select('seen_at, message:message_id(id, title, body, link, created_at, sender:sent_by(full_name))')
-      .eq('recipient_id', me)
-      .returns<MyMessage[]>()
-    if (error) handle(error)
-    return newestFirst(data ?? [])
-  }, { server: false, default: () => [], watch: [() => profile.value?.id] })
+    if (!me) return { rows: [], total: 0 }
+    try {
+      return await fetchMyMessages<MyMessage>(supabase, me, page.value)
+    } catch (err) {
+      handle(err)
+      return { rows: [], total: 0 }
+    }
+  }), { server: false, default: () => ({ rows: [], total: 0 }), watch: [() => profile.value?.id] })
+  const messages = computed(() => data.value?.rows ?? [])
+  const total = computed(() => data.value?.total ?? 0)
+  const pageCount = computed(() => Math.max(1, Math.ceil(total.value / MESSAGES_PAGE_SIZE)))
 
   /** ما كان جديداً عند الفتح — يبقى بارزاً في هذه الزيارة ولو سُجّلت مشاهدتُه. */
   const freshIds = ref<Set<string>>(new Set())
 
   watch(messages, async (list) => {
     const unseen = (list ?? []).filter(m => !m.seen_at).map(m => m.message!.id)
-    if (!unseen.length) return
+    // بلا اتصال لا تُسجَّل المشاهدة (تُسجَّل عند أوّل فتحٍ متّصل) — ويبقى الجديدُ بارزاً
+    if (unseen.length && !isOnlineNow()) freshIds.value = new Set([...freshIds.value, ...unseen])
+    if (!unseen.length || !isOnlineNow()) return
     freshIds.value = new Set([...freshIds.value, ...unseen])
     const { data, error } = await supabase.rpc('mark_staff_messages_seen', { p_ids: unseen })
     if (error) return handle(error)
     if (data) unread.value = Math.max(0, unread.value - data)
   })
 
-  return { messages, pending, freshIds }
+  return { messages, pending, freshIds, page, total, pageCount }
 }

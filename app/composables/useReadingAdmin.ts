@@ -4,6 +4,7 @@
  * للمديرين (سياساتُ الجداول والمستودع هي الحَكَم). التحقّقُ نقيٌّ ومختبَر.
  */
 import type { Database } from '~/types/database.types'
+import { isOnlineNow } from '~/utils/reachability'
 
 export const READING_BUCKET = 'reading-books'
 /** حدُّ الملفّ — مطابقٌ لحدّ المستودع (50 م.ب). */
@@ -81,6 +82,11 @@ export function useReadingAdmin() {
   /** ينزّل ملفَّ المقرّر برابطٍ موقَّتٍ باسمٍ مقروء. */
   async function download(unit: { title: string, pdfPath?: string | null }) {
     if (!unit.pdfPath) return
+    // الملفُّ لا يُحفظ على الجهاز (قرار 2026-10-27): بلا اتصالٍ رسالةٌ واضحة بدل خطأ الشبكة
+    if (!isOnlineNow()) {
+      toast.add({ title: 'تنزيلُ الملفّ يحتاج اتصالاً بالإنترنت.', icon: 'i-lucide-wifi-off', color: 'warning' })
+      return
+    }
     await withBusy(async () => {
       const { data, error } = await supabase.storage.from(READING_BUCKET)
         .createSignedUrl(unit.pdfPath!, SIGNED_URL_SECONDS, { download: `${unit.title}.pdf` })

@@ -9,6 +9,7 @@ import type { Database } from '~/types/database.types'
 import type { QualityHalaqa, QualityRow } from '~/utils/qualityRecord'
 import { FINAL_MAX, QUALITY_STATE_META, fmtScore, qualityState } from '~/utils/qualityRecord'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
+import { fetchQualityHalqat, fetchQualityRecords, SCREEN_KEYS } from '~/utils/teacherScreens'
 import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
 
 definePageMeta({ layout: 'dashboard' })
@@ -36,23 +37,28 @@ watch([year, month], ([y, m]) => {
   if (Number(route.query.y) !== y || Number(route.query.m) !== m) router.replace({ query: { ...route.query, y: String(y), m: String(m) } })
 })
 
-const { data: halqat, pending: hPending } = useLazyAsyncData<QualityHalaqa[]>('quality-halqat', async () => {
+// والمعلّمُ تُحفظ له نسخةٌ لكلّ شهرٍ فتحه تُعرض بلا إنترنت (البند 14، 2026-10-27)
+const { wrap } = useOfflineCopy()
+const recordsKey = () => SCREEN_KEYS.qualityRecords(year.value, month.value)
+const { data: halqat, pending: hPending } = useLazyAsyncData<QualityHalaqa[]>(SCREEN_KEYS.qualityHalqat, wrap(SCREEN_KEYS.qualityHalqat, async () => {
   if (!role.value) return []
-  const { data, error } = await supabase.from('halaqat')
-    .select('id, name, supervisor_id, teacher:teacher_id(id, full_name), supervisor:supervisor_id(full_name)')
-    .eq('status', 'active').not('supervisor_id', 'is', null).order('name')
-    .returns<QualityHalaqa[]>()
-  if (error) handle(error)
-  return data ?? []
-}, { server: false, default: () => [], watch: [role] })
+  try {
+    return await fetchQualityHalqat(supabase)
+  } catch (err) {
+    handle(err)
+    return []
+  }
+}), { server: false, default: () => [], watch: [role] })
 
-const { data: records, pending: rPending, refresh } = useLazyAsyncData<QualityRow[]>('quality-records', async () => {
+const { data: records, pending: rPending, refresh } = useLazyAsyncData<QualityRow[]>('quality-records', wrap(recordsKey, async () => {
   if (!role.value) return []
-  const { data, error } = await supabase.from('teacher_quality_months').select('*')
-    .eq('year', year.value).eq('month', month.value)
-  if (error) handle(error)
-  return data ?? []
-}, { server: false, default: () => [], watch: [role, year, month] })
+  try {
+    return await fetchQualityRecords(supabase, year.value, month.value)
+  } catch (err) {
+    handle(err)
+    return []
+  }
+}), { server: false, default: () => [], watch: [role, year, month] })
 
 /** سجلُّ الشهر لحلقة (النوعُ صريحٌ: استنتاجُ Json العميق يُتعب المترجم). */
 function recordOf(halaqaId: string): QualityRow | null {
@@ -88,6 +94,7 @@ async function onChanged() {
       :title="isTeacher ? 'تقييمي الشهري' : 'تقييم المعلمين'"
       :subtitle="isTeacher ? 'سجلّ تقييمك الشهريّ — اطّلع على تفاصيله وأقِرّ.' : 'تقييمُ المعلم الشهريّ: الزيارات والبنود الشهرية (الجودة من 50) وإنجاز الحلقة (من 50).'"
     />
+    <OfflineSavedNote :keys="[SCREEN_KEYS.qualityHalqat, recordsKey()]" />
 
     <div class="card month">
       <span class="month-label">الشهر</span>

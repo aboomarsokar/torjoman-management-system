@@ -4,18 +4,51 @@
  * الزيارة. فتحُ الصفحة يسجّل المشاهدةَ فيعرف المرسِلُ مَن شاهد ومتى (`useMyMessages`)؛ والجرسُ ينبّه فقط.
  */
 import { MESSAGE_LINKS, MESSAGE_RECIPIENT_ROLES } from '~/constants/announcements'
+import { MESSAGES_PAGE_SIZE } from '~/utils/teacherScreens'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'رسائل الإدارة — ترجمان' })
 
 const { profile } = useProfile()
 const isRecipient = computed(() => !!profile.value && MESSAGE_RECIPIENT_ROLES.includes(profile.value.role))
-const { messages, pending, freshIds } = useMyMessages()
+const { messages, pending, freshIds, page, total, pageCount } = useMyMessages()
+/** رقمُ الرسالة في القائمة كلّها لا في الصفحة وحدها. */
+const seq = (index: number) => (page.value - 1) * MESSAGES_PAGE_SIZE + index + 1
 
 const linkLabel = (to: string) => MESSAGE_LINKS.find(l => l.to === to)?.label ?? 'افتح الصفحة'
 const sentAt = (iso: string) => new Date(iso).toLocaleString('en-GB', {
   timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
 }).replace(',', ' ·')
+
+// ── جدولُ الرسائل و«عرض» (طلب المستخدم 2026-10-28): العنوانُ والتاريخُ ظاهران، والنصُّ في نافذته ──
+type Row = { id: string, title: string, body: string | null, link: string | null, date: string, sender: string | null, fresh: boolean }
+const columns = [
+  // ترقيمُ الرسائل (طلب المستخدم 2026-10-28)
+  { key: 'num', label: '#' },
+  { key: 'title', label: 'الرسالة' },
+  { key: 'date', label: 'التاريخ' },
+  { key: 'sender', label: 'المرسِل', class: 'col-sender' },
+  { key: 'actions', label: '', align: 'end' as const }
+]
+const rows = computed<Row[]>(() => (messages.value ?? []).filter(m => m.message).map(m => ({
+  id: m.message!.id,
+  title: m.message!.title,
+  body: m.message!.body,
+  link: m.message!.link,
+  date: sentAt(m.message!.created_at),
+  sender: m.message!.sender?.full_name ?? null,
+  fresh: freshIds.value.has(m.message!.id)
+})))
+const viewing = ref<Row | null>(null)
+const viewOpen = computed({
+  get: () => viewing.value !== null,
+  set: (v) => {
+    if (!v) viewing.value = null
+  }
+})
+const open = (r: Row) => {
+  viewing.value = r
+}
 </script>
 
 <template>
@@ -24,6 +57,7 @@ const sentAt = (iso: string) => new Date(iso).toLocaleString('en-GB', {
       title="رسائل الإدارة"
       subtitle="ما أرسلته إليك إدارةُ المشروع، الأحدثُ أوّلاً."
     />
+    <OfflineSavedNote :keys="['my-staff-messages|*']" />
     <ClientOnly>
       <UiEmptyState
         v-if="profile && !isRecipient"
@@ -40,74 +74,174 @@ const sentAt = (iso: string) => new Date(iso).toLocaleString('en-GB', {
         title="لا رسائلَ بعد"
         description="حين تُرسل إليك الإدارةُ رسالةً تظهر هنا ويصلك بها إشعار."
       />
-      <ol
+      <!-- جدولٌ بالعنوان والتاريخ و«عرض» (طلب المستخدم 2026-10-28)، وعلى الجوال بطاقاتٌ والتاريخُ تحت العنوان -->
+      <UiDataTable
         v-else
-        class="mm-list"
+        :columns="columns"
+        :rows="rows"
+        row-key="id"
+        :row-class="(r: Row) => (r.fresh ? 'is-fresh' : undefined)"
       >
-        <li
-          v-for="m in messages"
-          :key="m.message!.id"
-          class="mm-item"
-          :class="{ fresh: freshIds.has(m.message!.id) }"
-        >
-          <span class="mm-ico"><UIcon
-            name="i-lucide-megaphone"
-            class="size-5"
-          /></span>
-          <div class="mm-main">
-            <div class="mm-head">
-              <h2>{{ m.message!.title }}</h2>
+        <template #num="{ index }">
+          <span class="seq">{{ seq(index) }}</span>
+        </template>
+        <template #title="{ row }">
+          <span class="t-cell">
+            <span class="t-title">{{ row.title }}</span>
+            <UBadge
+              v-if="row.fresh"
+              label="جديدة"
+              color="warning"
+              variant="soft"
+              size="sm"
+            />
+          </span>
+        </template>
+        <template #date="{ row }">
+          <bdi
+            dir="ltr"
+            class="t-date"
+          >{{ row.date }}</bdi>
+        </template>
+        <template #sender="{ row }">
+          <span class="muted">{{ row.sender ?? '—' }}</span>
+        </template>
+        <template #actions="{ row }">
+          <span class="acts">
+            <!-- رابطُ الرسالة بجوار «عرض» (طلب المستخدم 2026-10-28) -->
+            <UButton
+              v-if="row.link"
+              :to="row.link"
+              :label="linkLabel(row.link)"
+              trailing-icon="i-lucide-arrow-left"
+              color="primary"
+              variant="soft"
+              :ui="{ base: 'rounded-[10px] min-h-10' }"
+            />
+            <UButton
+              label="عرض"
+              icon="i-lucide-eye"
+              color="neutral"
+              variant="outline"
+              :ui="{ base: 'rounded-[10px] min-h-10' }"
+              @click="open(row)"
+            />
+          </span>
+        </template>
+        <template #card="{ row, index }">
+          <UiCardRow
+            :title="row.title"
+            :subtitle="row.date"
+            subtitle-dir="ltr"
+          >
+            <template #lead>
+              <span class="seq">{{ seq(index) }}</span>
+            </template>
+            <template
+              v-if="row.fresh"
+              #badge
+            >
               <UBadge
-                v-if="freshIds.has(m.message!.id)"
                 label="جديدة"
                 color="warning"
                 variant="soft"
                 size="sm"
               />
-            </div>
-            <p
-              v-if="m.message!.body"
-              class="mm-body"
-            >
-              {{ m.message!.body }}
-            </p>
-            <div class="mm-foot">
-              <span>
-                <bdi dir="ltr">{{ sentAt(m.message!.created_at) }}</bdi>
-                <template v-if="m.message!.sender"> · {{ m.message!.sender.full_name }}</template>
-              </span>
-              <UButton
-                v-if="m.message!.link"
-                :to="m.message!.link"
-                :label="linkLabel(m.message!.link)"
-                trailing-icon="i-lucide-arrow-left"
-                color="primary"
-                variant="soft"
-                size="sm"
-                :ui="{ base: 'rounded-[10px] min-h-9' }"
-              />
-            </div>
-          </div>
-        </li>
-      </ol>
+            </template>
+            <template #actions>
+              <div class="card-acts">
+                <UButton
+                  label="عرض"
+                  icon="i-lucide-eye"
+                  color="neutral"
+                  variant="outline"
+                  :ui="{ base: 'rounded-[12px] min-h-11 justify-center' }"
+                  @click="open(row)"
+                />
+                <UButton
+                  v-if="row.link"
+                  :to="row.link"
+                  :label="linkLabel(row.link)"
+                  trailing-icon="i-lucide-arrow-left"
+                  color="primary"
+                  variant="soft"
+                  :ui="{ base: 'rounded-[12px] min-h-11 justify-center' }"
+                />
+              </div>
+            </template>
+          </UiCardRow>
+        </template>
+      </UiDataTable>
+      <!-- صفحاتٌ من السيرفر حين تكثر (طلب المستخدم 2026-10-28) -->
+      <UiPaginator
+        v-if="messages?.length && total > MESSAGES_PAGE_SIZE"
+        :page="page"
+        :page-count="pageCount"
+        :total="total"
+        :page-size="MESSAGES_PAGE_SIZE"
+        edges
+        refined
+        @update:page="page = $event"
+      />
     </ClientOnly>
+
+    <!-- الرسالةُ كاملةً -->
+    <!-- العنوانُ الطويلُ يفسح لزرّ الإغلاق (لقطة الجوال 2026-10-28: كان «✕» فوق آخره) -->
+    <UModal
+      v-model:open="viewOpen"
+      :title="viewing?.title ?? ''"
+      :ui="{ title: 'pe-10 leading-relaxed' }"
+    >
+      <template #body>
+        <div
+          v-if="viewing"
+          class="mv"
+        >
+          <p class="mv-meta">
+            <bdi dir="ltr">{{ viewing.date }}</bdi><template v-if="viewing.sender">
+              · {{ viewing.sender }}
+            </template>
+          </p>
+          <p
+            v-if="viewing.body"
+            class="mv-body"
+          >
+            {{ viewing.body }}
+          </p>
+          <UButton
+            v-if="viewing.link"
+            :to="viewing.link"
+            :label="linkLabel(viewing.link)"
+            trailing-icon="i-lucide-arrow-left"
+            color="primary"
+            variant="soft"
+            :ui="{ base: 'rounded-[12px] min-h-11 self-start' }"
+            @click="viewOpen = false"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <style scoped>
-.mm { max-width: 820px; display: flex; flex-direction: column; gap: 14px; }
-.mm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.mm-item { display: flex; gap: 14px; padding: 18px 20px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
-.mm-item.fresh { border-color: color-mix(in srgb, var(--ui-warning) 45%, var(--line)); box-shadow: var(--shadow); }
-.mm-ico { width: 40px; height: 40px; border-radius: 12px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
-.mm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.mm-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.mm-head h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
-.mm-body { margin: 0; color: var(--ink-2); font-size: 14.5px; line-height: 1.8; white-space: pre-line; }
-.mm-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--ink-3); }
-.mm-foot bdi { font-variant-numeric: tabular-nums; }
-@media (max-width: 560px) {
-  .mm-item { padding: 14px; gap: 10px; }
-  .mm-ico { width: 34px; height: 34px; }
+.mm { display: flex; flex-direction: column; gap: 14px; }
+.t-cell { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.t-title { font-weight: 600; color: var(--ink); }
+.t-date { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.muted { color: var(--ink-3); }
+.seq { width: 28px; height: 28px; border-radius: 8px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--ink-3); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.acts { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+/* البطاقة: «عرض» ورابطُ الرسالة متجاوران يتقاسمان العرض */
+.card-acts { display: flex; gap: 8px; width: 100%; }
+.card-acts > :deep(*) { flex: 1 1 0; min-width: 0; }
+.mm :deep(tr.is-fresh) { background: color-mix(in srgb, var(--ui-warning) 7%, transparent); }
+/* المرسِلُ يسقط على العرض المتوسّط: العنوانُ والتاريخُ أولى */
+@container dt (max-width: 820px) {
+  .mm :deep(.col-sender) { display: none; }
 }
+.mv { display: flex; flex-direction: column; gap: 12px; }
+.mv-meta { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.mv-meta bdi { font-variant-numeric: tabular-nums; }
+.mv-body { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.9; white-space: pre-line; }
 </style>

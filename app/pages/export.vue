@@ -24,7 +24,11 @@ const ITEMS: Item[] = [
   { kind: 'halaqat', title: 'الحلقات', desc: 'القسم والموعد والمعلّم والمشرف والمختبِر وعدد الطلاب.', icon: 'i-lucide-book-open' },
   { kind: 'attendance', title: 'الحضور', desc: 'طالبٌ × يوم للشهر المختار: ✓ حاضر · غ بلا عذر · ع بعذر · — لم تُفتح الحلقة.', icon: 'i-lucide-calendar-check', monthly: true },
   { kind: 'quran', title: 'الإنجاز القرآني', desc: 'سجلّ كلّ طالبٍ للشهر المختار: من/إلى وصفحات الحفظ والمراجعة وحالة الرصد.', icon: 'i-lucide-book-marked', monthly: true },
-  { kind: 'exams', title: 'نتائج الاختبارات', desc: 'كلّ النتائج بالدورة والدرجات والمختبِر.', icon: 'i-lucide-clipboard-check' }
+  { kind: 'exams', title: 'نتائج الاختبارات', desc: 'كلّ النتائج بالدورة والدرجات والمختبِر.', icon: 'i-lucide-clipboard-check' },
+  { kind: 'supervision', title: 'الإشراف', desc: 'الزيارات الإشرافية بدرجاتها وملاحظاتها، والتنبيهات الإدارية.', icon: 'i-lucide-search-check' },
+  { kind: 'finance', title: 'المالية', desc: 'حوافز الحلقات (المخصَّص والمستلَم والمصروف)، وبنود الكشوف، والمواصلات، والحسابات المالية.', icon: 'i-lucide-wallet' },
+  { kind: 'booklets', title: 'الملازم', desc: 'التسليمات والطلبات والمخزون وحركاته.', icon: 'i-lucide-book-copy' },
+  { kind: 'messages', title: 'الرسائل والطلبات', desc: 'سجلّ SMS، ورسائل الكادر، وطلبات إضافة الطلاب.', icon: 'i-lucide-messages-square' }
 ]
 </script>
 
@@ -44,7 +48,7 @@ const ITEMS: Item[] = [
         <section class="ex-all">
           <div class="ex-all-text">
             <h2>تصدير شامل</h2>
-            <p>ملفٌّ واحد فيه ورقةٌ لكلّ جدول: العاملون والطلاب والحلقات والاختبارات، والحضور والإنجاز للشهر المختار — يصلح نسخةً احتياطية.</p>
+            <p>ملفٌّ واحد فيه ورقةٌ لكلّ جدول: الأشخاص والحلقات والاختبارات والإشراف والمالية والملازم والرسائل، والحضور والإنجاز للشهر المختار — يصلح نسخةً احتياطية.</p>
           </div>
           <div class="ex-month">
             <span>الشهر</span>

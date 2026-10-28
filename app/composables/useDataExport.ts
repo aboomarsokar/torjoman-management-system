@@ -10,8 +10,15 @@ import { toExamCycle, CYCLE_COLUMNS, type ExamCycleRow } from '~/utils/exams/cyc
 import { attendanceSheet, examsSheet, quranSheet, type ExamResultRow } from '~/utils/excel/activity'
 import { halaqatSheet, staffSheet, studentsSheet, type HalaqaRow, type ProfileRow, type StudentRow } from '~/utils/excel/people'
 import { downloadWorkbook, exportFileName, type SheetSpec } from '~/utils/excel/workbook'
+import {
+  alertsSheet, financialsSheet, incentivesSheet, statementItemsSheet, transportSheet, visitsSheet, type Ctx
+} from '~/utils/excel/admin'
+import {
+  bookletRequestsSheet, deliveriesSheet, smsSheet, staffMessagesSheet, stockMovesSheet, stockSheet, studentRequestsSheet
+} from '~/utils/excel/records'
 
-export type ExportKind = 'staff' | 'students' | 'halaqat' | 'attendance' | 'quran' | 'exams' | 'all'
+export type ExportKind = 'staff' | 'students' | 'halaqat' | 'attendance' | 'quran' | 'exams'
+  | 'supervision' | 'finance' | 'booklets' | 'messages' | 'all'
 
 /** أوّلُ يومٍ وآخرُه لشهرٍ `YYYY-MM-DD`. */
 export function monthRange(year: number, month: number): { from: string, to: string } {
@@ -81,8 +88,41 @@ export function useDataExport() {
     return examsSheet(results, b.halaqat, b.students, b.names, cycles.map(toExamCycle))
   }
 
+  /** جدولٌ كاملٌ بكلّ أعمدته (الدفعة الثانية: جداولُ صغيرةٌ تُقرأ كما هي). */
+  const table = <T extends keyof Database['public']['Tables']>(name: T) =>
+    fetchAll<Database['public']['Tables'][T]['Row']>((a, z) => supabase.from(name).select('*').range(a, z) as never)
+  const ctxOf = (b: Base): Ctx => ({ halaqat: new Map(b.halaqat.map(h => [h.id, h])), names: b.names })
+
+  async function supervision(b: Base): Promise<SheetSpec[]> {
+    const [visits, alerts] = await Promise.all([table('supervision_visits'), table('admin_alerts')])
+    return [visitsSheet(visits, ctxOf(b)), alertsSheet(alerts, ctxOf(b))]
+  }
+
+  async function finance(b: Base): Promise<SheetSpec[]> {
+    const [allocs, statements, items, trips, accounts] = await Promise.all([
+      table('halaqa_incentives'), table('incentive_statements'), table('incentive_statement_items'), table('transport_trips'), table('profile_financials')
+    ])
+    const c = ctxOf(b)
+    return [incentivesSheet(allocs, statements, items, c), statementItemsSheet(statements, items, c), transportSheet(trips, b.staff, c), financialsSheet(accounts, b.staff)]
+  }
+
+  async function booklets(b: Base): Promise<SheetSpec[]> {
+    const [deliveries, requests, stock, moves] = await Promise.all([
+      table('booklet_deliveries'), table('booklet_requests'), table('booklet_stock'), table('booklet_stock_moves')
+    ])
+    const c = ctxOf(b)
+    return [deliveriesSheet(deliveries, c), bookletRequestsSheet(requests, c), stockSheet(stock), stockMovesSheet(moves, c)]
+  }
+
+  async function messages(b: Base): Promise<SheetSpec[]> {
+    const [sms, staffMsgs, requests] = await Promise.all([table('sms_log'), table('staff_messages'), table('student_requests')])
+    const c = ctxOf(b)
+    return [smsSheet(sms, c), staffMessagesSheet(staffMsgs, c), studentRequestsSheet(requests, c)]
+  }
+
   const TITLES: Record<ExportKind, string> = {
-    staff: 'العاملون', students: 'الطلاب', halaqat: 'الحلقات', attendance: 'الحضور', quran: 'الإنجاز القرآني', exams: 'نتائج الاختبارات', all: 'تصدير شامل'
+    staff: 'العاملون', students: 'الطلاب', halaqat: 'الحلقات', attendance: 'الحضور', quran: 'الإنجاز القرآني', exams: 'نتائج الاختبارات',
+    supervision: 'الإشراف', finance: 'المالية', booklets: 'الملازم', messages: 'الرسائل والطلبات', all: 'تصدير شامل'
   }
 
   /** يبني الملفّ المطلوب وينزّله؛ الحضورُ والإنجازُ لشهر (`year`/`month`)، والشاملُ يضمّهما لذلك الشهر. */
@@ -98,6 +138,10 @@ export function useDataExport() {
       if (kind === 'attendance' || kind === 'all') sheets.push(await attendance(b, year, month))
       if (kind === 'quran' || kind === 'all') sheets.push(await quran(b, year, month))
       if (kind === 'exams' || kind === 'all') sheets.push(await exams(b))
+      if (kind === 'supervision' || kind === 'all') sheets.push(...await supervision(b))
+      if (kind === 'finance' || kind === 'all') sheets.push(...await finance(b))
+      if (kind === 'booklets' || kind === 'all') sheets.push(...await booklets(b))
+      if (kind === 'messages' || kind === 'all') sheets.push(...await messages(b))
       const title = kind === 'attendance' || kind === 'quran' ? `${TITLES[kind]} ${periodLabel(year, month)}` : TITLES[kind]
       await downloadWorkbook(exportFileName(title, gazaToday()), sheets)
       toast.add({ title: `نُزّل ملفّ «${title}».`, color: 'success', icon: 'i-lucide-file-spreadsheet' })

@@ -194,7 +194,8 @@ const countOf = (item: Item) => (item.key === 'messages'
   ? unreadMessages.value
   : item.key === 'student-requests'
     ? openStudentRequests.value
-    : item.key === 'chat' ? unreadChats.value
+    : item.key === 'chat'
+      ? unreadChats.value
       : item.key === 'booklets' && profile.value?.role === 'admin_manager' ? lowBookletStock.value : 0)
 /** مجموعُ أعداد بنود المجموعة — يظهر على عنوانها أيضاً (طلب المستخدم 2026-10-27). */
 const groupCount = (items: Item[]) => items.reduce((n, i) => n + countOf(i), 0)

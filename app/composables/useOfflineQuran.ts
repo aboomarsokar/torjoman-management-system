@@ -7,7 +7,7 @@ import type { Database } from '~/types/database.types'
 import { prorationApplies } from '~/constants/quran'
 import { buildStudentRows } from '~/utils/quran/month'
 import type { Period, RecordInput } from '~/utils/quran/screen'
-import { canEditMonth, defaultPeriod } from '~/utils/quran/screen'
+import { canEditMonth, defaultPeriod, teacherOpeningNote } from '~/utils/quran/screen'
 import { syncStatusLine } from '~/utils/attendanceOutbox'
 import { QURAN_QUEUE } from '~/utils/offlineQueues'
 import { newQuranEntry, offlineSubmitBlock, overlayRecords, recordsCount, type QuranEntry, type QuranMirror } from '~/utils/quranOutbox'
@@ -109,8 +109,10 @@ export function useOfflineQuran() {
   })
   const report = computed(() => current.value?.inputs?.report ?? null)
   const status = computed(() => report.value?.status ?? null)
+  /** قبل يوم فتح الشهر لا يُدخل المعلّمُ إنجازَه (قرار المستخدم 2026-10-28) — بتاريخ الجهاز، والقاعدةُ ترفض عند الرفع. */
+  const openingNote = computed(() => teacherOpeningNote(year.value, month.value, today))
   const canEdit = computed(() => access.value === 'teacher' && !!halaqa.value
-    && canEditMonth({ readOnly: isReadOnlyNow(), isTeacher: true, canApprove: false, status: status.value }))
+    && canEditMonth({ readOnly: isReadOnlyNow(), isTeacher: true, canApprove: false, status: status.value, beforeOpening: !!openingNote.value }))
 
   /** رصدُ طالب: على الجهاز فوراً، والرفعُ في الخلفية. */
   async function save(studentId: string, input: RecordInput): Promise<boolean> {
@@ -163,6 +165,6 @@ export function useOfflineQuran() {
 
   return {
     ready, access, months, refreshing, queue, reference, start, today, year, month, current, halaqa, rows, report, status,
-    canEdit, pendingStudents, save, submitBlock, submit, statusText, retrying
+    canEdit, openingNote, pendingStudents, save, submitBlock, submit, statusText, retrying
   }
 }

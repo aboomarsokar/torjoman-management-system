@@ -164,11 +164,14 @@ const quranMonths = computed(() => {
         :class="{ 'needs-net': !online }"
         @click="blockIfOffline(`/students/${student.id}`, $event)"
       >
-        <UIcon
+        <span class="m-ico"><UIcon
           name="i-lucide-route"
           class="size-5"
-        />
-        <span>رحلتُه واختباراتُه وتعديلُ بياناته<small v-if="!online"> — تحتاج اتصالاً</small></span>
+        /></span>
+        <span class="m-txt">
+          <b>رحلتُه واختباراتُه</b>
+          <small>{{ online ? 'وتعديلُ بياناته — في ملفّه الكامل' : 'تحتاج اتصالاً بالإنترنت' }}</small>
+        </span>
         <UIcon
           name="i-lucide-chevron-left"
           class="size-5 chev"
@@ -192,9 +195,12 @@ const quranMonths = computed(() => {
 .fact b.muted { color: var(--ink-3); }
 .f-ico { width: 40px; height: 40px; flex: none; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
 .f-ico.green { background: var(--green-soft); color: var(--green-ink); }
-.more { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 20px; color: var(--ink); font-weight: 600; text-decoration: none; }
-.more span { flex: 1; }
-.more small { font-weight: 500; color: var(--ink-3); }
-.more .chev { color: var(--ink-3); }
+/* النصُّ وحده يأخذ العرض (لقطة المستخدم 2026-10-28: كانت الأيقونتان تقاسمانه فينكسر في الوسط) */
+.more { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 12px 18px; color: var(--ink); text-decoration: none; }
+.more .m-ico { width: 42px; height: 42px; flex: none; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
+.more .m-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.more .m-txt b { font-size: 15.5px; font-weight: 600; }
+.more .m-txt small { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.more .chev { flex: none; color: var(--ink-3); }
 .more.needs-net { opacity: .55; }
 </style>

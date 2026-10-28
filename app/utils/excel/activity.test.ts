@@ -18,8 +18,8 @@ describe('attendanceSheet', () => {
     expect(sheet.rows.map(r => r.name)).toEqual(['أحمد', 'باسم'])
   })
   it('الرموزُ والمجاميع', () => {
-    expect(sheet.rows[0]).toMatchObject({ '2026-10-03': '✓', '2026-10-04': 'غ', open: 2, present: 1, unexcused: 1, excused: 0 })
-    expect(sheet.rows[1]).toMatchObject({ '2026-10-03': '—', '2026-10-04': 'ع', open: 1, present: 0, excused: 1 })
+    expect(sheet.rows[0]).toMatchObject({ '2026-10-03': '✓', '2026-10-04': 'غ', 'open': 2, 'present': 1, 'unexcused': 1, 'excused': 0 })
+    expect(sheet.rows[1]).toMatchObject({ '2026-10-03': '—', '2026-10-04': 'ع', 'open': 1, 'present': 0, 'excused': 1 })
   })
 })
 

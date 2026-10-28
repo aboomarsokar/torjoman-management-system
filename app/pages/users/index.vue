@@ -89,11 +89,11 @@ const roleFilterItems = computed(() => ([
     ? [{ value: `${r}:male`, label: roleLabel(r, 'male') }, { value: `${r}:female`, label: roleLabel(r, 'female') }]
     : [{ value: r, label: roleLabel(r, fem.value ? 'female' : null) }])
 ]).map(c => ({ value: c.value, label: `${c.label} (${countFor(c.value)})` })))
-// البحث بالاسم أو الرقم الوظيفي (يقبل الأرقام العربية) — فوق تصفية الدور
+// البحث بالاسم أو الرقم الوظيفي أو الجوال (يقبل الأرقام العربية) — فوق تصفية الدور
 const query = ref('')
 const filteredUsers = computed(() => (users.value ?? []).filter(u =>
   matchesFilter(u, filter.value)
-  && matchesSearch(query.value, u.full_name, u.employee_number)
+  && matchesSearch(query.value, u.full_name, u.employee_number, u.phone)
 ))
 const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(filteredUsers, 12)
 /** الرقمُ المتسلسل عبر الصفحات لا داخلَ الصفحة وحدها (طلب المستخدم 2026-10-22). */
@@ -103,6 +103,7 @@ const columns = [
   { key: 'num', label: '#' },
   { key: 'user', label: 'المستخدم' },
   { key: 'employee_number', label: 'الرقم الوظيفي' },
+  { key: 'phone', label: 'الجوال' },
   { key: 'role', label: 'الدور' },
   // «عيّنه» أقلُّ الأعمدة شأناً: يسقط على العرض المتوسّط فلا يُعصر الاسم (2026-10-25)
   { key: 'assigner', label: 'عيّنه', class: 'col-assigner' },
@@ -244,7 +245,7 @@ async function confirmReset() {
       <div class="toolbar">
         <UiSearchField
           v-model="query"
-          placeholder="ابحث بالاسم أو الرقم الوظيفي"
+          placeholder="ابحث بالاسم أو الرقم الوظيفي أو الجوال"
           :shown="filteredUsers.length"
           :total="(users ?? []).length"
           class="search"
@@ -311,6 +312,18 @@ async function confirmReset() {
               class="emp-no"
               dir="ltr"
             >{{ row.employee_number || '—' }}</span>
+          </template>
+          <template #phone="{ row }">
+            <a
+              v-if="row.phone"
+              :href="`tel:${row.phone}`"
+              class="emp-no u-phone"
+              dir="ltr"
+            >{{ row.phone }}</a>
+            <span
+              v-else
+              class="u-none"
+            >—</span>
           </template>
           <template #role="{ row }">
             <UBadge
@@ -390,7 +403,7 @@ async function confirmReset() {
               :subtitle="row.employee_number"
               subtitle-dir="ltr"
               :to="`/profile/${row.id}`"
-              :fields="[{ label: 'عيّنه', value: row.assigner?.full_name, muted: true }]"
+              :fields="[{ label: 'الجوال', value: row.phone || '—' }, { label: 'عيّنه', value: row.assigner?.full_name, muted: true }]"
             >
               <template #lead>
                 <span class="lead"><span class="seq">{{ seq(index) }}</span><span class="av">
@@ -604,6 +617,9 @@ async function confirmReset() {
   .users :deep(.col-assigner) { display: none; }
 }
 .emp-no { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-2); letter-spacing: .04em; }
+.u-phone { font-weight: 500; text-decoration: none; }
+.u-phone:hover { color: var(--blue-ink); text-decoration: underline; }
+.u-none { color: var(--ink-3); }
 .actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 /* «تعطيل» حسّاسٌ: يحمرّ عند المرور لا قبله، فلا يصرخ في كلّ صفّ */
 .actions :deep(.act-danger:hover) { color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, transparent); }

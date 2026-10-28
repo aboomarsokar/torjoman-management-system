@@ -6,7 +6,7 @@
  * غيرُ المعلّم (`uid` فارغ) لا يُحفظ له شيءٌ على جهازه، ويحفظ متّصلاً كما كان.
  */
 import type { Ref } from 'vue'
-import { incentiveSnapshotKey, newIncentiveEntry, type IncentiveEntry, type IncentiveItem, type IncentiveSnapshot } from '~/utils/incentiveOutbox'
+import { INCENTIVE_HALQA_KEY, incentiveSnapshotKey, newIncentiveEntry, type IncentiveEntry, type IncentiveItem, type IncentiveSnapshot } from '~/utils/incentiveOutbox'
 import { INCENTIVE_QUEUE } from '~/utils/offlineQueues'
 import { offlineTeacherUid, readSnapshot, writeSnapshot } from '~/utils/offlineSnapshot'
 
@@ -25,9 +25,11 @@ export function useIncentiveOffline(halaqaId: Ref<string | null>, month: Ref<num
   const pendingEntry = computed(() => queue.pending.value.find(e => e.halaqaId === halaqaId.value && e.year === year.value && e.month === month.value) ?? null)
   const rejected = computed(() => queue.rejected.value.map(e => ({ key: e.key, label: `كشف ${String(e.month).padStart(2, '0')}-${e.year}`, error: e.error })))
 
+  /** يعلّم نسخةَ الشهر «من الجهاز» بوقتها، أو يمحو العلامة — ومحوُها يمحو علامةَ الحلقة كذلك: كشفٌ جُلب من القاعدة
+   *  يعني اتصالاً عاد، وكان اسمُ الحلقة المقروءُ من الجهاز يُبقي «معروضٌ من جهازك» بعد الرفع (تجربةُ الجوال 2026-10-28). */
   const markSaved = (at: string | null) => {
-    const { [copyKey.value]: _old, ...rest } = saved.value
-    saved.value = at ? { ...rest, [copyKey.value]: at } : rest
+    const { [copyKey.value]: _old, [INCENTIVE_HALQA_KEY]: _halqa, ...rest } = saved.value
+    saved.value = at ? { ...rest, ...(_halqa ? { [INCENTIVE_HALQA_KEY]: _halqa } : {}), [copyKey.value]: at } : rest
   }
 
   async function readCopy(): Promise<IncentiveSnapshot | null> {

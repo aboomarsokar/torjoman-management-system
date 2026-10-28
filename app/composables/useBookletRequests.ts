@@ -14,6 +14,7 @@ export type BookletRequest = {
   note: string | null
   status: string
   created_at: string
+  requested_by: string
   halaqa: { name: string, gender: string | null, teacher: { full_name: string } | null } | null
 }
 
@@ -37,7 +38,7 @@ export function useBookletRequests(halaqaId?: string) {
 
   const { data: requests, pending, refresh } = useLazyAsyncData<BookletRequest[]>(`booklet-requests-${halaqaId ?? 'all'}`, async () => {
     let q = supabase.from('booklet_requests')
-      .select('id, halaqa_id, booklet, copies, note, status, created_at, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))')
+      .select('id, halaqa_id, booklet, copies, note, status, created_at, requested_by, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))')
     if (halaqaId) q = q.eq('halaqa_id', halaqaId)
     // المفتوحةُ أوّلاً، ثم الأحدث
     const { data, error } = await q.order('status', { ascending: false }).order('created_at', { ascending: false })

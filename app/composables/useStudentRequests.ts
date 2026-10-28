@@ -23,6 +23,7 @@ export type StudentRequest = {
   note: string | null
   status: StudentRequestStatus
   reject_note: string | null
+  requested_by: string
   created_at: string
   closed_at: string | null
   halaqa: { name: string, gender: string | null, teacher: { full_name: string } | null } | null
@@ -87,7 +88,7 @@ export function chatFor(res: Pick<ApproveResult, 'teacher_id' | 'teacher_name' |
   return { label: res.female ? 'أرسلها للمعلّمة عبر المحادثة' : 'أرسلها للمعلّم عبر المحادثة', recipientId: res.teacher_id, text }
 }
 
-const SELECT = 'id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
+const SELECT = 'id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, requested_by, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
 
 /**
  * عددُ طلبات الإضافة المفتوحة لشارة القائمة (المدير الإداريّ كلُّها، والمديرةُ الإدارية طلباتُ البنات بـRLS) —

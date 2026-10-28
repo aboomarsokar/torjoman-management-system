@@ -12,7 +12,7 @@ import { gazaToday } from '~/utils/reportWindow'
 import { PROJECT_START_DATE } from '~/constants/project'
 
 const props = defineProps<{ rows: BookletRequest[], canClose: boolean, busy: boolean }>()
-const emit = defineEmits<{ deliver: [id: string, deliveredOn: string] }>()
+const emit = defineEmits<{ deliver: [id: string, deliveredOn: string], chat: [row: BookletRequest] }>()
 
 type View = 'open' | 'done'
 const view = ref<View>('open')
@@ -117,17 +117,32 @@ const columns = [
       />
     </template>
     <template #actions="{ row }">
-      <UButton
-        v-if="canClose && row.status === 'open'"
-        label="تسليم"
-        icon="i-lucide-package-check"
-        color="success"
-        variant="solid"
-        size="md"
-        :loading="busy"
-        :ui="{ base: 'rounded-[11px] min-h-10 px-4 font-semibold shadow-sm' }"
-        @click="toClose = row"
-      />
+      <div
+        v-if="canClose"
+        class="row-acts"
+      >
+        <UTooltip text="محادثة المعلّم">
+          <UButton
+            icon="i-lucide-message-circle"
+            color="secondary"
+            variant="soft"
+            :aria-label="`محادثة ${row.halaqa?.teacher?.full_name ?? 'المعلّم'}`"
+            :ui="{ base: 'rounded-[11px] min-h-10 min-w-10 justify-center' }"
+            @click="emit('chat', row)"
+          />
+        </UTooltip>
+        <UButton
+          v-if="row.status === 'open'"
+          label="تسليم"
+          icon="i-lucide-package-check"
+          color="success"
+          variant="solid"
+          size="md"
+          :loading="busy"
+          :ui="{ base: 'rounded-[11px] min-h-10 px-4 font-semibold shadow-sm' }"
+          @click="toClose = row"
+        />
+      </div>
     </template>
     <template #card="{ row, index }">
       <UiCardRow
@@ -150,19 +165,31 @@ const columns = [
           />
         </template>
         <template
-          v-if="canClose && row.status === 'open'"
+          v-if="canClose"
           #actions
         >
-          <UButton
-            label="تسليم"
-            icon="i-lucide-package-check"
-            color="success"
-            variant="solid"
-            block
-            :loading="busy"
-            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
-            @click="toClose = row"
-          />
+          <div class="card-acts">
+            <UButton
+              label="محادثة"
+              icon="i-lucide-message-circle"
+              color="secondary"
+              variant="soft"
+              block
+              :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+              @click="emit('chat', row)"
+            />
+            <UButton
+              v-if="row.status === 'open'"
+              label="تسليم"
+              icon="i-lucide-package-check"
+              color="success"
+              variant="solid"
+              block
+              :loading="busy"
+              :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+              @click="toClose = row"
+            />
+          </div>
         </template>
       </UiCardRow>
     </template>
@@ -219,6 +246,8 @@ const columns = [
 </template>
 
 <style scoped>
+.row-acts { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.card-acts { display: flex; gap: 8px; width: 100%; }
 .req-view { margin-bottom: 14px; }
 .seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .dl { display: flex; flex-direction: column; gap: 14px; }

@@ -35,6 +35,7 @@ export function useChatList() {
   const { handle } = useErrorHandler()
   const chats = useState<ChatRow[]>('chat-list', () => [])
   const loaded = useState<boolean>('chat-list-loaded', () => false)
+  const router = useRouter()
   const unread = computed(() => totalUnread(chats.value))
 
   async function refresh() {
@@ -80,5 +81,13 @@ export function useChatList() {
     return id
   }
 
-  return { chats, loaded, unread, refresh, clearUnread, contacts, startWith, sendDirect }
+  /** يفتح محادثةً خاصّةً مع شخص ومعه مسوّدةٌ في خانة الكتابة (لا تُرسَل) — من صفحات الطلبات (2026-10-28). */
+  async function openWithDraft(otherId: string, draft: string): Promise<boolean> {
+    const id = await startWith(otherId)
+    if (!id) return false
+    await router.push({ path: '/chat', query: { c: id, d: draft } })
+    return true
+  }
+
+  return { chats, loaded, unread, refresh, clearUnread, contacts, startWith, sendDirect, openWithDraft }
 }

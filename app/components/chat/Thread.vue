@@ -8,12 +8,12 @@ import { CHAT_MAX_BODY } from '~/constants/chat'
 import { roleLabel } from '~/constants/roles'
 import { dayLabel, isOnline, lastSeenLabel, membersLabel, messageTime, readByOthers, startsNewDay } from '~/utils/chat'
 
-const props = defineProps<{ chat: ChatRow, me: string | null, now: number }>()
+const props = defineProps<{ chat: ChatRow, me: string | null, now: number, initialDraft?: string }>()
 const emit = defineEmits<{ back: [] }>()
 
 const id = computed(() => props.chat.id)
 const { messages, members, loading, sending, send } = useChatThread(id)
-const draft = ref('')
+const draft = ref(props.initialDraft ?? '')
 const scroller = ref<HTMLElement | null>(null)
 
 const isGroup = computed(() => props.chat.kind === 'group')

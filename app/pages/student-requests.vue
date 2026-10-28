@@ -7,13 +7,15 @@
 import type { AccountCredentials } from '~/composables/useAccountAdmin'
 import type { StudentRequest, StudentRequestDraft } from '~/composables/useStudentRequests'
 import { REJECT_NOTE_MIN } from '~/constants/studentRequests'
+import { studentRequestDraft } from '~/utils/chatDrafts'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'طلبات إضافة الطلاب — ترجمان' })
 
 const supabase = useSupabaseClient()
 const { profile } = useProfile()
-const { role, isAdmin, isTeacher } = usePermissions()
+const { role, isAdmin, isTeacher, isWomenAdmin } = usePermissions()
+const { openWithDraft } = useChatList()
 const canView = computed(() => ['teacher', 'admin_manager', 'women_admin', 'project_supervisor'].includes(role.value ?? ''))
 
 // المعلّم: حلقتُه الواحدة
@@ -85,8 +87,10 @@ async function confirmReject() {
         :can-decide="isAdmin"
         :busy="busy"
         :show-teacher="!isTeacher"
+        :can-chat="isAdmin || isWomenAdmin"
         @approve="onApprove"
         @reject="(r: StudentRequest) => rejecting = r"
+        @chat="(r: StudentRequest) => openWithDraft(r.requested_by, studentRequestDraft(r.halaqa?.teacher?.full_name, r.full_name, r.halaqa?.gender === 'female'))"
       />
     </ClientOnly>
 

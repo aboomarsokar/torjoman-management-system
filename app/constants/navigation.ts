@@ -4,7 +4,7 @@
  */
 export const TEACHER_NAV_ORDER = [
   'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students-teacher', 'student-requests', 'exams', 'examplan', 'programs',
-  'incentives', 'my-booklets', 'messages', 'visits', 'quality-mine', 'alerts', 'profile'
+  'incentives', 'my-booklets', 'messages', 'chat', 'visits', 'quality-mine', 'alerts', 'profile'
 ] as const
 
 /** يرتّب البنودَ بالترتيب المعطى، وما لم يُذكر يأتي بعدها بترتيبه الأصليّ. */

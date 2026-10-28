@@ -15,11 +15,13 @@ export default defineEventHandler(async (event) => {
   if (!parsedId.ok) throw createError({ statusCode: 400, statusMessage: parsedId.message })
 
   const { data: req, error: readErr } = await admin.from('student_requests')
-    .select('id, status, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, halaqa:halaqa_id(id, gender, teacher:profiles!halaqat_teacher_id_fkey(id, full_name, phone, whatsapp))')
+    .select('id, kind, status, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, halaqa:halaqa_id(id, gender, teacher:profiles!halaqat_teacher_id_fkey(id, full_name, phone, whatsapp))')
     .eq('id', parsedId.value).maybeSingle()
   if (readErr) throw createError({ statusCode: 500, statusMessage: 'تعذّرت قراءة الطلب.' })
   if (!req) throw createError({ statusCode: 404, statusMessage: 'الطلب غير موجود.' })
   if (req.status !== 'open') throw createError({ statusCode: 409, statusMessage: 'أُغلق هذا الطلب من قبل.' })
+  // طلبُ الحذف (2026-10-28) يُقبل بدالّة القاعدة `approve_student_removal` لا بإنشاء حساب
+  if (req.kind !== 'add' || !req.national_id) throw createError({ statusCode: 400, statusMessage: 'هذا طلبُ حذفٍ لا إضافة.' })
   const halaqa = req.halaqa as {
     id: string
     gender: 'male' | 'female' | null

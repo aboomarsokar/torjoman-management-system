@@ -6,15 +6,18 @@
 import type { Database } from '~/types/database.types'
 import type { AccountCredentials } from '~/composables/useAccountAdmin'
 import { normalizeDigits } from '~/constants/identity'
-import { REJECT_NOTE_MIN, REQUEST_NAME_MAX, REQUEST_NAME_MIN, REQUEST_NOTE_MAX, type StudentRequestStatus } from '~/constants/studentRequests'
+import { REJECT_NOTE_MIN, REQUEST_NAME_MAX, REQUEST_NAME_MIN, REQUEST_NOTE_MAX, type StudentRequestKind, type StudentRequestStatus } from '~/constants/studentRequests'
 import { hasValidCheckDigit } from '~/utils/nationalId'
 import { teacherCredentialsMessage, whatsappMessageLink } from '~/utils/credentialsMessage'
 
 export type StudentRequest = {
   id: string
+  /** إضافةٌ أو حذف (2026-10-28) — طلبُ الحذف بلا هوية، وسببُه في `note`. */
+  kind: StudentRequestKind
+  student_id: string | null
   halaqa_id: string
   full_name: string
-  national_id: string
+  national_id: string | null
   birth_date: string | null
   guardian_phone: string | null
   tajweed_level: string | null
@@ -88,7 +91,7 @@ export function chatFor(res: Pick<ApproveResult, 'teacher_id' | 'teacher_name' |
   return { label: res.female ? 'أرسلها للمعلّمة عبر المحادثة' : 'أرسلها للمعلّم عبر المحادثة', recipientId: res.teacher_id, text }
 }
 
-const SELECT = 'id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, requested_by, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
+const SELECT = 'id, kind, student_id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, requested_by, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
 
 /**
  * عددُ طلبات الإضافة المفتوحة لشارة القائمة (المدير الإداريّ كلُّها، والمديرةُ الإدارية طلباتُ البنات بـRLS) —

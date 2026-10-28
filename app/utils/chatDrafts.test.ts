@@ -22,4 +22,7 @@ describe('bookletReadyDraft / studentRequestDraft', () => {
   it('سؤالٌ عن طلب الإضافة', () => {
     expect(studentRequestDraft('سجى حسن', 'آية أحمد', true)).toBe('السلام عليكم أ. سجى، بخصوص طلب إضافة الطالبة آية أحمد: ')
   })
+  it('وعن طلب الحذف', () => {
+    expect(studentRequestDraft('سجى حسن', 'آية أحمد', true, 'remove')).toBe('السلام عليكم أ. سجى، بخصوص طلب حذف الطالبة آية أحمد: ')
+  })
 })

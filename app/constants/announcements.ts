@@ -40,7 +40,7 @@ export const MESSAGE_LINKS: { label: string, to: string }[] = [
   { label: 'الحضور اليوميّ', to: '/attendance' },
   { label: 'الإنجاز القرآني', to: '/reports' },
   { label: 'الطلاب', to: '/students' },
-  { label: 'طلبات إضافة طالب', to: '/student-requests' },
+  { label: 'طلبات الطلاب', to: '/student-requests' },
   { label: 'الحلقات', to: '/halqat' },
   { label: 'الزيارات الإشرافية', to: '/visits' },
   { label: 'الاختبارات', to: '/exams' },

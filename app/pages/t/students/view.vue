@@ -177,6 +177,15 @@ const quranMonths = computed(() => {
           class="size-5 chev"
         />
       </NuxtLink>
+
+      <!-- طلبُ حذفه من الحلقة (2026-10-28) — بآلية طلبات الإضافة، ويحتاج اتصالاً -->
+      <StudentRequestsRemovalCard
+        v-if="student.status === 'active' && student.halaqa_id"
+        :student-id="student.id"
+        :halaqa-id="student.halaqa_id"
+        :name="student.full_name"
+        :female="student.gender === 'female'"
+      />
     </template>
   </div>
 </template>

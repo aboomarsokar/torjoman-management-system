@@ -211,6 +211,15 @@ const tab = useStudentTab()
               :national-id="student.national_id"
             />
             <StudentDetailCards :sections="sections" />
+            <!-- طلبُ حذفه من الحلقة للمعلّم (2026-10-28) — كما في ملفّه بلا اتصال -->
+            <StudentRequestsRemovalCard
+              v-if="isTeacher && student.status === 'active' && student.halaqa_id"
+              class="mt-[18px]"
+              :student-id="student.id"
+              :halaqa-id="student.halaqa_id"
+              :name="student.full_name"
+              :female="student.gender === 'female'"
+            />
           </template>
         </div>
       </template>

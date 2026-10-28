@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
- * «طلبات إضافة الطلاب» (طلب المستخدم 2026-10-27): المعلّمُ يطلب إضافةَ طالبٍ لحلقته ويتابع طلباتِه؛ والمديرُ الإداريّ
- * يُنشئ الحسابَ من الطلب (تُعرض الكلمةُ المؤقّتة مرّةً) أو يرفض بسبب؛ والمديرةُ الإدارية ترى طلباتِ البنات ومشرفُ
- * المشروع الكلَّ اطّلاعاً. الحكمُ لـRLS ومسارِ الخادم.
+ * «طلبات الطلاب» (طلب المستخدم 2026-10-27، وكانت «طلبات إضافة الطلاب»): المعلّمُ يطلب إضافةَ طالبٍ لحلقته — ومنذ
+ * 2026-10-28 حذفَه من ملفّه (`StudentRequestsRemovalCard`) — ويتابع طلباتِه؛ والمديرُ الإداريّ يُنشئ الحسابَ من طلب الإضافة
+ * (تُعرض الكلمةُ المؤقّتة مرّةً) أو يُنهي التحاقَ الطالب بطلب الحذف (بتأكيد)، أو يرفض بسبب؛ والمديرةُ الإدارية ترى طلباتِ
+ * البنات ومشرفُ المشروع الكلَّ اطّلاعاً. الحكمُ لـRLS ومسارِ الخادم ودالّةِ القاعدة.
  */
 import type { AccountCredentials } from '~/composables/useAccountAdmin'
 import type { StudentRequest, StudentRequestDraft } from '~/composables/useStudentRequests'
@@ -10,7 +11,7 @@ import { REJECT_NOTE_MIN } from '~/constants/studentRequests'
 import { studentRequestDraft } from '~/utils/chatDrafts'
 
 definePageMeta({ layout: 'dashboard' })
-useSeoMeta({ title: 'طلبات إضافة الطلاب — ترجمان' })
+useSeoMeta({ title: 'طلبات الطلاب — ترجمان' })
 
 const supabase = useSupabaseClient()
 const { profile } = useProfile()
@@ -28,7 +29,17 @@ const { data: halaqa } = useLazyAsyncData('student-requests-halaqa', async () =>
 const halaqaId = computed(() => (isTeacher.value ? halaqa.value?.id ?? null : undefined))
 const female = computed(() => halaqa.value?.gender === 'female')
 
-const { requests, pending, busy, addRequest, approve, reject } = useStudentRequests(halaqaId)
+const { requests, pending, busy, addRequest, approve, reject, refresh } = useStudentRequests(halaqaId)
+const removal = useStudentRemoval()
+
+// إنهاءُ التحاق الطالب بطلب الحذف — بتأكيد (يخرج من القوائم ويُوقَف حسابُه)
+const removing = ref<StudentRequest | null>(null)
+async function confirmRemove() {
+  if (removing.value && await removal.approveRemoval(removing.value.id)) {
+    removing.value = null
+    await refresh()
+  }
+}
 
 const asking = ref(false)
 async function save(d: StudentRequestDraft) {
@@ -54,8 +65,10 @@ async function confirmReject() {
 <template>
   <div class="sr">
     <UiPageHeader
-      title="طلبات إضافة الطلاب"
-      :subtitle="isTeacher ? 'اطلب إضافةَ طالبٍ لحلقتك، فتُنشئ الإدارةُ حسابَه وتُشعرك.' : 'ما يطلبه المعلّمون من إضافة طلاب، وإضافتُهم أو رفضُها.'"
+      title="طلبات الطلاب"
+      :subtitle="isTeacher
+        ? 'اطلب إضافةَ طالبٍ لحلقتك، أو حذفَه من ملفّه — فتبتّ الإدارةُ في الطلب وتُشعرك.'
+        : 'ما يطلبه المعلّمون من إضافة طلابٍ أو حذفهم، والبتُّ فيه.'"
     >
       <template
         v-if="isTeacher && halaqa"
@@ -85,12 +98,13 @@ async function confirmReject() {
         v-else
         :rows="requests"
         :can-decide="isAdmin"
-        :busy="busy"
+        :busy="busy || removal.busy.value"
         :show-teacher="!isTeacher"
         :can-chat="isAdmin || isWomenAdmin"
         @approve="onApprove"
+        @remove="(r: StudentRequest) => removing = r"
         @reject="(r: StudentRequest) => rejecting = r"
-        @chat="(r: StudentRequest) => openWithDraft(r.requested_by, studentRequestDraft(r.halaqa?.teacher?.full_name, r.full_name, r.halaqa?.gender === 'female'))"
+        @chat="(r: StudentRequest) => openWithDraft(r.requested_by, studentRequestDraft(r.halaqa?.teacher?.full_name, r.full_name, r.halaqa?.gender === 'female', r.kind))"
       />
     </ClientOnly>
 
@@ -104,6 +118,23 @@ async function confirmReject() {
       :credentials="credentials"
       @close="credentials = null"
     />
+    <UiConfirmModal
+      :open="!!removing"
+      title="إنهاءُ التحاق الطالب"
+      confirm-label="نعم، أنهِ التحاقه"
+      confirm-color="error"
+      confirm-icon="i-lucide-user-minus"
+      :loading="removal.busy.value"
+      @update:open="(v: boolean) => { if (!v) removing = null }"
+      @confirm="confirmRemove"
+    >
+      سيصير <b>{{ removing?.full_name }}</b> «منقطعاً» من اليوم: يخرج من قوائم حلقته والحضور والرصد، ويُوقَف حسابُه، ويبقى
+      سجلُّه كاملاً — ويُعاد من صفحة الطلاب متى شئت.
+      <span
+        v-if="removing?.note"
+        class="why"
+      >سببُ المعلّم: {{ removing.note }}</span>
+    </UiConfirmModal>
     <UModal
       :open="!!rejecting"
       title="رفضُ الطلب"
@@ -111,7 +142,7 @@ async function confirmReject() {
     >
       <template #body>
         <div class="rj">
-          <p>رفضُ طلب إضافة <b>{{ rejecting?.full_name }}</b> — يصل السببُ للمعلّم.</p>
+          <p>رفضُ طلب {{ rejecting?.kind === 'remove' ? 'حذف' : 'إضافة' }} <b>{{ rejecting?.full_name }}</b> — يصل السببُ للمعلّم.</p>
           <UFormField label="سبب الرفض">
             <UTextarea
               v-model="rejectNote"
@@ -151,4 +182,5 @@ async function confirmReject() {
 .sr { display: flex; flex-direction: column; gap: 16px; }
 .rj { display: flex; flex-direction: column; gap: 12px; }
 .rj p { margin: 0; line-height: 1.8; color: var(--ink); }
+.why { display: block; margin-top: 10px; color: var(--ink-2); }
 </style>

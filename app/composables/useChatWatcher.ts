@@ -6,6 +6,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
 import { CHAT_HEARTBEAT_MS, CHAT_LIST_REFRESH_MS } from '~/constants/chat'
 import { chatTitle, type ChatMessage } from '~/composables/useChat'
+import { isOnlineNow } from '~/utils/reachability'
 
 /** المحادثةُ المفتوحة أمام المستخدم الآن — فلا يُنبَّه برسائلها. */
 export function openConversationOf(path: string, query: Record<string, unknown>): string | null {
@@ -26,7 +27,7 @@ export function useChatWatcher() {
   const enabled = computed(() => !!profile.value && profile.value.role !== 'student')
 
   async function touch() {
-    if (!document.hidden) await supabase.rpc('touch_presence')
+    if (!document.hidden && isOnlineNow()) await supabase.rpc('touch_presence')
   }
 
   async function onMessage(msg: ChatMessage) {

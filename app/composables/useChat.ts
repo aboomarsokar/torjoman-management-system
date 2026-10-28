@@ -3,6 +3,7 @@
  * الجانبية والصفحة)، ومن أستطيع محادثته، وبدءُ محادثةٍ فردية. القراءةُ بدوالّ `my_chats` و`chat_contacts`، والصلاحيةُ في القاعدة.
  */
 import type { Database } from '~/types/database.types'
+import { isOnlineNow } from '~/utils/reachability'
 
 type Fns = Database['public']['Functions']
 export type ChatRow = Fns['my_chats']['Returns'][number]
@@ -39,8 +40,11 @@ export function useChatList() {
   const unread = computed(() => totalUnread(chats.value))
 
   async function refresh() {
+    // بلا اتصال لا يُطلب ولا يُنبَّه: يناديه المراقبُ في الخلفية فكان «تعذّر الاتصال بالخادم» يظهر على لوحة المعلّم
+    // المفتوحة بلا إنترنت (تجربةُ الجوال 2026-10-28)
+    if (!isOnlineNow()) return
     const { data, error } = await supabase.rpc('my_chats')
-    if (error) return handle(error)
+    if (error) return isOnlineNow() ? handle(error) : undefined
     chats.value = data ?? []
     loaded.value = true
   }

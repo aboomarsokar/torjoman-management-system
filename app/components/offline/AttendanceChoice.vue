@@ -84,7 +84,7 @@ const moreItems = computed(() => [[{
 .b:disabled { opacity: .55; cursor: not-allowed; }
 .present { flex: 1 1 auto; min-width: 120px; }
 .present.on { background: var(--present-bg); border-color: var(--present-bg); color: var(--present-ink); }
-.absent.on { border-color: var(--err); background: var(--err-soft); color: var(--err); }
+.absent.on { border-color: var(--absent-bg); background: var(--absent-bg); color: var(--absent-ink); }
 .more { padding: 0 12px; }
 .more.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-ink); }
 @media (hover: hover) {

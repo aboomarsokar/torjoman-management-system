@@ -294,6 +294,214 @@ export type Database = {
           },
         ]
       }
+      booklet_stock: {
+        Row: {
+          alert_at: number
+          booklet: number
+          quantity: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          alert_at?: number
+          booklet: number
+          quantity?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          alert_at?: number
+          booklet?: number
+          quantity?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booklet_stock_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booklet_stock_moves: {
+        Row: {
+          balance_after: number
+          booklet: number
+          created_at: string
+          created_by: string | null
+          delivery_id: string | null
+          delta: number
+          halaqa_id: string | null
+          id: string
+          moved_on: string
+          note: string | null
+          reason: string
+        }
+        Insert: {
+          balance_after: number
+          booklet: number
+          created_at?: string
+          created_by?: string | null
+          delivery_id?: string | null
+          delta: number
+          halaqa_id?: string | null
+          id?: string
+          moved_on?: string
+          note?: string | null
+          reason: string
+        }
+        Update: {
+          balance_after?: number
+          booklet?: number
+          created_at?: string
+          created_by?: string | null
+          delivery_id?: string | null
+          delta?: number
+          halaqa_id?: string | null
+          id?: string
+          moved_on?: string
+          note?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booklet_stock_moves_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booklet_stock_moves_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          direct_key: string | null
+          group_key: string | null
+          id: string
+          kind: string
+          last_message: string | null
+          last_message_at: string | null
+          last_sender_id: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          direct_key?: string | null
+          group_key?: string | null
+          id?: string
+          kind: string
+          last_message?: string | null
+          last_message_at?: string | null
+          last_sender_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          direct_key?: string | null
+          group_key?: string | null
+          id?: string
+          kind?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          last_sender_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_last_sender_id_fkey"
+            columns: ["last_sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_members: {
+        Row: {
+          conversation_id: string
+          joined_at: string
+          last_read_at: string
+          profile_id: string
+        }
+        Insert: {
+          conversation_id: string
+          joined_at?: string
+          last_read_at?: string
+          profile_id: string
+        }
+        Update: {
+          conversation_id?: string
+          joined_at?: string
+          last_read_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string | null
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_cycles: {
         Row: {
           created_at: string
@@ -2442,6 +2650,29 @@ export type Database = {
           },
         ]
       }
+      user_presence: {
+        Row: {
+          last_seen_at: string
+          profile_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          profile_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_presence_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit_deduction_items: {
         Row: {
           criterion: number
@@ -2514,6 +2745,15 @@ export type Database = {
     Functions: {
       acknowledge_quality_month: { Args: { p_id: string }; Returns: undefined }
       acknowledge_visit: { Args: { p_visit: string }; Returns: undefined }
+      add_booklet_stock: {
+        Args: {
+          p_booklet: number
+          p_copies: number
+          p_moved_on?: string
+          p_note?: string
+        }
+        Returns: number
+      }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -2526,6 +2766,29 @@ export type Database = {
       can_view_halaqa: { Args: { hid: string }; Returns: boolean }
       can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_view_statements_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      chat_contacts: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          full_name: string
+          gender: string
+          id: string
+          last_seen_at: string
+          role: string
+        }[]
+      }
+      chat_conversation_members: {
+        Args: { p_conversation: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          gender: string
+          id: string
+          last_read_at: string
+          last_seen_at: string
+          role: string
+        }[]
+      }
       claim_employee_number: { Args: never; Returns: string }
       consume_cron_nonce: { Args: { p_nonce: string }; Returns: boolean }
       current_user_role: {
@@ -2599,9 +2862,33 @@ export type Database = {
       is_halaqa_teacher: { Args: { hid: string }; Returns: boolean }
       is_project_supervisor: { Args: never; Returns: boolean }
       is_women_admin: { Args: never; Returns: boolean }
+      mark_chat_read: { Args: { p_conversation: string }; Returns: undefined }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       mark_staff_messages_seen: { Args: { p_ids: string[] }; Returns: number }
       my_approved_pages: { Args: never; Returns: number }
+      my_chat_contact_ids: { Args: never; Returns: string[] }
+      my_chat_conversation_ids: { Args: never; Returns: string[] }
+      my_chats: {
+        Args: never
+        Returns: {
+          group_key: string
+          id: string
+          kind: string
+          last_message: string
+          last_message_at: string
+          last_read_by_others: boolean
+          last_sender_id: string
+          members: number
+          other_avatar: string
+          other_gender: string
+          other_id: string
+          other_last_seen: string
+          other_name: string
+          other_role: string
+          title: string
+          unread: number
+        }[]
+      }
       my_exam_cycle_results: {
         Args: never
         Returns: {
@@ -2678,6 +2965,10 @@ export type Database = {
         }
         Returns: string
       }
+      send_chat_message: {
+        Args: { p_body: string; p_conversation: string }
+        Returns: string
+      }
       send_staff_message: {
         Args: {
           p_body: string
@@ -2686,6 +2977,16 @@ export type Database = {
           p_section: string
           p_target: string
           p_title: string
+        }
+        Returns: number
+      }
+      set_booklet_stock: {
+        Args: {
+          p_alert_at: number
+          p_booklet: number
+          p_moved_on?: string
+          p_note?: string
+          p_quantity: number
         }
         Returns: number
       }
@@ -2701,13 +3002,19 @@ export type Database = {
         Args: { p_ids: string[]; p_paid: boolean }
         Returns: number
       }
+      start_direct_chat: { Args: { p_other: string }; Returns: string }
       start_reading_test: { Args: never; Returns: Json }
       submit_reading_test: {
         Args: { p_answers: Json; p_attempt: string }
         Returns: Json
       }
+      touch_presence: { Args: never; Returns: undefined }
       unlock_quality_month: { Args: { p_id: string }; Returns: undefined }
       unlock_visit_result: { Args: { p_visit: string }; Returns: undefined }
+      update_booklet_stock_move: {
+        Args: { p_move: string; p_moved_on?: string; p_note: string }
+        Returns: undefined
+      }
       update_my_contact: {
         Args: {
           p_guardian_email: string

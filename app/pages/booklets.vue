@@ -2,16 +2,19 @@
 /**
  * أرشيفُ الملازم (طلب المستخدم 2026-10-21) — ما استلمته كلُّ حلقةٍ من ملازم المشروع الخمسَ عشرة
  * (الجزء 29 + 30 … 1 + 2) بنُسخها وتواريخها، لإحصاء العدد. المديرُ الإداريّ يسجّل ويحذف، ومشرفُ المشروع
- * يقرأ (RLS على `booklet_deliveries`). ثلاثةُ عروض: حسب الحلقة · حسب الملزمة · السجلّ.
+ * يقرأ (RLS على `booklet_deliveries`). العروض: حسب الحلقة · حسب الملزمة · السجلّ · الطلبات · المخزون (2026-10-28 —
+ * رصيدُ كلّ ملزمةٍ يُخصم مع التسليم، والتسليمُ يُرفض إن لم يكفِ، وتنبيهٌ عند قرب النفاد).
  */
 import type { DeliveryDraft } from '~/composables/useBooklets'
 import type { DeliveryRow } from '~/utils/booklets'
 import { bookletStats, halaqaBooklets, totalsByBooklet } from '~/utils/booklets'
+import type { StockAction, StockDraft, StockMove } from '~/composables/useBookletStock'
+import { stockItems } from '~/utils/bookletStock'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'أرشيف الملازم — ترجمان' })
 
-type View = 'halaqa' | 'booklet' | 'log' | 'requests'
+type View = 'halaqa' | 'booklet' | 'log' | 'requests' | 'stock'
 
 const { role, isAdmin, isReadOnly } = usePermissions()
 const canView = computed(() => isAdmin.value || isReadOnly.value)
@@ -20,16 +23,46 @@ const { deliveries, halaqat, pending, busy, addDelivery, removeDelivery, refresh
 const { requests, openCount, busy: reqBusy, deliverRequest } = useBookletRequests()
 /** «تمّ التسليم» يسجّل التسليمَ في الأرشيف — فتُحدَّث الأرقامُ والعروضُ معه. */
 async function deliver(id: string, deliveredOn: string) {
-  if (await deliverRequest(id, deliveredOn)) await refreshDeliveries()
+  const booklet = requests.value?.find(r => r.id === id)?.booklet
+  if (await deliverRequest(id, deliveredOn)) {
+    await refreshDeliveries()
+    if (booklet) await stockApi.afterDelivery(booklet)
+  }
+}
+
+const stockApi = useBookletStock()
+const { stock, moves, busy: stockBusy, lowCount } = stockApi
+onMounted(() => {
+  void stockApi.refreshStock()
+  void stockApi.refreshMoves()
+})
+const items = computed(() => stockItems(stock.value))
+const stockModal = reactive({ open: false, booklet: null as number | null, action: 'supply' as StockAction })
+function openStock(booklet: number, action: StockAction) {
+  Object.assign(stockModal, { open: true, booklet, action })
+}
+const stockItem = computed(() => items.value.find(i => i.no === stockModal.booklet))
+async function saveStock(d: StockDraft) {
+  if (await stockApi.save(d)) stockModal.open = false
+}
+const editMove = ref<StockMove | null>(null)
+const editOpen = ref(false)
+function openEdit(m: StockMove) {
+  editMove.value = m
+  editOpen.value = true
+}
+async function saveMove(id: string, note: string, movedOn: string | null) {
+  if (await stockApi.updateMove(id, note, movedOn)) editOpen.value = false
 }
 
 const route = useRoute()
-const view = ref<View>(route.query.view === 'requests' ? 'requests' : 'halaqa')
+const view = ref<View>(route.query.view === 'requests' ? 'requests' : route.query.view === 'stock' ? 'stock' : 'halaqa')
 const viewOptions = computed(() => [
   { value: 'halaqa' as const, label: 'حسب الحلقة' },
   { value: 'booklet' as const, label: 'حسب الملزمة' },
   { value: 'log' as const, label: 'السجلّ', count: deliveries.value.length },
-  { value: 'requests' as const, label: 'الطلبات', count: openCount.value || undefined }
+  { value: 'requests' as const, label: 'الطلبات', count: openCount.value || undefined },
+  { value: 'stock' as const, label: 'المخزون', count: lowCount.value || undefined }
 ])
 
 const stats = computed(() => bookletStats(deliveries.value, halaqat.value.length))
@@ -39,12 +72,18 @@ const halaqaNames = computed(() => Object.fromEntries(halaqat.value.map(h => [h.
 
 const modalOpen = ref(false)
 async function save(draft: DeliveryDraft, today: string) {
-  if (await addDelivery(draft, today)) modalOpen.value = false
+  if (await addDelivery(draft, today)) {
+    modalOpen.value = false
+    if (draft.booklet) await stockApi.afterDelivery(draft.booklet)
+  }
 }
 
 const deleteTarget = ref<DeliveryRow | null>(null)
 async function confirmDelete() {
-  if (deleteTarget.value && await removeDelivery(deleteTarget.value.id)) deleteTarget.value = null
+  if (deleteTarget.value && await removeDelivery(deleteTarget.value.id)) {
+    deleteTarget.value = null
+    await stockApi.refreshStock()
+  }
 }
 </script>
 
@@ -104,6 +143,15 @@ async function confirmDelete() {
           v-else-if="view === 'booklet'"
           :rows="byBooklet"
         />
+        <BookletsStock
+          v-else-if="view === 'stock'"
+          :items="items"
+          :moves="moves"
+          :halaqa-names="halaqaNames"
+          :can-edit="isAdmin"
+          @act="openStock"
+          @edit="openEdit"
+        />
         <BookletsRequests
           v-else-if="view === 'requests'"
           :rows="requests ?? []"
@@ -136,10 +184,27 @@ async function confirmDelete() {
       @save="save"
     />
 
+    <BookletsStockModal
+      v-model:open="stockModal.open"
+      :booklet="stockModal.booklet"
+      :action="stockModal.action"
+      :current="stockItem?.quantity ?? null"
+      :alert-at="stockItem?.alertAt ?? null"
+      :busy="stockBusy"
+      @save="saveStock"
+    />
+
+    <BookletsMoveEditModal
+      v-model:open="editOpen"
+      :move="editMove"
+      :busy="stockBusy"
+      @save="saveMove"
+    />
+
     <UiConfirmModal
       :open="!!deleteTarget"
       title="حذف التسليم"
-      :message="`سيُحذف تسليم ${deleteTarget?.copies ?? ''} نسخة من السجلّ وينقص من المجموع.`"
+      :message="`سيُحذف تسليم ${deleteTarget?.copies ?? ''} نسخة من السجلّ وينقص من المجموع، ويعود إلى المخزون.`"
       confirm-label="حذف"
       :loading="busy"
       @confirm="confirmDelete"

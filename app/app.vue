@@ -14,5 +14,6 @@ import { ar } from '@nuxt/ui/locale'
       <NuxtPage />
     </NuxtLayout>
     <PwaInstallBanner />
+    <PwaUpdateProgress />
   </UApp>
 </template>

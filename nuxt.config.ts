@@ -40,7 +40,9 @@ export default defineNuxtConfig({
     // إعادةُ صياغة الرسائل بالذكاء الاصطناعي — خادميٌّ فقط (NUXT_ANTHROPIC_API_KEY على Vercel)
     anthropicApiKey: '',
     public: {
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://turjuman.vercel.app'
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://turjuman.vercel.app',
+      // وقتُ بناء النسخة — تعرضه بطاقةُ تنزيل التحديث (`/api/version`، 2026-10-28)
+      buildTime: new Date().toISOString()
     }
   },
 

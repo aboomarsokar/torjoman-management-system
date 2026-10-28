@@ -83,7 +83,7 @@ const moreItems = computed(() => [[{
 .b:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .b:disabled { opacity: .55; cursor: not-allowed; }
 .present { flex: 1 1 auto; min-width: 120px; }
-.present.on { background: var(--green); border-color: var(--green); color: var(--on-primary); }
+.present.on { background: var(--present-bg); border-color: var(--present-bg); color: var(--present-ink); }
 .absent.on { border-color: var(--err); background: var(--err-soft); color: var(--err); }
 .more { padding: 0 12px; }
 .more.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-ink); }

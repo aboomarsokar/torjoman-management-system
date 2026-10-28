@@ -11,7 +11,6 @@ export function useChatThread(conversationId: Ref<string | null>) {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()
   const { clearUnread } = useChatList()
-  const { profile } = useProfile()
   const messages = ref<ChatMessage[]>([])
   const members = ref<ChatMember[]>([])
   const loading = ref(false)
@@ -77,10 +76,9 @@ export function useChatThread(conversationId: Ref<string | null>) {
       handle(error)
       return false
     }
-    // تظهر فوراً دون انتظار البثّ (ويُسقط البثُّ نسختَه بالمعرّف نفسه)
-    messages.value = mergeMessage(messages.value, {
-      id: data, conversation_id: id, sender_id: profile.value?.id ?? null, body: text, created_at: new Date().toISOString()
-    })
+    // تظهر فوراً بصفّها من الخادم (بوقته لا بساعة الجهاز التي قد تختلف فتقلب الترتيب)، والبثُّ يأتي بالنسخة نفسها
+    const { data: row } = await supabase.from('chat_messages').select('*').eq('id', data).maybeSingle()
+    if (row) messages.value = mergeMessage(messages.value, row)
     return true
   }
 

@@ -22,4 +22,8 @@ describe('mergeMessage', () => {
     expect(mergeMessage(list, m('a', '2026-10-27T10:00:00Z'))).toBe(list)
     expect(mergeMessage(list, m('b', '2026-10-27T10:01:00Z')).map(x => x.id)).toEqual(['a', 'b', 'c'])
   })
+  it('يستبدل نسخةً بوقتٍ خاطئ بنسخة الخادم فيعود ترتيبُها', () => {
+    const list = [m('mine', '2026-10-26T21:54:00Z'), m('a', '2026-10-28T11:24:00Z')]
+    expect(mergeMessage(list, m('mine', '2026-10-28T11:30:00Z')).map(x => x.id)).toEqual(['a', 'mine'])
+  })
 })

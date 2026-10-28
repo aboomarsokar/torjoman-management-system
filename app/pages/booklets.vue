@@ -11,6 +11,7 @@ import { bookletStats, halaqaBooklets, totalsByBooklet } from '~/utils/booklets'
 import type { StockAction, StockDraft, StockMove } from '~/composables/useBookletStock'
 import { stockItems } from '~/utils/bookletStock'
 import { bookletReadyDraft } from '~/utils/chatDrafts'
+import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
 import type { BookletRequest } from '~/composables/useBookletRequests'
 
 definePageMeta({ layout: 'dashboard' })
@@ -60,12 +61,13 @@ async function saveMove(id: string, note: string, movedOn: string | null) {
 
 const route = useRoute()
 const view = ref<View>(route.query.view === 'requests' ? 'requests' : route.query.view === 'stock' ? 'stock' : 'halaqa')
-const viewOptions = computed(() => [
-  { value: 'halaqa' as const, label: 'حسب الحلقة' },
-  { value: 'booklet' as const, label: 'حسب الملزمة' },
-  { value: 'log' as const, label: 'السجلّ', count: deliveries.value.length },
-  { value: 'requests' as const, label: 'الطلبات', count: openCount.value || undefined },
-  { value: 'stock' as const, label: 'المخزون', count: lowCount.value || undefined }
+/** عروضُ الصفحة تبويباتٍ مقطّعةً بأيقوناتها (طلب المستخدم 2026-10-28: بدل شرائح الفلترة). */
+const viewTabs = computed<SegmentTab<View>[]>(() => [
+  { key: 'halaqa', label: 'حسب الحلقة', icon: 'i-lucide-users-round' },
+  { key: 'booklet', label: 'حسب الملزمة', icon: 'i-lucide-book-copy' },
+  { key: 'log', label: 'السجلّ', icon: 'i-lucide-history', count: deliveries.value.length },
+  { key: 'requests', label: 'الطلبات', icon: 'i-lucide-inbox', count: openCount.value || undefined },
+  { key: 'stock', label: 'المخزون', icon: 'i-lucide-package', count: lowCount.value || undefined }
 ])
 
 const stats = computed(() => bookletStats(deliveries.value, halaqat.value.length))
@@ -133,9 +135,10 @@ async function confirmDelete() {
           :items="stats"
           label="أرقام الملازم"
         />
-        <UiFilterChips
+        <UiSegmentTabs
           v-model="view"
-          :options="viewOptions"
+          :tabs="viewTabs"
+          label="عروض أرشيف الملازم"
           class="views"
         />
         <BookletsByHalaqa
@@ -220,4 +223,9 @@ async function confirmDelete() {
 <style scoped>
 .stack { display: flex; flex-direction: column; gap: 14px; }
 .views { margin-bottom: 16px; }
+/* خمسةُ تبويباتٍ لا تتّسع لعرض الجوال: تُمرَّر أفقياً بدل أن تنضغط */
+@media (max-width: 760px) {
+  .views { overflow-x: auto; scrollbar-width: none; }
+  .views :deep(.tab) { flex: none; padding: 0 12px; }
+}
 </style>

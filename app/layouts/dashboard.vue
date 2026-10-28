@@ -85,7 +85,7 @@ const mainNav: Item[] = [
   // طلابُ المعلّم يعملون بلا إنترنت (البند 14، 2026-10-27)؛ والإدارةُ في `/students` متّصلاً
   { key: 'students-teacher', label: 'الطلاب', labelF: 'الطالبات', icon: 'i-lucide-graduation-cap', to: '/t/students', roles: ['teacher'], group: 'people' },
   // المعلّمُ يطلب إضافةَ طالب، والمديرُ الإداريّ يُضيفه أو يرفض (طلب المستخدم 2026-10-27)
-  { key: 'student-requests', label: 'طلبات إضافة طالب', labelF: 'طلبات إضافة طالبة', icon: 'i-lucide-user-plus', to: '/student-requests', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'people', isNew: true },
+  { key: 'student-requests', label: 'طلبات الطلاب', labelF: 'طلبات الطالبات', icon: 'i-lucide-users', to: '/student-requests', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'people', isNew: true },
   // والمعلم يرى زيارات حلقته ونتائجَها ويُقرّ بالاطّلاع (قرار 2026-10-21)
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ

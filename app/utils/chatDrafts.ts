@@ -24,6 +24,6 @@ export function bookletReadyDraft(teacher: string | null | undefined, booklet: n
 }
 
 /** «بخصوص طلب إضافة الطالب فلان: » — يكمل المرسِلُ سؤالَه. */
-export function studentRequestDraft(teacher: string | null | undefined, student: string, female: boolean): string {
-  return `${greetTeacher(teacher)}، بخصوص طلب إضافة ${female ? 'الطالبة' : 'الطالب'} ${student}: `
+export function studentRequestDraft(teacher: string | null | undefined, student: string, female: boolean, kind: 'add' | 'remove' = 'add'): string {
+  return `${greetTeacher(teacher)}، بخصوص طلب ${kind === 'remove' ? 'حذف' : 'إضافة'} ${female ? 'الطالبة' : 'الطالب'} ${student}: `
 }

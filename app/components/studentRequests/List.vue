@@ -1,15 +1,21 @@
 <script setup lang="ts">
 /**
- * قائمةُ طلبات إضافة الطلاب (طلب المستخدم 2026-10-27): تبويبان «بانتظار الإدارة» و«المُغلقة»، وفي كلّ سطرٍ الطالبُ وهويتُه
- * والحلقةُ ومعلّمُها والتاريخ. المديرُ الإداريّ (`canDecide`) يضيف الطالبَ (يُنشأ حسابُه وتُعرض كلمتُه مرّةً) أو يرفض بسبب.
- * المعلّمُ يرى طلباتِ حلقته وسببَ الرفض، والمديرةُ الإدارية طلباتِ البنات اطّلاعاً.
+ * قائمةُ طلبات الطلاب (طلب المستخدم 2026-10-27): تبويبان «بانتظار الإدارة» و«المُغلقة»، وفي كلّ سطرٍ نوعُ الطلب (إضافة · حذف،
+ * 2026-10-28) والطالبُ وهويتُه أو سببُ حذفه والحلقةُ ومعلّمُها والتاريخ. المديرُ الإداريّ (`canDecide`) يضيف الطالبَ (يُنشأ
+ * حسابُه وتُعرض كلمتُه مرّةً) أو يُنهي التحاقَه، أو يرفض بسبب. المعلّمُ يرى طلباتِ حلقته وسببَ الرفض، والمديرةُ الإدارية
+ * طلباتِ البنات اطّلاعاً.
  */
-import { STUDENT_REQUEST_STATUS } from '~/constants/studentRequests'
+import { STUDENT_REQUEST_KIND, STUDENT_REQUEST_STATUS } from '~/constants/studentRequests'
 import type { StudentRequest } from '~/composables/useStudentRequests'
 import { deliveryDate } from '~/utils/booklets'
 
 const props = defineProps<{ rows: StudentRequest[], canDecide: boolean, busy: boolean, showTeacher: boolean, canChat?: boolean }>()
-const emit = defineEmits<{ approve: [row: StudentRequest], reject: [row: StudentRequest], chat: [row: StudentRequest] }>()
+const emit = defineEmits<{ approve: [row: StudentRequest], remove: [row: StudentRequest], reject: [row: StudentRequest], chat: [row: StudentRequest] }>()
+/** القبولُ بحسب النوع: إضافةٌ تُنشئ الحساب، وحذفٌ يُنهي الالتحاق. */
+const accept = (r: StudentRequest) => (r.kind === 'remove' ? emit('remove', r) : emit('approve', r))
+const acceptLabel = (r: StudentRequest) => (r.kind === 'remove' ? 'إنهاء التحاقه' : 'إضافة')
+const acceptIcon = (r: StudentRequest) => (r.kind === 'remove' ? 'i-lucide-user-minus' : 'i-lucide-user-plus')
+const acceptColor = (r: StudentRequest) => (r.kind === 'remove' ? 'error' as const : 'success' as const)
 
 type View = 'open' | 'closed'
 const view = ref<View>('open')
@@ -31,6 +37,8 @@ const columns = computed(() => [
 ])
 const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_date}`, r.guardian_phone, r.tajweed_level, r.residence, r.nearest_mosque]
   .filter(Boolean).join(' · ')
+/** سطرُ البطاقة على الجوال: هويةُ المضاف، أو «طلبُ حذف» */
+const idOrKind = (r: StudentRequest) => (r.kind === 'remove' ? 'طلبُ حذف' : r.national_id ?? '')
 </script>
 
 <template>
@@ -38,7 +46,7 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
     <UiSegmentTabs
       v-model="view"
       :tabs="viewTabs"
-      label="حالة طلبات إضافة الطلاب"
+      label="حالة طلبات الطلاب"
     />
   </div>
   <UiEmptyState
@@ -47,7 +55,7 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
     :title="view === 'open' ? 'لا طلباتٍ بانتظار الإدارة' : 'لا طلباتٍ مُغلقة بعد'"
     :description="view === 'open'
       ? (showTeacher ? 'ما يُرسله المعلّمون يظهر هنا ويصل إشعارُه.' : 'ما ترسله يظهر هنا حتى تبتّ فيه الإدارة.')
-      : 'ما أُضيف أو رُفض يظهر هنا.'"
+      : 'ما أُضيف أو أُنهي التحاقُه أو رُفض يظهر هنا.'"
   />
   <UiDataTable
     v-else
@@ -61,12 +69,21 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
     </template>
     <template #student="{ row }">
       <div class="stu">
-        <b>{{ row.full_name }}</b>
-        <span><bdi dir="ltr">{{ row.national_id }}</bdi><template v-if="details(row)"> · {{ details(row) }}</template></span>
+        <b class="name">
+          <UBadge
+            :label="STUDENT_REQUEST_KIND[row.kind].label"
+            :color="STUDENT_REQUEST_KIND[row.kind].color"
+            :icon="STUDENT_REQUEST_KIND[row.kind].icon"
+            variant="subtle"
+            size="sm"
+          />
+          {{ row.full_name }}
+        </b>
+        <span v-if="row.kind === 'add'"><bdi dir="ltr">{{ row.national_id }}</bdi><template v-if="details(row)"> · {{ details(row) }}</template></span>
         <span
           v-if="row.note"
           class="note"
-        >{{ row.note }}</span>
+        >{{ row.kind === 'remove' ? `السبب: ${row.note}` : row.note }}</span>
         <span
           v-if="row.status === 'rejected' && row.reject_note"
           class="why"
@@ -112,13 +129,13 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
         </UTooltip>
         <template v-if="canDecide && row.status === 'open'">
           <UButton
-            label="إضافة"
-            icon="i-lucide-user-plus"
-            color="success"
+            :label="acceptLabel(row)"
+            :icon="acceptIcon(row)"
+            :color="acceptColor(row)"
             variant="solid"
             :loading="busy"
             :ui="{ base: 'rounded-[11px] min-h-10 px-4 font-semibold shadow-sm' }"
-            @click="emit('approve', row)"
+            @click="accept(row)"
           />
           <UButton
             label="رفض"
@@ -135,11 +152,11 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
     <template #card="{ row, index }">
       <UiCardRow
         :title="row.full_name"
-        :subtitle="showTeacher ? `${row.halaqa?.teacher?.full_name ?? '—'} · ${row.halaqa?.name ?? ''}` : row.national_id"
+        :subtitle="showTeacher ? `${row.halaqa?.teacher?.full_name ?? '—'} · ${row.halaqa?.name ?? ''}` : idOrKind(row)"
         :fields="[
-          ...(showTeacher ? [{ label: 'الهوية', value: row.national_id }] : []),
+          ...(showTeacher ? [{ label: row.kind === 'remove' ? 'الطلب' : 'الهوية', value: idOrKind(row) }] : []),
           ...(details(row) ? [{ label: 'البيانات', value: details(row) }] : []),
-          ...(row.note ? [{ label: 'ملاحظة', value: row.note }] : []),
+          ...(row.note ? [{ label: row.kind === 'remove' ? 'سبب الحذف' : 'ملاحظة', value: row.note }] : []),
           ...(row.status === 'rejected' && row.reject_note ? [{ label: 'سبب الرفض', value: row.reject_note }] : []),
           { label: 'التاريخ', value: deliveryDate(row.created_at) }
         ]"
@@ -171,13 +188,13 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
             />
             <UButton
               v-if="canDecide && row.status === 'open'"
-              label="إضافة"
-              icon="i-lucide-user-plus"
-              color="success"
+              :label="acceptLabel(row)"
+              :icon="acceptIcon(row)"
+              :color="acceptColor(row)"
               block
               :loading="busy"
               :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
-              @click="emit('approve', row)"
+              @click="accept(row)"
             />
             <UButton
               v-if="canDecide && row.status === 'open'"
@@ -202,6 +219,7 @@ const details = (r: StudentRequest) => [r.birth_date && `ميلاد ${r.birth_da
 .seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .stu { display: flex; flex-direction: column; line-height: 1.5; gap: 2px; min-width: 200px; }
 .stu b { color: var(--ink); font-weight: 600; }
+.stu .name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .stu span { font-size: 13px; color: var(--ink-3); }
 .stu .note { color: var(--ink-2); }
 .stu .why { color: var(--ui-error); }

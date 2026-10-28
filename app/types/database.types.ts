@@ -2182,7 +2182,8 @@ export type Database = {
           guardian_phone: string | null
           halaqa_id: string
           id: string
-          national_id: string
+          kind: string
+          national_id: string | null
           nearest_mosque: string | null
           note: string | null
           reject_note: string | null
@@ -2201,7 +2202,8 @@ export type Database = {
           guardian_phone?: string | null
           halaqa_id: string
           id?: string
-          national_id: string
+          kind?: string
+          national_id?: string | null
           nearest_mosque?: string | null
           note?: string | null
           reject_note?: string | null
@@ -2220,7 +2222,8 @@ export type Database = {
           guardian_phone?: string | null
           halaqa_id?: string
           id?: string
-          national_id?: string
+          kind?: string
+          national_id?: string | null
           nearest_mosque?: string | null
           note?: string | null
           reject_note?: string | null
@@ -2753,6 +2756,10 @@ export type Database = {
           p_note?: string
         }
         Returns: number
+      }
+      approve_student_removal: {
+        Args: { p_request: string }
+        Returns: undefined
       }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }

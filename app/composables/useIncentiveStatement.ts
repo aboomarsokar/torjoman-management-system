@@ -124,6 +124,9 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     if (!data) return
     statement.value = data.statement
     savedIds = data.itemIds
+    // النسخةُ تُجدَّد من القاعدة فيزول سطرُ «معروضٌ من جهازك» (بقي بعد الرفع — تجربةُ الجوال 2026-10-28)
+    const { itemIds: _ids, ...copy } = data
+    await offline.writeCopy(copy)
   }
 
   watch([halaqaId, month, year], load, { immediate: true })

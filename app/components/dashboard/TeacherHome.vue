@@ -9,6 +9,7 @@ import { formatAmount, isolateLtr } from '~/utils/transport'
 import { formatDay, gazaToday } from '~/utils/reportWindow'
 import { teacherActions } from '~/utils/teacherDashboard'
 import { formatHalaqaTime } from '~/utils/time'
+import { formatSavedAt } from '~/utils/offlineSnapshot'
 
 // الشهورُ والتواريخ معزولةٌ لاتينيّاً: «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10»
 const day = (iso: string) => isolateLtr(formatDay(iso))
@@ -16,9 +17,7 @@ const day = (iso: string) => isolateLtr(formatDay(iso))
 const { dash, pending, refresh, savedAt } = useTeacherDashboard()
 // بلا إنترنت (2026-10-27): آخرُ نسخةٍ محفوظة بوقتها، وما لا يعمل بلا اتصالٍ يُعتَم ويقول ذلك عند ضغطه
 const { online, needsNetwork, blockIfOffline } = useOfflineNav()
-const savedTime = computed(() => savedAt.value
-  ? new Date(savedAt.value).toLocaleString('en-GB', { timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace('/', '-').replace(',', ' ·')
-  : null)
+const savedTime = computed(() => (savedAt.value ? formatSavedAt(savedAt.value) : null))
 
 const d = computed(() => (dash.value && dash.value.halaqa ? dash.value : null))
 const noHalaqa = computed(() => !pending.value && dash.value?.halaqa === null)

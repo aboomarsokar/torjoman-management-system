@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatHalaqaTime, formatTime12 } from './time'
+import { formatHalaqaTime, formatTime12, gazaClock12 } from './time'
 
 describe('الوقت بصيغة 12 ساعة', () => {
   it('العصرُ والصباح', () => {
@@ -32,5 +32,13 @@ describe('موعدُ الحلقة من … إلى …', () => {
   it('الفارغُ ← نصٌّ فارغ', () => {
     expect(formatHalaqaTime(null)).toBe('')
     expect(formatHalaqaTime('25:00')).toBe('')
+  })
+})
+
+describe('gazaClock12', () => {
+  it('وقتُ اللحظة في غزة بنظام 12 ساعة', () => {
+    expect(gazaClock12('2026-10-28T12:06:00Z')).toBe('2:06 م')
+    expect(gazaClock12('2026-10-28T07:05:00Z')).toBe('9:05 ص')
+    expect(gazaClock12(new Date('2026-10-28T10:00:00Z'))).toBe('12:00 م')
   })
 })

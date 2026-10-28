@@ -16,6 +16,13 @@ export function formatTime12(value: string | null | undefined): string {
   return `${h12}:${m[2]} ${h < 12 ? 'ص' : 'م'}`
 }
 
+const GAZA_HM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Gaza', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+
+/** لحظةٌ (ISO أو تاريخ) ← وقتُها في غزة «2:06 م» — سطورُ «آخرُ تحديث» وتاريخُ النسخة (طلب المستخدم 2026-10-28). */
+export function gazaClock12(at: string | Date): string {
+  return formatTime12(GAZA_HM.format(typeof at === 'string' ? new Date(at) : at))
+}
+
 /**
  * موعدُ الحلقة «من … إلى …»: وقتُ البدء ثم البدءُ مضافاً إليه مدّتُها (`HALAQA_DURATION_MINUTES`) —
  * «5:00 م – 7:00 م». الفارغُ أو غيرُ المفهوم ← ''.

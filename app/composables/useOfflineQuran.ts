@@ -13,6 +13,7 @@ import { QURAN_QUEUE } from '~/utils/offlineQueues'
 import { newQuranEntry, offlineSubmitBlock, overlayRecords, recordsCount, type QuranEntry, type QuranMirror } from '~/utils/quranOutbox'
 import { isOnlineNow } from '~/utils/reachability'
 import { formatDay, gazaToday, isSubmittable, openingDay } from '~/utils/reportWindow'
+import { gazaClock12 } from '~/utils/time'
 
 /** الشهرُ الذي تفتح عليه الشاشة من الشهرين المحفوظين (السابقُ ثمّ الجاري): قاعدةُ `defaultPeriod` نفسُها. */
 export function offlinePeriod(months: Pick<QuranMirror, 'year' | 'month' | 'inputs'>[], today: string): Period | null {
@@ -154,7 +155,7 @@ export function useOfflineQuran() {
   }
 
   const syncedAt = computed(() => current.value?.syncedAt
-    ? new Date(current.value.syncedAt).toLocaleTimeString('en-GB', { timeZone: 'Asia/Gaza', hour: '2-digit', minute: '2-digit', hour12: false })
+    ? gazaClock12(current.value.syncedAt)
     : null)
   const statusText = computed(() => syncStatusLine({
     online: queue.online.value, pending: queue.pending.value.length, rejected: queue.rejected.value.length,

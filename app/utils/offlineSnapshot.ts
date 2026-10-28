@@ -6,6 +6,7 @@
  */
 import { PROFILE_CACHE_KEY, readCache } from '~/utils/offlineCache'
 import { idbGet, idbPut } from '~/utils/offlineDb'
+import { gazaClock12 } from '~/utils/time'
 
 export interface Snapshot<T> { savedAt: string, data: T }
 
@@ -33,11 +34,11 @@ export async function patchSnapshot<T>(uid: string, key: string, patch: (data: T
   if (snap) await idbPut('meta', { ...snap, data: patch(snap.data) }, snapshotKey(uid, key)).catch(() => undefined)
 }
 
-/** «27-10 · 10:42» بتوقيت غزة — وقتُ آخر تحديثٍ للنسخة. */
+const GAZA_DAY = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit' })
+
+/** «27-10 · 10:42 ص» بتوقيت غزة وبنظام 12 ساعة (طلب المستخدم 2026-10-28) — وقتُ آخر تحديثٍ للنسخة. */
 export function formatSavedAt(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
-  }).formatToParts(new Date(iso))
+  const parts = GAZA_DAY.formatToParts(new Date(iso))
   const get = (t: string) => parts.find(p => p.type === t)?.value ?? ''
-  return `${get('day')}-${get('month')} · ${get('hour')}:${get('minute')}`
+  return `${get('day')}-${get('month')} · ${gazaClock12(iso)}`
 }

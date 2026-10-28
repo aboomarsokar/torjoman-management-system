@@ -10,6 +10,7 @@ import { absencesFor, effectiveDay, syncStatusLine, type Absences, type OutboxEn
 import { attendanceStrip, lastSchoolDays } from '~/utils/attendanceStrip'
 import { isOnlineNow } from '~/utils/reachability'
 import { gazaToday, isFriday, schoolDayOnOrBefore } from '~/utils/reportWindow'
+import { gazaClock12 } from '~/utils/time'
 
 /** هل في المسوّدة تغييرٌ عن اليوم المعروض لطلاب القائمة. */
 export function draftChanged(shown: Absences, draft: Absences, studentIds: string[]): boolean {
@@ -118,7 +119,7 @@ export function useOfflineAttendance() {
   }
 
   const syncedAt = computed(() => mirror.value?.syncedAt
-    ? new Date(mirror.value.syncedAt).toLocaleTimeString('en-GB', { timeZone: 'Asia/Gaza', hour: '2-digit', minute: '2-digit', hour12: false })
+    ? gazaClock12(mirror.value.syncedAt)
     : null)
   const statusText = computed(() => syncStatusLine({
     online: outbox.online.value, pending: outbox.pending.value.length, rejected: outbox.rejected.value.length,

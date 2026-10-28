@@ -18,7 +18,8 @@ const NOT_REALLY_WRITES: readonly RegExp[] = [
 /** أبوابُ النيابة نفسِها — حَرْسُها يحبس النائبَ أو يجعل الفتحَ مستحيلاً. */
 const EXEMPT = new Set([
   'server/api/impersonate/end.post.ts', // بابُ الخروج: يختم صفَّه ويُبطل جلستَه
-  'server/api/impersonate/write-mode.post.ts' // بابُ الكتابة: لا نافذةَ قبل الفتح، وحارسُه دورُ الفاعل في الصفّ
+  'server/api/impersonate/write-mode.post.ts', // بابُ الكتابة: لا نافذةَ قبل الفتح، وحارسُه دورُ الفاعل في الصفّ
+  'server/api/cron/sms.post.ts' // يناديه المجدوِلُ (pg_net) لا مستخدم: لا جلسةَ ولا نائب، وحارسُه رمزٌ لمرّةٍ واحدة (consume_cron_nonce)
 ])
 
 const code = (p: string) => readFileSync(p, 'utf8')
@@ -79,7 +80,8 @@ describe('تغطيةُ حارس النيابة', () => {
     }
   })
   it('والمستثنى قليلٌ معروف — يُرفع السقفُ بقرارٍ مكتوب لا بعادة', () => {
-    expect(EXEMPT.size).toBeLessThanOrEqual(2)
+    // 3 (قرار 2026-10-27): بابا النيابة، ومسارُ المجدوِل الذي لا مستخدمَ له (cron/sms)
+    expect(EXEMPT.size).toBeLessThanOrEqual(3)
   })
   it('والمستثنى موجودٌ فعلاً — اسمٌ قديمٌ في القائمة لا يستر شيئاً', () => {
     for (const p of EXEMPT) expect(() => statSync(p), p).not.toThrow()

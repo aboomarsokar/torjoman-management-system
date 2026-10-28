@@ -181,10 +181,16 @@ const activeItem = computed(() => visibleItems.value
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const { unread: unreadMessages } = useUnreadMessages()
 const { open: openStudentRequests } = useOpenStudentRequestsCount()
-/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27). */
+const { lowCount: lowBookletStock, refreshStock: refreshBookletStock } = useBookletStock()
+onMounted(() => watch(() => profile.value?.role, (r) => {
+  if (r === 'admin_manager') void refreshBookletStock()
+}, { immediate: true }))
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27)، والملازمُ التي قاربت النفاد (2026-10-28). */
 const countOf = (item: Item) => (item.key === 'messages'
   ? unreadMessages.value
-  : item.key === 'student-requests' ? openStudentRequests.value : 0)
+  : item.key === 'student-requests'
+    ? openStudentRequests.value
+    : item.key === 'booklets' && profile.value?.role === 'admin_manager' ? lowBookletStock.value : 0)
 /** مجموعُ أعداد بنود المجموعة — يظهر على عنوانها أيضاً (طلب المستخدم 2026-10-27). */
 const groupCount = (items: Item[]) => items.reduce((n, i) => n + countOf(i), 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))

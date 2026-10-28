@@ -1186,3 +1186,13 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 - **`sms_log`** — القراءةُ: المديرُ الإداريّ ومشرفُ المشروع كلَّه، والمديرُ الفنيّ والمديرةُ الإدارية ما أرسلاه (`sent_by = auth.uid()`).
 - **`scheduled_messages`** — المديرُ الفنيّ (البنين) والمديرةُ الإدارية (البنات) يجدولان بقناة SMS أيضاً؛ والحارسُ يحصر SMS في الأدوار الثلاثة، والقسمُ مفروضٌ كما كان.
+
+## مخزونُ الملازم (2026-10-28)
+
+> هجرتا `20261028081804_booklet_stock` و`20261028081909_booklet_stock_keep_history`.
+
+- **`booklet_stock`** — `booklet` (1..15، مفتاح)، `quantity` (≥ 0)، `alert_at` (حدُّ التنبيه، افتراضيّاً 20)، `updated_at`، `updated_by`. صفٌّ لملزمةٍ جُردت؛ وبلا صفٍّ لا تُتتبَّع.
+- **`booklet_stock_moves`** — `booklet`، `delta`، `balance_after`، `reason` (`count` جرد · `supply` توريد · `delivery` تسليم · `delivery_removed` إرجاع)، `delivery_id` (بلا مفتاحٍ أجنبيّ)، `halaqa_id`، `note`، `created_by`.
+- **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع، ولا كتابةَ مباشرة؛ حارسُ النيابة على الجدولين.
+- **المشغّل** `booklet_deliveries_stock` (`private.booklet_stock_on_delivery`، بعد الإدراج والحذف وتعديل الملزمة أو النسخ): يخصم ويرفض إن لم يكفِ الرصيد، ويُرجع صافيَ ما خُصم للتسليم عند حذفه أو تعديله.
+- **الدوال:** `set_booklet_stock(booklet, quantity, alert_at, note)` جرد، و`add_booklet_stock(booklet, copies, note)` توريد — للمدير الإداريّ.

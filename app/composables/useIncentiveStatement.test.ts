@@ -1,8 +1,11 @@
 /**
  * توثيقُ بنود كشف الحوافز: تاريخٌ داخل شهر الكشف لا يتجاوز اليوم، وبيانٌ واضح، ومبلغٌ موجب.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { isBlankItem, statementDateBounds, validateStatementItem } from './useIncentiveStatement'
+
+// تعريفُ الصناديق يحتاج Nuxt — والمختبَرُ هنا التوثيقُ النقيّ؛ ورفعُ المسوّدة في utils/incentiveOutbox.test.ts
+vi.mock('~/utils/offlineQueues', () => ({ INCENTIVE_QUEUE: 'incentives' }))
 
 const item = (over: Partial<{ description: string, amount: number | string, item_date: string }> = {}) =>
   ({ description: 'جوائز الحفظ', category: 'جوائز', amount: 50, item_date: '2026-10-12', ...over })

@@ -2,11 +2,12 @@
  * قاعدةُ الجهاز (IndexedDB) للحضور بلا إنترنت — غلافٌ صغيرٌ بالوعود حول الواجهة الأصلية (بلا مكتبة).
  * مخزنان: `mirror` نسخةُ حلقة المعلّم وطلابها وأيامها (مفتاحُها `uid`)، و`outbox` صندوقُ الرفع (مفتاحُه `key`)،
  * و`meta` لِما يلزم الإقلاعَ بلا شبكة (آخرُ معلّمٍ فتح الشاشة، ومراجعُ المصحف، ونسخةُ الطلاب `students|`، ونُسخُ الشاشات
- * التي تُقرأ `snap|`)، و`quran_mirror`/`quran_outbox` للإنجاز القرآنيّ، و`ack_outbox` لـ«أُقِرّ بالاطّلاع» بلا اتصال.
+ * التي تُقرأ `snap|`)، و`quran_mirror`/`quran_outbox` للإنجاز القرآنيّ، و`ack_outbox` لـ«أُقِرّ بالاطّلاع» بلا اتصال،
+ * و`incentive_outbox` لمسوّدات كشف الحوافز.
  */
 import { OFFLINE_DB_NAME, OFFLINE_DB_VERSION } from '~/constants/offline'
 
-export type StoreName = 'mirror' | 'outbox' | 'meta' | 'quran_mirror' | 'quran_outbox' | 'ack_outbox'
+export type StoreName = 'mirror' | 'outbox' | 'meta' | 'quran_mirror' | 'quran_outbox' | 'ack_outbox' | 'incentive_outbox'
 
 let opening: Promise<IDBDatabase> | null = null
 
@@ -32,6 +33,8 @@ export function openOfflineDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('quran_outbox')) db.createObjectStore('quran_outbox', { keyPath: 'key' })
       // النسخة 3: «أُقِرّ بالاطّلاع» بلا اتصال (الزيارات والتقييم والتنبيهات)
       if (!db.objectStoreNames.contains('ack_outbox')) db.createObjectStore('ack_outbox', { keyPath: 'key' })
+      // النسخة 4 (2026-10-28): كشفُ الحوافز بلا اتصال — مسوّدةُ الشهر كاملةً
+      if (!db.objectStoreNames.contains('incentive_outbox')) db.createObjectStore('incentive_outbox', { keyPath: 'key' })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => {

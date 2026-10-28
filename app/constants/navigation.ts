@@ -35,5 +35,7 @@ export const TEACHER_ONLINE_ONLY = ['my-booklets', 'student-requests'] as const
 export const OFFLINE_PATHS = [
   '/t/home', '/t', '/t/quran', '/t/students', '/t/students/view',
   // الدفعةُ الأولى (2026-10-27): شاشاتٌ تُقرأ من نسخة الجهاز (`useOfflineCopy`) — مشتركةٌ مع الأدوار الأخرى
-  '/exam-plan', '/programs', '/visits', '/quality', '/alerts', '/messages', '/profile/me'
+  '/exam-plan', '/programs', '/visits', '/quality', '/alerts', '/messages', '/profile/me',
+  // الدفعةُ الثانية (2026-10-28): كشفُ الحوافز — يُكتب على الجهاز ويُرفع حين يعود الاتصال، والإرسالُ متّصلاً
+  '/incentives'
 ]

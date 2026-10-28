@@ -1,12 +1,18 @@
 import type { Ref } from 'vue'
 import type { Database } from '~/types/database.types'
 import { MIN_ITEM_DESCRIPTION_LENGTH, STATEMENT_ITEM_CATEGORIES } from '~/constants/incentives'
+import { INCENTIVE_SAVED_ON_DEVICE } from '~/composables/useIncentiveOffline'
+import { rejectionText } from '~/utils/attendanceOutbox'
+import { fetchIncentiveStatement, incentiveSubmitBlock, type IncentiveEntry, type IncentiveItem, type IncentiveSnapshot } from '~/utils/incentiveOutbox'
+import { isOnlineNow } from '~/utils/reachability'
 
 /**
  * كشفُ حوافز الحلقة لشهرٍ واحد (المعلّم): المبلغ المخصّص للقراءة، وبنودُ المصروف تُوثَّق
  * كلٌّ منها بتاريخٍ داخل شهر الكشف وبيانٍ واضح ومبلغٍ موجب. يُحمَّل تلقائياً عند تغيّر الشهر
  * (كان الكشفُ القديم يبقى على الشاشة تحت شهرٍ آخر)، والإرسالُ يحفظ أولاً فلا تضيع تعديلاتٌ لم تُحفظ.
  * الحفظُ يُدرج البنود ثم يحذف القديمة، فإن رفضت القاعدةُ بنداً بقي الكشفُ كما كان.
+ * وبلا إنترنت (البند 14، 2026-10-28): يُقرأ الكشفُ من نسخة جهاز المعلّم، ويُحفظ في صندوق الرفع (`useIncentiveOffline`)
+ * فيُرفع حين يعود الاتصال؛ والإرسالُ للمراجعة متّصلاً وحده.
  */
 type StatementStatus = Database['public']['Enums']['statement_status']
 export interface StatementItemDraft { description: string, category: string, amount: number | string, item_date: string }
@@ -47,8 +53,11 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
   // نيابةُ القراءة تُرفض قبل الإرسال: تحديثٌ لا يطابق صفّاً يعود «0 صفوف» بلا رفضٍ صريح
   const { blockIfReadOnly } = useImpersonation()
   const toast = useToast()
+  const offline = useIncentiveOffline(halaqaId, month, year)
 
   const loading = ref(false)
+  /** بلا اتصالٍ ولا نسخةَ لهذا الشهر على الجهاز (لم يُفتح متّصلاً قطّ). */
+  const noCopy = ref(false)
   const loaded = ref(false)
   const saving = ref(false)
   const submitting = ref(false)
@@ -66,28 +75,40 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
   const errors = computed(() => rows.value.map(r => (isBlankItem(r) ? {} : validateStatementItem(r, bounds.value))))
   const hasErrors = computed(() => errors.value.some(e => Object.keys(e).length > 0))
 
+  /** كشفُ الشهر: من القاعدة متّصلاً (وتُحفظ نسختُه على جهاز المعلّم)، ومن نسخة الجهاز بلا اتصال. */
+  async function fetchMonth(hid: string): Promise<(IncentiveSnapshot & { itemIds?: string[] }) | null> {
+    if (offline.uid.value && !isOnlineNow()) return offline.readCopy()
+    try {
+      const data = await fetchIncentiveStatement(supabase, hid, year.value, month.value)
+      const { itemIds: _ids, ...copy } = data
+      await offline.writeCopy(copy)
+      return data
+    } catch (err) {
+      // انقطع الاتصالُ في الطريق: النسخةُ أصدق من الخطأ
+      const copy = offline.uid.value && !isOnlineNow() ? await offline.readCopy() : null
+      if (!copy) throw err
+      return copy
+    }
+  }
+
   async function load() {
     loaded.value = false
     showErrors.value = false
+    noCopy.value = false
     if (!halaqaId.value) return
     loading.value = true
     try {
-      const hid = halaqaId.value
-      const [{ data: alloc, error: e1 }, { data: st, error: e2 }] = await Promise.all([
-        supabase.from('halaqa_incentives').select('allocated_amount').eq('halaqa_id', hid).eq('incentive_month', month.value).eq('incentive_year', year.value).maybeSingle(),
-        supabase.from('incentive_statements').select('id, status, return_note').eq('halaqa_id', hid).eq('statement_month', month.value).eq('statement_year', year.value).maybeSingle()
-      ])
-      if (e1 || e2) throw e1 ?? e2
-      allocated.value = alloc?.allocated_amount ?? 0
-      statement.value = st ? { id: st.id, status: st.status, returnNote: st.return_note } : null
-      let items: { id: string, description: string | null, category: string | null, amount: number, item_date: string | null }[] = []
-      if (st) {
-        const { data, error } = await supabase.from('incentive_statement_items').select('id, description, category, amount, item_date').eq('statement_id', st.id).order('item_date')
-        if (error) throw error
-        items = data ?? []
+      const pending = offline.pendingEntry.value
+      const data = await fetchMonth(halaqaId.value) ?? (pending ? { allocated: 0, statement: null, items: [] } : null)
+      if (!data) {
+        noCopy.value = true
+        return
       }
-      savedIds = items.map(i => i.id)
-      rows.value = items.map(i => ({ description: i.description ?? '', category: i.category ?? STATEMENT_ITEM_CATEGORIES[0], amount: i.amount, item_date: i.item_date ?? '' }))
+      allocated.value = data.allocated
+      statement.value = data.statement
+      savedIds = data.itemIds ?? []
+      // ما حُفظ على الجهاز ولم يُرفع بعدُ يغلب ما في القاعدة
+      rows.value = (pending?.items ?? data.items).map(i => ({ ...i, category: i.category || STATEMENT_ITEM_CATEGORIES[0] }))
       loaded.value = true
     } catch (err) {
       handle(err)
@@ -96,7 +117,20 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     }
   }
 
+  /** بعد رفع مسوّدة الشهر في الخلفية: حالةُ الكشف ومعرّفاتُ بنوده من القاعدة — والبنودُ المعروضة لا تُمسّ. */
+  async function syncServerIds() {
+    if (!halaqaId.value) return
+    const data = await fetchIncentiveStatement(supabase, halaqaId.value, year.value, month.value).catch(() => null)
+    if (!data) return
+    statement.value = data.statement
+    savedIds = data.itemIds
+  }
+
   watch([halaqaId, month, year], load, { immediate: true })
+  watch(offline.lastUploaded, (u) => {
+    const e = u?.entry as IncentiveEntry | undefined
+    if (e && e.halaqaId === halaqaId.value && e.year === year.value && e.month === month.value) void syncServerIds()
+  })
 
   function addRow() {
     const today = gazaToday()
@@ -118,6 +152,8 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     saving.value = true
     try {
       blockIfReadOnly()
+      // المعلّمُ بلا اتصال، أو والصندوقُ فيه مسوّدةٌ لهذا الشهر: الحفظُ عبر الصندوق (لا تُرفع القديمةُ بعد الجديدة)
+      if (offline.uid.value && (!isOnlineNow() || offline.pendingEntry.value)) return await saveThroughQueue()
       let sid = statement.value?.id
       if (!sid) {
         const { data, error } = await supabase.from('incentive_statements')
@@ -145,6 +181,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
       savedIds = insertedIds
       rows.value = rows.value.filter(r => !isBlankItem(r))
       showErrors.value = false
+      await offline.writeCopy({ allocated: allocated.value, statement: statement.value, items: draftItems() })
       toast.add({ title: 'حُفظ الكشف.', color: 'success', icon: 'i-lucide-save' })
       return true
     } catch (err) {
@@ -155,7 +192,38 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     }
   }
 
+  /** بنودُ المسوّدة كما تُحفظ (بلا الفارغة). */
+  const draftItems = (): IncentiveItem[] => rows.value.filter(r => !isBlankItem(r))
+    .map(r => ({ description: r.description.trim(), category: r.category, amount: amountOf(r.amount), item_date: r.item_date }))
+
+  /** الحفظُ عبر صندوق الجهاز: بلا اتصالٍ يبقى عليه، ومتّصلاً يُرفع الآن — true إن وصل القاعدة. */
+  async function saveThroughQueue(): Promise<boolean> {
+    const items = draftItems()
+    rows.value = rows.value.filter(r => !isBlankItem(r))
+    showErrors.value = false
+    if (!isOnlineNow()) {
+      await offline.queueDraft(items)
+      toast.add({ title: INCENTIVE_SAVED_ON_DEVICE, color: 'success', icon: 'i-lucide-cloud-off' })
+      return false
+    }
+    const r = await offline.uploadNow(items)
+    if (r.kind === 'uploaded') {
+      await syncServerIds()
+      toast.add({ title: 'حُفظ الكشف.', color: 'success', icon: 'i-lucide-save' })
+      return true
+    }
+    if (r.kind === 'rejected') toast.add({ title: rejectionText(r.error), color: 'error', icon: 'i-lucide-circle-alert' })
+    else toast.add({ title: INCENTIVE_SAVED_ON_DEVICE, color: 'success', icon: 'i-lucide-cloud-off' })
+    return false
+  }
+
   async function submit() {
+    // الإرسالُ للمراجعة متّصلاً وحده: لا يُرسَل كشفٌ لم تصل بنودُه القاعدة
+    const blocked = incentiveSubmitBlock(isOnlineNow())
+    if (blocked) {
+      toast.add({ title: blocked, color: 'warning', icon: 'i-lucide-cloud-off' })
+      return
+    }
     submitting.value = true
     try {
       if (!(await save()) || !statement.value) return
@@ -170,5 +238,9 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     }
   }
 
-  return { loading, loaded, saving, submitting, showErrors, statement, allocated, rows, bounds, canEdit, spent, remaining, errors, hasErrors, addRow, removeRow, save, submit }
+  return {
+    loading, loaded, noCopy, saving, submitting, showErrors, statement, allocated, rows, bounds, canEdit, spent, remaining, errors, hasErrors,
+    onDevice: computed(() => !!offline.pendingEntry.value), rejected: offline.rejected, retryRejected: offline.retry, discardRejected: offline.discard,
+    addRow, removeRow, save, submit
+  }
 }

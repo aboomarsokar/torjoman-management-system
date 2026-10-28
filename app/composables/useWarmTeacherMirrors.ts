@@ -12,6 +12,7 @@ import { PROJECT_START_DATE } from '~/constants/project'
 import type { MyMessage } from '~/composables/useMyMessages'
 import { fetchReadingSettings, fetchReadingUnits, READING_SETTINGS_KEY, READING_UNITS_KEY } from '~/composables/useReadingPlan'
 import { fetchReadingProgress, READING_HALAQAT_KEY, readingProgressKey } from '~/composables/useReadingProgress'
+import { fetchIncentiveStatement, INCENTIVE_HALQA_KEY, incentiveSnapshotKey } from '~/utils/incentiveOutbox'
 import { readCache, WARMED_CACHE_KEY as WARM_KEY, WARMED_SCREENS_CACHE_KEY, writeCache } from '~/utils/offlineCache'
 import { writeSnapshot } from '~/utils/offlineSnapshot'
 import { isOnlineNow } from '~/utils/reachability'
@@ -66,6 +67,16 @@ export function useWarmTeacherMirrors() {
       await writeSnapshot(uid, READING_HALAQAT_KEY, halaqat)
       const hid = halaqat[0]?.id
       if (hid) await snap(uid, readingProgressKey(hid), () => fetchReadingProgress(supabase, hid))
+      // وكشفُ الحوافز: حلقتُه، وكشفا الشهر الجاري والسابق (2026-10-28)
+      await writeSnapshot(uid, INCENTIVE_HALQA_KEY, halaqat[0] ?? null)
+      if (hid) {
+        for (const p of [current, previous]) {
+          await snap(uid, incentiveSnapshotKey(p.year, p.month), async () => {
+            const { itemIds: _ids, ...copy } = await fetchIncentiveStatement(supabase, hid, p.year, p.month)
+            return copy
+          })
+        }
+      }
     }
   }
 

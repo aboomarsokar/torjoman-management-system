@@ -8,10 +8,13 @@ import { keptAbsences, type OutboxEntry } from '~/utils/attendanceOutbox'
 import { idbGet, idbPut } from '~/utils/offlineDb'
 import { entryAsRecord, quranMirrorKey, type QuranEntry, type QuranMirror } from '~/utils/quranOutbox'
 import type { AckEntry } from '~/utils/ackOutbox'
+import { incentiveSnapshotKey, settledSnapshot, uploadIncentiveDraft, type IncentiveEntry, type IncentiveSnapshot } from '~/utils/incentiveOutbox'
+import { patchSnapshot } from '~/utils/offlineSnapshot'
 
 export const ATTENDANCE_QUEUE = 'attendance'
 export const QURAN_QUEUE = 'quran'
 export const ACK_QUEUE = 'acks'
+export const INCENTIVE_QUEUE = 'incentives'
 
 defineOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, {
   store: 'outbox',
@@ -62,4 +65,15 @@ defineOfflineQueue<AckEntry>(ACK_QUEUE, {
     : e.kind === 'quality'
       ? supabase.rpc('acknowledge_quality_month', { p_id: e.id })
       : supabase.from('admin_alerts').update({ status: 'acknowledged', acknowledged_at: e.recordedAt }).eq('id', e.id)
+})
+
+defineOfflineQueue<IncentiveEntry>(INCENTIVE_QUEUE, {
+  store: 'incentive_outbox',
+  order: (a, b) => a.recordedAt.localeCompare(b.recordedAt),
+  upload: uploadIncentiveDraft,
+  // نسخةُ الشهر تحمل البنودَ المرفوعة — فلا تعود القديمةُ إن فُتحت الشاشةُ بلا اتصالٍ بعد الرفع
+  async settle(e, data) {
+    if (typeof data !== 'string') return
+    await patchSnapshot<IncentiveSnapshot>(e.uid, incentiveSnapshotKey(e.year, e.month), snap => settledSnapshot(snap, e, data))
+  }
 })

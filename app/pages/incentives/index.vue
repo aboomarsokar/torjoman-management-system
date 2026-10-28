@@ -7,6 +7,7 @@
 import type { Database } from '~/types/database.types'
 import { STATEMENT_ITEM_CATEGORIES } from '~/constants/incentives'
 import type { StatementItemField } from '~/composables/useIncentiveStatement'
+import { INCENTIVE_HALQA_KEY } from '~/utils/incentiveOutbox'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'كشف الحوافز — ترجمان' })
@@ -23,22 +24,29 @@ const categoryItems = STATEMENT_ITEM_CATEGORIES.map(c => ({ label: c, value: c }
 const now = new Date()
 const yearItems = [now.getFullYear() - 1, now.getFullYear()].map(y => ({ label: String(y), value: y }))
 
-// حلقة المعلّم تلقائيّاً
+// حلقة المعلّم تلقائيّاً — ومن نسخة جهازه بلا اتصال (البند 14، 2026-10-28)
 type NameRow = { id: string, name: string }
-const { data: myHalqa } = useLazyAsyncData<NameRow | null>('inc-my-halqa', async () => {
+const { wrap } = useOfflineCopy()
+const { data: myHalqa } = useLazyAsyncData<NameRow | null>(INCENTIVE_HALQA_KEY, wrap(INCENTIVE_HALQA_KEY, async () => {
   if (role.value !== 'teacher') return null
   const { data } = await supabase.from('halaqat').select('id, name').eq('teacher_id', profile.value?.id ?? '').limit(1).maybeSingle()
   return data
-}, { server: false, default: () => null, watch: [role] })
+}), { server: false, default: () => null, watch: [role] })
 
 const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
 const halaqaId = computed(() => myHalqa.value?.id ?? null)
 const {
-  loading, loaded, saving, submitting, showErrors, statement, allocated, rows, bounds,
-  canEdit: statementEditable, spent, remaining, errors, addRow, removeRow, save, submit
+  loading, loaded, noCopy, saving, submitting, showErrors, statement, allocated, rows, bounds,
+  canEdit: statementEditable, spent, remaining, errors, onDevice, rejected, retryRejected, discardRejected,
+  addRow, removeRow, save, submit
 } = useIncentiveStatement(halaqaId, month, year)
+const statusBadge = computed(() => onDevice.value
+  ? { label: 'على جهازك — بانتظار الرفع', color: 'warning' as const }
+  : statement.value
+    ? { label: STATEMENT_STATUS[statement.value.status]?.label, color: STATEMENT_STATUS[statement.value.status]?.color }
+    : { label: 'جديد — لم يُحفظ', color: 'neutral' as const })
 // المعلّم يعدّل المسودّة فقط (أو كشفاً لم يُحفظ بعد) — حارس القاعدة يرفض أيّ تعديل بعد الإرسال
 const canEdit = computed(() => isTeacher.value && statementEditable.value)
 const errorOf = (i: number, field: StatementItemField) => (showErrors.value ? errors.value[i]?.[field] : undefined)
@@ -102,10 +110,19 @@ const fmt = (n: number) => n.toLocaleString('ar')
       </div>
 
       <ClientOnly>
+        <OfflineSavedNote :keys="[INCENTIVE_HALQA_KEY, 'incentive-statement|*']" />
+        <OfflineRejectedDays
+          v-if="rejected.length"
+          title="لم تقبلها القاعدة"
+          :entries="rejected"
+          @retry="retryRejected"
+          @discard="discardRejected"
+        />
         <UiEmptyState
           v-if="!loaded"
-          :icon="loading ? 'i-lucide-loader-circle' : 'i-lucide-gift'"
-          :title="loading ? 'يُحمَّل الكشف…' : myHalqa ? 'تعذّر تحميل الكشف' : 'لا حلقة معيّنة لك'"
+          :icon="loading ? 'i-lucide-loader-circle' : noCopy ? 'i-lucide-cloud-off' : 'i-lucide-gift'"
+          :title="loading ? 'يُحمَّل الكشف…' : noCopy ? 'كشفُ هذا الشهر ليس على جهازك' : myHalqa ? 'تعذّر تحميل الكشف' : 'لا حلقة معيّنة لك'"
+          :description="noCopy ? 'افتحه مرّةً متّصلاً فيُحفظ على جهازك ويعمل بلا إنترنت.' : undefined"
         />
 
         <template v-else>
@@ -186,8 +203,8 @@ const fmt = (n: number) => n.toLocaleString('ar')
                 >{{ rows.length }}</span>
               </h3>
               <UBadge
-                :label="statement ? STATEMENT_STATUS[statement.status]?.label : 'جديد — لم يُحفظ'"
-                :color="statement ? STATEMENT_STATUS[statement.status]?.color : 'neutral'"
+                :label="statusBadge.label"
+                :color="statusBadge.color"
                 variant="soft"
               />
             </div>

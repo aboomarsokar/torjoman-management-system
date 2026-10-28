@@ -21,6 +21,8 @@ const sentAt = (iso: string) => new Date(iso).toLocaleString('en-GB', {
 // ── جدولُ الرسائل و«عرض» (طلب المستخدم 2026-10-28): العنوانُ والتاريخُ ظاهران، والنصُّ في نافذته ──
 type Row = { id: string, title: string, body: string | null, link: string | null, date: string, sender: string | null, fresh: boolean }
 const columns = [
+  // ترقيمُ الرسائل (طلب المستخدم 2026-10-28)
+  { key: 'num', label: '#' },
   { key: 'title', label: 'الرسالة' },
   { key: 'date', label: 'التاريخ' },
   { key: 'sender', label: 'المرسِل', class: 'col-sender' },
@@ -78,6 +80,9 @@ const open = (r: Row) => {
         row-key="id"
         :row-class="(r: Row) => (r.fresh ? 'is-fresh' : undefined)"
       >
+        <template #num="{ index }">
+          <span class="seq">{{ index + 1 }}</span>
+        </template>
         <template #title="{ row }">
           <span class="t-cell">
             <span class="t-title">{{ row.title }}</span>
@@ -121,12 +126,15 @@ const open = (r: Row) => {
             />
           </span>
         </template>
-        <template #card="{ row }">
+        <template #card="{ row, index }">
           <UiCardRow
             :title="row.title"
             :subtitle="row.date"
             subtitle-dir="ltr"
           >
+            <template #lead>
+              <span class="seq">{{ index + 1 }}</span>
+            </template>
             <template
               v-if="row.fresh"
               #badge
@@ -209,6 +217,7 @@ const open = (r: Row) => {
 .t-title { font-weight: 600; color: var(--ink); }
 .t-date { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
 .muted { color: var(--ink-3); }
+.seq { width: 28px; height: 28px; border-radius: 8px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--ink-3); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .acts { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 /* البطاقة: «عرض» ورابطُ الرسالة متجاوران يتقاسمان العرض */
 .card-acts { display: flex; gap: 8px; width: 100%; }

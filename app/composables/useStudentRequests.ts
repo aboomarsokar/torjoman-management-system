@@ -64,6 +64,7 @@ interface ApproveResult {
   full_name: string
   national_id: string
   female: boolean
+  teacher_id: string | null
   teacher_name: string | null
   teacher_phone: string | null
   request_closed: boolean
@@ -75,6 +76,15 @@ function whatsappFor(res: ApproveResult) {
   })
   const url = whatsappMessageLink(res.teacher_phone, text)
   return url ? { label: res.female ? 'أرسلها للمعلّمة على واتساب' : 'أرسلها للمعلّم على واتساب', url } : null
+}
+
+/** زرُّ «أرسلها عبر المحادثة» — الرسالةُ نفسها بلا تنسيق واتساب، أو null إن لم يكن للحلقة معلّم. */
+export function chatFor(res: Pick<ApproveResult, 'teacher_id' | 'teacher_name' | 'full_name' | 'national_id' | 'temp_password' | 'female'>) {
+  if (!res.teacher_id) return null
+  const text = teacherCredentialsMessage({
+    teacherName: res.teacher_name, studentName: res.full_name, nationalId: res.national_id, password: res.temp_password, female: res.female
+  }, true)
+  return { label: res.female ? 'أرسلها للمعلّمة عبر المحادثة' : 'أرسلها للمعلّم عبر المحادثة', recipientId: res.teacher_id, text }
 }
 
 const SELECT = 'id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'
@@ -167,7 +177,8 @@ export function useStudentRequests(halaqaId?: Ref<string | null | undefined>) {
         loginLabel: 'رقم الهوية',
         loginId: res.national_id,
         password: res.temp_password,
-        whatsapp: whatsappFor(res)
+        whatsapp: whatsappFor(res),
+        chat: chatFor(res)
       }
     } catch (err) {
       handle(err)

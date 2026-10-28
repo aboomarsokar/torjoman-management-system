@@ -15,19 +15,22 @@ export interface CredentialsMessageInput {
   female: boolean
 }
 
-/** نصُّ الرسالة بالعربية — بلا رموزِ قلوب (أسلوبُ رسائل المستخدم). */
-export function teacherCredentialsMessage(m: CredentialsMessageInput): string {
+/**
+ * نصُّ الرسالة بالعربية — بلا رموزِ قلوب (أسلوبُ رسائل المستخدم). `plain` لمحادثة المنصّة: بلا نجومِ واتساب
+ * (تُعرض فيها حرفاً)، ومعه تنبيهُ أنّ الكلمةَ مؤقّتة (2026-10-28).
+ */
+export function teacherCredentialsMessage(m: CredentialsMessageInput, plain = false): string {
   const greeting = m.teacherName ? `السلام عليكم أ. ${m.teacherName.split(' ')[0]} 🌿` : 'السلام عليكم 🌿'
   return [
     greeting,
-    `بيانات دخول ${m.female ? 'الطالبة' : 'الطالب'} *${m.studentName}* على منصة ترجمان القرآنية:`,
+    `بيانات دخول ${m.female ? 'الطالبة' : 'الطالب'} ${plain ? m.studentName : `*${m.studentName}*`} على منصة ترجمان القرآنية:`,
     '',
     `🔗 الرابط: ${LOGIN_LINK}`,
     `👤 اسم المستخدم (رقم الهوية): ${m.nationalId}`,
     `🔑 كلمة المرور المؤقّتة: ${m.password}`,
     '',
     `${m.female ? 'تختار' : 'يختار'} كلمةَ مرورٍ جديدة عند أوّل دخول.`
-  ].join('\n')
+  ].join('\n') + (plain ? '\n⚠️ الكلمةُ مؤقّتة وتبطل بعد أوّل دخول.' : '')
 }
 
 /** رابطُ واتساب برسالةٍ جاهزة، أو null إن لم يكن للمعلّم رقمٌ صالح. */

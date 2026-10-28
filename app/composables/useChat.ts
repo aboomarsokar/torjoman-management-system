@@ -63,5 +63,18 @@ export function useChatList() {
     return data
   }
 
-  return { chats, loaded, unread, refresh, clearUnread, contacts, startWith }
+  /** يرسل نصّاً في محادثةٍ خاصّةٍ مع شخص (يبدؤها إن لم تكن) ويُعيد معرّفَها، أو null عند الخطأ. */
+  async function sendDirect(otherId: string, text: string): Promise<string | null> {
+    const id = await startWith(otherId)
+    if (!id) return null
+    const { error } = await supabase.rpc('send_chat_message', { p_conversation: id, p_body: text })
+    if (error) {
+      handle(error)
+      return null
+    }
+    void refresh()
+    return id
+  }
+
+  return { chats, loaded, unread, refresh, clearUnread, contacts, startWith, sendDirect }
 }

@@ -21,6 +21,15 @@ describe('teacherCredentialsMessage', () => {
   })
 })
 
+describe('teacherCredentialsMessage — المحادثة', () => {
+  it('بلا نجوم واتساب ومعه تنبيهُ الكلمة المؤقّتة', () => {
+    const t = teacherCredentialsMessage(base, true)
+    expect(t).toContain('الطالب مصطفى عاطف مصطفى التتر على')
+    expect(t).not.toContain('*')
+    expect(t.endsWith('⚠️ الكلمةُ مؤقّتة وتبطل بعد أوّل دخول.')).toBe(true)
+  })
+})
+
 describe('whatsappMessageLink', () => {
   it('يحوّل 05… إلى 970 ويُرمّز النصّ', () => {
     expect(whatsappMessageLink('0599123456', 'سلام عليكم')).toBe(`https://wa.me/970599123456?text=${encodeURIComponent('سلام عليكم')}`)

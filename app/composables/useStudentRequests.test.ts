@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blankStudentRequest, studentRequestError } from './useStudentRequests'
+import { blankStudentRequest, chatFor, studentRequestError } from './useStudentRequests'
 
 const draft = (over: Partial<ReturnType<typeof blankStudentRequest>> = {}) =>
   ({ ...blankStudentRequest(), full_name: 'مصطفى عاطف مصطفى التتر', national_id: '432248433', ...over })
@@ -19,5 +19,19 @@ describe('studentRequestError', () => {
   })
   it('جوالُ وليّ الأمر 05 وعشرُ خانات', () => {
     expect(studentRequestError(draft({ guardian_phone: '599514359' }))).toBe('جوال وليّ الأمر عشر خانات يبدأ بـ05.')
+  })
+})
+
+describe('chatFor', () => {
+  const res = { teacher_id: 't1', teacher_name: 'سجى حسن', full_name: 'آية أحمد', national_id: '432248433', temp_password: 'Ab12-xy', female: true }
+  it('للمعلّمة بالمؤنّث وبالرسالة غير المنسّقة', () => {
+    const c = chatFor(res)!
+    expect(c.label).toBe('أرسلها للمعلّمة عبر المحادثة')
+    expect(c.recipientId).toBe('t1')
+    expect(c.text).toContain('Ab12-xy')
+    expect(c.text).not.toContain('*')
+  })
+  it('null لحلقةٍ بلا معلّم', () => {
+    expect(chatFor({ ...res, teacher_id: null })).toBeNull()
   })
 })

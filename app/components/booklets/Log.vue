@@ -115,6 +115,11 @@ const columns = computed(() => [
 
 <style scoped>
 .log { display: flex; flex-direction: column; gap: 12px; }
+/* حين تحدّد الصفحةُ ارتفاعَه (عرضُ السجلّ بلا تمريرٍ للصفحة): الجدولُ يملأ ما بقي ويُمرَّر داخله، والرأسُ ثابتٌ في أعلاه */
+.log :deep(.dt) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.log :deep(.table-wrap) { flex: 1; min-height: 0; overflow-y: auto; }
+.log :deep(.table-wrap th) { top: 0; }
+.log > :last-child { flex: none; }
 .muted { color: var(--ink-3); font-size: 13px; }
 .num { font-variant-numeric: tabular-nums; }
 .halaqa { color: var(--ink); font-weight: 600; }

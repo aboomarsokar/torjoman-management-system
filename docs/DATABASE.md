@@ -1188,3 +1188,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 - **`sms_log`** — القراءةُ: المديرُ الإداريّ ومشرفُ المشروع كلَّه، والمديرُ الفنيّ والمديرةُ الإدارية ما أرسلاه (`sent_by = auth.uid()`).
 - **`scheduled_messages`** — المديرُ الفنيّ (البنين) والمديرةُ الإدارية (البنات) يجدولان بقناة SMS أيضاً؛ والحارسُ يحصر SMS في الأدوار الثلاثة، والقسمُ مفروضٌ كما كان.
+
+## المحادثاتُ الفورية (2026-10-27)
+
+> هجرتا `20261027135113_chat` و`20261027140824_chat_list_read_receipt`. الجداولُ الثلاثةُ الأولى في نشر `supabase_realtime`.
+
+- **`chat_conversations`** — `kind` (`direct`/`group`)، `group_key` (`management`/`male_teachers`/`female_teachers`)، `direct_key` (المعرّفان مرتّبين)، `title`، `last_message`/`last_message_at`/`last_sender_id`.
+- **`chat_members`** — (`conversation_id`, `profile_id`)، `last_read_at` (لعدّاد غير المقروء وعلامة «قُرئت»)، `joined_at`.
+- **`chat_messages`** — `conversation_id`، `sender_id`، `body` (1–2000)، `created_at`.
+- **`user_presence`** — `profile_id`، `last_seen_at` (يقرؤها صاحبُها ومن يحقّ له محادثتُه).
+- **RLS:** القراءةُ لأعضاء المحادثة (`my_chat_conversation_ids()`)، ولا كتابةَ مباشرة؛ حارسُ النيابة على الأربعة.
+- **الدوال:** `private.chat_contact_ids` / `private.can_chat` (من يحادث من)، `private.sync_chat_groups` (مشغّلُ `profiles_sync_chat_groups` على الدور والحالة والجنس)، `start_direct_chat`، `send_chat_message`، `mark_chat_read` و`touch_presence` (بلا أثرٍ في النيابة)، `my_chats` (مع `last_read_by_others`)، `chat_contacts`، `chat_conversation_members`.

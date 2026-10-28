@@ -118,6 +118,7 @@ const mainNav: Item[] = [
   { key: 'sms', label: 'رسائل SMS', icon: 'i-lucide-message-square-text', to: '/sms', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true },
   // تذكيراتٌ تُرسَل وحدها في موعدها (طلب المستخدم 2026-10-27) — كلٌّ لقسمه، وSMS للمدير الإداريّ
   { key: 'scheduled', label: 'الرسائل المجدولة', icon: 'i-lucide-calendar-clock', to: '/scheduled', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true },
+  { key: 'chat', label: 'المحادثات', icon: 'i-lucide-messages-square', to: '/chat', roles: [...LEADERS, WOMEN, FIELD, 'examiner', 'teacher'], group: 'supervision', isNew: true },
   { key: 'announcements', label: 'رسائل للكادر', icon: 'i-lucide-megaphone', to: '/announcements', roles: [...LEADERS, WOMEN], group: 'supervision', isNew: true }
 ]
 
@@ -183,10 +184,13 @@ const activeItem = computed(() => visibleItems.value
   .reduce<Item | null>((best, i) => (!best || (i.to ?? '').length > (best.to ?? '').length ? i : best), null))
 const { unread: unreadMessages } = useUnreadMessages()
 const { open: openStudentRequests } = useOpenStudentRequestsCount()
-/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27). */
+const { unread: unreadChats } = useChatList()
+/** رقمٌ بجانب البند — غيرُ المقروء من رسائل الإدارة والمحادثات، وطلباتُ إضافة الطلاب المفتوحة (2026-10-27). */
 const countOf = (item: Item) => (item.key === 'messages'
   ? unreadMessages.value
-  : item.key === 'student-requests' ? openStudentRequests.value : 0)
+  : item.key === 'student-requests'
+    ? openStudentRequests.value
+    : item.key === 'chat' ? unreadChats.value : 0)
 /** مجموعُ أعداد بنود المجموعة — يظهر على عنوانها أيضاً (طلب المستخدم 2026-10-27). */
 const groupCount = (items: Item[]) => items.reduce((n, i) => n + countOf(i), 0)
 const { isNewFor } = useNavNewBadges(activeItem, computed(() => profile.value?.id))
@@ -446,6 +450,7 @@ const isActive = (item: Item) => matches(item) && (!!item.tab || item.qtab !== u
         class="content"
       >
         <slot />
+        <ClientOnly><ChatWatcher /></ClientOnly>
       </main>
       <UiBackToTop :container="contentEl" />
     </div>

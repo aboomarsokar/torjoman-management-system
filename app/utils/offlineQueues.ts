@@ -10,11 +10,15 @@ import { entryAsRecord, quranMirrorKey, type QuranEntry, type QuranMirror } from
 import type { AckEntry } from '~/utils/ackOutbox'
 import { incentiveSnapshotKey, settledSnapshot, uploadIncentiveDraft, type IncentiveEntry, type IncentiveSnapshot } from '~/utils/incentiveOutbox'
 import { patchSnapshot } from '~/utils/offlineSnapshot'
+import { SCREEN_KEYS } from '~/utils/teacherScreens'
+import { settledVisits, uploadVisitResult, type VisitEntry } from '~/utils/visitOutbox'
+import type { VisitRow } from '~/types/visits'
 
 export const ATTENDANCE_QUEUE = 'attendance'
 export const QURAN_QUEUE = 'quran'
 export const ACK_QUEUE = 'acks'
 export const INCENTIVE_QUEUE = 'incentives'
+export const VISIT_QUEUE = 'visits'
 
 defineOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, {
   store: 'outbox',
@@ -75,5 +79,15 @@ defineOfflineQueue<IncentiveEntry>(INCENTIVE_QUEUE, {
   async settle(e, data) {
     if (typeof data !== 'string') return
     await patchSnapshot<IncentiveSnapshot>(e.uid, incentiveSnapshotKey(e.year, e.month), snap => settledSnapshot(snap, e, data))
+  }
+})
+
+defineOfflineQueue<VisitEntry>(VISIT_QUEUE, {
+  store: 'visit_outbox',
+  order: (a, b) => a.recordedAt.localeCompare(b.recordedAt),
+  upload: uploadVisitResult,
+  // الصفُّ المرفوع (قفلُه ومجموعُه من القاعدة) يدخل نسخةَ الزيارات — فيبقى مقفلاً إن فُتحت الشاشةُ بلا اتصالٍ بعد الرفع
+  async settle(e, data) {
+    await patchSnapshot<VisitRow[]>(e.uid, SCREEN_KEYS.visits, rows => settledVisits(rows, e.visitId, data as Partial<VisitRow>))
   }
 })

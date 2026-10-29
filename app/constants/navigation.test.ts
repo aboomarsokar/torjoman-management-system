@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { OFFLINE_DASHBOARD, offlineStartFor } from './offline'
 import { EXAMINER_OFFLINE_PATHS, OFFLINE_PATHS, SUPERVISOR_OFFLINE_PATHS, offlinePathsFor, offlineRedirect, orderByKeys, TEACHER_NAV_ORDER } from './navigation'
 
 describe('orderByKeys', () => {
@@ -36,6 +37,9 @@ describe('offlineRedirect', () => {
     expect(offlineRedirect('/dashboard', 'teacher')).toBe('/t/home')
     expect(offlineRedirect('/visits', 'teacher')).toBeNull()
   })
+  it('/exams ليست للمعلّم فتُحوَّل إلى لوحته', () => {
+    expect(offlineRedirect('/exams', 'teacher')).toBe('/t/home')
+  })
   it('بلا دورٍ محفوظ كالمعلّم', () => {
     expect(offlineRedirect('/dashboard', null)).toBe('/t/home')
   })
@@ -44,5 +48,14 @@ describe('offlineRedirect', () => {
     expect(offlineRedirect('/t/home', 'examiner')).toBe('/exams')
     expect(offlineRedirect('/exams', 'examiner')).toBeNull()
     expect(offlineRedirect('/visits', 'field_supervisor')).toBeNull()
+  })
+})
+
+describe('offlineStartFor', () => {
+  it('شاشةُ الإقلاع بحسب الدور، وللمعلّم ولمن لا دورَ له اللوحة', () => {
+    expect(offlineStartFor('field_supervisor')).toBe('/visits')
+    expect(offlineStartFor('examiner')).toBe('/exams')
+    expect(offlineStartFor('teacher')).toBe(OFFLINE_DASHBOARD)
+    expect(offlineStartFor(null)).toBe(OFFLINE_DASHBOARD)
   })
 })

@@ -8,6 +8,13 @@ import { offlineOwnerRole, type OfflineOwnerRole } from '~/utils/offlineSnapshot
 
 export const OFFLINE_NAV_MESSAGE = 'هذه الشاشة تحتاج اتصالاً — بلا إنترنت تعمل لوحةُ التحكم والحضورُ اليوميّ والإنجازُ القرآنيّ.'
 
+/** رسالةُ «تحتاج اتصالاً» بحسب دور صاحب الجهاز — تذكر الشاشاتِ التي تعمل له بلا إنترنت (المعلّمُ ومن لا دورَ له: نصُّه القائم). */
+export function offlineNavMessage(role: OfflineOwnerRole | null): string {
+  if (role === 'field_supervisor') return 'هذه الشاشة تحتاج اتصالاً — بلا إنترنت تعمل الزياراتُ وملفُّك الشخصيّ.'
+  if (role === 'examiner') return 'هذه الشاشة تحتاج اتصالاً — بلا إنترنت تعمل الاختباراتُ وملفُّك الشخصيّ.'
+  return OFFLINE_NAV_MESSAGE
+}
+
 /** مسارُ الرابط بلا استعلام (`/t/quran?y=2026&m=10` ← `/t/quran`). */
 export function linkPath(to: string): string {
   return to.split(/[?#]/)[0] ?? to
@@ -27,7 +34,7 @@ export function useOfflineNav() {
     check()
     if (!needsNetwork(to)) return false
     event?.preventDefault()
-    toast.add({ title: OFFLINE_NAV_MESSAGE, icon: 'i-lucide-wifi-off', color: 'warning' })
+    toast.add({ title: offlineNavMessage(offlineOwnerRole()), icon: 'i-lucide-wifi-off', color: 'warning' })
     return true
   }
   return { online, needsNetwork, blockIfOffline }

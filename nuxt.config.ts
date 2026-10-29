@@ -66,7 +66,9 @@ export default defineNuxtConfig({
     '/messages': { ssr: false, prerender: true },
     '/profile/me': { ssr: false, prerender: true },
     // الدفعةُ الثانية (2026-10-28): كشفُ الحوافز يُكتب بلا اتصال (صندوقُ `incentive_outbox`)
-    '/incentives': { ssr: false, prerender: true }
+    '/incentives': { ssr: false, prerender: true },
+    // شاشةُ المختبِر بلا إنترنت (2026-10-29): تُصيَّر في المتصفّح كشاشة زيارات المشرف
+    '/exams': { ssr: false, prerender: true }
   },
 
   compatibilityDate: '2025-01-15',
@@ -129,7 +131,7 @@ export default defineNuxtConfig({
       navigateFallback: '/t/home',
       navigateFallbackAllowlist: [
         /^\/t(\/home|\/quran|\/students|\/students\/view)?$/,
-        /^\/(exam-plan|programs|visits|quality|alerts|messages|profile\/me|incentives)$/
+        /^\/(exam-plan|programs|visits|quality|alerts|messages|profile\/me|incentives|exams)$/
       ],
       // الشاشاتُ المخزَّنة تُطابَق بلا استعلام الرابط (`/quality?y=…&m=…`، `/programs?tab=units`): هياكلُ تُصيَّر في
       // المتصفّح، والاستعلامُ يقرؤه الموجِّه لا الخادم

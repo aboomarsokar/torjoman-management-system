@@ -12,9 +12,9 @@ import type { Database } from '~/types/database.types'
 import { CHANGE_PASSWORD_PATH } from '~/constants/auth'
 import { accountGateDecision, type GateProfile } from '~/utils/accountGate'
 import { isSessionSwitching } from '~/utils/impersonation'
-import { OFFLINE_DASHBOARD, OFFLINE_HOME, OFFLINE_QURAN } from '~/constants/offline'
-import { OFFLINE_PATHS } from '~/constants/navigation'
-import { hasOfflineTeacher } from '~/utils/offlineDb'
+import { offlinePathsFor, offlineRedirect } from '~/constants/navigation'
+import { hasOfflineOwner } from '~/utils/offlineDb'
+import { offlineOwnerRole } from '~/utils/offlineSnapshot'
 import { isOnlineNow } from '~/utils/reachability'
 
 const PUBLIC_PATHS = ['/', '/login']
@@ -22,16 +22,14 @@ const PUBLIC_PATHS = ['/', '/login']
 type Profile = Database['public']['Tables']['profiles']['Row']
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  // بلا إنترنت (البند 14): لا تعمل إلا شاشاتُ المعلّم المخزَّنة (لوحتُه وحضورُه وإنجازُه) — تُفتح بلا جلسةٍ ولا ملفّ
-  // (لا شبكةَ تؤكّدهما)، وكلُّ شاشةٍ محميّةٍ تُحوَّل إلى اللوحة («الحضور اليوميّ» و«الإنجاز القرآني» إلى شاشتيهما)؛
-  // والرئيسيةُ كذلك إن كان على الجهاز معلّمٌ فتحه من قبل
+  // بلا إنترنت (البند 14): لا تعمل إلا الشاشاتُ المخزَّنة لدور صاحب الجهاز (المعلّم: لوحتُه وحضورُه وإنجازُه؛ والمشرفُ
+  // الميدانيّ: زياراتُه؛ والمختبِر: اختباراتُه — 2026-10-29) — تُفتح بلا جلسةٍ ولا ملفّ (لا شبكةَ تؤكّدهما)، وكلُّ شاشةٍ
+  // محميّةٍ تُحوَّل إلى شاشة الدور (`offlineRedirect`)؛ والرئيسيةُ كذلك إن كان على الجهاز صاحبُ دورٍ فتحه من قبل
   if (import.meta.client && !isOnlineNow()) {
-    if (OFFLINE_PATHS.includes(to.path)) return
+    const role = offlineOwnerRole()
+    if (offlinePathsFor(role).includes(to.path)) return
     const publicRead = to.path.startsWith('/s/') || to.path.startsWith('/news/') || to.path.startsWith('/auth')
-    const target = to.path === '/reports'
-      ? OFFLINE_QURAN
-      : to.path === '/attendance' ? OFFLINE_HOME : to.path.startsWith('/students') ? '/t/students' : OFFLINE_DASHBOARD
-    if (!publicRead && (to.path !== '/' || await hasOfflineTeacher())) return navigateTo(target)
+    if (!publicRead && (to.path !== '/' || await hasOfflineOwner())) return navigateTo(offlineRedirect(to.path, role))
   }
 
   const user = useSupabaseUser()

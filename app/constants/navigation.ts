@@ -1,3 +1,7 @@
+import { OFFLINE_DASHBOARD, OFFLINE_HOME, OFFLINE_QURAN, offlineStartFor } from '~/constants/offline'
+// نوعٌ فقط (يُمحى عند البناء) فلا استيرادَ دائريّ
+import type { OfflineOwnerRole } from '~/utils/offlineSnapshot'
+
 /**
  * ترتيبُ قائمة المعلّم — مسطّحةٌ بلا مجموعاتٍ تُطوى (طلب المستخدم 2026-10-26: «ما بدي قوائم منسدلة… وأعد ترتيبهم»).
  * أُعيد 2026-10-27 («أعد ترتيب التبويبات جيداً») على مسار العمل: عملُ اليوم ← الاختبارات والبرامج ← ما يصل من الإدارة ←
@@ -39,3 +43,29 @@ export const OFFLINE_PATHS = [
   // الدفعةُ الثانية (2026-10-28): كشفُ الحوافز — يُكتب على الجهاز ويُرفع حين يعود الاتصال، والإرسالُ متّصلاً
   '/incentives'
 ]
+
+/** شاشاتُ المشرف الميدانيّ بلا إنترنت (2026-10-29) — زياراتُه وملفُّه الشخصيّ. */
+export const SUPERVISOR_OFFLINE_PATHS = ['/visits', '/profile/me']
+
+/** شاشاتُ المختبِر بلا إنترنت (2026-10-29) — اختباراتُه وملفُّه الشخصيّ. */
+export const EXAMINER_OFFLINE_PATHS = ['/exams', '/profile/me']
+
+/** الشاشاتُ التي تعمل بلا إنترنت لدورِ صاحب الجهاز — المعلّمُ (أو من لا دورَ محفوظاً له) `OFFLINE_PATHS` بلا تغيير. */
+export function offlinePathsFor(role: OfflineOwnerRole | null): readonly string[] {
+  if (role === 'field_supervisor') return SUPERVISOR_OFFLINE_PATHS
+  if (role === 'examiner') return EXAMINER_OFFLINE_PATHS
+  return OFFLINE_PATHS
+}
+
+/**
+ * وجهةُ التحويل بلا اتصال، أو null إن كان المسارُ مسموحاً لهذا الدور. للمعلّم تحويلاتُه كما كانت في الوسيط
+ * (الإنجازُ والحضورُ والطلابُ ثمّ اللوحة)، وللمشرف والمختبِر شاشةُ إقلاعهما.
+ */
+export function offlineRedirect(path: string, role: OfflineOwnerRole | null): string | null {
+  if (offlinePathsFor(role).includes(path)) return null
+  if (role === 'field_supervisor' || role === 'examiner') return offlineStartFor(role)
+  if (path === '/reports') return OFFLINE_QURAN
+  if (path === '/attendance') return OFFLINE_HOME
+  if (path.startsWith('/students')) return '/t/students'
+  return OFFLINE_DASHBOARD
+}

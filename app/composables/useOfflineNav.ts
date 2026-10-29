@@ -1,8 +1,10 @@
 /**
- * أيُّ الروابط تعمل بلا إنترنت (البند 14): شاشاتُ المعلّم المخزَّنة وحدها (`OFFLINE_PATHS`). غيرُها يُعتَم ويقول ضغطُه
- * ذلك بدل أن يُحوَّل صامتاً — في القائمة وفي أزرار لوحة المعلّم وبطاقاتها (طلب المستخدم 2026-10-26).
+ * أيُّ الروابط تعمل بلا إنترنت (البند 14): الشاشاتُ المخزَّنة لدور صاحب الجهاز وحدها (`offlinePathsFor` — للمعلّم
+ * `OFFLINE_PATHS`، وللمشرف الميدانيّ والمختبِر شاشتاهما، 2026-10-29). غيرُها يُعتَم ويقول ضغطُه ذلك بدل أن يُحوَّل
+ * صامتاً — في القائمة وفي أزرار لوحة المعلّم وبطاقاتها (طلب المستخدم 2026-10-26).
  */
-import { OFFLINE_PATHS } from '~/constants/navigation'
+import { offlinePathsFor } from '~/constants/navigation'
+import { offlineOwnerRole, type OfflineOwnerRole } from '~/utils/offlineSnapshot'
 
 export const OFFLINE_NAV_MESSAGE = 'هذه الشاشة تحتاج اتصالاً — بلا إنترنت تعمل لوحةُ التحكم والحضورُ اليوميّ والإنجازُ القرآنيّ.'
 
@@ -11,8 +13,9 @@ export function linkPath(to: string): string {
   return to.split(/[?#]/)[0] ?? to
 }
 
-export function worksOffline(to: string | undefined): boolean {
-  return !!to && OFFLINE_PATHS.includes(linkPath(to))
+/** هل يعمل الرابطُ بلا إنترنت لدور صاحب الجهاز المحفوظ (أو للدور المعطى)؟ */
+export function worksOffline(to: string | undefined, role: OfflineOwnerRole | null = offlineOwnerRole()): boolean {
+  return !!to && offlinePathsFor(role).includes(linkPath(to))
 }
 
 export function useOfflineNav() {

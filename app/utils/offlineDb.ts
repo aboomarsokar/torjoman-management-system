@@ -87,8 +87,8 @@ export async function forgetOfflineTeacher(): Promise<void> {
   }
 }
 
-/** هل فتح معلّمٌ شاشةَ الحضور على هذا الجهاز من قبل (فله نسخةٌ تعمل بلا إنترنت)؟ */
-export async function hasOfflineTeacher(): Promise<boolean> {
+/** هل فتح صاحبُ دورٍ يعمل بلا إنترنت (معلّمٌ أو مشرفٌ أو مختبِر) شاشتَه على هذا الجهاز من قبل (فله نسخةٌ تعمل)؟ */
+export async function hasOfflineOwner(): Promise<boolean> {
   try {
     return !!(await idbGet<string>('meta', 'current'))
   } catch {

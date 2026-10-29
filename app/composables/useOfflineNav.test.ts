@@ -8,6 +8,12 @@ describe('worksOffline', () => {
     expect(worksOffline('/students')).toBe(false)
     expect(worksOffline(undefined)).toBe(false)
   })
+  it('رابطُ /exams يعمل للمختبِر بلا اتصال ويُعتَم للمعلّم', () => {
+    expect(worksOffline('/exams', 'examiner')).toBe(true)
+    expect(worksOffline('/exams?x=1', 'examiner')).toBe(true)
+    expect(worksOffline('/exams', 'teacher')).toBe(false)
+    expect(worksOffline('/t/home', 'field_supervisor')).toBe(false)
+  })
   it('المسارُ بلا استعلام', () => {
     expect(linkPath('/incentives?tab=a#x')).toBe('/incentives')
   })

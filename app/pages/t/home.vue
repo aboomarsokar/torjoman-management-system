@@ -4,12 +4,18 @@
  * تُصيَّر في المتصفّح وتُخزَّن في عامل الخدمة؛ والبياناتُ آخرُ ما جُلب متّصلاً (`useTeacherDashboard` يحفظه على الجهاز)
  * وفيه ما سجّله المعلّمُ بعده على جهازه. غيرُ المعلّم يُحوَّل إلى `/dashboard`.
  */
+import { offlineStartFor } from '~/constants/offline'
+import { isOnlineNow } from '~/utils/reachability'
+import { offlineOwnerRole } from '~/utils/offlineSnapshot'
+
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'لوحة التحكم — ترجمان', robots: 'noindex' })
 
 const { role, fullName, profile, pending } = useProfile()
 watch(role, (r) => {
-  if (r && r !== 'teacher') navigateTo('/dashboard', { replace: true })
+  if (!r || r === 'teacher') return
+  // بلا اتصال: المشرفُ الميدانيّ والمختبِر إلى شاشتيهما المخزَّنتين (لا `/dashboard` فتُحوَّل ثانيةً) — 2026-10-29
+  navigateTo(isOnlineNow() ? '/dashboard' : offlineStartFor(offlineOwnerRole()), { replace: true })
 }, { immediate: true })
 
 // متّصلاً: نُسخُ الحضور والإنجاز والطلاب تُحدَّث في الخلفية — فتعمل شاشاتُها بلا إنترنت ولو لم تُفتح قبلُ

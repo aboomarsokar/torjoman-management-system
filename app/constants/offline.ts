@@ -1,6 +1,8 @@
 /**
  * الحضورُ بلا إنترنت (البند 14 — نمطُ الصحابة، 2026-10-26): ثوابتُ النسخة المحلّية وصندوقِ الرفع.
  */
+// نوعٌ فقط (يُمحى عند البناء) فلا استيرادَ دائريّ مع `offlineSnapshot` الذي يستورد هذا الملفّ بدوره
+import type { OfflineOwnerRole } from '~/utils/offlineSnapshot'
 
 /** قاعدةُ الجهاز (IndexedDB) ونسختُها — رفعُ النسخة يعيد بناء المخازن. */
 export const OFFLINE_DB_NAME = 'torjoman-offline'
@@ -26,3 +28,16 @@ export const OFFLINE_DASHBOARD = '/t/home'
 
 /** الإنجازُ القرآنيّ للمعلّم بلا إنترنت (2026-10-27). */
 export const OFFLINE_QURAN = '/t/quran'
+
+/** شاشةُ المشرف الميدانيّ بلا إنترنت — يُقلع عليها جهازُه، وإليها يُحوَّل التنقّلُ بلا اتصال (2026-10-29). */
+export const OFFLINE_SUPERVISOR_HOME = '/visits'
+
+/** شاشةُ المختبِر بلا إنترنت — يُقلع عليها جهازُه، وإليها يُحوَّل التنقّلُ بلا اتصال (2026-10-29). */
+export const OFFLINE_EXAMINER_HOME = '/exams'
+
+/** شاشةُ الإقلاع بلا إنترنت بحسب دورِ صاحب الجهاز: المعلّمُ (أو من لا دورَ محفوظاً له) على لوحته. */
+export function offlineStartFor(role: OfflineOwnerRole | null): string {
+  if (role === 'field_supervisor') return OFFLINE_SUPERVISOR_HOME
+  if (role === 'examiner') return OFFLINE_EXAMINER_HOME
+  return OFFLINE_DASHBOARD
+}

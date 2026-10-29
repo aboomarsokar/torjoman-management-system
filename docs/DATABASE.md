@@ -1207,3 +1207,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع، ولا كتابةَ مباشرة؛ حارسُ النيابة على الجدولين.
 - **المشغّل** `booklet_deliveries_stock` (`private.booklet_stock_on_delivery`، بعد الإدراج والحذف وتعديل الملزمة أو النسخ): يخصم ويرفض إن لم يكفِ الرصيد، ويُرجع صافيَ ما خُصم للتسليم عند حذفه أو تعديله.
 - **الدوال:** `set_booklet_stock(booklet, quantity, alert_at, note, moved_on)` جرد، و`add_booklet_stock(booklet, copies, note, moved_on)` توريد، و`update_booklet_stock_move(move, note, moved_on)` تعديلُ الملاحظة والتاريخ (التاريخُ للتوريد والجرد) — للمدير الإداريّ. (هجرتا `…092410_booklet_stock_move_note` و`…092604_booklet_stock_move_date`.)
+
+## حذفُ رسائل المحادثات (2026-10-29)
+
+> هجرة `20261029164617_chat_delete_message`.
+
+- **`chat_messages.deleted_at`** — وقتُ الحذف؛ والمحذوفةُ نصُّها فارغ (القيد: نصٌّ 1–2000 لغير المحذوفة، وفارغٌ للمحذوفة).
+- **`delete_chat_message(message)`** — للمرسِل وحده: يمحو النصَّ ويضع الوقت، ويحدّث `last_message` إلى «🚫 حُذفت رسالة» إن كانت الأخيرة.

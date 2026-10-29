@@ -468,6 +468,7 @@ export type Database = {
           body: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           sender_id: string | null
         }
@@ -475,6 +476,7 @@ export type Database = {
           body: string
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           sender_id?: string | null
         }
@@ -482,6 +484,7 @@ export type Database = {
           body?: string
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           sender_id?: string | null
         }
@@ -2802,6 +2805,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      delete_chat_message: { Args: { p_message: string }; Returns: undefined }
       deliver_booklet_request: {
         Args: { p_delivered_on: string; p_request: string }
         Returns: string

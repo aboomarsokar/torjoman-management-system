@@ -1,6 +1,7 @@
 /**
  * محادثةٌ مفتوحة (طلب المستخدم 2026-10-27): آخرُ رسائلها وأعضاؤها بآخر قراءة كلٍّ منهم، والإرسال، وتعليمُها مقروءة،
- * والبثُّ اللحظيّ لرسائلها الجديدة ولقراءة الآخرين (علامة «قُرئت»). القناةُ تتبع المحادثةَ المفتوحة وتُغلق عند المغادرة.
+ * والبثُّ اللحظيّ لرسائلها الجديدة ولقراءة الآخرين (علامة «قُرئت»)، وحذفُ المرسِل رسالتَه للجميع (2026-10-29).
+ * القناةُ تتبع المحادثةَ المفتوحة وتُغلق عند المغادرة.
  */
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
@@ -48,6 +49,11 @@ export function useChatThread(conversationId: Ref<string | null>) {
           messages.value = mergeMessage(messages.value, payload.new as ChatMessage)
           void markRead()
         })
+      // الحذفُ تعديلٌ للصفّ (نصٌّ فارغ ووقتُ الحذف): يُستبدل عند الطرفين لحظياً
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `conversation_id=eq.${id}` },
+        (payload) => {
+          messages.value = mergeMessage(messages.value, payload.new as ChatMessage)
+        })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_members', filter: `conversation_id=eq.${id}` },
         (payload) => {
           const row = payload.new as { profile_id: string, last_read_at: string }
@@ -82,6 +88,18 @@ export function useChatThread(conversationId: Ref<string | null>) {
     return true
   }
 
+  /** يحذف المرسِلُ رسالتَه للجميع — يُمحى نصُّها ويبقى مكانُها «حُذفت هذه الرسالة». */
+  async function remove(messageId: string): Promise<boolean> {
+    const { error } = await supabase.rpc('delete_chat_message', { p_message: messageId })
+    if (error) {
+      handle(error)
+      return false
+    }
+    const { data: row } = await supabase.from('chat_messages').select('*').eq('id', messageId).maybeSingle()
+    if (row) messages.value = mergeMessage(messages.value, row)
+    return true
+  }
+
   function onVisible() {
     if (!document.hidden) void markRead()
   }
@@ -103,5 +121,5 @@ export function useChatThread(conversationId: Ref<string | null>) {
     dropChannel()
   })
 
-  return { messages, members, loading, sending, send }
+  return { messages, members, loading, sending, send, remove }
 }

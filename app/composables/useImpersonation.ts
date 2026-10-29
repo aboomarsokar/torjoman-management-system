@@ -10,7 +10,7 @@ import type { Database } from '~/types/database.types'
 import type { ImpersonationStatus } from '~/constants/impersonation'
 import {
   IMPERSONATION_BLOCKED_MESSAGE, IMPERSONATION_STATE_KEY, isSessionSwitching, markSessionSwitching, sessionReadOnly,
-  SESSION_SWITCH_FAILED, shouldReloadOnIdentityChange
+  SESSION_SWITCH_FAILED, setImpersonatingNow, shouldReloadOnIdentityChange
 } from '~/utils/impersonation'
 import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
 
@@ -60,11 +60,17 @@ export function useImpersonation() {
   /** «ليست نيابةً» يقيناً: قبل اكتمال الفحص مجهول — فما يُمنع في النيابة لا يومض قبله. */
   const notImpersonating = computed(() => isChecked.value && state.value === null)
 
+  /** الكتابةُ الوحيدة في الحالة — ومعها علَمُ «نيابةٌ الآن» الذي تقرؤه نُسخُ الجهاز بلا سياق Nuxt. */
+  function setState(s: ImpersonationStatus | null): void {
+    state.value = s
+    setImpersonatingNow(!!s && !s.ended)
+  }
+
   /** يسأل الخادم؛ تعثّرُ الشبكة لا يُخفي شريطاً ظاهراً (تبقى الحالةُ كما هي). */
   async function refresh(): Promise<void> {
     try {
       const s = await $fetch<ImpersonationStatus | null>('/api/me/impersonation')
-      state.value = s && typeof s === 'object' ? s : null
+      setState(s && typeof s === 'object' ? s : null)
       isChecked.value = true
     } catch (err) {
       console.error('[useImpersonation] تعذّر فحصُ النيابة:', err)
@@ -112,7 +118,7 @@ export function useImpersonation() {
   /** خروجٌ محلّيّ إلى الدخول — الحالةُ تُفرَّغ (لا شريطَ لمن يدخل بعده). */
   async function signOutLocally(message: string): Promise<void> {
     await client.auth.signOut({ scope: 'local' })
-    state.value = null
+    setState(null)
     isChecked.value = false
     // روابطُ الصور الموقَّعة لصاحب الجلسة السابقة (تفريغٌ لا محو — انظر useAuth.signOut)
     useState(PROFILE_PHOTOS_SIGNED_KEY).value = {}

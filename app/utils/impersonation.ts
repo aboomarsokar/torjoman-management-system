@@ -106,3 +106,16 @@ export function markSessionSwitching(on: boolean): void {
 export function isSessionSwitching(): boolean {
   return switching
 }
+
+// ── علَمُ «نيابةٌ الآن» ──
+// متغيّرٌ على مستوى الوحدة يُقرأ بلا سياق Nuxt (نُسخُ الجهاز والصناديقُ تسأله من أدواتٍ نقيّة)؛
+// `useImpersonation` يرفعه ويُنزله كلّما تغيّرت حالةُ النيابة.
+let impersonating = false
+
+export function setImpersonatingNow(on: boolean): void {
+  impersonating = on
+}
+
+export function impersonatingNow(): boolean {
+  return impersonating
+}

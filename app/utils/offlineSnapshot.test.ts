@@ -1,5 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { formatSavedAt, snapshotKey } from './offlineSnapshot'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PROFILE_CACHE_KEY } from './offlineCache'
+import { setImpersonatingNow } from './impersonation'
+import { formatSavedAt, offlineOwnerRole, offlineOwnerUid, offlineTeacherUid, snapshotKey } from './offlineSnapshot'
+
+/** ملفٌّ محفوظٌ على الجهاز كما يكتبه `useProfile` — يُقرأ عبر `readCache` من التخزين المحلّيّ. */
+function stubProfile(profile: { id?: string, role?: string } | null) {
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => (key === PROFILE_CACHE_KEY && profile ? JSON.stringify(profile) : null)
+  })
+}
 
 describe('offlineSnapshot', () => {
   it('مفتاحٌ لكلّ معلّمٍ وشاشة', () => {
@@ -12,5 +21,51 @@ describe('offlineSnapshot', () => {
     // 14:06 بتوقيت غزة (+2 بعد انتهاء الصيفيّ) ← 12 ساعة
     expect(formatSavedAt('2026-10-28T12:06:00Z')).toBe('28-10 · 2:06 م')
     expect(formatSavedAt('2026-10-27T22:30:00Z')).toBe('28-10 · 12:30 ص')
+  })
+})
+
+describe('صاحبُ الجهاز', () => {
+  beforeEach(() => stubProfile(null))
+  afterEach(() => {
+    setImpersonatingNow(false)
+    vi.unstubAllGlobals()
+  })
+
+  it('offlineOwnerUid يردّ المعرّف للمشرف الميدانيّ والمختبِر', () => {
+    stubProfile({ id: 'u1', role: 'field_supervisor' })
+    expect(offlineOwnerUid()).toBe('u1')
+    stubProfile({ id: 'u1', role: 'examiner' })
+    expect(offlineOwnerUid()).toBe('u1')
+  })
+
+  it('offlineOwnerUid يردّ null للمدير الإداري والفنيّ', () => {
+    stubProfile({ id: 'u1', role: 'admin_manager' })
+    expect(offlineOwnerUid()).toBeNull()
+    stubProfile({ id: 'u1', role: 'technical_manager' })
+    expect(offlineOwnerUid()).toBeNull()
+  })
+
+  it('أثناء النيابة لا صاحبَ للمشرف والمختبِر ويبقى للمعلّم', () => {
+    setImpersonatingNow(true)
+    stubProfile({ id: 'u1', role: 'field_supervisor' })
+    expect(offlineOwnerUid()).toBeNull()
+    stubProfile({ id: 'u1', role: 'examiner' })
+    expect(offlineOwnerUid()).toBeNull()
+    stubProfile({ id: 'u1', role: 'teacher' })
+    expect(offlineOwnerUid()).toBe('u1')
+  })
+
+  it('offlineTeacherUid لا يتغيّر', () => {
+    stubProfile({ id: 'u1', role: 'field_supervisor' })
+    expect(offlineTeacherUid()).toBeNull()
+  })
+
+  it('offlineOwnerRole', () => {
+    stubProfile({ id: 'u1', role: 'examiner' })
+    expect(offlineOwnerRole()).toBe('examiner')
+    stubProfile({ id: 'u1', role: 'admin_manager' })
+    expect(offlineOwnerRole()).toBeNull()
+    stubProfile(null)
+    expect(offlineOwnerRole()).toBeNull()
   })
 })

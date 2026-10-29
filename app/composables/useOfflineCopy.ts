@@ -1,12 +1,12 @@
 /**
- * نسخةُ الشاشة على جهاز المعلّم (البند 14، الدفعة الأولى — 2026-10-27): يلفّ دالّةَ الجلب في `useLazyAsyncData` فلا
- * يتغيّر شيءٌ في الصفحة غيرُ سطرٍ واحد —
+ * نسخةُ الشاشة على جهاز المعلّم والمشرف الميدانيّ والمختبِر (البند 14، الدفعة الأولى — 2026-10-27): يلفّ دالّةَ الجلب
+ * في `useLazyAsyncData` فلا يتغيّر شيءٌ في الصفحة غيرُ سطرٍ واحد —
  *   • متّصلاً: يجلب كالمعتاد ويحفظ النتيجةَ على الجهاز (لا طلبَ زائداً).
  *   • بلا اتصال (أو تعثّر الجلبُ فصار الجهازُ منقطعاً): آخرُ نسخةٍ محفوظة، ويُعلَّم مفتاحُها «من الجهاز» بوقتها.
- * غيرُ المعلّم يجلب كالمعتاد ولا يُحفظ له شيء. `OfflineSavedNote` يعرض «آخرُ تحديث» حين تُعرض نسخةٌ من الجهاز.
+ * غيرُ هؤلاء (وهم أثناء النيابة) يجلب كالمعتاد ولا يُحفظ له شيء. `OfflineSavedNote` يعرض «آخرُ تحديث» حين تُعرض نسخةٌ من الجهاز.
  */
 import { isOnlineNow } from '~/utils/reachability'
-import { offlineTeacherUid, readSnapshot, writeSnapshot } from '~/utils/offlineSnapshot'
+import { offlineOwnerUid, readSnapshot, writeSnapshot } from '~/utils/offlineSnapshot'
 
 /** مفاتيحُ الجلب المعروضة من الجهاز الآن ← وقتُ نسختها. */
 export const useOfflineSavedKeys = () => useState<Record<string, string>>('offline-saved-keys', () => ({}))
@@ -22,7 +22,7 @@ export function useOfflineCopy() {
   function wrap<T>(key: string | (() => string), fetcher: () => Promise<T>): () => Promise<T> {
     return async () => {
       const k = typeof key === 'function' ? key() : key
-      const uid = offlineTeacherUid()
+      const uid = offlineOwnerUid()
       if (!uid) return fetcher()
       if (!isOnlineNow()) {
         const snap = await readSnapshot<T>(uid, k)

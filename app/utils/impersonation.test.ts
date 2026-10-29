@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { IMPERSONATION_READ_ONLY_MESSAGE } from '~/constants/impersonation'
 import {
   clockLabel, countdownLabel, expired, IMPERSONATION_BLOCKED_MESSAGE, impersonateConfirmText,
-  isSessionSwitching, markSessionSwitching, minutesLeftLabel, readOnlyRefusal, sessionReadOnly, shouldReloadOnIdentityChange, writeOpen
+  impersonatingNow, isSessionSwitching, markSessionSwitching, minutesLeftLabel, readOnlyRefusal, sessionReadOnly, setImpersonatingNow, shouldReloadOnIdentityChange, writeOpen
 } from './impersonation'
 
 const NOW = Date.parse('2026-10-20T12:00:00Z')
@@ -107,5 +107,15 @@ describe('علَمُ تبديل الجلسة', () => {
     expect(isSessionSwitching()).toBe(true)
     markSessionSwitching(false)
     expect(isSessionSwitching()).toBe(false)
+  })
+})
+
+describe('علَمُ «نيابةٌ الآن»', () => {
+  it('يُرفع ويُنزل، وهو منخفضٌ في البدء', () => {
+    expect(impersonatingNow()).toBe(false)
+    setImpersonatingNow(true)
+    expect(impersonatingNow()).toBe(true)
+    setImpersonatingNow(false)
+    expect(impersonatingNow()).toBe(false)
   })
 })

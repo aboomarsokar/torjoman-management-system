@@ -11,7 +11,7 @@ let teacher: string | null = 'u'
 let online = true
 vi.mock('~/utils/reachability', () => ({ isOnlineNow: () => online }))
 vi.mock('~/utils/offlineSnapshot', () => ({
-  offlineTeacherUid: () => teacher,
+  offlineOwnerUid: () => teacher,
   readSnapshot: async (uid: string, key: string) => store.get(`${uid}|${key}`) ?? null,
   writeSnapshot: async (uid: string, key: string, data: unknown) => void store.set(`${uid}|${key}`, { savedAt: 'T', data })
 }))

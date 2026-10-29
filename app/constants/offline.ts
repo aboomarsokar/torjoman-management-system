@@ -6,7 +6,7 @@ import type { OfflineOwnerRole } from '~/utils/offlineSnapshot'
 
 /** قاعدةُ الجهاز (IndexedDB) ونسختُها — رفعُ النسخة يعيد بناء المخازن. */
 export const OFFLINE_DB_NAME = 'torjoman-offline'
-export const OFFLINE_DB_VERSION = 4
+export const OFFLINE_DB_VERSION = 5
 
 /** كم يوماً من الحضور تُحفظ على الجهاز — يكفي انقطاعاً لأيّام وتصحيحَ الأسابيع الماضية. */
 export const MIRROR_DAYS = 40

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * إرسالُ دعوة المقابلة SMS (طلب المستخدم 2026-10-30): الصيغةُ المعتمدة قابلةً للتعديل بمتغيّراتها، ومعاينةٌ حيّة لأوّل مرشّح
- * وعددُ المقاطع، والمستلمون (المدعوّون بموعدٍ وحدهم). المدير الإداريّ يعتمد الصيغة المعدّلة للمرّات القادمة.
+ * إرسالُ دعوة المقابلة SMS (طلب المستخدم 2026-10-30): الصيغةُ المعتمدة قابلةً للتعديل بمتغيّراتها، ومعاينةٌ حيّة لرسالة كلّ
+ * مرشّحٍ بموعده وعددُ مقاطعها، والمستلمون (المدعوّون بموعدٍ وحدهم). المدير الإداريّ يعتمد الصيغة المعدّلة للمرّات القادمة.
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { DEFAULT_INVITE_SMS, INVITE_SMS_VARS, MAX_INVITE_SMS_TEMPLATE } from '~/constants/candidates'
@@ -21,15 +21,17 @@ watch(open, (o) => {
 })
 const ready = computed(() => props.candidates.filter(c => c.status === 'invited' && c.interview_at))
 const already = computed(() => ready.value.filter(c => c.invite_sms_at).length)
-const preview = computed(() => {
-  const c = ready.value[0]
-  return c ? renderInviteSms(text.value, { ...c, interview_at: c.interview_at! }) : ''
-})
-const seg = computed(() => smsSegments(preview.value))
+const previews = computed(() => ready.value.map(c => ({
+  id: c.id, name: c.full_name, sent: !!c.invite_sms_at,
+  text: renderInviteSms(text.value, { ...c, interview_at: c.interview_at! })
+})))
+/** أطولُ رسالةٍ تحكم: مقاطعُها هي الحدّ، ومجموعُ المقاطع تكلفةُ الإرسال. */
+const maxSegments = computed(() => Math.max(0, ...previews.value.map(p => smsSegments(p.text).segments)))
+const totalSegments = computed(() => previews.value.reduce((n, p) => n + smsSegments(p.text).segments, 0))
 const problem = computed(() => {
   if (!ready.value.length) return 'لا مدعوَّ بموعدٍ بين المحدّدين — ادعُهم للمقابلة أوّلاً.'
   if (text.value.trim().length < 10) return 'اكتب نصّ الرسالة.'
-  if (seg.value.segments > SMS_MAX_SEGMENTS) return `الرسالة أطول من ${SMS_MAX_SEGMENTS} مقاطع — اختصرها.`
+  if (maxSegments.value > SMS_MAX_SEGMENTS) return `الرسالة أطول من ${SMS_MAX_SEGMENTS} مقاطع — اختصرها.`
   return null
 })
 const changed = computed(() => text.value.trim() !== props.template.trim())
@@ -67,13 +69,22 @@ const changed = computed(() => text.value.trim() !== props.template.trim())
             >{{ v }}</code>
           </template>
         </UFormField>
-        <div
-          v-if="preview"
-          class="sm-preview"
+        <section
+          v-if="previews.length"
+          class="sm-previews"
+          aria-label="معاينة الرسائل"
         >
-          <small>معاينة لـ {{ ready[0]?.full_name }} · {{ seg.segments }} {{ seg.segments === 1 ? 'مقطع' : 'مقاطع' }} لكلّ رسالة</small>
-          <p>{{ preview }}</p>
-        </div>
+          <h3>المعاينة · الرسائل: {{ previews.length }} · المقاطع إجمالاً: {{ totalSegments }}</h3>
+          <ul>
+            <li
+              v-for="p in previews"
+              :key="p.id"
+            >
+              <small>{{ p.name }}<template v-if="p.sent"> · وصلته من قبل</template></small>
+              <p>{{ p.text }}</p>
+            </li>
+          </ul>
+        </section>
         <div class="sm-tools">
           <UCheckbox
             v-if="canSave && changed"
@@ -131,9 +142,12 @@ const changed = computed(() => text.value.trim() !== props.template.trim())
 .sm-who { margin: 0; color: var(--ink-2); line-height: 1.8; }
 .sm-who b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .sm-var { display: inline-block; margin-inline-start: 6px; padding: 0 6px; border-radius: 6px; background: var(--surface-3); color: var(--blue-ink); font-family: inherit; font-size: 12.5px; }
-.sm-preview { padding: 12px 14px; border-radius: 12px; background: var(--surface-3); display: flex; flex-direction: column; gap: 4px; }
-.sm-preview small { color: var(--ink-3); font-size: 12px; }
-.sm-preview p { margin: 0; color: var(--ink); line-height: 1.9; white-space: pre-line; }
+.sm-previews { display: flex; flex-direction: column; gap: 8px; }
+.sm-previews h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.sm-previews ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.sm-previews li { padding: 10px 14px; border-radius: 12px; background: var(--surface-3); display: flex; flex-direction: column; gap: 4px; }
+.sm-previews small { color: var(--ink-3); font-size: 12px; }
+.sm-previews p { margin: 0; color: var(--ink); line-height: 1.9; white-space: pre-line; }
 .sm-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
 .sm-err { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--err-soft); color: var(--err); font-weight: 600; font-size: 14px; }
 .sm-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap; }

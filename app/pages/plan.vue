@@ -212,6 +212,7 @@ async function exportPlan() {
           :goal="x.g"
           :index="x.i"
           :tasks="x.list"
+          :all-tasks="tasks.filter(t => t.goal_id === x.g.id)"
           :task-index="taskIndex"
           :names="names"
           :today="today"

@@ -24,7 +24,13 @@ export const NOTIFICATION_KINDS = [
   'booklet_requested',
   'announcement',
   'student_requested',
-  'student_request_closed'
+  'student_request_closed',
+  'off_day_reported',
+  'off_day_rejected',
+  'plan_task_assigned',
+  'plan_task_due',
+  'plan_task_overdue',
+  'plan_weekly_update'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -51,7 +57,13 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   booklet_requested: 'i-lucide-package-plus',
   announcement: 'i-lucide-megaphone',
   student_requested: 'i-lucide-user-plus',
-  student_request_closed: 'i-lucide-user-check'
+  student_request_closed: 'i-lucide-user-check',
+  off_day_reported: 'i-lucide-calendar-x',
+  off_day_rejected: 'i-lucide-calendar-x-2',
+  plan_task_assigned: 'i-lucide-clipboard-plus',
+  plan_task_due: 'i-lucide-alarm-clock',
+  plan_task_overdue: 'i-lucide-clock-alert',
+  plan_weekly_update: 'i-lucide-list-checks'
 }
 
 /** آخرُ ما يُعرض في لوحة الجرس. */

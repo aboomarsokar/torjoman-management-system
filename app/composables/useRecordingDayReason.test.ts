@@ -49,7 +49,7 @@ describe('useRecordingDayReason', () => {
 
   it('صفٌّ غائب (محجوب أو محذوف): نصٌّ بلا سبب لا خطأ', async () => {
     const text = await useRecordingDayReason().read('off', 'h1', '2026-10-29', false)
-    expect(text).toBe('لم تنعقد الحلقة. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.')
+    expect(text).toBe('لم تنعقد الحلقة. البلاغُ معتمَد فلا يُعدّ يوماً ناقصاً.')
   })
 
   it('الفشلُ يرتفع', async () => {

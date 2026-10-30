@@ -63,15 +63,15 @@ describe('dayReasonText / isReasonState', () => {
   })
   it('المعتمَد: تسميةُ السبب العربية والملاحظة', () => {
     expect(dayReasonText('off', { reason: 'security', note: 'قصف' }, false))
-      .toBe('لم تنعقد الحلقة — ظرف أمني · قصف. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.')
+      .toBe('لم تنعقد الحلقة — ظرف أمني · قصف. البلاغُ معتمَد فلا يُعدّ يوماً ناقصاً.')
   })
   it('المعلّق: بجنس الحلقة، ويُعدّ ناقصاً', () => {
     expect(dayReasonText('off_pending', { reason: 'teacher_sick' }, true))
-      .toBe('بلّغت المعلّمةُ أنّ الحلقة لم تنعقد — مرض المعلم أو عذر طارئ. بانتظار اعتماد المشرف، ويُعدّ ناقصاً حتى يُعتمد.')
+      .toBe('بلّغت المعلّمةُ أنّ الحلقة لم تنعقد — مرض المعلم أو عذر طارئ. بانتظار الاعتماد، ويُعدّ ناقصاً حتى يُعتمد.')
     expect(dayReasonText('off_pending', { reason: 'other', note: null }, false)).toContain('بلّغ المعلّمُ')
   })
   it('سببٌ غائب: بلا شرطة', () => {
-    expect(dayReasonText('off', { reason: null }, false)).toBe('لم تنعقد الحلقة. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.')
+    expect(dayReasonText('off', { reason: null }, false)).toBe('لم تنعقد الحلقة. البلاغُ معتمَد فلا يُعدّ يوماً ناقصاً.')
   })
 })
 

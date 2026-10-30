@@ -72,6 +72,30 @@ describe('effectiveDay', () => {
     })
   })
 
+  it('سطرُ بلاغٍ رفضته القاعدة: لا «على الجهاز» — اليومُ وبلاغُه من النسخة', () => {
+    const entry = { ...newOffEntry('u', 'h', 'd', 'other', 'ن'), status: 'rejected' as const }
+    const off = { reason: 'security' as const, note: null, status: 'pending' as const, reviewNote: null }
+    expect(effectiveDay({ held: true, absences: { s1: 'excused' } }, entry, off)).toEqual({
+      held: true, absences: { s1: 'excused' }, pending: false, off: { ...off, queued: false }
+    })
+    expect(effectiveDay(undefined, entry)).toEqual({ held: false, absences: {}, pending: false, off: null })
+  })
+
+  it('سطرُ سحبٍ رفضته القاعدة: البلاغُ باقٍ كما في النسخة', () => {
+    const entry = { ...newWithdrawEntry('u', 'h', 'd'), status: 'rejected' as const }
+    const off = { reason: 'security' as const, note: null, status: 'approved' as const, reviewNote: null }
+    expect(effectiveDay({ held: false, absences: {} }, entry, off)).toEqual({
+      held: false, absences: {}, pending: false, off: { ...off, queued: false }
+    })
+  })
+
+  it('حضورٌ رفضته القاعدة: يبقى معروضاً كما أدخله المعلّم (مسوّدتُه منه)', () => {
+    const entry = { ...newEntry('u', 'h', 'd', { s2: 'unexcused' }), status: 'rejected' as const }
+    expect(effectiveDay({ held: true, absences: { s1: 'excused' } }, entry)).toEqual({
+      held: true, absences: { s2: 'unexcused' }, pending: true, off: null
+    })
+  })
+
   it('بلا سطر: النسخةُ كما هي مع بلاغها المرفوع (غيرَ منتظرٍ للرفع)', () => {
     const off = { reason: 'teacher_sick' as const, note: null, status: 'rejected' as const, reviewNote: 'لا يكفي' }
     expect(effectiveDay({ held: false, absences: {} }, undefined, off)).toEqual({

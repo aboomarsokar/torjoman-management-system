@@ -114,6 +114,29 @@ describe('لوحة المعلم — المطلوب منك الآن', () => {
     }
   })
 
+  it('بلاغُ «لم تنعقد» معلّقٌ أو معتمَد: بندٌ هادئٌ بحاله بدل «لم تسجّل حضور اليوم»', () => {
+    for (const [off, detail] of [['pending', 'بانتظار الاعتماد'], ['approved', 'معتمَد']] as const) {
+      const acts = teacherActions({ ...base, todayAttendance: { isFriday: false, held: false, absent: 0, off } })
+      const att = acts.find(a => a.key === 'att')
+      expect(att).toMatchObject({ tone: 'done', icon: 'i-lucide-calendar-x', title: 'بلّغت أنّ الحلقة لم تنعقد اليوم', detail, to: '/t' })
+      expect(att?.cta).toBeUndefined()
+    }
+  })
+
+  it('بلاغٌ مرفوض أو لا بلاغ: الحضورُ مطلوبٌ كما كان', () => {
+    for (const off of ['rejected', null, undefined] as const) {
+      const att = teacherActions({ ...base, todayAttendance: { isFriday: false, held: false, absent: 0, off } }).find(a => a.key === 'att')
+      expect(att).toMatchObject({ tone: 'todo', title: 'لم تسجّل حضور اليوم بعد', cta: 'سجّل الحضور' })
+    }
+  })
+
+  it('الإجازةُ تغلب البلاغ، والجمعةُ بلا بندٍ ولو فيها بلاغ', () => {
+    const holiday = teacherActions({ ...base, todayAttendance: { isFriday: false, held: false, absent: 0, holiday: 'عيد', off: 'pending' } })
+    expect(holiday.find(a => a.key === 'att')?.title).toBe('اليوم إجازة: عيد')
+    const friday = teacherActions({ ...base, todayAttendance: { isFriday: true, held: false, absent: 0, off: 'approved' } })
+    expect(friday.some(a => a.key === 'att')).toBe(false)
+  })
+
   it('الجمعةُ بلا بند حضور، ولا كشفَ حوافز بلا مخصّصٍ ولا كشف', () => {
     const keys = teacherActions({ ...base, todayAttendance: { isFriday: true, held: false, absent: 0 } }).map(a => a.key)
     expect(keys).toEqual(['rec'])

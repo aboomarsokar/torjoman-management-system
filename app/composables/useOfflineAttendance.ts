@@ -124,8 +124,8 @@ export function useOfflineAttendance() {
   /** يُرى زرُّ البلاغ تحت القائمة (معطَّلاً مع سببه إن مُنع) — لا في الجمعة ولا الإجازة ولا يومٍ فيه بلاغ. */
   const reportShown = computed(() => listDay.value && !isFriday(day.value) && !holiday.value && !off.value)
   const canReport = computed(() => listDay.value && reportBlock.value === null && !holiday.value && off.value?.status !== 'approved')
-  /** «تراجع»: بلاغٌ معروضٌ غيرُ معتمَد. */
-  const canWithdraw = computed(() => teacherSession.value && !!off.value && off.value.status !== 'approved')
+  /** «تراجع»: بلاغٌ معروضٌ غيرُ معتمَد، في شهرٍ مفتوح (بعد اعتماد الشهر لا يُسجَّل حضورٌ فلا معنى للتراجع). */
+  const canWithdraw = computed(() => teacherSession.value && !!off.value && off.value.status !== 'approved' && !locked.value)
 
   function setChoice(studentId: string, choice: AttendanceChoice) {
     const { [studentId]: _removed, ...rest } = draft.value
@@ -147,15 +147,17 @@ export function useOfflineAttendance() {
   }
 
   /**
-   * «تراجع — الحلقة انعقدت»: بلاغٌ على الجهاز لم يُرفع (بلا اتصالٍ ولا رفعٍ جارٍ، أو رفضته القاعدة) يُحذف فلا
-   * يُرفع شيء؛ وغيرُ ذلك سطرُ سحبٍ بمفتاح اليوم — فقد يكون البلاغُ في الطريق، والرفعُ متتابعٌ فيلحقه السحب.
+   * «تراجع — الحلقة انعقدت»: بلاغٌ على الجهاز لم يُحاوَل رفعُه قطّ (بلا اتصالٍ ولا رفعٍ جارٍ ولا محاولةٍ سابقة) يُحذف
+   * فلا يُرفع شيء؛ وغيرُ ذلك سطرُ سحبٍ بمفتاح اليوم — فقد يكون البلاغُ في الطريق أو وصل وضاع ردُّه (محاولةٌ تعثّرت)،
+   * والرفعُ متتابعٌ فيلحقه السحب. وبلاغٌ محلّيٌّ رفضته القاعدةُ لا يُعرض أصلاً (`effectiveDay`): المعروضُ بلاغُ النسخة،
+   * فالتراجعُ عنه سحبٌ يحلّ محلَّ المرفوض — وسحبُ ما لا وجودَ له في القاعدة لا يضرّ.
    */
   async function withdrawOff(): Promise<boolean> {
     if (!canWithdraw.value || !halaqaId.value || !uid.value) return false
     const local = entry.value
-    // رفعٌ بدأ قبل الانقطاع قد يكون أوصل البلاغ — فلا حذفَ إلا والصندوقُ ساكن
-    const idle = !outbox.online.value && !outbox.syncing.value
-    if (local && entryKind(local) === 'off' && (idle || local.status === 'rejected')) {
+    // رفعٌ بدأ قبل الانقطاع أو محاولةٌ تعثّرت قد تكون أوصلت البلاغ — فلا حذفَ إلا لسطرٍ لم يغادر الجهاز
+    const untouched = !outbox.online.value && !outbox.syncing.value && local?.attempts === 0
+    if (local && entryKind(local) === 'off' && local.status === 'pending' && untouched) {
       await outbox.discard(local.key)
       return true
     }

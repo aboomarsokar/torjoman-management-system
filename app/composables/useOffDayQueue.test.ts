@@ -13,8 +13,11 @@ let queryError: unknown = null
 let rpcError: unknown = null
 const rpc = vi.fn(async () => ({ error: rpcError }))
 const select = vi.fn()
+const toastAdd = vi.fn()
+/** حالُ البلاغ عند قراءتها قبل القرار (`maybeSingle`). */
+let freshStatus: { status: string } | null = { status: 'pending' }
 
-/** باني استعلامٍ ينتظره `await` كما يفعل supabase-js. */
+/** باني استعلامٍ ينتظره `await` كما يفعل supabase-js؛ و`maybeSingle` قراءةُ حال البلاغ قبل القرار. */
 function builder() {
   const b: Record<string, unknown> = {}
   for (const m of ['select', 'eq', 'order', 'returns']) {
@@ -23,6 +26,7 @@ function builder() {
       return b
     }
   }
+  b.maybeSingle = async () => ({ data: freshStatus, error: null })
   b.then = (ok: (r: unknown) => unknown, bad: (e: unknown) => unknown) =>
     Promise.resolve({ data: rows, error: queryError }).then(ok, bad)
   return b
@@ -32,6 +36,7 @@ vi.stubGlobal('computed', computed)
 vi.stubGlobal('useProfile', () => ({ role: roleRef }))
 vi.stubGlobal('useSupabaseClient', () => ({ from: builder, rpc }))
 vi.stubGlobal('useErrorHandler', () => ({ handle }))
+vi.stubGlobal('useToast', () => ({ add: toastAdd }))
 vi.stubGlobal('useImpersonation', () => ({ blockIfReadOnly }))
 const { useOffDayQueue, visibleQueue, offDayLine } = await import('./useOffDayQueue')
 
@@ -134,9 +139,31 @@ describe('useOffDayQueue', () => {
     select.mockClear()
     expect(await q.review('a', true, null)).toBe(false)
     expect(handle).toHaveBeenCalled()
-    expect(select).toHaveBeenCalledTimes(1)
+    // قراءةُ الحال قبل القرار، ثمّ إعادةُ جلب الطابور
+    expect(select).toHaveBeenCalledTimes(2)
+    expect(select).toHaveBeenLastCalledWith(expect.stringContaining('reported_at'))
     expect(q.items.value.map(i => i.id)).toEqual(['a'])
     rpcError = null
+  })
+
+  it('review لبلاغٍ سبق إليه معتمِدٌ آخر: لا قرارَ يُرسل، وتنبيهٌ، ويُعاد جلبُ الطابور', async () => {
+    roleRef.value = 'admin_manager'
+    rows = [row('a', 'male'), row('b', 'male')]
+    const q = useOffDayQueue()
+    await q.load()
+    freshStatus = { status: 'approved' }
+    rows = [row('b', 'male')]
+    rpc.mockClear()
+    toastAdd.mockClear()
+    expect(await q.review('a', false, 'لا')).toBe(false)
+    expect(rpc).not.toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'سبقك معتمِدٌ آخر — حُدّثت القائمة.', color: 'warning' }))
+    expect(q.items.value.map(i => i.id)).toEqual(['b'])
+    // بلاغٌ سُحب (لا صفّ) يُعامَل كذلك
+    freshStatus = null
+    expect(await q.review('b', true, null)).toBe(false)
+    expect(rpc).not.toHaveBeenCalled()
+    freshStatus = { status: 'pending' }
   })
 
   it('review في نيابة القراءة: يُمنع قبل الإرسال', async () => {

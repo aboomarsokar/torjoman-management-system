@@ -126,12 +126,49 @@ describe('بلاغ «لم تنعقد الحلقة» في /t', () => {
     expect(rows.value[0]!.kind).toBe('withdraw')
   })
 
-  it('withdrawOff لبلاغٍ رفضته القاعدة: يُحذف ولو متّصلاً', async () => {
+  it('withdrawOff بلا اتصالٍ لبلاغٍ تعثّرت محاولةُ رفعه: سطرُ سحبٍ لا حذف (قد يكون وصل وضاع ردُّه)', async () => {
+    const s = screen()
+    await s.reportOff('security', null)
+    rows.value = rows.value.map(e => ({ ...e, attempts: 1 }))
+    expect(await s.withdrawOff()).toBe(true)
+    expect(rows.value).toHaveLength(1)
+    expect(rows.value[0]).toMatchObject({ kind: 'withdraw', day: DAY, attempts: 0 })
+  })
+
+  it('بلاغٌ محلّيٌّ رفضته القاعدة: لا يُعرض «على الجهاز»، واليومُ كما في النسخة فيُسجَّل حضورُه', async () => {
     const s = screen()
     await s.reportOff('security', null)
     rows.value = rows.value.map(e => ({ ...e, status: 'rejected' as const }))
+    expect(s.off.value).toBeNull()
+    expect(s.canWithdraw.value).toBe(false)
+    expect(s.canWrite.value).toBe(true)
+    // الحفظُ يحلّ محلَّ المرفوض بمفتاح اليوم
+    expect(await s.save()).toBe(true)
+    expect(rows.value).toHaveLength(1)
+    expect(rows.value[0]).toMatchObject({ kind: 'attendance', status: 'pending' })
+  })
+
+  it('بلاغٌ محلّيٌّ مرفوض فوق بلاغِ النسخة المعلّق: يُعرض بلاغُ النسخة، والتراجعُ سطرُ سحبٍ يحلّ محلَّ المرفوض', async () => {
+    mirror.value = baseMirror({ offDays: { [DAY]: { reason: 'security', note: null, status: 'pending', reviewNote: null } } })
+    rows.value = [{ key: `u|h|${DAY}`, uid: 'u', halaqaId: 'h', day: DAY, absences: {}, recordedAt: 'x', attempts: 1, status: 'rejected', kind: 'off', off: { reason: 'other', note: 'ن' } }]
     online.value = true
+    const s = screen()
+    expect(s.off.value).toMatchObject({ reason: 'security', status: 'pending', queued: false })
     expect(await s.withdrawOff()).toBe(true)
+    expect(rows.value).toHaveLength(1)
+    expect(rows.value[0]).toMatchObject({ kind: 'withdraw', status: 'pending' })
+  })
+
+  it('بلاغٌ مرفوض في شهرٍ معتمَد: لا «تراجع» (لا يُسجَّل حضورٌ بعد الاعتماد)', async () => {
+    mirror.value = baseMirror({
+      approvedMonths: ['2026-10'],
+      offDays: { [DAY]: { reason: 'other', note: 'ن', status: 'rejected', reviewNote: 'انعقدت' } }
+    })
+    const s = screen()
+    expect(s.off.value).toMatchObject({ status: 'rejected' })
+    expect(s.canWithdraw.value).toBe(false)
+    expect(s.canWrite.value).toBe(false)
+    expect(await s.withdrawOff()).toBe(false)
     expect(rows.value).toHaveLength(0)
   })
 

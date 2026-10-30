@@ -25,7 +25,8 @@ import { idbGet } from '~/utils/offlineDb'
 import { ATTENDANCE_QUEUE, QURAN_QUEUE } from '~/utils/offlineQueues'
 import type { QuranEntry } from '~/utils/quranOutbox'
 import { isOnlineNow } from '~/utils/reachability'
-import { localDay, withLocalWork, type DashSnapshot } from '~/utils/teacherDashboardOffline'
+import { asOffStatus } from '~/utils/offDays'
+import { queuedToday, withLocalWork, type DashSnapshot } from '~/utils/teacherDashboardOffline'
 
 type StatementStatus = Database['public']['Enums']['statement_status']
 type RecordRow = HistoryRow & DashRecord
@@ -88,7 +89,7 @@ export function useTeacherDashboard() {
     const range = monthRange(year, month)
     const lowerYear = shiftMonth(year, month, -HISTORY_MONTHS).year
 
-    const [students, days, absences, reports, cycles, items, records, results, alerts, alloc, statement, readingUnits, readingPassed] = await Promise.all([
+    const [students, days, absences, reports, cycles, items, records, results, alerts, alloc, statement, readingUnits, readingPassed, offToday] = await Promise.all([
       supabase.from('students').select('id, full_name, quran_parts, enrollment_date, halaqa_id').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
       supabase.from('attendance_days').select('day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
       supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
@@ -107,6 +108,8 @@ export function useTeacherDashboard() {
       supabase.from('incentive_statements').select('status, return_note').eq('halaqa_id', hid).eq('statement_month', month).eq('statement_year', year).maybeSingle(),
       supabase.from('reading_units').select('id', { count: 'exact', head: true }),
       supabase.from('reading_attempts').select('student_id, unit_id, student:student_id!inner(halaqa_id)').eq('student.halaqa_id', hid).eq('passed', true),
+      // بلاغُ «لم تنعقد» لليوم: صامتٌ عند الفشل (لا يُسقط اللوحة) — فلا يدخل `failure`
+      supabase.from('attendance_off_days').select('status').eq('halaqa_id', hid).eq('day', today).maybeSingle(),
       quran.load()
     ])
     const failure = students.error ?? days.error ?? absences.error ?? reports.error ?? cycles.error ?? items.error
@@ -137,7 +140,8 @@ export function useTeacherDashboard() {
       today: {
         isFriday: isFriday(today),
         held: todayHeld,
-        absent: todayHeld ? absenceRows.filter(a => a.day === today).length : 0
+        absent: todayHeld ? absenceRows.filter(a => a.day === today).length : 0,
+        off: offToday.error ? null : asOffStatus(offToday.data?.status)
       },
       recording,
       recordedCount: studs.length - unrecorded.length,
@@ -197,20 +201,26 @@ export function useTeacherDashboard() {
   const attendanceQueue = useOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, uid)
   const quranQueue = useOfflineQueue<QuranEntry>(QURAN_QUEUE, uid)
   const mirrorDays = ref<AttendanceMirror['days']>({})
+  const mirrorOffDays = ref<NonNullable<AttendanceMirror['offDays']>>({})
   watch([uid, () => attendanceQueue.lastUploaded.value], async () => {
     const mirror = uid.value ? await idbGet<AttendanceMirror>('mirror', uid.value).catch(() => undefined) : undefined
     mirrorDays.value = mirror?.days ?? {}
+    mirrorOffDays.value = mirror?.offDays ?? {}
   }, { immediate: true })
 
   const dash = computed(() => {
     const d = data.value
     if (!d?.halaqa) return d
     const today = gazaToday()
+    // سطرُ اليوم المنتظِر: حضورٌ أو بلاغُ «لم تنعقد» أو سحبُه
     const queued = attendanceQueue.pending.value.find(e => e.halaqaId === d.halaqa.id && e.day === today)
+    const local = queuedToday(queued, mirrorDays.value[today])
     return withLocalWork(d, {
       today,
       savedOn: savedOn.value,
-      day: localDay(queued?.absences ?? null, mirrorDays.value[today]),
+      day: local.day,
+      queuedOff: local.queuedOff,
+      mirrorOff: mirrorOffDays.value[today]?.status ?? null,
       quranPending: quranQueue.entries.value
     })
   })

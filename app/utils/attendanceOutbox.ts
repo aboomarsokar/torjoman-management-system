@@ -65,12 +65,15 @@ export function newWithdrawEntry(uid: string, halaqaId: string, day: string, now
  * اليومُ كما يُعرض: ما في الصندوق يغلب نسخةَ الجهاز (هو الأحدث).
  * حضور ← مسجَّل · بلاغ ← غيرُ مسجَّل وبلاغٌ «على الجهاز» · سحبٌ ← غيرُ مسجَّل بلا بلاغ · بلا سطر ← النسخة كما هي
  * مع بلاغها المرفوع (`off`) إن وُجد. `off` الغائبُ (نسخةُ جهازٍ قديمة) = لا بلاغ.
+ * وبلاغٌ أو سحبٌ **رفضته القاعدة** لا يُعرض «على جهازك — بانتظار الرفع»: اليومُ كما في النسخة، والمرفوضُ في قائمة
+ * «أيامٌ لم تقبلها الإدارة». أمّا حضورٌ مرفوض فيبقى معروضاً كما أدخله المعلّم — مسوّدتُه منه، فيصحّحها ويعيد حفظها.
  */
 export function effectiveDay(
   mirror: MirrorDay | undefined,
-  entry: OutboxEntry | undefined,
+  queued: OutboxEntry | undefined,
   off?: OffDay
 ): MirrorDay & { pending: boolean, off: ShownOff | null } {
+  const entry = queued && !(entryKind(queued) !== 'attendance' && queued.status === 'rejected') ? queued : undefined
   if (entry) {
     const kind = entryKind(entry)
     if (kind === 'off' && entry.off) {

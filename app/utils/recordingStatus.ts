@@ -29,7 +29,7 @@ export interface RecordingRow {
 /** `none`: الشهرُ المستحقّ قبل بداية المشروع (10/2026) فلا رصدَ له — كان يظهر «رصد 9/2026: متأخّر» (2026-10-25). */
 export type ReportState = 'approved' | 'submitted' | 'late' | 'due' | 'none'
 /**
- * حالُ اليوم في الشريط: `holiday` إجازةٌ عامة، و`off` يومٌ لم تنعقد فيه الحلقةُ باعتماد المشرف، و`off_pending` بلاغٌ
+ * حالُ اليوم في الشريط: `holiday` إجازةٌ عامة، و`off` يومٌ لم تنعقد فيه الحلقةُ ببلاغٍ معتمَد، و`off_pending` بلاغٌ
  * بانتظار الاعتماد (يبقى في `missed_days` حتى يُعتمد — بلاغ «لم تنعقد» 2026-10-30).
  */
 export type DayState = 'held' | 'missed' | 'today' | 'before' | 'holiday' | 'off' | 'off_pending'
@@ -102,6 +102,7 @@ export function dayReasonText(state: ReasonState, info: { reason: string | null,
   const label = info.reason ? (OFF_REASON_LABELS[info.reason as OffReason] ?? info.reason) : null
   const why = label ? ` — ${label}${info.note ? ` · ${info.note}` : ''}` : ''
   if (state === 'holiday') return `إجازةٌ عامة${why}. لا يُعدّ يوماً ناقصاً.`
-  if (state === 'off') return `لم تنعقد الحلقة${why}. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.`
-  return `${female ? 'بلّغت المعلّمةُ' : 'بلّغ المعلّمُ'} أنّ الحلقة لم تنعقد${why}. بانتظار اعتماد المشرف، ويُعدّ ناقصاً حتى يُعتمد.`
+  // المعتمِدون أربعةُ أدوار (المشرف والمدير الإداري والمدير الفني والمديرة) — فلا يُسمّى أحدُهم
+  if (state === 'off') return `لم تنعقد الحلقة${why}. البلاغُ معتمَد فلا يُعدّ يوماً ناقصاً.`
+  return `${female ? 'بلّغت المعلّمةُ' : 'بلّغ المعلّمُ'} أنّ الحلقة لم تنعقد${why}. بانتظار الاعتماد، ويُعدّ ناقصاً حتى يُعتمد.`
 }

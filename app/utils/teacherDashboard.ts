@@ -8,6 +8,7 @@ import { countAttendance } from '~/utils/quran/attendanceCount'
 import { summarizeOutcomes, type StudentMonthRow } from '~/utils/quran/month'
 import { defaultPeriod, type Period, type ReportStatus } from '~/utils/quran/screen'
 import type { NomineeRow } from '~/utils/exams/nomination'
+import type { OffStatus } from '~/utils/offDays'
 import { openingDay, periodLabel, shiftMonth } from '~/utils/reportWindow'
 import { isolateLtr } from '~/utils/transport'
 
@@ -142,8 +143,11 @@ export interface TeacherAction {
 
 export interface ActionsInput {
   today: string
-  /** `holiday`: سببُ إجازة اليوم العامة إن وُجدت (قراءةٌ متّصلة، `useTodayHoliday`)، وإلا `null`/غائب. */
-  todayAttendance: { isFriday: boolean, held: boolean, absent: number, holiday?: string | null }
+  /**
+   * `holiday`: سببُ إجازة اليوم العامة إن وُجدت (قراءةٌ متّصلة، `useTodayHoliday`)، وإلا `null`/غائب.
+   * `off`: حالُ بلاغ «لم تنعقد الحلقة» لليوم (`useTeacherDashboard` + `withLocalWork`)، وإلا `null`/غائب.
+   */
+  todayAttendance: { isFriday: boolean, held: boolean, absent: number, holiday?: string | null, off?: OffStatus | null }
   recording: ReturnType<typeof recordingStatus>
   recordedCount: number
   studentCount: number
@@ -165,9 +169,13 @@ export function teacherActions(i: ActionsInput): TeacherAction[] {
   // «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10» (الشَّرطةُ لا تصل أرقاماً تلي حروفاً عربية) — تُعزل لاتينيّاً
   const month = isolateLtr(r.label)
 
-  // حضور اليوم (الجمعة بلا حلقة) — ويومُ الإجازة العامة بندٌ هادئٌ بدله: لا حضورَ مطلوباً ولا تقصير
+  // حضور اليوم (الجمعة بلا حلقة) — ويومُ الإجازة العامة بندٌ هادئٌ بدله: لا حضورَ مطلوباً ولا تقصير؛
+  // وكذا يومٌ بُلّغ أنّ الحلقة لم تنعقد فيه ما دام البلاغُ معلّقاً أو معتمَداً (والمرفوضُ يعود حضوراً مطلوباً)
+  const off = i.todayAttendance.off
   if (i.todayAttendance.holiday) {
     out.push({ key: 'att', tone: 'done', icon: 'i-lucide-calendar-off', title: `اليوم إجازة: ${i.todayAttendance.holiday}`, to: '/t' })
+  } else if (!i.todayAttendance.isFriday && (off === 'pending' || off === 'approved')) {
+    out.push({ key: 'att', tone: 'done', icon: 'i-lucide-calendar-x', title: 'بلّغت أنّ الحلقة لم تنعقد اليوم', detail: off === 'approved' ? 'معتمَد' : 'بانتظار الاعتماد', to: '/t' })
   } else if (!i.todayAttendance.isFriday) {
     out.push(i.todayAttendance.held
       ? { key: 'att', tone: 'done', icon: 'i-lucide-calendar-check', title: 'سُجّل حضور اليوم', detail: i.todayAttendance.absent ? `غاب ${i.todayAttendance.absent}` : 'الجميع حاضر', to: '/t' }

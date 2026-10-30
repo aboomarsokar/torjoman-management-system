@@ -67,6 +67,7 @@ function toItem(row: QueueRow): OffDayQueueItem | null {
 export function useOffDayQueue() {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()
+  const toast = useToast()
   const { blockIfReadOnly } = useImpersonation()
   const { role } = useProfile()
   const all = ref<OffDayQueueItem[]>([])
@@ -107,12 +108,20 @@ export function useOffDayQueue() {
 
   /**
    * قبولُ البلاغ أو رفضُه. `note` سببُ الرفض (اختياريّ، يراه المعلّم) ويُهمَل مع القبول. الناجحُ يخرج من القائمة فوراً،
-   * والفاشلُ يُعرض خطؤه ويُعاد الجلب.
+   * والفاشلُ يُعرض خطؤه ويُعاد الجلب. وتُقرأ حالُه أوّلاً: بلاغٌ لم يعد معلّقاً (اعتمده أو رفضه معتمِدٌ آخر، أو سحبه
+   * المعلّم) لا يُرسل فيه قرار — فالخادمُ يقبل تغييرَ قرارٍ سابق ما دام الشهرُ مفتوحاً، فكان يقلب قرارَ الآخر بصمت.
    */
   async function review(id: string, approve: boolean, note: string | null): Promise<boolean> {
     try {
       // نيابةُ القراءة: تُرفض قبل الإرسال
       blockIfReadOnly()
+      const { data: current, error: readError } = await supabase.from('attendance_off_days').select('status').eq('id', id).maybeSingle()
+      if (readError) throw readError
+      if (current?.status !== 'pending') {
+        toast.add({ title: 'سبقك معتمِدٌ آخر — حُدّثت القائمة.', color: 'warning', icon: 'i-lucide-info' })
+        await load()
+        return false
+      }
       const reason = approve ? undefined : normalizeOffNote(note) ?? undefined
       const { error } = await supabase.rpc('review_off_day', { p_id: id, p_approve: approve, p_note: reason })
       if (error) throw error

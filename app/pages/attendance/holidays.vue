@@ -6,6 +6,7 @@
  * شاشاته ولا يرى هذه الشاشة. الحكمُ الأخير لـRLS ومشغّل القاعدة (الجمعة، وما قبل بداية المشروع).
  */
 import { PROJECT_START_DATE } from '~/constants/project'
+import { daysCount } from '~/utils/attendanceOutbox'
 import { expandHolidayRange, holidayConfirmMessage, holidayHorizon, splitNewHolidays } from '~/utils/holidays'
 import { formatDay, gazaToday, schoolDayOnOrBefore } from '~/utils/reportWindow'
 
@@ -70,7 +71,7 @@ async function confirmedAdd() {
   const p = pendingAdd.value
   if (!p) return
   if (await add(p.fresh, p.reason)) {
-    toast.add({ title: `أُضيف ${p.fresh.length} يوم إجازة.`, color: 'success', icon: 'i-lucide-circle-check' })
+    toast.add({ title: `أُضيفت الإجازة: ${daysCount(p.fresh.length)}.`, color: 'success', icon: 'i-lucide-circle-check' })
     form.value?.reset()
   }
   pendingAdd.value = null

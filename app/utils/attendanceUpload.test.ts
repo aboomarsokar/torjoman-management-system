@@ -70,6 +70,24 @@ describe('settleAttendanceEntry', () => {
     expect(m.offDays?.['2026-10-28']).toBeDefined()
   })
 
+  it('حالةُ البلاغ من ردّ الدالّة: معتمَدٌ يبقى معتمَداً، وقيمةٌ غريبة تعود معلّقة', () => {
+    const entry = newOffEntry('u', 'h', '2026-10-29', 'security', null, NOW)
+    const a = base()
+    settleAttendanceEntry(a, entry, { id: '1', status: 'approved' })
+    expect(a.offDays?.['2026-10-29']?.status).toBe('approved')
+    const b = base()
+    settleAttendanceEntry(b, entry, { id: '1', status: 'weird' })
+    expect(b.offDays?.['2026-10-29']?.status).toBe('pending')
+  })
+
+  it('الملاحظةُ في النسخة تُشذَّب وتصير null إن فرغت', () => {
+    const m = base()
+    settleAttendanceEntry(m, newOffEntry('u', 'h', '2026-10-29', 'security', '   ', NOW), null)
+    expect(m.offDays?.['2026-10-29']?.note).toBeNull()
+    settleAttendanceEntry(m, newOffEntry('u', 'h', '2026-10-29', 'other', '  مرض  ', NOW), null)
+    expect(m.offDays?.['2026-10-29']?.note).toBe('مرض')
+  })
+
   it('سحبٌ يمحو البلاغ وحده', () => {
     const m = base()
     settleAttendanceEntry(m, newWithdrawEntry('u', 'h', '2026-10-28', NOW), { withdrawn: true })

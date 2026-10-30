@@ -16,7 +16,18 @@ export const OFF_REASON_LABELS: Record<OffReason, string> = {
   other: 'سبب آخر'
 }
 
-export type OffStatus = 'pending' | 'approved' | 'rejected'
+export const OFF_STATUSES = ['pending', 'approved', 'rejected'] as const
+export type OffStatus = typeof OFF_STATUSES[number]
+
+/** حالةٌ صالحةٌ من قيمةٍ خام (ردّ القاعدة)، أو `null`. */
+export function asOffStatus(value: unknown): OffStatus | null {
+  return (OFF_STATUSES as readonly unknown[]).includes(value) ? value as OffStatus : null
+}
+
+/** تطبيعُ الملاحظة كما تحفظها القاعدة: تشذيبٌ ثمّ `null` إن فرغت. */
+export function normalizeOffNote(note: string | null | undefined): string | null {
+  return note?.trim() || null
+}
 
 /** بلاغٌ مرفوعٌ كما تحفظه نسخةُ الجهاز. */
 export interface OffDay { reason: OffReason, note: string | null, status: OffStatus, reviewNote: string | null }

@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
 import type { MirrorDay, OutboxEntry } from '~/utils/attendanceOutbox'
 import { entryKind, keptAbsences } from '~/utils/attendanceOutbox'
-import type { OffDay } from '~/utils/offDays'
+import { asOffStatus, normalizeOffNote, type OffDay } from '~/utils/offDays'
 
 /** ما يلزم من النسخة ليُحدَّث بعد الرفع — النسخةُ الكاملة تحقّق هذا الشكل. */
 export interface SettleTarget {
@@ -31,7 +31,7 @@ export function uploadAttendanceEntry(supabase: SupabaseClient<Database>, e: Out
       p_halaqa: e.halaqaId, p_day: e.day, p_reason: e.off.reason,
       // الملاحظةُ الفارغة null لا نصٌّ فارغ (القاعدة تعدّ الفارغ ملاحظة)؛ والأنواعُ المولَّدة لا تقبل null لوسيطٍ نصّي
       // مع أنّ الدالّةَ تقبله — فالتحويلُ هنا كالذي في `save_quran_record`
-      p_note: (e.off.note?.trim() || null) as string,
+      p_note: normalizeOffNote(e.off.note) as string,
       p_reported_at: e.recordedAt
     })
   }
@@ -45,7 +45,9 @@ export function settleAttendanceEntry(mirror: SettleTarget, e: OutboxEntry, data
   const kind = entryKind(e)
   if (kind === 'off') {
     if (!e.off) return
-    mirror.offDays = { ...mirror.offDays, [e.day]: { reason: e.off.reason, note: e.off.note, status: 'pending', reviewNote: null } }
+    // الحالةُ ممّا ردّته الدالّة: إعادةُ رفعٍ بعد ردٍّ ضائع تردّ الصفَّ الموجود وقد يكون معتمَداً أو مرفوضاً
+    const status = asOffStatus((data as { status?: unknown } | null)?.status) ?? 'pending'
+    mirror.offDays = { ...mirror.offDays, [e.day]: { reason: e.off.reason, note: normalizeOffNote(e.off.note), status, reviewNote: null } }
     delete mirror.days[e.day]
     return
   }

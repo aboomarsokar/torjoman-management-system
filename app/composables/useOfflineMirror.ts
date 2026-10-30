@@ -7,7 +7,7 @@ import type { Database } from '~/types/database.types'
 import { MIRROR_DAYS } from '~/constants/offline'
 import type { AbsenceKind } from '~/composables/useAttendanceDay'
 import type { MirrorDay } from '~/utils/attendanceOutbox'
-import { OFF_REASONS, type OffDay, type OffReason, type OffStatus } from '~/utils/offDays'
+import { OFF_REASONS, OFF_STATUSES, type OffDay, type OffReason, type OffStatus } from '~/utils/offDays'
 import { idbGet, idbPut } from '~/utils/offlineDb'
 
 export type MirrorStudent = { id: string, full_name: string, enrollment_date: string | null }
@@ -47,8 +47,6 @@ export function buildMirrorDays(days: { day: string }[], absences: { day: string
   }
   return out
 }
-
-const OFF_STATUSES: readonly OffStatus[] = ['pending', 'approved', 'rejected']
 
 /** يبني بلاغاتِ النسخة من صفوف القاعدة؛ صفٌّ بسببٍ أو حالةٍ غير معروفين يُسقط (لا يُعرض ما لا تفهمه الشاشة). */
 export function buildOffDays(rows: { day: string, reason: string, note: string | null, status: string, review_note: string | null }[]): Record<string, OffDay> {
@@ -140,12 +138,5 @@ export function useOfflineMirror() {
     await idbPut('mirror', mirror.value)
   }
 
-  /** يكتب يوماً رُفع إلى النسخة (بلا انتظار تحديثٍ كامل). */
-  async function setDay(day: string, value: MirrorDay) {
-    if (!mirror.value) return
-    mirror.value = { ...mirror.value, days: { ...mirror.value.days, [day]: value } }
-    await idbPut('mirror', mirror.value)
-  }
-
-  return { mirror, refreshing, loadLocal, refresh, loadDay, setDay }
+  return { mirror, refreshing, loadLocal, refresh, loadDay }
 }

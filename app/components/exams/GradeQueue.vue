@@ -3,11 +3,16 @@
  * طابورُ الرصد (المختبِر لحلقاته، والمديران احتياطاً — كما يسمح RLS): البنودُ بلا نتيجة بدورتها ونطاقها
  * وحدودها من التقسيمة؛ ولا يُعرض بندٌ بلا دورة.
  * يفتح نافذةَ الرصد (ExamsGradeModal)، وللمديرَين سحبُ الترشيح المعلّق. على الجوال بطاقات.
+ * المختبِرُ بلا اتصال (2026-10-29): يُعرض الطابورُ من نسخة جهازه، وما رصده ينتظر الرفع في قسمٍ فوقه (لا يُرصد مرّتين)،
+ * وما رفضته القاعدةُ في قسمٍ يليه. وسحبُ الترشيح يحتاج اتصالاً.
  */
 import type { Database } from '~/types/database.types'
 import { cycleSpanLabel, toExamCycle } from '~/utils/exams/cycles'
 import { examTargetText, type WithdrawTarget } from '~/utils/exams/nomination'
 import { EXAMS_QUEUE_KEY, fetchExamQueue, type ExamQueueRaw } from '~/utils/fieldScreens'
+import { queueOnline as online } from '~/composables/useOfflineQueue'
+import { useExamOffline } from '~/composables/useExamOffline'
+import { isOnlineNow } from '~/utils/reachability'
 
 const emit = defineEmits<{ graded: [] }>()
 
@@ -16,21 +21,33 @@ const { role } = useProfile()
 const { isManager } = usePermissions()
 const { handle } = useErrorHandler()
 const quran = useQuranReference()
+const { wrap } = useOfflineCopy()
+// درجةُ النجاح مشتركةٌ مع النافذة (المفتاحُ نفسُه): بها يُحكم على ما رُصد على الجهاز
+const { passMark } = useExamPassMark()
+const { pending: onDevice, rejected, rowsFor, retry, discard, lastUploaded } = useExamOffline(passMark)
 
 /** صفُّ الطابور المعروض. */
 type QueueRow = { id: string, student: { id: string, full_name: string } | null, name: string, halaqa: string, teacher: string, title: string, detail: string, span: string }
 
-const { data: raw, refresh, pending } = useLazyAsyncData<ExamQueueRaw[]>(EXAMS_QUEUE_KEY, async () => {
+// خطأُ الخادم والاتصالُ قائم يُرمى داخل `wrap` فلا تُكتب نسخةٌ فارغة، ويُعرض خارجه؛ وتعثّرٌ بلا اتصال يردّ فارغاً فيرجع `wrap` إلى النسخة
+const copied = wrap(EXAMS_QUEUE_KEY, async () => {
   void quran.load()
-  try {
-    return await fetchExamQueue(supabase)
-  } catch (error) {
-    handle(error)
+  return fetchExamQueue(supabase).catch((err) => {
+    if (isOnlineNow()) throw err
     return []
-  }
-}, { server: false, default: () => [], watch: [role] })
+  })
+})
+const { data: raw, refresh, pending } = useLazyAsyncData<ExamQueueRaw[]>(EXAMS_QUEUE_KEY, () => copied().catch((err) => {
+  handle(err)
+  return []
+}), { server: false, default: () => [], watch: [role] })
 
-const rows = computed<QueueRow[]>(() => (raw.value ?? []).map((i) => {
+// ما على الجهاز (معلَّقاً أو مرفوضاً) أو رُفع الآن لا يُعرض في الطابور
+const shown = rowsFor(raw)
+// رُفع سطرٌ: يُجلب الطابورُ ومتصفّحُ النتائج من جديد (والبندُ مُسقطٌ حتى تصل النسخة فلا رمشة)
+watch(lastUploaded, () => onGraded())
+
+const rows = computed<QueueRow[]>(() => shown.value.map((i) => {
   const cycle = i.exam_cycle ? toExamCycle(i.exam_cycle) : null
   const t = examTargetText(cycle)
   return {
@@ -72,6 +89,19 @@ function askWithdraw(r: QueueRow) {
 
 <template>
   <div>
+    <ExamsPendingUploads
+      v-if="onDevice.length"
+      class="above"
+      :items="onDevice"
+    />
+    <OfflineRejectedDays
+      v-if="rejected.length"
+      class="above"
+      title="لم تقبلها القاعدة"
+      :entries="rejected"
+      @retry="retry"
+      @discard="discard"
+    />
     <h3 class="sec-title">
       الاختبارات الواردة <span class="count">{{ rows.length }}</span>
     </h3>
@@ -127,6 +157,8 @@ function askWithdraw(r: QueueRow) {
             size="sm"
             icon="i-lucide-undo-2"
             aria-label="سحب الترشيح"
+            :disabled="!online"
+            :title="online ? undefined : 'يحتاج اتصالاً'"
             :ui="{ base: 'rounded-[10px]' }"
             @click="askWithdraw(row)"
           />
@@ -157,6 +189,8 @@ function askWithdraw(r: QueueRow) {
               color="neutral"
               variant="outline"
               icon="i-lucide-undo-2"
+              :disabled="!online"
+              :title="online ? undefined : 'يحتاج اتصالاً'"
               :ui="{ base: 'rounded-[10px]' }"
               @click="askWithdraw(row)"
             />
@@ -178,6 +212,7 @@ function askWithdraw(r: QueueRow) {
 </template>
 
 <style scoped>
+.above { margin-bottom: 16px; }
 .sec-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
 .count { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; }
 .strong { font-weight: 600; color: var(--ink); }

@@ -82,6 +82,15 @@ describe('examOutbox', () => {
     expect(classifySyncError(r.error)).toBe('retry')
   })
 
+  it('23505 ثم قراءةٌ بلا خطأٍ وبلا سطر (حُذفت النتيجةُ بين الإدراج والقراءة): يُعاد الرصدُ لا رفض', async () => {
+    const e = newExamEntry('u', item, payload())
+    const { client } = fakeClient({ code: '23505' }, { data: null, error: null })
+    const r = await uploadExamResult(client, e)
+    expect(r.error?.message).not.toBe(EXAM_GRADED_BY_OTHER)
+    expect(r.error?.code).toBe('40001')
+    expect(classifySyncError(r.error)).toBe('retry')
+  })
+
   it('23503 (سُحب الترشيح) يمرّ رفضاً', async () => {
     const e = newExamEntry('u', item, payload())
     const err = { code: '23503', message: 'fk' }

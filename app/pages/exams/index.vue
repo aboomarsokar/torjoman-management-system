@@ -5,8 +5,10 @@
  * - المختبِر لحلقاته والمديران احتياطاً: طابورُ الرصد بالدورة (ExamsGradeQueue + ExamsGradeModal)؛
  *   الاجتيازُ يرفع الأجزاء بمُشغِّلٍ في القاعدة، وإشعارا الترشيح والرصد يصدران منها تلقائياً.
  * - الجميع: متابعة النتائج حسب النطاق (ExamsResultsBrowser بفلاتر هرمية).
+ * المختبِرُ بلا اتصال (2026-10-29): يرصد على جهازه (ExamsGradeQueue)، والنتائجُ السابقة تحتاج اتصالاً.
  */
 import { EXAM_MAX_TOTAL } from '~/constants/exams'
+import { queueOnline } from '~/composables/useOfflineQueue'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الاختبارات — ترجمان' })
@@ -41,9 +43,18 @@ async function onGraded() {
         @graded="onGraded"
       />
 
-      <!-- النتائج (للجميع، بفلاتر هرمية حسب النطاق) -->
+      <!-- النتائج (للجميع، بفلاتر هرمية حسب النطاق) — وبلا اتصالٍ لا نسخةَ لها على الجهاز -->
       <div class="results-slot">
-        <ExamsResultsBrowser ref="resultsRef" />
+        <p
+          v-if="!queueOnline"
+          class="offline-note"
+        >
+          النتائج السابقة تحتاج اتصالاً.
+        </p>
+        <ExamsResultsBrowser
+          v-else
+          ref="resultsRef"
+        />
       </div>
     </ClientOnly>
   </div>
@@ -51,4 +62,5 @@ async function onGraded() {
 
 <style scoped>
 .results-slot { margin-top: 30px; }
+.offline-note { margin: 0; font-size: 14px; color: var(--ink-2); }
 </style>

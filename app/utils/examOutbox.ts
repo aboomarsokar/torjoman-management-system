@@ -34,7 +34,7 @@ type UploadResult = { data: unknown, error: { code?: string, message?: string } 
 /**
  * رفعُ النتيجة. `23505` (فهرسٌ فريدٌ على البند) له وجهان: **ردٌّ ضائع** — نجح الإدراجُ ولم يصل ردُّه فجاءت
  * الإعادةُ بالتعارض، والراصدُ صاحبُ السطر، فنجاح؛ أو رصَدها غيرُه قبله، فرفضٌ دائم. وإن فشلت قراءةُ الراصد
- * نفسُها فيُعاد خطأُ القراءة (يُصنَّف فيُعاد لاحقاً) — لا يُعدّ نجاحاً.
+ * نفسُها فيُعاد خطأُ القراءة (يُصنَّف فيُعاد لاحقاً) — لا يُعدّ نجاحاً؛ وكذا إن عادت بلا سطر (حُذفت النتيجةُ بينهما).
  */
 export async function uploadExamResult(supabase: Client, e: ExamEntry): Promise<UploadResult> {
   const { error } = await supabase.from('exam_results').insert(e.payload)
@@ -43,7 +43,9 @@ export async function uploadExamResult(supabase: Client, e: ExamEntry): Promise<
   const { data: existing, error: readError } = await supabase.from('exam_results')
     .select('examiner_id').eq('exam_list_item_id', e.itemId).maybeSingle()
   if (readError) return { data: null, error: readError }
-  if (existing?.examiner_id === e.uid) return { data: null, error: null }
+  // لا خطأ ولا سطر: حُذفت النتيجةُ بين الإدراج والقراءة — لا رفضَ ولا نجاح، يُعاد الرصدُ (`40001` يُصنَّف إعادة)
+  if (!existing) return { data: null, error: { code: '40001', message: 'حُذفت النتيجةُ أثناء الرفع — يُعاد الرصد.' } }
+  if (existing.examiner_id === e.uid) return { data: null, error: null }
   return { data: null, error: { code: '23505', message: EXAM_GRADED_BY_OTHER } }
 }
 

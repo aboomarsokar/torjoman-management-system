@@ -3,11 +3,14 @@
  * نافذة رصد نتيجة الاختبار (§4.10) — كل سؤال بتفريعاته (حفظ/فهم/تدبّر) + التجويد،
  * كل خانة من 10 والتجويد من 7 إلى 9، والمجموع من 99. تُعرض دورةُ البند ونطاقُها وحدودُها.
  * تحفظ في exam_results وتُصدر saved للتحديث؛ والرصدُ المكرَّر (23505) يُعرض برسالةٍ عربيّة.
+ * المختبِرُ بلا اتصال (2026-10-29): تُحفظ الحمولةُ نفسُها على جهازه (`exam_date` يومَ الحفظ) وتُرفع حين يعود الاتصال.
  */
 import type { Database } from '~/types/database.types'
 import { gradeErrorMessage } from '~/utils/exams/nomination'
+import { passVerdict } from '~/utils/examOutbox'
 import { gazaToday } from '~/utils/reportWindow'
 import { EXAM_MAX_TOTAL, EXAM_SCORE_STEP } from '~/constants/exams'
+import { EXAM_SAVED_ON_DEVICE, useExamOffline } from '~/composables/useExamOffline'
 
 /** البندُ المرصود: معرّفُه وطالبُه، ونصُّ هدفه (الدورة أو نطاقُ الخطة القديمة) وحدودُه. */
 type GradeTarget = {
@@ -30,10 +33,9 @@ const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { data: passMark } = useLazyAsyncData<number>('exams-passmark', async () => {
-  const { data } = await supabase.from('app_settings').select('pass_mark').eq('id', 1).single()
-  return data?.pass_mark ?? 80
-}, { server: false, default: () => 80 })
+// درجةُ النجاح: من الإعدادات ونسخةِ الجهاز، وبلا قيمةٍ افتراضية في العرض (`null` ← لا علامةَ ولا حكم)
+const { passMark } = useExamPassMark()
+const { shouldQueue, saveOnDevice } = useExamOffline(passMark)
 
 const scores = reactive({
   q1_memorization: '', q1_understanding: '', q1_reflection: '',
@@ -86,6 +88,7 @@ function clampScore(key: ScoreKey) {
 const roundToStep = (n: number) => Math.round(n / EXAM_SCORE_STEP) * EXAM_SCORE_STEP
 
 const liveTotal = computed(() => scoreKeys.reduce((sum, k) => sum + (Number(scores[k]) || 0), 0))
+const verdict = computed(() => passVerdict(liveTotal.value, passMark.value))
 
 // تفريغ الخانات عند كل فتح
 watch(open, (v) => {
@@ -123,6 +126,14 @@ async function saveGrade() {
       tajweed_score: sc('tajweed_score'),
       notes: scores.notes.trim() || null
     }
+    if (shouldQueue()) {
+      // بلا اتصال: على الجهاز بالحمولة نفسها، و`exam_date` أعلاه يومُ الحفظ لا يومُ الرفع
+      await saveOnDevice({ id: props.target.id, studentName: props.target.student.full_name, title: props.target.title ?? '' }, payload)
+      toast.add({ title: EXAM_SAVED_ON_DEVICE, color: 'success', icon: 'i-lucide-circle-check' })
+      open.value = false
+      emit('saved')
+      return
+    }
     // عند الاجتياز يرفع مُشغِّل القاعدة (bump_parts_on_pass) الأجزاءَ المثبتة إلى
     // نهاية نطاق المحطة — فلا يحتاج الراصد (المختبِر) صلاحية تعديل الطلاب.
     const { error } = await supabase.from('exam_results').insert(payload)
@@ -156,7 +167,9 @@ async function saveGrade() {
           <span v-if="target.span">{{ target.span }}</span>
         </div>
         <p class="grade-hint">
-          كل خانة من 10، والتجويد بين 7 و9 (المجموع من {{ MAX_TOTAL }}). علامة الاجتياز: <strong>{{ passMark }}</strong>.
+          كل خانة من 10، والتجويد بين 7 و9 (المجموع من {{ MAX_TOTAL }}).<template v-if="passMark !== null">
+            علامة الاجتياز: <strong>{{ passMark }}</strong>.
+          </template>
         </p>
         <div class="groups">
           <div
@@ -195,10 +208,13 @@ async function saveGrade() {
         </div>
         <div
           class="total"
-          :class="{ ok: liveTotal >= (passMark || 80) }"
+          :class="{ ok: verdict === 'passed' }"
         >
           المجموع: <strong>{{ liveTotal }}</strong> / {{ MAX_TOTAL }}
-          <span class="pill">{{ liveTotal >= (passMark || 80) ? 'مجتاز' : 'غير مجتاز' }}</span>
+          <span
+            v-if="verdict"
+            class="pill"
+          >{{ verdict === 'passed' ? 'مجتاز' : 'غير مجتاز' }}</span>
         </div>
         <UFormField label="ملاحظات (اختياري)">
           <UTextarea

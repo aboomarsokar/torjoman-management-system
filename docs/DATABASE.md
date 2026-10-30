@@ -1214,7 +1214,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 > الهجرة `20261030084203_department_plan`.
 
 - **`dept_plans`**: خطةُ شهرٍ واحدة (`plan_year`, `plan_month`، فريدٌ معاً، ولا قبل 10/2026 — `dept_plans_from_project_start`) وحقولُ تقرير القسم الأربعة (`report_achievements`، `report_not_done`، `report_obstacles`، `report_team_notes`، كلٌّ حتى 3000 حرف).
-- **`dept_plan_goals`**: أهدافُ الخطة (`title` حتى 300، `sort_order`)، وحارسُ `dept_plan_goals_limit` يمنع أكثر من 10.
+- **`dept_plan_goals`**: أهدافُ الخطة (`title` حتى 300، `sort_order`)، **بلا حدٍّ لعددها** (أُلغي حارسُ العشرة `dept_plan_goals_limit` بـ`20261030115234_dept_plan_no_goal_limit`).
 - **`dept_plan_tasks`**: الأنشطة (`goal_id`، `plan_id` يضعه الحارس من الهدف، `title` حتى 400، `due_on` داخل شهر الخطة أو بعده بستة أيام، `status` من النوع `dept_task_status`: `not_started`/`in_progress`/`done`/`not_done`، `notes` حتى 1000، و`status_updated_by`/`status_updated_at` يضعهما الحارس `dept_plan_tasks_guard` عند تغيّر الحالة أو الملاحظة).
 - **`dept_plan_task_owners`**: المسؤولون (`task_id`, `profile_id` مفتاحٌ مركّب، `assigned_by`). الحارس `dept_plan_task_owners_guard` يشترط عاملاً نشطاً (لا طالب) ويُرسل `plan_task_assigned`.
 - **RLS:** القراءةُ الكاملة لـ`can_view_full_dept_plan()` (المدير الإداريّ والفنيّ والمديرة الإدارية ومشرف المشروع)، وغيرُهم يرى أنشطته وأهدافها وخطتها عبر `my_dept_task_ids()`؛ الكتابةُ كلُّها للمدير الإداريّ (`is_admin_manager()`)؛ وتحديثُ الحالة والملاحظة للمسؤول عبر `update_my_dept_task(p_task, p_status, p_notes)` (`assert_session_writable`). كلُّ جدولٍ عليه `guard_table_for_impersonation`.

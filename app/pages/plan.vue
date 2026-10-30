@@ -6,7 +6,7 @@
  */
 import type { DeptGoal, DeptTask, TaskDraft } from '~/composables/useDeptPlan'
 import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
-import { DEPT_PLAN_FULL_VIEWERS, MAX_DEPT_GOALS, type DeptTaskStatus } from '~/constants/deptPlan'
+import { DEPT_PLAN_FULL_VIEWERS, type DeptTaskStatus } from '~/constants/deptPlan'
 import { filterTasks, isDueSoon, isOverdue, planMonthLabel, progressOf, shiftPlanMonth, type TaskFilter } from '~/utils/deptPlan'
 import { gazaToday } from '~/utils/reportWindow'
 import { deptPlanSheets } from '~/utils/excel/deptPlan'
@@ -130,7 +130,7 @@ async function exportPlan() {
         class="tools"
       >
         <UButton
-          v-if="isAdmin && goals.length < MAX_DEPT_GOALS"
+          v-if="isAdmin"
           label="هدف جديد"
           icon="i-lucide-plus"
           color="primary"

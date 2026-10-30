@@ -106,6 +106,9 @@ begin
   if new.day < date '2026-10-01' then
     raise exception 'قبل بداية المشروع';
   end if;
+  if tg_op = 'INSERT' then
+    new.created_by := auth.uid();   -- المعيِّنُ هو المستدعي، لا ما يُرسَل
+  end if;
   new.reason := btrim(new.reason);
   return new;
 end;
@@ -246,6 +249,7 @@ declare
   v_uid uuid := auth.uid();
   v_err text;
   v_id uuid;
+  v_status text;
   v_note text := nullif(btrim(coalesce(p_note, '')), '');
   v_name text;
   v_gender text;
@@ -273,6 +277,18 @@ begin
   end if;
   if char_length(v_note) > 300 then
     raise exception 'الملاحظةُ أطولُ من 300 حرف' using errcode = '22023';
+  end if;
+
+  -- إعادةُ رفعٍ بعد ردٍّ ضائع: البلاغُ قائمٌ بالسبب والملاحظة أنفسهما (معلّقاً أو معتمَداً) ← يُردّ كما هو بلا كتابةٍ ولا إشعار.
+  -- قبل فحص النافذة وفحص «اعتُمد البلاغ»، فلا يُرفض ما قُبل أصلاً لأنّ الشهرَ اعتُمد أو اليومَ صار إجازةً بعده.
+  select o.id, o.status into v_id, v_status
+    from public.attendance_off_days o
+   where o.halaqa_id = p_halaqa and o.day = p_day
+     and o.reason = p_reason and o.note is not distinct from v_note
+     and o.status in ('pending', 'approved')
+   for update;
+  if found then
+    return jsonb_build_object('id', v_id, 'status', v_status);
   end if;
 
   v_err := private.off_day_window_ok(p_halaqa, p_day);
@@ -399,14 +415,19 @@ begin
     raise exception 'لا صلاحيةَ لك في اعتماد بلاغات هذه الحلقة' using errcode = '42501';
   end if;
 
-  if v_row.status <> 'pending' and private.attendance_month_approved(v_row.halaqa_id, v_row.day) then
-    raise exception 'الشهر معتمَد — لا يُغيَّر قرارٌ سابق' using errcode = 'P0001';
-  end if;
-
   v_status := case when p_approve then 'approved' else 'rejected' end;
   v_note := case when p_approve then null else nullif(btrim(coalesce(p_note, '')), '') end;
   if char_length(v_note) > 300 then
     raise exception 'سببُ الرفض أطولُ من 300 حرف' using errcode = '22023';
+  end if;
+
+  -- رفضٌ مكرَّر بالملاحظة نفسها (نقرةٌ ثانية أو ردٌّ ضائع): لا كتابةَ ولا إشعارَ ثانٍ. وبملاحظةٍ أخرى يُحدَّث ويُشعَر.
+  if not p_approve and v_row.status = 'rejected' and v_row.review_note is not distinct from v_note then
+    return jsonb_build_object('status', v_row.status);
+  end if;
+
+  if v_row.status <> 'pending' and private.attendance_month_approved(v_row.halaqa_id, v_row.day) then
+    raise exception 'الشهر معتمَد — لا يُغيَّر قرارٌ سابق' using errcode = 'P0001';
   end if;
 
   update public.attendance_off_days o

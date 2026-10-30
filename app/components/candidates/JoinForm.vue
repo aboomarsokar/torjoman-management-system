@@ -5,7 +5,7 @@
  * الأرقامُ العربية تُقبل وتُحوَّل، والتحقّقُ في `candidateDraftError` قبل الإرسال وفي القاعدة بعده.
  */
 import { TAJWEED_LEVELS } from '~/constants/profileChoices'
-import { CANDIDATE_PHONE_LENGTH, CANDIDATE_RESIDENCES, HALAQA_AREAS, MAX_ADDRESS_DETAIL, MAX_EXPERIENCE_YEARS, MAX_CANDIDATE_LONG, OTHER_AREA, SMALL_NUMBER_DIGITS } from '~/constants/candidates'
+import { CANDIDATE_PHONE_LENGTH, CANDIDATE_RESIDENCES, HALAQA_AREAS, MAX_ADDRESS_DETAIL, MAX_EXPERIENCE_YEARS, MAX_CANDIDATE_LONG, OTHER_AREA } from '~/constants/candidates'
 import { IDENTITY_LENGTH } from '~/constants/identity'
 import { PROGRAM_JUZ_COUNT } from '~/constants/quran'
 import { blankCandidate } from '~/composables/useCandidateRegistration'
@@ -15,6 +15,9 @@ const { busy, error, register } = useCandidateRegistration()
 const form = reactive(blankCandidate())
 const done = ref(false)
 const genderItems = [{ label: 'ذكر', value: 'male' }, { label: 'أنثى', value: 'female' }]
+/** حقلا الأجزاء والخبرة بأسهم زيادةٍ ونقص، والمسودّةُ نصّية. */
+const numberOf = (v: string) => v === '' ? null : Number(v)
+const numberUi = { base: 'text-start', increment: 'min-w-11 justify-center', decrement: 'min-w-11 justify-center' }
 const toItems = (list: readonly string[]) => list.map(l => ({ label: l, value: l }))
 const tajweedItems = toItems(TAJWEED_LEVELS)
 const residenceItems = toItems(CANDIDATE_RESIDENCES)
@@ -177,13 +180,16 @@ async function submit() {
         label="عدد الأجزاء المحفوظة"
         required
       >
-        <UiDigitsInput
-          v-model="form.quran_parts"
-          :max="SMALL_NUMBER_DIGITS"
-          :max-value="PROGRAM_JUZ_COUNT"
-          placeholder="0 – 30"
+        <UInputNumber
+          :model-value="numberOf(form.quran_parts)"
+          :min="0"
+          :max="PROGRAM_JUZ_COUNT"
+          locale="en"
+          placeholder="من 0 إلى 30"
           size="xl"
           class="w-full"
+          :ui="numberUi"
+          @update:model-value="v => form.quran_parts = v == null ? '' : String(v)"
         />
       </UFormField>
       <UFormField
@@ -202,12 +208,15 @@ async function submit() {
         label="سنوات الخبرة في التحفيظ"
         required
       >
-        <UiDigitsInput
-          v-model="form.experience_years"
-          :max="SMALL_NUMBER_DIGITS"
-          :max-value="MAX_EXPERIENCE_YEARS"
+        <UInputNumber
+          :model-value="numberOf(form.experience_years)"
+          :min="0"
+          :max="MAX_EXPERIENCE_YEARS"
+          locale="en"
           size="xl"
           class="w-full"
+          :ui="numberUi"
+          @update:model-value="v => form.experience_years = v == null ? '' : String(v)"
         />
       </UFormField>
       <UFormField label="المؤهل العلمي والتخصص">

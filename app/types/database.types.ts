@@ -598,6 +598,7 @@ export type Database = {
           created_at: string
           halaqa_id: string
           id: string
+          is_legacy: boolean
           status: Database["public"]["Enums"]["exam_list_status"]
           teacher_id: string
           updated_at: string
@@ -607,6 +608,7 @@ export type Database = {
           created_at?: string
           halaqa_id: string
           id?: string
+          is_legacy?: boolean
           status?: Database["public"]["Enums"]["exam_list_status"]
           teacher_id: string
           updated_at?: string
@@ -616,6 +618,7 @@ export type Database = {
           created_at?: string
           halaqa_id?: string
           id?: string
+          is_legacy?: boolean
           status?: Database["public"]["Enums"]["exam_list_status"]
           teacher_id?: string
           updated_at?: string
@@ -645,6 +648,7 @@ export type Database = {
           exam_list_item_id: string | null
           examiner_id: string | null
           id: string
+          is_legacy: boolean
           notes: string | null
           pass_mark_snapshot: number
           passed: boolean | null
@@ -668,6 +672,7 @@ export type Database = {
           exam_list_item_id?: string | null
           examiner_id?: string | null
           id?: string
+          is_legacy?: boolean
           notes?: string | null
           pass_mark_snapshot: number
           passed?: boolean | null
@@ -691,6 +696,7 @@ export type Database = {
           exam_list_item_id?: string | null
           examiner_id?: string | null
           id?: string
+          is_legacy?: boolean
           notes?: string | null
           pass_mark_snapshot?: number
           passed?: boolean | null

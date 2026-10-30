@@ -6,7 +6,9 @@
  * - المديرُ الإداري والفنيّ يفتحان المقفلةَ للتعديل (`unlock_visit_result`) فيصحّح المشرف ويحفظ فتُقفل ثانيةً.
  * - المعلمُ يرى نتيجةَ حلقته ويُقرّ بالاطّلاع (`acknowledge_visit`) بدل التوقيع.
  * - الزيارةُ القديمة (قبل النموذج، بلا `deductions`) تُعرض بحقولها القديمة للقراءة.
- * ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع.
+ * ويظهر سجلُّ تغييرات الموعد وأسبابُها للجميع (`VisitsRescheduleLog`، وبلا اتصال يُخفى).
+ * المشرفُ الميداني بلا اتصال (الدفعة الثالثة — 2026-10-29): الحفظُ يذهب إلى صندوق جهازه (`useVisitOffline`)، والزيارةُ
+ * المحفوظةُ على الجهاز تُفتح للقراءة بعدّه وملاحظاته ويومه (الصفُّ يصل مطبَّقاً عليه سطرُه) وتحمل شارةَ «بانتظار الرفع».
  */
 import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
@@ -14,6 +16,9 @@ import type { VisitRow } from '~/types/visits'
 import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
 import { cleanCounts, groupCriteria, parseCounts } from '~/utils/visitForm'
 import { ACK_SAVED_MESSAGE } from '~/composables/useOfflineAck'
+import { PENDING_UPLOAD_BADGE, VISIT_SAVED_ON_DEVICE } from '~/composables/useVisitOffline'
+import { queueOnline as online } from '~/composables/useOfflineQueue'
+import { fetchDeductionItems, VISIT_ITEMS_KEY } from '~/utils/fieldScreens'
 
 interface Props {
   open: boolean
@@ -29,13 +34,13 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 const { isAdmin, isTechnical, isTeacher } = usePermissions()
 
-// البنودُ ثابتة: تُجلب مرّةً للجلسة
-const { data: items } = useLazyAsyncData<DeductionItem[]>('visit-deduction-items', async () => {
-  const { data, error } = await supabase.from('visit_deduction_items')
-    .select('key, criterion, criterion_label, criterion_hint, label, per_time, sort_order').order('sort_order')
-  if (error) handle(error)
-  return data ?? []
-}, { server: false, default: () => [] })
+const { wrap } = useOfflineCopy()
+const { pendingFor, shouldQueue, saveOnDevice } = useVisitOffline()
+// البنودُ ثابتة: تُجلب مرّةً للجلسة، ولها نسخةٌ على جهاز المشرف
+const { data: items } = useLazyAsyncData<DeductionItem[]>(VISIT_ITEMS_KEY, wrap(VISIT_ITEMS_KEY, () => fetchDeductionItems(supabase).catch((err) => {
+  handle(err)
+  return []
+})), { server: false, default: () => [] })
 const criteria = computed(() => groupCriteria(items.value ?? []))
 
 const executedDay = ref('')
@@ -43,24 +48,19 @@ const counts = ref<DeductionCounts>({})
 const notes = ref('')
 const saving = ref(false)
 const busy = ref(false)
-type LogRow = { id: string, old_time: string | null, new_time: string | null, reason: string, changed_at: string }
-const log = ref<LogRow[]>([])
 const today = ref(gazaToday())
 
-watch(() => [props.open, props.visit?.id, props.visit?.locked_at] as const, async ([open]) => {
+watch(() => [props.open, props.visit?.id, props.visit?.locked_at] as const, ([open]) => {
   const v = props.visit
   if (!open || !v) return
   today.value = gazaToday()
   executedDay.value = v.executed_at ? gazaDayOf(v.executed_at) : props.canEdit ? today.value : ''
   counts.value = parseCounts(v.deductions)
   notes.value = v.notes ?? ''
-  log.value = []
-  const { data, error } = await supabase.from('visit_reschedule_log')
-    .select('id, old_time, new_time, reason, changed_at').eq('visit_id', v.id).order('changed_at')
-  if (error) handle(error)
-  else log.value = data ?? []
 }, { immediate: true })
 
+/** سطرُ هذه الزيارة على الجهاز (لم يُرفع بعد) — تُعرض للقراءة بشارته. */
+const onDevice = computed(() => (props.visit ? pendingFor(props.visit.id) : null))
 const locked = computed(() => !!props.visit?.locked_at)
 /** يكتب: صاحبُها وهي غيرُ مقفلة. */
 const editable = computed(() => props.canEdit && !locked.value)
@@ -79,6 +79,13 @@ async function save() {
   }
   saving.value = true
   try {
+    if (shouldQueue(v.id)) {
+      await saveOnDevice(v.id, { executedAt: executedAtFromDay(executedDay.value), deductions: cleanCounts(counts.value), notes: notes.value.trim() || null })
+      toast.add({ title: VISIT_SAVED_ON_DEVICE, color: 'success', icon: 'i-lucide-cloud-upload' })
+      emit('update:open', false)
+      emit('saved')
+      return
+    }
     const { data, error } = await supabase.from('supervision_visits').update({
       executed_at: executedAtFromDay(executedDay.value),
       deductions: cleanCounts(counts.value),
@@ -150,9 +157,11 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
             name="i-lucide-lock"
             class="size-[18px] shrink-0"
           />
-          <span v-if="canEdit">حُفظت النتيجة وأُقفلت — يفتحها المدير الإداري أو الفنيّ إن احتجت تصحيحاً.</span>
+          <span v-if="onDevice">{{ PENDING_UPLOAD_BADGE }}</span>
+          <span v-else-if="canEdit">حُفظت النتيجة وأُقفلت — يفتحها المدير الإداري أو الفنيّ إن احتجت تصحيحاً.</span>
           <span v-else>النتيجة محفوظة ومقفلة.</span>
           <span
+            v-if="!onDevice"
             class="ack"
             :class="{ yes: !!visit?.teacher_ack_at }"
           >{{ visit?.teacher_ack_at ? `اطّلع المعلم ${gazaDayOf(visit.teacher_ack_at).split('-').reverse().join('-')}` : 'لم يطّلع المعلم بعد' }}</span>
@@ -218,24 +227,10 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
           </UFormField>
         </template>
 
-        <section
-          v-if="log.length"
-          class="log"
-        >
-          <h3>تغييرات الموعد ({{ log.length }})</h3>
-          <ul>
-            <li
-              v-for="l in log"
-              :key="l.id"
-            >
-              <span
-                class="log-times"
-                dir="ltr"
-              >{{ l.old_time ? formatVisitMoment(l.old_time) : '—' }} → {{ l.new_time ? formatVisitMoment(l.new_time) : '—' }}</span>
-              <span class="log-reason">{{ l.reason }}</span>
-            </li>
-          </ul>
-        </section>
+        <VisitsRescheduleLog
+          :open="open"
+          :visit-id="visit?.id ?? null"
+        />
 
         <div class="form-actions">
           <UButton
@@ -254,6 +249,8 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
             size="lg"
             icon="i-lucide-lock-open"
             :loading="busy"
+            :disabled="!online"
+            :title="online ? undefined : 'يحتاج اتصالاً'"
             :ui="{ base: 'rounded-[13px]' }"
             @click="runRpc('unlock_visit_result', 'فُتحت الزيارة للتعديل — وصل المشرفَ إشعار.')"
           />
@@ -306,10 +303,4 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
 .legacy { display: flex; flex-direction: column; gap: 10px; margin: 0; }
 .legacy dt { font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
 .legacy dd { margin: 3px 0 0; font-size: 14.5px; color: var(--ink); line-height: 1.8; white-space: pre-wrap; }
-.log h3 { margin: 4px 0 8px; font-size: 14.5px; font-weight: 700; color: var(--ink); }
-.log ul { list-style: none; margin: 0; padding: 0; }
-.log li { display: flex; flex-direction: column; gap: 3px; padding: 10px 0; }
-.log li + li { border-top: 1px solid var(--line); }
-.log-times { font-size: 12.5px; color: var(--ink-3); text-align: end; align-self: flex-start; font-variant-numeric: tabular-nums; }
-.log-reason { color: var(--ink); font-size: 14px; overflow-wrap: anywhere; }
 </style>

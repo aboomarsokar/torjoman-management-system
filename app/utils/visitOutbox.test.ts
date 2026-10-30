@@ -79,6 +79,12 @@ describe('visitOutbox', () => {
     expect(out[1]!.score).toBe(4)
   })
 
+  it('applyPendingVisits بلا بنودٍ على الجهاز: المجموعُ فارغٌ لا رقمٌ من معاييرَ غائبة', () => {
+    const e = newVisitEntry('u', 'v1', { executedAt: '2026-10-28T09:00:00+03:00', deductions: { a: 1 }, notes: 'ن' }, new Date('2026-10-28T20:59:00Z'))
+    const out = applyPendingVisits([row('v1')], [e], [])
+    expect(out[0]).toMatchObject({ score: null, deductions: { a: 1 }, notes: 'ن', locked_at: e.recordedAt })
+  })
+
   it('applyPendingVisits بلا سطورٍ تردّ الصفوفَ كما هي', () => {
     const rows = [row('v1')]
     expect(applyPendingVisits(rows, [], items)).toEqual(rows)

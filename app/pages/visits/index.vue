@@ -5,13 +5,20 @@
  * وتفاصيلُ كلّ زيارةٍ بسجلّ تغييرات موعدها وأسبابه. ثلاثُ حالات (`visitDisplayStatus`، قرار 2026-10-21):
  * مجدولة، ومتأخّرة (فات موعدُها بلا تنفيذ)، وتمّت (كلُّ منفّذة). والمشرفُ الميدانيّ لا يرى «الزائر» — هو الزائر.
  * الحذفُ لصاحب الزيارة وللمدير الإداري (تنظيف خطأ).
+ * المشرفُ الميداني بلا اتصال (2026-10-29): تُعرض نسخةُ الزيارات من جهازه، وما حفظه من تقييمٍ ينتظر الرفع يظهر في صفّه
+ * مقفلاً بشارة «بانتظار الرفع» (الحالةُ والفلاترُ والعدّاداتُ بحالة القاعدة)؛ والجدولةُ والتأجيلُ والحذفُ تحتاج اتصالاً.
  */
 import type { Database } from '~/types/database.types'
 import type { VisitHalqaOption, VisitRow } from '~/types/visits'
 import type { VisitDisplayStatus } from '~/utils/visitStatus'
+import type { DeductionItem } from '~/utils/visitForm'
 import { roleLabel } from '~/constants/roles'
 import { VISIT_MAX } from '~/utils/visitForm'
 import { fetchVisitHalqat, fetchVisits, SCREEN_KEYS } from '~/utils/teacherScreens'
+import { fetchDeductionItems, VISIT_ITEMS_KEY } from '~/utils/fieldScreens'
+import { applyPendingVisits } from '~/utils/visitOutbox'
+import { PENDING_UPLOAD_BADGE } from '~/composables/useVisitOffline'
+import { queueOnline as online } from '~/composables/useOfflineQueue'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الزيارات الإشرافية — ترجمان' })
@@ -31,7 +38,7 @@ const canEditVisit = (v: VisitRow) => isVisitor.value && v.supervisor_id === pro
 
 // والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
 const { wrap } = useOfflineCopy()
-const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(SCREEN_KEYS.visits, wrap(SCREEN_KEYS.visits, async () => {
+const { data: fetched, refresh, pending } = useLazyAsyncData<VisitRow[]>(SCREEN_KEYS.visits, wrap(SCREEN_KEYS.visits, async () => {
   try {
     return await fetchVisits(supabase)
   } catch (err) {
@@ -39,11 +46,23 @@ const { data: visits, refresh, pending } = useLazyAsyncData<VisitRow[]>(SCREEN_K
     return []
   }
 }), { server: false, default: () => [] })
+// بنودُ الخصم (نسخةُ الجهاز كنافذة النتيجة): بها يُحسب مجموعُ ما ينتظر الرفع
+const { data: items } = useLazyAsyncData<DeductionItem[]>(VISIT_ITEMS_KEY,
+  wrap(VISIT_ITEMS_KEY, () => fetchDeductionItems(supabase).catch(() => [])), { server: false, default: () => [] })
+const { pending: pendingVisits, pendingFor, rejected, retry, discard, lastUploaded } = useVisitOffline()
+/** الصفوفُ المعروضة: نسخةُ القاعدة وعليها ما حُفظ على الجهاز ولم يُرفع بعد. */
+const visits = computed(() => applyPendingVisits(fetched.value ?? [], pendingVisits.value, items.value ?? []))
+// رُفع سطرٌ: القاعدةُ تحمل نتيجتَه الآن
+watch(lastUploaded, () => refresh())
 const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>(SCREEN_KEYS.visitHalqat,
   wrap(SCREEN_KEYS.visitHalqat, () => fetchVisitHalqat(supabase).catch(() => [])), { server: false, default: () => [] })
 
 const today = gazaToday()
 const display = (v: VisitRow) => visitDisplayStatus(v, today)
+/** شارةُ الحالة: ما ينتظر الرفع على الجهاز يحمل شارتَه بدل حالةِ القاعدة. */
+const statusBadge = (v: VisitRow) => pendingFor(v.id)
+  ? { label: PENDING_UPLOAD_BADGE, color: 'warning' as const }
+  : { label: VISIT_STATUS[display(v)]?.label, color: VISIT_STATUS[display(v)]?.color }
 
 // ── الفلاتر: الشهر (افتراضاً الجاري) والمشرف (للإدارة) ثم شرائح الحالة ──
 const periodOf = (v: VisitRow) => gazaDayOf(v.scheduled_at).slice(0, 7)
@@ -183,12 +202,23 @@ async function confirmDelete() {
           color="primary"
           size="lg"
           icon="i-lucide-plus"
+          :disabled="!online"
+          :title="online ? undefined : 'يحتاج اتصالاً'"
           :ui="{ base: 'rounded-[13px] font-semibold' }"
           @click="openSchedule(null)"
         />
       </template>
     </UiPageHeader>
     <OfflineSavedNote :keys="[SCREEN_KEYS.visits]" />
+    <ClientOnly>
+      <OfflineRejectedDays
+        v-if="rejected.length"
+        title="لم تقبلها القاعدة"
+        :entries="rejected"
+        @retry="retry"
+        @discard="discard"
+      />
+    </ClientOnly>
 
     <div class="filters">
       <UiSelect
@@ -312,8 +342,7 @@ async function confirmDelete() {
         </template>
         <template #status="{ row }">
           <UBadge
-            :label="VISIT_STATUS[display(row)]?.label"
-            :color="VISIT_STATUS[display(row)]?.color"
+            v-bind="statusBadge(row)"
             variant="soft"
           />
         </template>
@@ -332,6 +361,8 @@ async function confirmDelete() {
               size="sm"
               icon="i-lucide-calendar-clock"
               :ui="{ base: 'rounded-[10px]' }"
+              :disabled="!online"
+              :title="online ? undefined : 'يحتاج اتصالاً'"
               aria-label="تعديل الموعد"
               @click="openSchedule(row)"
             />
@@ -342,6 +373,8 @@ async function confirmDelete() {
               size="sm"
               icon="i-lucide-trash-2"
               :ui="{ base: 'rounded-[10px]' }"
+              :disabled="!online"
+              :title="online ? undefined : 'يحتاج اتصالاً'"
               aria-label="حذف"
               @click="deleteTarget = row"
             />
@@ -361,8 +394,7 @@ async function confirmDelete() {
           >
             <template #badge>
               <UBadge
-                :label="VISIT_STATUS[display(row)]?.label"
-                :color="VISIT_STATUS[display(row)]?.color"
+                v-bind="statusBadge(row)"
                 variant="soft"
               />
             </template>
@@ -379,6 +411,8 @@ async function confirmDelete() {
                 variant="outline"
                 icon="i-lucide-calendar-clock"
                 :ui="{ base: 'rounded-[11px]' }"
+                :disabled="!online"
+                :title="online ? undefined : 'يحتاج اتصالاً'"
                 @click="openSchedule(row)"
               />
               <UButton
@@ -388,6 +422,8 @@ async function confirmDelete() {
                 variant="ghost"
                 icon="i-lucide-trash-2"
                 aria-label="حذف"
+                :disabled="!online"
+                :title="online ? undefined : 'يحتاج اتصالاً'"
                 :ui="{ base: 'rounded-[11px]' }"
                 @click="deleteTarget = row"
               />

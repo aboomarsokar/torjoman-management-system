@@ -55,7 +55,7 @@ export function settledVisits(rows: VisitRow[], visitId: string, patch: Partial<
 
 /**
  * الزياراتُ كما تُعرض والمعلَّقُ على الجهاز مطبَّقٌ عليها: النتيجةُ من السطر، والمجموعُ من 42 يُحسب محلّياً بالبنود،
- * و`locked_at` وقتُ الحفظ — فيراها المشرفُ مقفلةً للقراءة بعدّه وملاحظاته لا فارغةً ولا قابلةً للتعديل.
+ * (فارغٌ إن غابت البنودُ عن الجهاز) و`locked_at` وقتُ الحفظ — فيراها المشرفُ مقفلةً للقراءة بعدّه وملاحظاته لا فارغةً ولا قابلةً للتعديل.
  */
 export function applyPendingVisits(rows: VisitRow[], entries: VisitEntry[], items: DeductionItem[]): VisitRow[] {
   if (!entries.length) return rows
@@ -69,7 +69,8 @@ export function applyPendingVisits(rows: VisitRow[], entries: VisitEntry[], item
       executed_at: e.executedAt,
       deductions: e.deductions,
       notes: e.notes,
-      score: visitTotals(criteria, e.deductions).score,
+      // بلا بنودٍ على الجهاز لا معاييرَ يُحسب بها المجموع: فارغٌ لا رقمٌ مضلِّل (تحسبه القاعدةُ عند الرفع)
+      score: items.length ? visitTotals(criteria, e.deductions).score : null,
       locked_at: e.recordedAt
     }
   })

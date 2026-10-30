@@ -13,12 +13,12 @@
 import { PROJECT_START_DATE } from '~/constants/project'
 import type { Database } from '~/types/database.types'
 import type { VisitRow } from '~/types/visits'
-import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
-import { cleanCounts, groupCriteria, parseCounts } from '~/utils/visitForm'
+import type { DeductionCounts } from '~/utils/visitForm'
+import { cleanCounts, parseCounts } from '~/utils/visitForm'
 import { ACK_SAVED_MESSAGE } from '~/composables/useOfflineAck'
 import { PENDING_UPLOAD_BADGE, VISIT_SAVED_ON_DEVICE } from '~/composables/useVisitOffline'
 import { queueOnline as online } from '~/composables/useOfflineQueue'
-import { fetchDeductionItems, VISIT_ITEMS_KEY } from '~/utils/fieldScreens'
+import { useDeductionItems } from '~/composables/useDeductionItems'
 
 interface Props {
   open: boolean
@@ -34,14 +34,9 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 const { isAdmin, isTechnical, isTeacher } = usePermissions()
 
-const { wrap } = useOfflineCopy()
 const { pendingFor, shouldQueue, saveOnDevice } = useVisitOffline()
 // البنودُ ثابتة: تُجلب مرّةً للجلسة، ولها نسخةٌ على جهاز المشرف
-const { data: items } = useLazyAsyncData<DeductionItem[]>(VISIT_ITEMS_KEY, wrap(VISIT_ITEMS_KEY, () => fetchDeductionItems(supabase).catch((err) => {
-  handle(err)
-  return []
-})), { server: false, default: () => [] })
-const criteria = computed(() => groupCriteria(items.value ?? []))
+const { criteria } = useDeductionItems()
 
 const executedDay = ref('')
 const counts = ref<DeductionCounts>({})

@@ -1,17 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import type { VisitEntry } from '~/utils/visitOutbox'
+import { groupCriteria, visitTotals } from '~/utils/visitForm'
 
 // بيئةُ الاختبار بلا Nuxt: الاستيراداتُ التلقائيّة محاكاةٌ بعلب قيم، والصندوقُ والاتصالُ وصاحبُ الجهاز محاكَون —
 // والمختبَرُ هنا قرارُ «أين يُحفظ التقييم» وما يُحفظ في سطره؛ ورفعُ السطر في utils/visitOutbox.test.ts
 vi.stubGlobal('computed', computed)
+vi.stubGlobal('shallowRef', shallowRef)
+vi.stubGlobal('watch', watch)
 const queued: VisitEntry[] = []
 const pendingRows = ref<VisitEntry[]>([])
+const lastUploaded = ref<{ entry: VisitEntry, data: unknown, at: number } | null>(null)
 const put = vi.fn(async (e: VisitEntry) => void queued.push(e))
 vi.stubGlobal('useOfflineQueue', () => ({
   pending: computed(() => pendingRows.value),
   rejected: computed(() => [{ key: 'u|v9', visitId: 'v9', error: 'x' }]),
-  lastUploaded: ref(null), retry: vi.fn(), discard: vi.fn(), put
+  lastUploaded, retry: vi.fn(), discard: vi.fn(), put
 }))
 const listCopy = ref<{ id: string, halaqa: { name: string } | null }[] | undefined>(undefined)
 vi.stubGlobal('useNuxtData', () => ({ data: listCopy }))
@@ -30,6 +34,7 @@ beforeEach(() => {
   online = true
   queued.length = 0
   pendingRows.value = []
+  lastUploaded.value = null
   listCopy.value = undefined
   put.mockClear()
 })
@@ -82,5 +87,41 @@ describe('useVisitOffline', () => {
     expect(useVisitOffline().rejected.value).toEqual([{ key: 'u|v9', label: 'زيارة', error: 'x' }])
     listCopy.value = [{ id: 'v9', halaqa: { name: 'الفرقان' } }]
     expect(useVisitOffline().rejected.value[0]!.label).toBe('زيارة الفرقان')
+  })
+
+  it('badgeFor: شارةُ الانتظار للمعلَّق وحالةُ القاعدة لغيره', () => {
+    pendingRows.value = [entry('v1')]
+    const v = useVisitOffline()
+    expect(v.badgeFor('v1', { label: 'مجدولة', color: 'info' })).toEqual({ label: PENDING_UPLOAD_BADGE, color: 'warning' })
+    expect(v.badgeFor('v2', { label: 'مجدولة', color: 'info' })).toEqual({ label: 'مجدولة', color: 'info' })
+  })
+
+  describe('rowsFor', () => {
+    const row = (id: string, extra: Record<string, unknown> = {}) => ({ id, executed_at: null, locked_at: null, score: null, deductions: null, notes: null, status: 'scheduled', ...extra }) as never
+    const items = ref([{ key: 'a', criterion: 1, criterion_label: 'م', criterion_hint: null, label: 'a', per_time: 1, sort_order: 1 }])
+
+    it('يطبّق ما على الجهاز على صفّه وحده', () => {
+      const e = entry('v1')
+      pendingRows.value = [e]
+      const rows = useVisitOffline().rowsFor(ref([row('v1'), row('v2')]), items)
+      expect(rows.value[0]).toMatchObject({ id: 'v1', executed_at: e.executedAt, locked_at: e.recordedAt, score: visitTotals(groupCriteria(items.value), e.deductions).score })
+      expect(rows.value[1]).toMatchObject({ id: 'v2', locked_at: null })
+    })
+
+    it('بعد الرفع: نتيجةُ القاعدة فوراً بلا رمشةٍ قبل refresh، ثم تُمحى حين تصل نسخةٌ جديدة', async () => {
+      const e = entry('v1')
+      pendingRows.value = [e]
+      const fetched = ref([row('v1')])
+      const rows = useVisitOffline().rowsFor(fetched, items)
+      // رُفع السطرُ: يُحذف من الصندوق ويصل ردُّ القاعدة، والشاشةُ لم تجلب بعد
+      pendingRows.value = []
+      lastUploaded.value = { entry: e, data: { id: 'v1', executed_at: e.executedAt, locked_at: 'SERVER', score: 30, deductions: { a: 1 }, notes: 'ن', status: 'done' }, at: 1 }
+      await nextTick()
+      expect(rows.value[0]).toMatchObject({ locked_at: 'SERVER', score: 30, status: 'done' })
+      // وصل الجلبُ (المدير فتح المقفلة في الأثناء): لا ترقيعَ قديماً فوقه
+      fetched.value = [row('v1', { locked_at: null, status: 'done' })]
+      await nextTick()
+      expect(rows.value[0]).toMatchObject({ locked_at: null })
+    })
   })
 })

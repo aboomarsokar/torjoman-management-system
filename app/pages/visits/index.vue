@@ -11,13 +11,10 @@
 import type { Database } from '~/types/database.types'
 import type { VisitHalqaOption, VisitRow } from '~/types/visits'
 import type { VisitDisplayStatus } from '~/utils/visitStatus'
-import type { DeductionItem } from '~/utils/visitForm'
 import { roleLabel } from '~/constants/roles'
 import { VISIT_MAX } from '~/utils/visitForm'
 import { fetchVisitHalqat, fetchVisits, SCREEN_KEYS } from '~/utils/teacherScreens'
-import { fetchDeductionItems, VISIT_ITEMS_KEY } from '~/utils/fieldScreens'
-import { applyPendingVisits } from '~/utils/visitOutbox'
-import { PENDING_UPLOAD_BADGE } from '~/composables/useVisitOffline'
+import { useDeductionItems } from '~/composables/useDeductionItems'
 import { queueOnline as online } from '~/composables/useOfflineQueue'
 
 definePageMeta({ layout: 'dashboard' })
@@ -46,13 +43,12 @@ const { data: fetched, refresh, pending } = useLazyAsyncData<VisitRow[]>(SCREEN_
     return []
   }
 }), { server: false, default: () => [] })
-// بنودُ الخصم (نسخةُ الجهاز كنافذة النتيجة): بها يُحسب مجموعُ ما ينتظر الرفع
-const { data: items } = useLazyAsyncData<DeductionItem[]>(VISIT_ITEMS_KEY,
-  wrap(VISIT_ITEMS_KEY, () => fetchDeductionItems(supabase).catch(() => [])), { server: false, default: () => [] })
-const { pending: pendingVisits, pendingFor, rejected, retry, discard, lastUploaded } = useVisitOffline()
-/** الصفوفُ المعروضة: نسخةُ القاعدة وعليها ما حُفظ على الجهاز ولم يُرفع بعد. */
-const visits = computed(() => applyPendingVisits(fetched.value ?? [], pendingVisits.value, items.value ?? []))
-// رُفع سطرٌ: القاعدةُ تحمل نتيجتَه الآن
+// بنودُ الخصم (جلبٌ مشتركٌ مع نافذة النتيجة): بها يُحسب مجموعُ ما ينتظر الرفع
+const { items } = useDeductionItems()
+const { rowsFor, badgeFor, rejected, retry, discard, lastUploaded } = useVisitOffline()
+/** الصفوفُ المعروضة: نسخةُ القاعدة وعليها ما رُفع الآن وما حُفظ على الجهاز ولم يُرفع بعد. */
+const visits = rowsFor(fetched, items)
+// رُفع سطرٌ: يظهر ردُّ القاعدة فوراً، ثم تُجلب النسخةُ الجديدة
 watch(lastUploaded, () => refresh())
 const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>(SCREEN_KEYS.visitHalqat,
   wrap(SCREEN_KEYS.visitHalqat, () => fetchVisitHalqat(supabase).catch(() => [])), { server: false, default: () => [] })
@@ -60,9 +56,7 @@ const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>(SCREEN_KEYS.visitH
 const today = gazaToday()
 const display = (v: VisitRow) => visitDisplayStatus(v, today)
 /** شارةُ الحالة: ما ينتظر الرفع على الجهاز يحمل شارتَه بدل حالةِ القاعدة. */
-const statusBadge = (v: VisitRow) => pendingFor(v.id)
-  ? { label: PENDING_UPLOAD_BADGE, color: 'warning' as const }
-  : { label: VISIT_STATUS[display(v)]?.label, color: VISIT_STATUS[display(v)]?.color }
+const statusBadge = (v: VisitRow) => badgeFor(v.id, { label: VISIT_STATUS[display(v)]?.label, color: VISIT_STATUS[display(v)]?.color })
 
 // ── الفلاتر: الشهر (افتراضاً الجاري) والمشرف (للإدارة) ثم شرائح الحالة ──
 const periodOf = (v: VisitRow) => gazaDayOf(v.scheduled_at).slice(0, 7)

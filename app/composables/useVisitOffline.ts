@@ -10,8 +10,9 @@ import { VISIT_QUEUE } from '~/utils/offlineQueues'
 import { offlineOwnerUid } from '~/utils/offlineSnapshot'
 import { SCREEN_KEYS } from '~/utils/teacherScreens'
 import type { VisitRow } from '~/types/visits'
-import { newVisitEntry, type VisitEntry } from '~/utils/visitOutbox'
-import type { DeductionCounts } from '~/utils/visitForm'
+import { applyPendingVisits, newVisitEntry, settledVisits, type VisitEntry } from '~/utils/visitOutbox'
+import type { Ref } from 'vue'
+import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
 
 /** شارةُ ما ينتظر الرفع: في عمود الحالة ونافذة النتيجة. */
 export const PENDING_UPLOAD_BADGE = 'على جهازك — بانتظار الرفع'
@@ -37,5 +38,29 @@ export function useVisitOffline() {
     return { key: e.key, label: name ? `زيارة ${name}` : 'زيارة', error: e.error }
   }))
 
-  return { uid, pending, pendingFor, shouldQueue, saveOnDevice, rejected, lastUploaded: queue.lastUploaded, retry: queue.retry, discard: queue.discard }
+  /** شارةُ الحالة: ما ينتظر الرفع يحمل شارتَه بدل حالة القاعدة (`normal`). */
+  const badgeFor = <B>(visitId: string, normal: B): B | { label: string, color: 'warning' } =>
+    pendingFor(visitId) ? { label: PENDING_UPLOAD_BADGE, color: 'warning' } : normal
+
+  /**
+   * الصفوفُ المعروضة: ما جلبته الشاشةُ وعليه (١) ما رُفع الآن — بنتيجة القاعدة فوراً قبل أن يعود `refresh()`، كي لا يعود
+   * الصفُّ قابلاً للتعديل لحظةً بعد حذف سطره من الصندوق، و(٢) ما ينتظر الرفع على الجهاز. وما رُفع يُمحى حين تصل
+   * الشاشةَ نسخةٌ جديدة (فتحُ المدير للمقفلة بعدها لا يُغطّيه ترقيعٌ قديم).
+   */
+  function rowsFor(fetched: Ref<VisitRow[] | undefined>, items: Ref<DeductionItem[] | undefined>) {
+    // `shallowRef`: الصفوفُ كبيرةُ النوع فلا يُفكَّك عمقُها (TS2589)، ولا حاجةَ لتفاعلٍ داخل الترقيع
+    const uploaded = shallowRef<{ visitId: string, patch: Partial<VisitRow> }[]>([])
+    watch(queue.lastUploaded, (u) => {
+      if (u) uploaded.value = [...uploaded.value, { visitId: (u.entry as VisitEntry).visitId, patch: (u.data ?? {}) as Partial<VisitRow> }]
+    })
+    watch(fetched, () => {
+      uploaded.value = []
+    })
+    return computed(() => {
+      const base = uploaded.value.reduce<VisitRow[]>((rows, u) => settledVisits(rows, u.visitId, u.patch), fetched.value ?? [])
+      return applyPendingVisits(base, pending.value, items.value ?? [])
+    })
+  }
+
+  return { rowsFor, badgeFor, uid, pending, pendingFor, shouldQueue, saveOnDevice, rejected, lastUploaded: queue.lastUploaded, retry: queue.retry, discard: queue.discard }
 }

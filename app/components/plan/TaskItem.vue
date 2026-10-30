@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * نشاطٌ في بطاقة هدفٍ من خطة القسم: شارةُ ترقيمه («1-2»)، وشريطٌ على طرفه بلون حالته، والعنوانُ والمسؤولون والموعد
+ * نشاطٌ في بطاقة هدفٍ من خطة القسم: شارةُ ترقيمه («1-2»)، والعنوانُ والمسؤولون والموعد
  * (المتأخّرُ أحمر والقريبُ أصفر)، والملاحظة، وزرُّ الحالة ظاهراً، والتعديلُ والحذفُ في قائمة «⋯» للمدير الإداريّ.
  */
 import type { DropdownMenuItem } from '@nuxt/ui'
@@ -85,12 +85,9 @@ const menu = computed<DropdownMenuItem[]>(() => [
 <style scoped>
 .ti {
   display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start;
-  padding: 12px 14px; border-top: 1px solid var(--line); box-shadow: inset -3px 0 0 var(--stripe);
-  --stripe: var(--line-2);
+  padding: 10px 16px; border-top: 1px solid var(--line);
 }
-.ti.is-in_progress { --stripe: var(--blue); }
-.ti.is-done { --stripe: var(--green); }
-.ti.is-not_done { --stripe: var(--err); }
+.ti:hover { background: var(--bg); }
 .ti-no {
   min-width: 34px; padding: 2px 8px; border-radius: 8px; background: var(--surface-3); color: var(--ink-3);
   font-size: 12px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; margin-top: 2px;

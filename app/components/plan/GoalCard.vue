@@ -64,7 +64,10 @@ const menu = computed<DropdownMenuItem[]>(() => [
         @click="collapsed = !collapsed"
       >
         <span class="gc-lead">
-          <span class="gc-no">{{ index + 1 }}</span>
+          <span
+            class="gc-no"
+            :aria-label="`الهدف ${index + 1}`"
+          >{{ index + 1 }}</span>
           <span class="gc-chev gc-chev-m"><UIcon
             name="i-lucide-chevron-down"
             class="size-4.5"
@@ -72,8 +75,14 @@ const menu = computed<DropdownMenuItem[]>(() => [
           /></span>
         </span>
         <span class="gc-title">
-          <span class="gc-kicker">الهدف {{ index + 1 }}<template v-if="complete"> · منجز</template></span>
           <span class="gc-name">{{ goal.title }}</span>
+          <span
+            v-if="complete"
+            class="gc-done"
+          ><UIcon
+            name="i-lucide-circle-check"
+            class="size-4"
+          /> أُنجز الهدف</span>
         </span>
         <span
           class="gc-ring"
@@ -107,7 +116,7 @@ const menu = computed<DropdownMenuItem[]>(() => [
             aria-hidden="true"
           >
             <span class="gc-line-top"><b dir="ltr">{{ progress.pct }}%</b><span>{{ progress.done }} من {{ progress.total }} منجزة</span></span>
-            <span class="gc-track"><i :style="{ width: progress.pct + '%' }" /></span>
+            <span class="gc-track"><i :style="{ transform: `scaleX(${progress.pct / 100})` }" /></span>
           </span>
         </span>
         <span class="gc-chev gc-chev-d">
@@ -189,9 +198,8 @@ const menu = computed<DropdownMenuItem[]>(() => [
 }
 .gc.complete .gc-no { background: var(--green); color: var(--band-ink); }
 .gc-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.gc-kicker { font-size: 12px; font-weight: 600; color: var(--band-sub); }
-.gc.complete .gc-kicker { color: var(--green); }
-.gc-name { font-size: 18px; font-weight: 600; color: var(--band-ink); line-height: 1.55; text-wrap: balance; }
+.gc-done { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--green); }
+.gc-name { font-size: 17px; font-weight: 600; color: var(--band-ink); line-height: 1.55; text-wrap: balance; }
 .gc-ring { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .gc-dial { position: relative; width: 64px; height: 64px; }
 .gc-dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -215,7 +223,7 @@ const menu = computed<DropdownMenuItem[]>(() => [
 .gc-line-top b { font-size: 20px; font-weight: 700; color: var(--band-ink); font-variant-numeric: tabular-nums; line-height: 1; }
 .gc-line-top span { font-size: 12px; font-weight: 600; color: var(--band-sub); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .gc-track { display: block; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--band-ink) 20%, transparent); overflow: hidden; }
-.gc-track i { display: block; height: 100%; border-radius: 999px; background: var(--green); transition: width .4s var(--ease-out); }
+.gc-track i { display: block; height: 100%; border-radius: 999px; background: var(--green); transform-origin: right; transition: transform .4s var(--ease-out); }
 .gc-lead { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .gc-chev {
   flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px;

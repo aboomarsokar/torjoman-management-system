@@ -6,7 +6,6 @@
  */
 import type { DeptGoal, DeptTask, TaskDraft } from '~/composables/useDeptPlan'
 import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
-import type { StatItem } from '~/components/ui/StatStrip.vue'
 import { DEPT_PLAN_FULL_VIEWERS, MAX_DEPT_GOALS, type DeptTaskStatus } from '~/constants/deptPlan'
 import { filterTasks, isDueSoon, isOverdue, planMonthLabel, progressOf, shiftPlanMonth, type TaskFilter } from '~/utils/deptPlan'
 import { gazaToday } from '~/utils/reportWindow'
@@ -68,12 +67,12 @@ const visibleGoals = computed(() => goals.value
   .filter(x => (filter.value === 'all' && owner.value === ALL_OWNERS) || x.list.length))
 
 const progress = computed(() => progressOf(tasks.value))
-const stats = computed<StatItem[]>(() => [
-  { key: 'pct', icon: 'i-lucide-target', value: `${progress.value.pct}%`, label: 'نسبة إنجاز الخطة', sub: `${progress.value.done} من ${progress.value.total}`, tone: 'green' },
-  { key: 'open', icon: 'i-lucide-loader', value: tasks.value.filter(t => t.status === 'in_progress').length, label: 'قيد التنفيذ', tone: 'blue' },
-  { key: 'soon', icon: 'i-lucide-alarm-clock', value: tasks.value.filter(t => isDueSoon(t, today)).length, label: 'موعدها خلال يومين', tone: 'neutral' },
-  { key: 'late', icon: 'i-lucide-clock-alert', value: tasks.value.filter(t => isOverdue(t, today)).length, label: 'متأخّرة', tone: 'err' }
-])
+const summary = computed(() => ({
+  ...progress.value,
+  active: tasks.value.filter(t => t.status === 'in_progress').length,
+  soon: tasks.value.filter(t => isDueSoon(t, today)).length,
+  late: tasks.value.filter(t => isOverdue(t, today)).length
+}))
 
 // ── النوافذ ──
 const goalModal = reactive({ open: false, id: '' as string, title: '' })
@@ -187,22 +186,27 @@ async function exportPlan() {
     </template>
 
     <template v-else>
-      <UiStatStrip
-        :items="stats"
-        label="ملخص الخطة"
+      <PlanSummary
+        v-bind="summary"
+        @filter="(f: TaskFilter) => (filter = f)"
       />
-      <div class="filters">
+      <div
+        class="toolbar"
+        role="group"
+        aria-label="تصفية الأنشطة"
+      >
+        <UiSegmentTabs
+          v-model="filter"
+          :tabs="filterTabs"
+          label="حالة الأنشطة"
+          class="toolbar-tabs"
+        />
         <PlanOwnerFilter
           v-if="fullView"
           v-model="owner"
           :tasks="tasks"
           :names="names"
           :shown="shown.length"
-        />
-        <UiSegmentTabs
-          v-model="filter"
-          :tabs="filterTabs"
-          label="تصفية الأنشطة"
         />
       </div>
       <div class="goals">
@@ -280,6 +284,11 @@ async function exportPlan() {
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .tools, .start { display: flex; flex-wrap: wrap; gap: 8px; }
 .start { justify-content: center; }
-.filters { display: flex; flex-direction: column; gap: 10px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.toolbar-tabs { flex: 0 1 auto; max-width: 100%; min-width: 0; margin-bottom: 0; overflow-x: auto; scrollbar-width: none; }
+.toolbar-tabs::-webkit-scrollbar { display: none; }
+@media (max-width: 640px) {
+  .toolbar-tabs { flex: 1 1 100%; }
+}
 .goals { display: flex; flex-direction: column; gap: 14px; }
 </style>

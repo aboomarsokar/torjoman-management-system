@@ -46,7 +46,7 @@ const countLabel = computed(() => {
       :search-input="{ placeholder: 'ابحث بالاسم' }"
       aria-label="تصفية بالمسؤول"
       class="of-select"
-      :ui="{ base: 'rounded-[12px] min-h-11 cursor-pointer w-80 max-w-full', content: 'min-w-80 max-w-[92vw]' }"
+      :ui="{ base: `rounded-[12px] min-h-11 cursor-pointer w-72 max-w-full ${active ? 'ring-2 ring-(--blue)' : ''}`, content: 'min-w-72 max-w-[92vw]' }"
     >
       <template #item-trailing="{ item }">
         <span class="of-n">{{ item.count }}</span>
@@ -68,11 +68,7 @@ const countLabel = computed(() => {
 </template>
 
 <style scoped>
-.of {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px;
-}
-.of.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.of { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .of-lbl { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink-2); font-size: 14px; }
 .of-select { max-width: 100%; }
 .of-n {

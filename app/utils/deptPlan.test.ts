@@ -44,9 +44,9 @@ describe('خطة القسم', () => {
   })
 
   it('الترقيم كملف الخطة والأشهر أرقاماً', () => {
-    expect(goalLabel(2)).toBe('هدف ٣')
-    expect(goalLabel(9)).toBe('هدف ١٠')
-    expect(taskLabel(2, 1)).toBe('٣-٢')
+    expect(goalLabel(2)).toBe('هدف 3')
+    expect(goalLabel(9)).toBe('هدف 10')
+    expect(taskLabel(2, 1)).toBe('3-2')
     expect(planMonthLabel(2026, 11)).toBe('11-2026')
   })
 

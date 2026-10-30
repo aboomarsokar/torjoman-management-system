@@ -12,6 +12,7 @@ import { filterTasks, isDueSoon, isOverdue, planMonthLabel, progressOf, shiftPla
 import { gazaToday } from '~/utils/reportWindow'
 import { deptPlanSheets } from '~/utils/excel/deptPlan'
 import { downloadWorkbook } from '~/utils/excel/workbook'
+import { ALL_OWNERS } from '~/constants/deptPlan'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'خطة القسم — ترجمان' })
@@ -45,14 +46,18 @@ const filter = ref<TaskFilter>('all')
 watch(role, (r) => {
   if (r) filter.value = fullView.value ? 'all' : 'mine'
 }, { immediate: true })
+// تصفيةٌ بالمسؤول (طلب المستخدم 2026-10-30)، وتُطبَّق قبل تبويبات الحالة
+const owner = ref<string>(ALL_OWNERS)
+watch([year, month], () => (owner.value = ALL_OWNERS))
+const byOwner = computed(() => owner.value === ALL_OWNERS ? tasks.value : tasks.value.filter(t => t.owners.includes(owner.value)))
 const filterTabs = computed<SegmentTab<TaskFilter>[]>(() => [
-  { key: 'all', label: 'الكل', icon: 'i-lucide-list', count: tasks.value.length },
-  { key: 'mine', label: 'مهامي', icon: 'i-lucide-user-check', count: filterTasks(tasks.value, 'mine', today, me.value).length || undefined },
-  { key: 'overdue', label: 'متأخّر', icon: 'i-lucide-clock-alert', count: filterTasks(tasks.value, 'overdue', today, null).length || undefined },
-  { key: 'soon', label: 'قريب الموعد', icon: 'i-lucide-alarm-clock', count: filterTasks(tasks.value, 'soon', today, null).length || undefined },
+  { key: 'all', label: 'الكل', icon: 'i-lucide-list', count: byOwner.value.length },
+  { key: 'mine', label: 'مهامي', icon: 'i-lucide-user-check', count: filterTasks(byOwner.value, 'mine', today, me.value).length || undefined },
+  { key: 'overdue', label: 'متأخّر', icon: 'i-lucide-clock-alert', count: filterTasks(byOwner.value, 'overdue', today, null).length || undefined },
+  { key: 'soon', label: 'قريب الموعد', icon: 'i-lucide-alarm-clock', count: filterTasks(byOwner.value, 'soon', today, null).length || undefined },
   { key: 'done', label: 'منجز', icon: 'i-lucide-circle-check' }
 ])
-const shown = computed(() => filterTasks(tasks.value, filter.value, today, me.value))
+const shown = computed(() => filterTasks(byOwner.value, filter.value, today, me.value))
 const taskIndex = computed(() => {
   const idx: Record<string, number> = {}
   for (const g of goals.value) tasks.value.filter(t => t.goal_id === g.id).forEach((t, i) => (idx[t.id] = i))
@@ -60,7 +65,7 @@ const taskIndex = computed(() => {
 })
 const visibleGoals = computed(() => goals.value
   .map((g, i) => ({ g, i, list: shown.value.filter(t => t.goal_id === g.id) }))
-  .filter(x => filter.value === 'all' || x.list.length))
+  .filter(x => (filter.value === 'all' && owner.value === ALL_OWNERS) || x.list.length))
 
 const progress = computed(() => progressOf(tasks.value))
 const stats = computed<StatItem[]>(() => [
@@ -117,29 +122,10 @@ async function exportPlan() {
     />
 
     <div class="bar">
-      <div
-        class="month"
-        role="group"
-        aria-label="الشهر"
-      >
-        <UButton
-          icon="i-lucide-chevron-right"
-          color="neutral"
-          variant="ghost"
-          aria-label="الشهر السابق"
-          :ui="{ base: 'min-h-11 min-w-11 justify-center' }"
-          @click="go(-1)"
-        />
-        <b>{{ planMonthLabel(year, month) }}</b>
-        <UButton
-          icon="i-lucide-chevron-left"
-          color="neutral"
-          variant="ghost"
-          aria-label="الشهر التالي"
-          :ui="{ base: 'min-h-11 min-w-11 justify-center' }"
-          @click="go(1)"
-        />
-      </div>
+      <PlanMonthNav
+        :label="planMonthLabel(year, month)"
+        @go="go"
+      />
       <div
         v-if="plan"
         class="tools"
@@ -205,11 +191,20 @@ async function exportPlan() {
         :items="stats"
         label="ملخص الخطة"
       />
-      <UiSegmentTabs
-        v-model="filter"
-        :tabs="filterTabs"
-        label="تصفية الأنشطة"
-      />
+      <div class="filters">
+        <PlanOwnerFilter
+          v-if="fullView"
+          v-model="owner"
+          :tasks="tasks"
+          :names="names"
+          :shown="shown.length"
+        />
+        <UiSegmentTabs
+          v-model="filter"
+          :tabs="filterTabs"
+          label="تصفية الأنشطة"
+        />
+      </div>
       <div class="goals">
         <PlanGoalCard
           v-for="x in visibleGoals"
@@ -245,44 +240,13 @@ async function exportPlan() {
       />
     </template>
 
-    <UModal
+    <PlanGoalModal
       v-model:open="goalModal.open"
-      :title="goalModal.id ? 'تعديل الهدف' : 'هدف جديد'"
-    >
-      <template #body>
-        <UFormField
-          label="الهدف"
-          hint="اكتب الرقم في الهدف ليُقاس، مثل: تجهيز 100 سؤال لأربعة كتب"
-        >
-          <UTextarea
-            v-model="goalModal.title"
-            :rows="2"
-            autoresize
-            class="w-full"
-            :maxlength="300"
-          />
-        </UFormField>
-      </template>
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            label="إلغاء"
-            color="neutral"
-            variant="ghost"
-            :ui="{ base: 'rounded-[12px] min-h-11' }"
-            @click="goalModal.open = false"
-          />
-          <UButton
-            label="احفظ"
-            icon="i-lucide-check"
-            color="primary"
-            :loading="busy"
-            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
-            @click="saveGoal"
-          />
-        </div>
-      </template>
-    </UModal>
+      v-model:title="goalModal.title"
+      :editing="!!goalModal.id"
+      :busy="busy"
+      @save="saveGoal"
+    />
     <PlanTaskModal
       v-model:open="taskModal.open"
       :task="taskModal.task"
@@ -313,9 +277,8 @@ async function exportPlan() {
 <style scoped>
 .page { display: flex; flex-direction: column; gap: 18px; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.month { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 4px; }
-.month b { min-width: 76px; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink); }
 .tools, .start { display: flex; flex-wrap: wrap; gap: 8px; }
 .start { justify-content: center; }
+.filters { display: flex; flex-direction: column; gap: 10px; }
 .goals { display: flex; flex-direction: column; gap: 14px; }
 </style>

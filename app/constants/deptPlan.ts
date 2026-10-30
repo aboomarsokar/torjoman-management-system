@@ -6,6 +6,9 @@ import type { Database } from '~/types/database.types'
 
 export type DeptTaskStatus = Database['public']['Enums']['dept_task_status']
 
+/** قيمةُ «كل المسؤولين» في تصفية الأنشطة بالمسؤول. */
+export const ALL_OWNERS = 'all'
+
 export const MAX_DEPT_GOALS = 10
 export const MAX_GOAL_TITLE = 300
 export const MAX_TASK_TITLE = 400

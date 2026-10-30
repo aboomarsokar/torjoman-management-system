@@ -1,6 +1,6 @@
 /**
  * منطقُ خطة القسم الخالص (بلا شبكة): نسبُ الإنجاز، والمتأخّر وقريبُ الموعد، وتصفيةُ الأنشطة، وحدودُ موعد النشاط،
- * وصياغةُ أرقام الأهداف كما في ملفّ الخطة («هدف ٣» و«٣-٢»).
+ * وصياغةُ أرقام الأهداف كما في ملفّ الخطة («هدف 3» و«3-2»).
  */
 import { DUE_SOON_DAYS, TASK_DUE_GRACE_DAYS, type DeptTaskStatus } from '~/constants/deptPlan'
 
@@ -58,17 +58,12 @@ export function dueRange(year: number, month: number): { min: string, max: strin
   return { min: `${year}-${pad(month)}-01`, max: last.toISOString().slice(0, 10) }
 }
 
-const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩'
-export function arabicDigits(n: number): string {
-  return String(n).replace(/\d/g, d => AR_DIGITS[Number(d)]!)
-}
-
-/** «هدف ٣» للهدف الثالث، و«٣-٢» للنشاط الثاني تحته — كترقيم ملفّ الخطة. */
+/** «هدف 3» للهدف الثالث، و«3-2» للنشاط الثاني تحته — ترقيمُ ملفّ الخطة بأرقامٍ إنجليزية (طلب المستخدم 2026-10-30). */
 export function goalLabel(goalIndex: number): string {
-  return `هدف ${arabicDigits(goalIndex + 1)}`
+  return `هدف ${goalIndex + 1}`
 }
 export function taskLabel(goalIndex: number, taskIndex: number): string {
-  return `${arabicDigits(goalIndex + 1)}-${arabicDigits(taskIndex + 1)}`
+  return `${goalIndex + 1}-${taskIndex + 1}`
 }
 
 /** «11-2026» للشهر (الأشهرُ أرقاماً لا أسماء — قاعدة المنصّة). */

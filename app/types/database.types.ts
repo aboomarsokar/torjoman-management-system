@@ -570,13 +570,18 @@ export type Database = {
       candidates: {
         Row: {
           about: string | null
+          address_detail: string | null
           birth_date: string | null
+          can_gather: boolean | null
           created_at: string
+          daily_commitment: boolean | null
           decision_note: string | null
           education: string | null
           experience: string | null
+          experience_years: number | null
           full_name: string
           gender: Database["public"]["Enums"]["gender_type"]
+          halaqa_area: string | null
           id: string
           interview_at: string | null
           interview_place: string | null
@@ -589,17 +594,23 @@ export type Database = {
           status_changed_at: string | null
           status_changed_by: string | null
           tajweed_level: string | null
+          terms_accepted_at: string | null
           updated_at: string
         }
         Insert: {
           about?: string | null
+          address_detail?: string | null
           birth_date?: string | null
+          can_gather?: boolean | null
           created_at?: string
+          daily_commitment?: boolean | null
           decision_note?: string | null
           education?: string | null
           experience?: string | null
+          experience_years?: number | null
           full_name: string
           gender: Database["public"]["Enums"]["gender_type"]
+          halaqa_area?: string | null
           id?: string
           interview_at?: string | null
           interview_place?: string | null
@@ -612,17 +623,23 @@ export type Database = {
           status_changed_at?: string | null
           status_changed_by?: string | null
           tajweed_level?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Update: {
           about?: string | null
+          address_detail?: string | null
           birth_date?: string | null
+          can_gather?: boolean | null
           created_at?: string
+          daily_commitment?: boolean | null
           decision_note?: string | null
           education?: string | null
           experience?: string | null
+          experience_years?: number | null
           full_name?: string
           gender?: Database["public"]["Enums"]["gender_type"]
+          halaqa_area?: string | null
           id?: string
           interview_at?: string | null
           interview_place?: string | null
@@ -635,6 +652,7 @@ export type Database = {
           status_changed_at?: string | null
           status_changed_by?: string | null
           tajweed_level?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3414,17 +3432,23 @@ export type Database = {
       register_candidate: {
         Args: {
           p_about?: string
+          p_address_detail: string
           p_birth_date?: string
+          p_can_gather: boolean
+          p_daily_commitment: boolean
           p_education?: string
           p_experience?: string
+          p_experience_years: number
           p_full_name: string
           p_gender: Database["public"]["Enums"]["gender_type"]
+          p_halaqa_area: string
           p_national_id: string
-          p_nearest_mosque?: string
+          p_nearest_mosque: string
           p_phone: string
-          p_quran_parts?: number
-          p_residence?: string
-          p_tajweed_level?: string
+          p_quran_parts: number
+          p_residence: string
+          p_tajweed_level: string
+          p_terms_accepted: boolean
         }
         Returns: undefined
       }

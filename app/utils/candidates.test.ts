@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { CANDIDATE_CRITERIA } from '~/constants/candidates'
-import { averageScore, candidateDraftError, criterionAverages, inviteMessage, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
+import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
 
 const draft = (o: Partial<CandidateDraft> = {}): CandidateDraft => ({
   full_name: 'محمد أحمد سالم', national_id: '123456789', phone: '0599123456', gender: 'male', birth_date: '',
-  residence: '', nearest_mosque: '', quran_parts: '', tajweed_level: '', education: '', experience: '', about: '', ...o
+  residence: 'غزة', residence_other: '', halaqa_area: 'الرمال', nearest_mosque: 'مسجد الهدى', address_detail: 'شارع الوحدة',
+  quran_parts: '10', tajweed_level: 'عليا', experience_years: '6', can_gather: true, daily_commitment: true, terms_accepted: true,
+  education: '', experience: '', about: '', ...o
 })
 
 describe('مقابلات المرشحين', () => {
@@ -41,6 +43,22 @@ describe('مقابلات المرشحين', () => {
     expect(candidateDraftError(draft({ phone: '0812345678' }))).toBe('رقم الجوال يبدأ بـ 05 ومن 10 أرقام.')
     expect(candidateDraftError(draft({ gender: '' }))).toBe('اختر الجنس.')
     expect(candidateDraftError(draft({ quran_parts: '31' }))).toBe('عدد الأجزاء المحفوظة من 0 إلى 30.')
+    expect(candidateDraftError(draft({ quran_parts: '' }))).toBe('عدد الأجزاء المحفوظة من 0 إلى 30.')
+    expect(candidateDraftError(draft({ residence: 'أخرى' }))).toBe('اكتب مكان السكن.')
+    expect(candidateDraftError(draft({ residence: 'أخرى', residence_other: 'رفح' }))).toBeNull()
+    expect(candidateDraftError(draft({ halaqa_area: '' }))).toBe('اختر منطقة الحلقة.')
+    expect(candidateDraftError(draft({ address_detail: ' ' }))).toBe('اكتب العنوان بالتفصيل.')
+    expect(candidateDraftError(draft({ can_gather: null }))).toBe('أجب: هل تستطيع جمع 15 طالباً؟')
+    expect(candidateDraftError(draft({ daily_commitment: false }))).toBeNull()
+    expect(candidateDraftError(draft({ terms_accepted: false }))).toBe('أقرّ بقراءة الشروط قبل الإرسال.')
+  })
+
+  it('علامة عدم انطباق الشروط', () => {
+    const ok = { residence: 'غزة', quran_parts: 5, tajweed_level: 'عليا', experience_years: 5, can_gather: true, daily_commitment: true }
+    expect(eligibilityIssues(ok)).toEqual([])
+    expect(eligibilityIssues({ ...ok, residence: 'النصيرات', quran_parts: 3, tajweed_level: 'تأهيلية', experience_years: 2, can_gather: false, daily_commitment: false })).toHaveLength(6)
+    // الطلبات القديمة بلا الحقول الجديدة لا تُعلَّم
+    expect(eligibilityIssues({ residence: null, quran_parts: null, tajweed_level: null, experience_years: null, can_gather: null, daily_commitment: null })).toEqual([])
   })
 
   it('رسالة الدعوة بالجنس', () => {

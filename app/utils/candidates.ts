@@ -2,7 +2,10 @@
  * منطقُ مقابلات المرشّحين الخالص: تحويلُ درجات البنود بالأوزان إلى مجموعٍ من 100، ومتوسّطُ تقييمات اللجنة، والتحقّقُ من
  * نموذج التسجيل العامّ، ونصُّ رسالة الدعوة.
  */
-import { CANDIDATE_CRITERIA, CRITERION_MAX, MAX_CANDIDATE_LONG, MAX_CANDIDATE_TEXT } from '~/constants/candidates'
+import {
+  ADVANCED_TAJWEED_LEVELS, CANDIDATE_CRITERIA, CRITERION_MAX, ELIGIBLE_RESIDENCE, MAX_ADDRESS_DETAIL, MAX_CANDIDATE_LONG, MAX_CANDIDATE_TEXT,
+  MAX_EXPERIENCE_YEARS, MAX_HALAQA_AREA, MIN_EXPERIENCE_YEARS, MIN_TEACHER_PARTS, OTHER_AREA
+} from '~/constants/candidates'
 import { IDENTITY_LENGTH, normalizeDigits } from '~/constants/identity'
 
 /** مجموعُ تقييمٍ واحد من 100: كلُّ بندٍ (من 5) × وزنه ÷ 5، بخانةٍ عشريّةٍ واحدة. */
@@ -40,14 +43,28 @@ export interface CandidateDraft {
   phone: string
   gender: 'male' | 'female' | ''
   birth_date: string
+  /** من قائمة السكن، أو «أخرى» مع `residence_other`. */
   residence: string
+  residence_other: string
+  halaqa_area: string
   nearest_mosque: string
+  address_detail: string
   quran_parts: string
   tajweed_level: string
+  experience_years: string
+  can_gather: boolean | null
+  daily_commitment: boolean | null
+  terms_accepted: boolean
   education: string
   experience: string
   about: string
 }
+
+/** السكنُ كما يُحفظ: الخيارُ، أو النصُّ المكتوب عند «أخرى». */
+export const draftResidence = (d: Pick<CandidateDraft, 'residence' | 'residence_other'>) =>
+  (d.residence === OTHER_AREA ? d.residence_other : d.residence).trim()
+
+const toInt = (v: string) => v.trim() === '' ? null : Number(normalizeDigits(v))
 
 /** خطأُ نموذج التسجيل بالعربية، أو null. */
 export function candidateDraftError(d: CandidateDraft): string | null {
@@ -57,11 +74,46 @@ export function candidateDraftError(d: CandidateDraft): string | null {
   if (!new RegExp(`^\\d{${IDENTITY_LENGTH}}$`).test(normalizeDigits(d.national_id).trim())) return `رقم الهوية ${IDENTITY_LENGTH} أرقام.`
   if (!/^05\d{8}$/.test(normalizePhone(d.phone))) return 'رقم الجوال يبدأ بـ 05 ومن 10 أرقام.'
   if (!d.gender) return 'اختر الجنس.'
-  const parts = d.quran_parts.trim() === '' ? null : Number(normalizeDigits(d.quran_parts))
-  if (parts !== null && (!Number.isInteger(parts) || parts < 0 || parts > 30)) return 'عدد الأجزاء المحفوظة من 0 إلى 30.'
-  if ([d.residence, d.nearest_mosque, d.education, d.tajweed_level].some(v => v.trim().length > MAX_CANDIDATE_TEXT)) return `الحقول القصيرة لا تتجاوز ${MAX_CANDIDATE_TEXT} حرف.`
+  if (!draftResidence(d)) return d.residence === OTHER_AREA ? 'اكتب مكان السكن.' : 'اختر مكان السكن.'
+  if (!d.halaqa_area) return 'اختر منطقة الحلقة.'
+  if (!d.nearest_mosque.trim()) return 'اكتب اسم المسجد أو المصلّى.'
+  if (!d.address_detail.trim()) return 'اكتب العنوان بالتفصيل.'
+  const parts = toInt(d.quran_parts)
+  if (parts === null || !Number.isInteger(parts) || parts < 0 || parts > 30) return 'عدد الأجزاء المحفوظة من 0 إلى 30.'
+  if (!d.tajweed_level) return 'اختر مستوى التجويد.'
+  const years = toInt(d.experience_years)
+  if (years === null || !Number.isInteger(years) || years < 0 || years > MAX_EXPERIENCE_YEARS) return `سنوات الخبرة من 0 إلى ${MAX_EXPERIENCE_YEARS}.`
+  if (d.can_gather === null) return 'أجب: هل تستطيع جمع 15 طالباً؟'
+  if (d.daily_commitment === null) return 'أجب: هل تستطيع التفرّغ ساعتين يومياً؟'
+  if ([draftResidence(d), d.nearest_mosque, d.education].some(v => v.trim().length > MAX_CANDIDATE_TEXT)) return `الحقول القصيرة لا تتجاوز ${MAX_CANDIDATE_TEXT} حرف.`
+  if (d.halaqa_area.length > MAX_HALAQA_AREA || d.address_detail.trim().length > MAX_ADDRESS_DETAIL) return `العنوان لا يتجاوز ${MAX_ADDRESS_DETAIL} حرف.`
   if ([d.experience, d.about].some(v => v.trim().length > MAX_CANDIDATE_LONG)) return `الحقول الطويلة لا تتجاوز ${MAX_CANDIDATE_LONG} حرف.`
+  if (!d.terms_accepted) return 'أقرّ بقراءة الشروط قبل الإرسال.'
   return null
+}
+
+export interface EligibilityInput {
+  residence: string | null
+  quran_parts: number | null
+  tajweed_level: string | null
+  experience_years: number | null
+  can_gather: boolean | null
+  daily_commitment: boolean | null
+}
+
+/**
+ * الشروطُ التي لا تنطبق على المرشّح بحسب ما سجّله — علامةٌ للإدارة لا رفضٌ آليّ (قرار المستخدم 2026-10-30: «يسجّل ويُعلَّم»).
+ * الحقلُ الفارغ (طلباتٌ قديمة) لا يُحسب مخالفة.
+ */
+export function eligibilityIssues(c: EligibilityInput): string[] {
+  const out: string[] = []
+  if (c.residence && c.residence !== ELIGIBLE_RESIDENCE) out.push('السكن خارج مدينة غزة')
+  if (c.quran_parts != null && c.quran_parts < MIN_TEACHER_PARTS) out.push(`يحفظ أقلّ من ${MIN_TEACHER_PARTS} أجزاء`)
+  if (c.tajweed_level && !(ADVANCED_TAJWEED_LEVELS as readonly string[]).includes(c.tajweed_level)) out.push('لم يجتز الدورة العليا في التجويد')
+  if (c.experience_years != null && c.experience_years < MIN_EXPERIENCE_YEARS) out.push(`خبرته أقلّ من ${MIN_EXPERIENCE_YEARS} سنوات`)
+  if (c.can_gather === false) out.push('لا يستطيع جمع 15 طالباً')
+  if (c.daily_commitment === false) out.push('لا يستطيع التفرّغ ساعتين يومياً')
+  return out
 }
 
 /** رسالةُ دعوة المقابلة جاهزةً للنسخ (واتس أو SMS). */

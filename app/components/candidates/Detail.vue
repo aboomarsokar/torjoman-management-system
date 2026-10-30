@@ -5,7 +5,7 @@
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
-import { averageScore, criterionAverages, inviteMessage, weightedScore } from '~/utils/candidates'
+import { averageScore, criterionAverages, eligibilityIssues, inviteMessage, weightedScore } from '~/utils/candidates'
 
 interface Props {
   candidate: Candidate | null
@@ -27,15 +27,19 @@ const perCriterion = computed(() => props.candidate ? criterionAverages(props.ca
 const canEvaluate = computed(() => !!props.candidate && !!props.me && (props.canManage || props.candidate.committee.includes(props.me))
   && ['invited', 'interviewed'].includes(props.candidate.status))
 const when = (iso: string) => new Date(iso).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Asia/Gaza', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const yesNo = (v: boolean | null) => v === null ? '—' : v ? 'نعم' : 'لا'
 const facts = computed(() => {
   const c = props.candidate
   if (!c) return []
   return [
     ['الهوية', c.national_id], ['الجوال', c.phone], ['الجنس', c.gender === 'female' ? 'أنثى' : 'ذكر'],
-    ['الأجزاء المحفوظة', c.quran_parts ?? '—'], ['التجويد', c.tajweed_level ?? '—'], ['السكن', c.residence ?? '—'],
-    ['أقرب مسجد', c.nearest_mosque ?? '—'], ['المؤهل', c.education ?? '—']
+    ['الأجزاء المحفوظة', c.quran_parts ?? '—'], ['التجويد', c.tajweed_level ?? '—'], ['سنوات الخبرة', c.experience_years ?? '—'],
+    ['السكن', c.residence ?? '—'], ['منطقة الحلقة', c.halaqa_area ?? '—'], ['المسجد أو المصلّى', c.nearest_mosque ?? '—'],
+    ['العنوان', c.address_detail ?? '—'], ['يجمع 15 طالباً', yesNo(c.can_gather)], ['يتفرّغ ساعتين يومياً', yesNo(c.daily_commitment)],
+    ['المؤهل', c.education ?? '—']
   ] as [string, string | number][]
 })
+const issues = computed(() => props.candidate ? eligibilityIssues(props.candidate) : [])
 
 async function copyInvite() {
   const c = props.candidate
@@ -75,6 +79,17 @@ async function copyInvite() {
           ><b dir="ltr">{{ avg }}</b> / 100 · {{ candidate.evaluations.length }} تقييم</span>
         </div>
 
+        <div
+          v-if="issues.length"
+          class="cd-flag"
+          role="note"
+        >
+          <b><UIcon
+            name="i-lucide-triangle-alert"
+            class="size-4"
+          />لا تنطبق عليه الشروط</b>
+          <span>{{ issues.join('، ') }}</span>
+        </div>
         <dl class="cd-facts">
           <div
             v-for="[k, v] in facts"
@@ -244,6 +259,8 @@ async function copyInvite() {
 .cd-score { color: var(--ink-3); font-size: 13px; }
 .cd-score b { font-size: 22px; color: var(--err); font-variant-numeric: tabular-nums; }
 .cd-score.pass b { color: var(--green-ink); }
+.cd-flag { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 12px; background: var(--err-soft); color: var(--err); font-size: 13.5px; }
+.cd-flag b { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
 .cd-facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
 .cd-facts dt { font-size: 12px; color: var(--ink-3); }
 .cd-facts dd { margin: 0; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * قائمةُ المرشّحين (طلب المستخدم 2026-10-30): الاسمُ والجوال، والجنسُ والأجزاء، والحالة، وموعدُ المقابلة، ومتوسّطُ اللجنة.
+ * قائمةُ المرشّحين (طلب المستخدم 2026-10-30): الاسمُ والجوال، والجنسُ والأجزاء ومنطقةُ الحلقة، وعلامةُ «لا تنطبق الشروط»،
+ * والحالة، وموعدُ المقابلة، ومتوسّطُ اللجنة.
  * للمدير: تحديدٌ متعدّد للدعوة دفعةً واحدة. الضغطُ على الصفّ يفتح ملفّ المرشّح.
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { CANDIDATE_PASS_MARK, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL } from '~/constants/candidates'
-import { averageScore } from '~/utils/candidates'
+import { averageScore, eligibilityIssues } from '~/utils/candidates'
 
 const props = defineProps<{ rows: Candidate[], selectable: boolean, me: string | null }>()
 const emit = defineEmits<{ open: [c: Candidate] }>()
@@ -15,6 +16,7 @@ const toggle = (id: string) => (selected.value = selected.value.includes(id) ? s
 const allOn = computed(() => props.rows.length > 0 && props.rows.every(r => selected.value.includes(r.id)))
 const toggleAll = () => (selected.value = allOn.value ? [] : props.rows.map(r => r.id))
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ' ·')
+const flags = computed(() => Object.fromEntries(props.rows.map(r => [r.id, eligibilityIssues(r)])))
 const mineDone = (c: Candidate) => !!props.me && c.evaluations.some(e => e.evaluator_id === props.me)
 </script>
 
@@ -50,9 +52,17 @@ const mineDone = (c: Candidate) => !!props.me && c.evaluations.some(e => e.evalu
         >
           <span class="cl-name">
             <b>{{ c.full_name }}</b>
-            <small><bdi dir="ltr">{{ c.phone }}</bdi> · {{ c.gender === 'female' ? 'أنثى' : 'ذكر' }}<template v-if="c.quran_parts != null"> · {{ c.quran_parts }} جزءاً</template></small>
+            <small><bdi dir="ltr">{{ c.phone }}</bdi> · {{ c.gender === 'female' ? 'أنثى' : 'ذكر' }}<template v-if="c.quran_parts != null"> · {{ c.quran_parts }} جزءاً</template><template v-if="c.halaqa_area"> · {{ c.halaqa_area }}</template></small>
           </span>
           <span class="cl-meta">
+            <span
+              v-if="flags[c.id]?.length"
+              class="cl-flag"
+              :title="flags[c.id]?.join('، ')"
+            ><UIcon
+              name="i-lucide-triangle-alert"
+              class="size-3.5"
+            />لا تنطبق الشروط</span>
             <UBadge
               :label="CANDIDATE_STATUS_LABEL[c.status]"
               :color="CANDIDATE_STATUS_COLOR[c.status]"
@@ -100,6 +110,7 @@ const mineDone = (c: Candidate) => !!props.me && c.evaluations.some(e => e.evalu
 .cl-when { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .cl-score { font-size: 13px; font-weight: 700; color: var(--err); font-variant-numeric: tabular-nums; }
 .cl-score.pass { color: var(--green-ink); }
+.cl-flag { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--err); background: var(--err-soft); padding: 2px 10px; border-radius: 999px; }
 .cl-todo { font-size: 12.5px; font-weight: 600; color: var(--chip-warn-ink); background: var(--chip-warn-bg); padding: 2px 10px; border-radius: 999px; }
 @media (hover: hover) {
   .cl-row:hover { background: var(--bg); }

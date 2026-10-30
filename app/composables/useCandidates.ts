@@ -9,8 +9,8 @@ import { CANDIDATE_CRITERIA, CRITERION_MAX, MAX_CANDIDATE_LONG, MAX_INTERVIEW_PL
 type Row = Database['public']['Tables']['candidates']['Row']
 export interface CandidateEvaluation { evaluator_id: string, scores: number[], notes: string | null, updated_at: string }
 export interface Candidate extends Row { committee: string[], evaluations: CandidateEvaluation[] }
-export interface StaffOption { id: string, name: string, role: Role, gender: 'male' | 'female' | null }
-export interface ScheduleDraft { ids: string[], at: string, place: string, committee: string[] }
+export interface CandidateStaffOption { id: string, name: string, role: Role, gender: 'male' | 'female' | null }
+export interface CandidateScheduleDraft { ids: string[], at: string, place: string, committee: string[] }
 
 /** خطأُ تقييم العضو: عشرُ درجاتٍ كلٌّ من 0 إلى 5. */
 export function evaluationError(scores: (number | null)[], notes: string): string | null {
@@ -25,7 +25,7 @@ export function useCandidates() {
   const { handle } = useErrorHandler()
   const toast = useToast()
   const candidates = ref<Candidate[]>([])
-  const staff = ref<StaffOption[]>([])
+  const staff = ref<CandidateStaffOption[]>([])
   const loading = ref(false)
   const busy = ref(false)
 
@@ -69,7 +69,7 @@ export function useCandidates() {
   }
 
   /** دعوةٌ لمقابلة: الموعدُ والمكان لمرشّحٍ أو أكثر، ولجنتُهم (تُستبدل اللجنة كلُّها بما اختير). */
-  async function schedule(d: ScheduleDraft): Promise<boolean> {
+  async function schedule(d: CandidateScheduleDraft): Promise<boolean> {
     if (!d.ids.length) return warn('اختر مرشّحاً واحداً على الأقلّ.')
     if (!d.at) return warn('حدّد موعد المقابلة.')
     if (d.place.trim().length > MAX_INTERVIEW_PLACE) return warn(`المكان لا يتجاوز ${MAX_INTERVIEW_PLACE} حرف.`)

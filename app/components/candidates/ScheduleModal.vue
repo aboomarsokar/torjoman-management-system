@@ -3,12 +3,12 @@
  * دعوةُ مرشّحٍ أو أكثر إلى المقابلة (طلب المستخدم 2026-10-30): الموعدُ والمكانُ واللجنة (من العاملين، يقيّم كلٌّ من حسابه).
  * يُعبّأ بموعد المرشّح ولجنته إن كان واحداً قد دُعي من قبل.
  */
-import type { Candidate, ScheduleDraft, StaffOption } from '~/composables/useCandidates'
+import type { Candidate, CandidateScheduleDraft, CandidateStaffOption } from '~/composables/useCandidates'
 import { MAX_INTERVIEW_PLACE } from '~/constants/candidates'
 import { roleLabel } from '~/constants/roles'
 
-const props = defineProps<{ candidates: Candidate[], staff: StaffOption[], busy: boolean }>()
-const emit = defineEmits<{ save: [draft: ScheduleDraft] }>()
+const props = defineProps<{ candidates: Candidate[], staff: CandidateStaffOption[], busy: boolean }>()
+const emit = defineEmits<{ save: [draft: CandidateScheduleDraft] }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const form = reactive({ at: '', place: '', committee: [] as string[] })

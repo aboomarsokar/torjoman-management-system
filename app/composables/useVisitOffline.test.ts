@@ -12,10 +12,11 @@ const queued: VisitEntry[] = []
 const pendingRows = ref<VisitEntry[]>([])
 const lastUploaded = ref<{ entry: VisitEntry, data: unknown, at: number } | null>(null)
 const put = vi.fn(async (e: VisitEntry) => void queued.push(e))
+const discard = vi.fn(async () => undefined)
 vi.stubGlobal('useOfflineQueue', () => ({
   pending: computed(() => pendingRows.value),
   rejected: computed(() => [{ key: 'u|v9', visitId: 'v9', error: 'x' }]),
-  lastUploaded, retry: vi.fn(), discard: vi.fn(), put
+  lastUploaded, retry: vi.fn(), discard, put
 }))
 const listCopy = ref<{ id: string, halaqa: { name: string } | null }[] | undefined>(undefined)
 vi.stubGlobal('useNuxtData', () => ({ data: listCopy }))
@@ -37,6 +38,7 @@ beforeEach(() => {
   lastUploaded.value = null
   listCopy.value = undefined
   put.mockClear()
+  discard.mockClear()
 })
 
 describe('useVisitOffline', () => {
@@ -65,6 +67,26 @@ describe('useVisitOffline', () => {
     owner = null
     online = false
     expect(useVisitOffline().shouldQueue('v1')).toBe(false)
+  })
+
+  it('تغيّرُ صاحب الجهاز بعد الإنشاء (دخولُ نيابة) يغيّر shouldQueue وsaveOnDevice', async () => {
+    online = false
+    const v = useVisitOffline()
+    expect(v.shouldQueue('v1')).toBe(true)
+    owner = null
+    expect(v.shouldQueue('v1')).toBe(false)
+    await v.saveOnDevice('v1', { executedAt: '2026-10-20T12:00:00.000Z', deductions: {}, notes: null })
+    expect(put).not.toHaveBeenCalled()
+    owner = 'u'
+    expect(v.shouldQueue('v1')).toBe(true)
+  })
+
+  it('discardRejectedFor يترك سطرَ تلك الزيارة المرفوض وحده', async () => {
+    const v = useVisitOffline()
+    await v.discardRejectedFor('v1')
+    expect(discard).not.toHaveBeenCalled()
+    await v.discardRejectedFor('v9')
+    expect(discard).toHaveBeenCalledExactlyOnceWith('u|v9')
   })
 
   it('saveOnDevice يضع سطراً بمفتاح uid|visitId ويومِ التنفيذ المختار', async () => {

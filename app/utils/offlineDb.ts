@@ -39,7 +39,15 @@ export function openOfflineDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('visit_outbox')) db.createObjectStore('visit_outbox', { keyPath: 'key' })
       if (!db.objectStoreNames.contains('exam_outbox')) db.createObjectStore('exam_outbox', { keyPath: 'key' })
     }
-    req.onsuccess = () => resolve(req.result)
+    req.onsuccess = () => {
+      const db = req.result
+      // لسانٌ قديم مفتوحٌ على نسخةٍ أدنى يحجز ترقيةَ القاعدة القادمة (النشرُ يرفع النسخة): يُغلق نفسَه ويُعاد الفتحُ عند الحاجة
+      db.onversionchange = () => {
+        db.close()
+        opening = null
+      }
+      resolve(db)
+    }
     req.onerror = () => {
       opening = null
       reject(req.error)

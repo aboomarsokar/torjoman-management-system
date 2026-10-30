@@ -34,7 +34,7 @@ const { handle } = useErrorHandler()
 const toast = useToast()
 const { isAdmin, isTechnical, isTeacher } = usePermissions()
 
-const { pendingFor, shouldQueue, saveOnDevice } = useVisitOffline()
+const { pendingFor, shouldQueue, saveOnDevice, discardRejectedFor } = useVisitOffline()
 // البنودُ ثابتة: تُجلب مرّةً للجلسة، ولها نسخةٌ على جهاز المشرف
 const { criteria } = useDeductionItems()
 
@@ -88,6 +88,7 @@ async function save() {
     }).eq('id', v.id).select('id')
     if (error) throw error
     if (!data?.length) throw new Error('لم يُحفظ التغيير — هذه الزيارة ليست ضمن صلاحيتك.')
+    await discardRejectedFor(v.id).catch(() => undefined)
     toast.add({ title: 'حُفظت نتيجة الزيارة وأُقفلت.', description: 'وصل المعلمَ إشعارٌ بها.', color: 'success', icon: 'i-lucide-lock' })
     emit('update:open', false)
     emit('saved')

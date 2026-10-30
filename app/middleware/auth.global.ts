@@ -11,7 +11,7 @@
 import type { Database } from '~/types/database.types'
 import { CHANGE_PASSWORD_PATH } from '~/constants/auth'
 import { accountGateDecision, type GateProfile } from '~/utils/accountGate'
-import { isSessionSwitching } from '~/utils/impersonation'
+import { isSessionSwitching, setImpersonatingNow } from '~/utils/impersonation'
 import { offlinePathsFor, offlineRedirect } from '~/constants/navigation'
 import { hasOfflineOwner } from '~/utils/offlineDb'
 import { offlineOwnerRole } from '~/utils/offlineSnapshot'
@@ -68,6 +68,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
         .catch((err: unknown) => console.error('[auth] تعذّر إنهاءُ النيابة عند الخروج:', err))
       await supabase.auth.signOut({ scope: 'local' })
       impersonation.state.value = null
+      setImpersonatingNow(false)
       impersonation.isChecked.value = false
     } else {
       await supabase.auth.signOut()

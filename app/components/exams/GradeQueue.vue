@@ -32,17 +32,19 @@ type QueueRow = { id: string, student: { id: string, full_name: string } | null,
 
 // خطأُ الخادم والاتصالُ قائم يُرمى داخل `wrap` فلا تُكتب نسخةٌ فارغة، ويُعرض خارجه؛ وتعثّرٌ بلا اتصال يردّ فارغاً فيرجع `wrap` إلى النسخة.
 // والمديران (بلا `uid`: لا نسخةَ لهما) يُرمى لهما الخطأُ دائماً ويُعرض كما كان قبل العمل بلا اتصال
-const copied = wrap(EXAMS_QUEUE_KEY, async () => {
+const copied = wrap(EXAMS_QUEUE_KEY, () => fetchExamQueue(supabase).catch((err) => {
+  if (isOnlineNow() || !offlineOwnerUid()) throw err
+  return []
+}))
+// مرجعُ المصحف خارج `wrap`: بلا اتصالٍ ومع نسخةٍ يردّها `wrap` دون نداء الجالب، فلو كان داخله لما حُمّل
+// ولخرجت حدودُ الدورة فارغةً في الطابور والنافذة (`load()` نفسُه يرجع إلى نسخة الجهاز بلا اتصال)
+const { data: raw, refresh, pending } = useLazyAsyncData<ExamQueueRaw[]>(EXAMS_QUEUE_KEY, () => {
   void quran.load()
-  return fetchExamQueue(supabase).catch((err) => {
-    if (isOnlineNow() || !offlineOwnerUid()) throw err
+  return copied().catch((err) => {
+    handle(err)
     return []
   })
-})
-const { data: raw, refresh, pending } = useLazyAsyncData<ExamQueueRaw[]>(EXAMS_QUEUE_KEY, () => copied().catch((err) => {
-  handle(err)
-  return []
-}), { server: false, default: () => [], watch: [role] })
+}, { server: false, default: () => [], watch: [role] })
 
 // ما على الجهاز (معلَّقاً أو مرفوضاً) أو رُفع الآن لا يُعرض في الطابور
 const shown = rowsFor(raw)
@@ -97,6 +99,7 @@ function askWithdraw(r: QueueRow) {
 
 <template>
   <div>
+    <OfflineSavedNote :keys="[EXAMS_QUEUE_KEY]" />
     <ExamsPendingUploads
       v-if="onDevice.length"
       class="above"

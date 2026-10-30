@@ -5,7 +5,7 @@
  *   • الحكمُ «اجتاز/لم يجتز» على الجهاز بدرجة النجاح المحفوظة؛ وإن لم تُحفظ فلا حكم (لا قيمةَ افتراضية).
  *   • `rowsFor`: الطابورُ بلا ما رُصد على الجهاز (معلَّقاً أو مرفوضاً) وبلا ما رُفع الآن إلى أن تصل نسخةٌ أحدث.
  */
-import type { Ref } from 'vue'
+import { customRef, type Ref } from 'vue'
 import { examTotal, newExamEntry, passVerdict, type ExamEntry, type ExamPayload, withoutPending } from '~/utils/examOutbox'
 import { EXAM_QUEUE } from '~/utils/offlineQueues'
 import { isOnlineNow } from '~/utils/reachability'
@@ -14,7 +14,8 @@ import { offlineOwnerUid } from '~/utils/offlineSnapshot'
 export const EXAM_SAVED_ON_DEVICE = 'حُفظت النتيجة على جهازك، وتُرفع حين يعود الاتصال.'
 
 export function useExamOffline(passMark: Ref<number | null>) {
-  const uid = computed(() => offlineOwnerUid())
+  // يُقرأ طازجاً عند كلّ قراءة: علَمُ النيابة متغيّرٌ عاديّ لا تفاعليّ، فالمحسوبةُ كانت تحبس أوّلَ قيمةٍ للأبد
+  const uid = customRef<string | null>(() => ({ get: offlineOwnerUid, set: () => undefined }))
   const queue = useOfflineQueue<ExamEntry>(EXAM_QUEUE, uid)
 
   const pending = computed(() => queue.pending.value.map((e) => {
@@ -25,9 +26,10 @@ export function useExamOffline(passMark: Ref<number | null>) {
   const shouldQueue = () => !!uid.value && !isOnlineNow()
 
   async function saveOnDevice(item: { id: string, studentName: string, title: string }, payload: ExamPayload): Promise<void> {
-    if (!uid.value) return
+    const me = uid.value
+    if (!me) return
     // RLS يشترط `examiner_id = auth.uid()`، وكشفُ الردّ الضائع عند الرفع يقارن الراصدَ بصاحب السطر
-    await queue.put(newExamEntry(uid.value, item, { ...payload, examiner_id: uid.value }))
+    await queue.put(newExamEntry(me, item, { ...payload, examiner_id: me }))
   }
 
   const rejected = computed(() => queue.rejected.value.map(e => ({ key: e.key, label: e.studentName, error: e.error })))

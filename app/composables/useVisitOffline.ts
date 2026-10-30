@@ -11,7 +11,7 @@ import { offlineOwnerUid } from '~/utils/offlineSnapshot'
 import { SCREEN_KEYS } from '~/utils/teacherScreens'
 import type { VisitRow } from '~/types/visits'
 import { applyPendingVisits, newVisitEntry, settledVisits, type VisitEntry } from '~/utils/visitOutbox'
-import type { Ref } from 'vue'
+import { customRef, type Ref } from 'vue'
 import type { DeductionCounts, DeductionItem } from '~/utils/visitForm'
 
 /** شارةُ ما ينتظر الرفع: في عمود الحالة ونافذة النتيجة. */
@@ -19,7 +19,8 @@ export const PENDING_UPLOAD_BADGE = 'على جهازك — بانتظار الر
 export const VISIT_SAVED_ON_DEVICE = 'حُفظ التقييم على جهازك، ويُرفع حين يعود الاتصال.'
 
 export function useVisitOffline() {
-  const uid = computed(() => offlineOwnerUid())
+  // يُقرأ طازجاً عند كلّ قراءة: علَمُ النيابة متغيّرٌ عاديّ لا تفاعليّ، فالمحسوبةُ كانت تحبس أوّلَ قيمةٍ للأبد
+  const uid = customRef<string | null>(() => ({ get: offlineOwnerUid, set: () => undefined }))
   const queue = useOfflineQueue<VisitEntry>(VISIT_QUEUE, uid)
   // اسمُ الحلقة لسطرٍ مرفوض: من قائمة الزيارات المعروضة (نسخةُ الجهاز أو الجلب) إن وُجدت
   const { data: list } = useNuxtData<VisitRow[]>(SCREEN_KEYS.visits)
@@ -29,8 +30,15 @@ export function useVisitOffline() {
   const shouldQueue = (visitId: string) => !!uid.value && (!isOnlineNow() || !!pendingFor(visitId))
 
   async function saveOnDevice(visitId: string, input: { executedAt: string, deductions: DeductionCounts, notes: string | null }): Promise<void> {
-    if (!uid.value) return
-    await queue.put(newVisitEntry(uid.value, visitId, input))
+    const me = uid.value
+    if (!me) return
+    await queue.put(newVisitEntry(me, visitId, input))
+  }
+
+  /** حُفظت الزيارةُ متّصلةً بنجاح: ما رفضته القاعدةُ سابقاً لها صار قديماً (وإعادةُ محاولته ترفع قيماً بالية) — يُترك. */
+  async function discardRejectedFor(visitId: string): Promise<void> {
+    const old = queue.rejected.value.find(e => e.visitId === visitId)
+    if (old) await queue.discard(old.key)
   }
 
   const rejected = computed(() => queue.rejected.value.map((e) => {
@@ -62,5 +70,5 @@ export function useVisitOffline() {
     })
   }
 
-  return { rowsFor, badgeFor, uid, pending, pendingFor, shouldQueue, saveOnDevice, rejected, lastUploaded: queue.lastUploaded, retry: queue.retry, discard: queue.discard }
+  return { rowsFor, badgeFor, uid, pending, pendingFor, shouldQueue, saveOnDevice, discardRejectedFor, rejected, lastUploaded: queue.lastUploaded, retry: queue.retry, discard: queue.discard }
 }

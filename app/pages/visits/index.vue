@@ -9,11 +9,12 @@
  * مقفلاً بشارة «بانتظار الرفع» (الحالةُ والفلاترُ والعدّاداتُ بحالة القاعدة)؛ والجدولةُ والتأجيلُ والحذفُ تحتاج اتصالاً.
  */
 import type { Database } from '~/types/database.types'
-import type { VisitHalqaOption, VisitRow } from '~/types/visits'
+import type { VisitRow } from '~/types/visits'
 import type { VisitDisplayStatus } from '~/utils/visitStatus'
 import { roleLabel } from '~/constants/roles'
 import { VISIT_MAX } from '~/utils/visitForm'
-import { fetchVisitHalqat, fetchVisits, SCREEN_KEYS } from '~/utils/teacherScreens'
+import { SCREEN_KEYS } from '~/utils/teacherScreens'
+import { useVisitsData } from '~/composables/useVisitsData'
 import { useDeductionItems } from '~/composables/useDeductionItems'
 import { queueOnline as online } from '~/composables/useOfflineQueue'
 
@@ -33,16 +34,8 @@ const ratingText = (v: VisitRow) => v.score != null ? `${v.score} / ${VISIT_MAX}
 /** موعدُ الزيارة ونتيجتُها لصاحبها الزائر وحده (visits_update) — المشرفُ الميدانيّ أو المديرُ الفنيّ. */
 const canEditVisit = (v: VisitRow) => isVisitor.value && v.supervisor_id === profile.value?.id
 
-// والمعلّمُ تُحفظ له نسخةٌ تُعرض بلا إنترنت (البند 14، 2026-10-27)
-const { wrap } = useOfflineCopy()
-const { data: fetched, refresh, pending } = useLazyAsyncData<VisitRow[]>(SCREEN_KEYS.visits, wrap(SCREEN_KEYS.visits, async () => {
-  try {
-    return await fetchVisits(supabase)
-  } catch (err) {
-    handle(err)
-    return []
-  }
-}), { server: false, default: () => [] })
+// جلبُ الزيارات والحلقات في `useVisitsData`: خطأُ الخادم متّصلاً لا يكتب نسخةً فارغة، ويُعرض كما كان
+const { fetched, refresh, pending, halqat } = useVisitsData()
 // بنودُ الخصم (جلبٌ مشتركٌ مع نافذة النتيجة): بها يُحسب مجموعُ ما ينتظر الرفع
 const { items } = useDeductionItems()
 const { rowsFor, badgeFor, rejected, retry, discard, lastUploaded } = useVisitOffline()
@@ -50,8 +43,6 @@ const { rowsFor, badgeFor, rejected, retry, discard, lastUploaded } = useVisitOf
 const visits = rowsFor(fetched, items)
 // رُفع سطرٌ: يظهر ردُّ القاعدة فوراً، ثم تُجلب النسخةُ الجديدة
 watch(lastUploaded, () => refresh())
-const { data: halqat } = useLazyAsyncData<VisitHalqaOption[]>(SCREEN_KEYS.visitHalqat,
-  wrap(SCREEN_KEYS.visitHalqat, () => fetchVisitHalqat(supabase).catch(() => [])), { server: false, default: () => [] })
 
 const today = gazaToday()
 const display = (v: VisitRow) => visitDisplayStatus(v, today)

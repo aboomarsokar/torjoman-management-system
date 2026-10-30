@@ -5,6 +5,7 @@ import { LOGIN_REJECTION } from '~/constants/auth'
 import { loginErrorMessage } from '~/utils/loginError'
 import { PROFILE_PHOTOS_GENERATIONS_KEY, PROFILE_PHOTOS_SIGNED_KEY } from '~/composables/useProfilePhotoUrls'
 import { clearOfflineCaches } from '~/utils/offlineCache'
+import { setImpersonatingNow } from '~/utils/impersonation'
 import { forgetOfflineTeacher } from '~/utils/offlineDb'
 
 /**
@@ -57,6 +58,8 @@ export function useAuth() {
       await supabase.auth.signOut()
     }
     impersonation.state.value = null
+    // علَمُ «نيابةٌ الآن» متغيّرٌ عاديّ لا يتبع الحالة: يُنزَل معها وإلا بقي صاحبُ الجهاز التالي بلا نسخٍ
+    setImpersonatingNow(false)
     impersonation.isChecked.value = false
     // تفريغٌ لا محو: `clearNuxtState` يجعل الحالةَ undefined فيسقط أوّلُ قارئٍ لصورةٍ بعد الدخول التالي
     // («Cannot read properties of undefined» في urlFrom)

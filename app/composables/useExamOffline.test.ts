@@ -105,6 +105,16 @@ describe('useExamOffline', () => {
     expect(useExamOffline(ref(80)).shouldQueue()).toBe(false)
   })
 
+  it('تغيّرُ صاحب الجهاز بعد الإنشاء (دخولُ نيابة) يغيّر shouldQueue وsaveOnDevice', async () => {
+    online = false
+    const x = useExamOffline(ref(80))
+    expect(x.shouldQueue()).toBe(true)
+    owner = null
+    expect(x.shouldQueue()).toBe(false)
+    await x.saveOnDevice(item('i1'), payload())
+    expect(put).not.toHaveBeenCalled()
+  })
+
   it('rejected تحمل اسمَ الطالب ورسالةَ القاعدة', () => {
     rows.value = [{ ...entry('a'), status: 'rejected', error: 'رُصدت نتيجةُ هذا الطالب قبل رفع نتيجتك.' }]
     expect(useExamOffline(ref(80)).rejected.value).toEqual([

@@ -1242,3 +1242,18 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **`halaqat_recording_status`:**
   - الإجازةُ والبلاغُ المعتمَد يخرجان من `expected_days` و`missed_days`، إلا يوماً منعقداً. والمعلّقُ يبقى ناقصاً.
   - و`recent` يعرف `holiday` و`off` و`off_pending`.
+
+## 28. خطةُ القسم الشهرية: `dept_plans` و`dept_plan_goals` و`dept_plan_tasks` و`dept_plan_task_owners` (2026-10-30)
+
+> الهجرة `20261030084203_department_plan`.
+
+- **`dept_plans`**: خطةُ شهرٍ واحدة (`plan_year`, `plan_month`، فريدٌ معاً، ولا قبل 10/2026 — `dept_plans_from_project_start`) وحقولُ تقرير القسم الأربعة (`report_achievements`، `report_not_done`، `report_obstacles`، `report_team_notes`، كلٌّ حتى 3000 حرف).
+- **`dept_plan_goals`**: أهدافُ الخطة (`title` حتى 300، `sort_order`)، **بلا حدٍّ لعددها** (أُلغي حارسُ العشرة `dept_plan_goals_limit` بـ`20261030115234_dept_plan_no_goal_limit`).
+- **`dept_plan_tasks`**: الأنشطة (`goal_id`، `plan_id` يضعه الحارس من الهدف، `title` حتى 400، `due_on` داخل شهر الخطة أو بعده بستة أيام، `status` من النوع `dept_task_status`: `not_started`/`in_progress`/`done`/`not_done`، `notes` حتى 1000، و`status_updated_by`/`status_updated_at` يضعهما الحارس `dept_plan_tasks_guard` عند تغيّر الحالة أو الملاحظة).
+- **`dept_plan_task_owners`**: المسؤولون (`task_id`, `profile_id` مفتاحٌ مركّب، `assigned_by`). الحارس `dept_plan_task_owners_guard` يشترط عاملاً نشطاً (لا طالب) ويُرسل `plan_task_assigned`.
+- **RLS:** القراءةُ الكاملة لـ`can_view_full_dept_plan()` (المدير الإداريّ والفنيّ والمديرة الإدارية ومشرف المشروع)، وغيرُهم يرى أنشطته وأهدافها وخطتها عبر `my_dept_task_ids()`؛ الكتابةُ كلُّها للمدير الإداريّ (`is_admin_manager()`)؛ وتحديثُ الحالة والملاحظة للمسؤول عبر `update_my_dept_task(p_task, p_status, p_notes)` (`assert_session_writable`). كلُّ جدولٍ عليه `guard_table_for_impersonation`.
+- **التذكير:** `private.dept_plan_reminders()` بمهمّة pg_cron `dept-plan-reminders` (`0 5 * * *` = 8 صباحاً بتوقيت غزة): `plan_task_due` للمسؤولين قبل الموعد بيومين وصباح يومه، و`plan_task_overdue` للمدير الإداريّ مرّةً لكلّ متأخّر، و`plan_weekly_update` كلَّ خميس لمن عنده أنشطةٌ مفتوحة في خطة الشهر. سجلّا عدم التكرار `private.dept_plan_reminder_log` و`private.dept_plan_weekly_log`.
+- **الإشعارات:** أُضيفت إلى `notifications_kind_check` و`private.notify` الأنواعُ `off_day_reported`، `off_day_rejected` (لميزة «لم تنعقد الحلقة» بالتنسيق مع جلستها)، و`plan_task_assigned`، `plan_task_due`، `plan_task_overdue`، `plan_weekly_update`.
+
+
+> **2026-10-30 — `20261030114254_women_admin_visits`:** المديرةُ الإدارية زائرةٌ لحلقات البنات (سياستا `visits_insert`/`visits_update` وحارسُ `guard_visit_visitor`: المشرفُ لحلقاته، والمديرُ الفنيّ لحلقات البنين، والمديرةُ الإدارية لحلقات البنات)، و`unlock_visit_result` يقبلها في نطاقها. و`private.quality_month_compute` يحسب زياراتِ `field_supervisor` و`technical_manager` و`women_admin` في متوسّط الزيارات (كان المشرفَ وحده منذ `20261026081420`).

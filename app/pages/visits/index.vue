@@ -25,13 +25,14 @@ const supabase = useSupabaseClient<Database>()
 const { profile } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isFieldSupervisor, isTeacher, isTechnical } = usePermissions()
-// والمديرُ الفنيّ يجدول ويزور حلقاتِ البنين بنفسه (طلب المستخدم 2026-10-26) — زيارتُه للاطّلاع لا لسجلّ التقييم
-const isVisitor = computed(() => isFieldSupervisor.value || isTechnical.value)
+const { isAdmin, isFieldSupervisor, isTeacher, isTechnical, isWomenAdmin } = usePermissions()
+// والمديرُ الفنيّ يزور حلقاتِ البنين بنفسه (2026-10-26)، والمديرةُ الإدارية حلقاتِ البنات (2026-10-30) — وزيارتاهما
+// تُحسبان في سجلّ التقييم (قرار 2026-10-30). وتُحفظان متّصلتين: الزيارةُ بلا إنترنت للمشرف الميدانيّ وحده.
+const isVisitor = computed(() => isFieldSupervisor.value || isTechnical.value || isWomenAdmin.value)
 const canSchedule = isVisitor
 /** التقييم: مجموعُ النموذج «35 / 42»، وللزيارة القديمة تقييمُها النصّيّ. */
 const ratingText = (v: VisitRow) => v.score != null ? `${v.score} / ${VISIT_MAX}` : v.flow_rating || '—'
-/** موعدُ الزيارة ونتيجتُها لصاحبها الزائر وحده (visits_update) — المشرفُ الميدانيّ أو المديرُ الفنيّ. */
+/** موعدُ الزيارة ونتيجتُها لصاحبها الزائر وحده (visits_update) — المشرفُ الميدانيّ أو المديرُ الفنيّ أو المديرةُ الإدارية. */
 const canEditVisit = (v: VisitRow) => isVisitor.value && v.supervisor_id === profile.value?.id
 
 // جلبُ الزيارات والحلقات في `useVisitsData`: خطأُ الخادم متّصلاً لا يكتب نسخةً فارغة، ويُعرض كما كان
@@ -112,7 +113,8 @@ const monthsShown = computed(() => period.value === 'all' ? new Set(scoped.value
 const stats = computed(() => {
   const list = scoped.value.map(display)
   // نسبةُ الإنجاز على زيارات المشرفين الميدانيّين — زيارةُ المدير الفنيّ لا تُتمّ المطلوبَ منهم
-  const c = visitCompletion(scoped.value.filter(v => v.supervisor?.role !== 'technical_manager'), requiredHalqat.value, monthsShown.value)
+  // إنجازُ المشرفين بزياراتهم وحدها — زيارةُ المدير الفنيّ أو المديرة الإدارية لا تُحسب من زيارتَي المشرف
+  const c = visitCompletion(scoped.value.filter(v => v.supervisor?.role === 'field_supervisor'), requiredHalqat.value, monthsShown.value)
   return {
     scheduled: list.filter(s => s === 'scheduled').length,
     done: list.filter(s => s === 'done').length,

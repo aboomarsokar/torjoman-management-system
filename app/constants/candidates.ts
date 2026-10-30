@@ -61,6 +61,9 @@ export const MAX_CANDIDATE_TEXT = 120
 export const MAX_CANDIDATE_LONG = 1000
 export const MAX_INTERVIEW_PLACE = 200
 
+/** أدوارُ لجنة التحكيم: الإداريون والمختبرون (طلب المستخدم 2026-10-30) — يطابق `private.candidate_committee_guard`. */
+export const CANDIDATE_COMMITTEE_ROLES = ['admin_manager', 'project_supervisor', 'technical_manager', 'examiner'] as const
+
 /** رؤيةُ المشروع — تتصدّر صفحة الالتحاق. */
 export const PROJECT_VISION = 'أن يكونَ في كلِّ بيتٍ طالبٌ يحفظُ كلامَ الله، ويفهمُ معانيَه، ويعملُ بما فيه.'
 

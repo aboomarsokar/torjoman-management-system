@@ -12,6 +12,8 @@ export const TEACHER_DASH_CACHE_KEY = 'torjoman-offline-teacher-dash'
 export const WARMED_CACHE_KEY = 'torjoman-offline-warmed'
 /** ومتى حُدّثت نُسخُ الشاشات التي تُقرأ (مرّةً في اليوم) — يُمحى كذلك عند الخروج. */
 export const WARMED_SCREENS_CACHE_KEY = 'torjoman-offline-warmed-screens'
+/** ومتى حُدّثت نُسخُ المشرف الميداني والمختبِر من لوحتهما (`useWarmFieldCopies`، كلَّ ساعة) — يُمحى كذلك عند الخروج. */
+export const WARMED_FIELD_CACHE_KEY = 'torjoman-offline-warmed-field'
 
 /** صورةٌ أكبرُ من هذا لا تُخزَّن (التخزينُ المحلّيّ محدودٌ بنحو 5 م.ب للأصل). */
 export const MAX_CACHED_PHOTO_CHARS = 400_000
@@ -32,7 +34,7 @@ export function writeCache(key: string, value: unknown): void {
 }
 
 export function clearOfflineCaches(): void {
-  for (const key of [PROFILE_CACHE_KEY, INBOX_CACHE_KEY, PHOTO_CACHE_KEY, TEACHER_DASH_CACHE_KEY, WARMED_CACHE_KEY, WARMED_SCREENS_CACHE_KEY]) {
+  for (const key of [PROFILE_CACHE_KEY, INBOX_CACHE_KEY, PHOTO_CACHE_KEY, TEACHER_DASH_CACHE_KEY, WARMED_CACHE_KEY, WARMED_SCREENS_CACHE_KEY, WARMED_FIELD_CACHE_KEY]) {
     try {
       localStorage.removeItem(key)
     } catch { /* محجوب */ }

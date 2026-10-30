@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * ملفُّ المرشّح (طلب المستخدم 2026-10-30): بياناتُه، وموعدُ مقابلته ولجنتُه، وتقييماتُ اللجنة بالمتوسّط وتفصيل البنود،
- * والقرار (مقبول · احتياط · مرفوض)، ونسخُ رسالة الدعوة، وإنشاءُ حساب معلّمٍ للمقبول (للمدير الإداريّ).
+ * والقرار (مقبول · احتياط · مرفوض)، ونسخُ رسالة الدعوة وإرسالُها SMS، وإنشاءُ حساب معلّمٍ للمقبول (للمدير الإداريّ).
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CRITERION_MAX, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
-import { averageScore, criterionAverages, eligibilityIssues, inviteMessage, weightedScore } from '~/utils/candidates'
+import { averageScore, criterionAverages, eligibilityIssues, interviewWhen, inviteMessage, weightedScore } from '~/utils/candidates'
 
 interface Props {
   candidate: Candidate | null
@@ -16,7 +16,7 @@ interface Props {
   busy: boolean
 }
 const props = defineProps<Props>()
-const emit = defineEmits<{ evaluate: [], schedule: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [] }>()
+const emit = defineEmits<{ evaluate: [], schedule: [], sms: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
@@ -26,7 +26,7 @@ const avg = computed(() => props.candidate ? averageScore(props.candidate.evalua
 const perCriterion = computed(() => props.candidate ? criterionAverages(props.candidate.evaluations) : [])
 const canEvaluate = computed(() => !!props.candidate && !!props.me && (props.canManage || props.candidate.committee.includes(props.me))
   && ['invited', 'interviewed'].includes(props.candidate.status))
-const when = (iso: string) => new Date(iso).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Asia/Gaza', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const when = interviewWhen
 const yesNo = (v: boolean | null) => v === null ? '—' : v ? 'نعم' : 'لا'
 const facts = computed(() => {
   const c = props.candidate
@@ -130,6 +130,15 @@ async function copyInvite() {
           >
             اللجنة: {{ candidate.committee.map(id => names[id] ?? '—').join('، ') }}
           </p>
+          <p
+            v-if="candidate.invite_sms_at"
+            class="cd-sent"
+          >
+            <UIcon
+              name="i-lucide-message-square-check"
+              class="size-4"
+            />أُرسلت رسالة الدعوة SMS · {{ when(candidate.invite_sms_at) }}
+          </p>
           <div class="cd-actions">
             <UButton
               v-if="canManage && ['new', 'invited', 'reserve'].includes(candidate.status)"
@@ -139,6 +148,16 @@ async function copyInvite() {
               variant="soft"
               :ui="{ base: 'rounded-[12px] min-h-11' }"
               @click="emit('schedule')"
+            />
+            <UButton
+              v-if="candidate.status === 'invited' && candidate.interview_at && canManage"
+              :label="candidate.invite_sms_at ? 'أعد إرسال الدعوة SMS' : 'أرسل الدعوة SMS'"
+              icon="i-lucide-message-square-text"
+              color="primary"
+              variant="soft"
+              :loading="busy"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="emit('sms')"
             />
             <UButton
               v-if="candidate.interview_at && canManage"
@@ -268,6 +287,7 @@ async function copyInvite() {
 .cd-sec { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
 .cd-sec h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
 .cd-sec p { margin: 0; color: var(--ink-2); }
+.cd-sent { display: inline-flex; align-items: center; gap: 6px; color: var(--green-ink) !important; font-size: 13.5px; font-weight: 600; }
 .muted { color: var(--ink-3) !important; font-size: 13.5px; }
 .cd-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .cd-evals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

@@ -122,7 +122,19 @@ export function eligibilityIssues(c: EligibilityInput): string[] {
   return out
 }
 
-/** رسالةُ دعوة المقابلة جاهزةً للنسخ (واتس أو SMS). */
+/** موعدُ المقابلة بتوقيت غزة وأرقامٍ لاتينية: «الأحد، 02/11، 10:00». */
+export function interviewWhen(iso: string): string {
+  return new Date(iso).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Asia/Gaza', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+/** رسالةُ SMS قصيرة (مقطعان في الغالب) بموعد المقابلة ومكانها. */
+export function inviteSms(name: string, gender: 'male' | 'female', iso: string, place: string | null): string {
+  const you = gender === 'female' ? 'الأخت' : 'الأخ'
+  const first = name.trim().split(/\s+/)[0] ?? ''
+  return `${you} ${first}، يسرّنا دعوتك لمقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية يوم ${interviewWhen(iso)}${place ? ` في ${place}` : ''}.`
+}
+
+/** رسالةُ دعوة المقابلة جاهزةً للنسخ (واتس). */
 export function inviteMessage(name: string, gender: 'male' | 'female', when: string, place: string | null): string {
   const you = gender === 'female' ? 'الأخت الكريمة' : 'الأخ الكريم'
   const first = name.trim().split(/\s+/)[0] ?? ''

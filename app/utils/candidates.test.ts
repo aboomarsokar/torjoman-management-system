@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CANDIDATE_CRITERIA } from '~/constants/candidates'
-import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
+import { smsSegments } from '~/utils/sms'
+import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, inviteSms, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
 
 const draft = (o: Partial<CandidateDraft> = {}): CandidateDraft => ({
   full_name: 'محمد أحمد سالم', national_id: '123456789', phone: '0599123456', gender: 'male', birth_date: '',
@@ -61,6 +62,14 @@ describe('مقابلات المرشحين', () => {
     expect(eligibilityIssues({ ...ok, residence: 'النصيرات', quran_parts: 3, tajweed_level: 'تأهيلية', experience_years: 2, can_gather: false, daily_commitment: false })).toHaveLength(6)
     // الطلبات القديمة بلا الحقول الجديدة لا تُعلَّم
     expect(eligibilityIssues({ residence: null, quran_parts: null, tajweed_level: null, experience_years: null, can_gather: null, daily_commitment: null })).toEqual([])
+  })
+
+  it('رسالة SMS بالموعد بتوقيت غزة وفي حدود مقطعين', () => {
+    const m = inviteSms('أحمد محمد سالم', 'male', '2026-11-02T08:00:00Z', 'مقر المشروع')
+    expect(m).toContain('الأخ أحمد')
+    expect(m).toContain('10:00')
+    expect(m).toContain('في مقر المشروع')
+    expect(smsSegments(m).segments).toBeLessThanOrEqual(2)
   })
 
   it('رسالة الدعوة بالجنس', () => {

@@ -114,5 +114,24 @@ export function useCandidates() {
     }, { onConflict: 'candidate_id,evaluator_id' }), 'حُفظ تقييمك.')
   }
 
-  return { candidates, staff, loading, busy, load, loadStaff, schedule, decide, remove, evaluate }
+  /** رسالةُ الدعوة SMS للمدعوّين (النصُّ يُبنى في الخادم لكلٍّ باسمه وموعده). */
+  async function sendInviteSms(ids: string[]): Promise<boolean> {
+    if (!ids.length) return warn('اختر مرشّحاً واحداً على الأقلّ.')
+    busy.value = true
+    try {
+      const r = await $fetch<{ sent: number, failed: number, skipped: number, error: string | null }>('/api/candidates/invite-sms', { method: 'POST', body: { ids } })
+      if (r.sent) toast.add({ title: `أُرسلت رسالة الدعوة إلى ${r.sent}.`, color: 'success', icon: 'i-lucide-circle-check' })
+      if (r.failed) toast.add({ title: `تعذّر الإرسال إلى ${r.failed}: ${r.error ?? ''}`, color: 'error', icon: 'i-lucide-circle-alert' })
+      if (r.skipped) toast.add({ title: `تُرك ${r.skipped} بلا دعوةٍ بموعد أو رقمٍ صالح.`, color: 'warning', icon: 'i-lucide-info' })
+      await load()
+      return r.sent > 0
+    } catch (err) {
+      handle(err, 'تعذّر إرسال رسالة الدعوة.')
+      return false
+    } finally {
+      busy.value = false
+    }
+  }
+
+  return { candidates, staff, loading, busy, load, loadStaff, schedule, decide, remove, evaluate, sendInviteSms }
 }

@@ -585,6 +585,7 @@ export type Database = {
           id: string
           interview_at: string | null
           interview_place: string | null
+          invite_sms_at: string | null
           national_id: string
           nearest_mosque: string | null
           phone: string
@@ -614,6 +615,7 @@ export type Database = {
           id?: string
           interview_at?: string | null
           interview_place?: string | null
+          invite_sms_at?: string | null
           national_id: string
           nearest_mosque?: string | null
           phone: string
@@ -643,6 +645,7 @@ export type Database = {
           id?: string
           interview_at?: string | null
           interview_place?: string | null
+          invite_sms_at?: string | null
           national_id?: string
           nearest_mosque?: string | null
           phone?: string

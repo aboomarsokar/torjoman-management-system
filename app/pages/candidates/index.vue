@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * مقابلاتُ المرشّحين (طلب المستخدم 2026-10-30): الطلباتُ الواردة من صفحة الالتحاق العامّة (/join)، وتصفيتُها بالحالة والجنس
- * والبحث، ودعوةُ مرشّحٍ أو مجموعةٍ لمقابلةٍ بموعدٍ ولجنة، وتقييمُ كلّ عضوٍ من حسابه، والقرار، وإنشاءُ حساب المعلّم للمقبول.
+ * والبحث، ودعوةُ مرشّحٍ أو مجموعةٍ لمقابلةٍ بموعدٍ ولجنة وإبلاغُهم SMS، وتقييمُ كلّ عضوٍ من حسابه، والقرار، وإنشاءُ حساب المعلّم للمقبول.
  * عضوُ اللجنة من غير الإدارة يرى من أُسند إليه وحده (RLS).
  */
 import type { Candidate } from '~/composables/useCandidates'
@@ -64,6 +64,13 @@ async function saveSchedule(d: Parameters<typeof api.schedule>[0]) {
 const evalOpen = ref(false)
 async function saveEvaluation(scores: (number | null)[], notes: string) {
   if (current.value && me.value && await api.evaluate(current.value.id, me.value, scores, notes)) evalOpen.value = false
+}
+// رسالةُ الدعوة SMS — تأكيدٌ قبل الإرسال (تُحسب من رصيد الرسائل)
+const smsFor = ref<Candidate[]>([])
+const smsReady = computed(() => smsFor.value.filter(c => c.status === 'invited' && c.interview_at))
+async function sendSms() {
+  if (await api.sendInviteSms(smsReady.value.map(c => c.id))) selected.value = []
+  smsFor.value = []
 }
 const confirmRemove = ref(false)
 async function remove() {
@@ -158,6 +165,14 @@ async function copyJoinLink() {
         :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
         @click="openSchedule(candidates.filter(c => selected.includes(c.id)))"
       />
+      <UButton
+        label="أرسل الدعوة SMS"
+        icon="i-lucide-message-square-text"
+        color="neutral"
+        variant="solid"
+        :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+        @click="smsFor = candidates.filter(c => selected.includes(c.id))"
+      />
     </div>
 
     <UiSkeletonCard
@@ -188,6 +203,7 @@ async function copyJoinLink() {
       :is-admin="isAdmin"
       :busy="busy"
       @schedule="current && openSchedule([current])"
+      @sms="current && (smsFor = [current])"
       @evaluate="evalOpen = true"
       @decide="(s: CandidateStatus, n: string) => current && api.decide(current.id, s, n)"
       @hire="hire"
@@ -206,6 +222,17 @@ async function copyJoinLink() {
       :evaluator-id="me"
       :busy="busy"
       @save="saveEvaluation"
+    />
+    <UiConfirmModal
+      :open="smsFor.length > 0"
+      title="إرسال دعوة المقابلة SMS"
+      :message="smsReady.length ? `ستُرسل رسالةٌ بموعد المقابلة ومكانها إلى ${smsReady.length} مرشّح${smsReady.length < smsFor.length ? `، ويُترك ${smsFor.length - smsReady.length} غيرُ مدعوّ بموعد` : ''}. تُحسب من رصيد الرسائل.` : 'لا مدعوَّ بموعدٍ بين المحدّدين — ادعُهم للمقابلة أوّلاً.'"
+      confirm-label="أرسل"
+      confirm-color="primary"
+      confirm-icon="i-lucide-send"
+      :loading="busy"
+      @update:open="v => !v && (smsFor = [])"
+      @confirm="smsReady.length ? sendSms() : (smsFor = [])"
     />
     <UiConfirmModal
       v-model:open="confirmRemove"
@@ -229,7 +256,8 @@ async function copyJoinLink() {
 .cp-tabs::-webkit-scrollbar { display: none; }
 .cp-search { flex: 1 1 260px; min-width: 0; }
 .cp-bulk {
-  position: sticky; top: 84px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  position: sticky; top: 84px; z-index: 5; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
   padding: 10px 14px; border-radius: 14px; background: var(--navy); color: var(--on-primary); font-weight: 600; box-shadow: var(--shadow-lg);
 }
+.cp-bulk > span { margin-inline-end: auto; }
 </style>

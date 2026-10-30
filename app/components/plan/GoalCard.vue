@@ -63,7 +63,14 @@ const menu = computed<DropdownMenuItem[]>(() => [
         :aria-controls="`goal-${goal.id}`"
         @click="collapsed = !collapsed"
       >
-        <span class="gc-no">{{ index + 1 }}</span>
+        <span class="gc-lead">
+          <span class="gc-no">{{ index + 1 }}</span>
+          <span class="gc-chev gc-chev-m"><UIcon
+            name="i-lucide-chevron-down"
+            class="size-4.5"
+            :class="{ up: !collapsed }"
+          /></span>
+        </span>
         <span class="gc-title">
           <span class="gc-kicker">الهدف {{ index + 1 }}<template v-if="complete"> · منجز</template></span>
           <span class="gc-name">{{ goal.title }}</span>
@@ -72,33 +79,45 @@ const menu = computed<DropdownMenuItem[]>(() => [
           class="gc-ring"
           :aria-label="`الإنجاز ${progress.pct}%، ${progress.done} من ${progress.total}`"
         >
-          <svg
-            viewBox="0 0 48 48"
+          <span class="gc-dial">
+            <svg
+              viewBox="0 0 48 48"
+              aria-hidden="true"
+            >
+              <circle
+                cx="24"
+                cy="24"
+                r="20"
+                class="track"
+              />
+              <circle
+                v-if="progress.pct > 0"
+                cx="24"
+                cy="24"
+                r="20"
+                class="fill"
+                :stroke-dasharray="dash"
+              />
+            </svg>
+            <b dir="ltr">{{ progress.pct }}<small>%</small></b>
+          </span>
+          <span class="gc-frac">{{ progress.done }} من {{ progress.total }}</span>
+          <span
+            class="gc-line"
             aria-hidden="true"
           >
-            <circle
-              cx="24"
-              cy="24"
-              r="20"
-              class="track"
-            />
-            <circle
-              v-if="progress.pct > 0"
-              cx="24"
-              cy="24"
-              r="20"
-              class="fill"
-              :stroke-dasharray="dash"
-            />
-          </svg>
-          <b>{{ progress.pct }}%</b>
-          <small>{{ progress.done }} من {{ progress.total }}</small>
+            <span class="gc-line-top"><b dir="ltr">{{ progress.pct }}%</b><span>{{ progress.done }} من {{ progress.total }} منجزة</span></span>
+            <span class="gc-track"><i :style="{ width: progress.pct + '%' }" /></span>
+          </span>
         </span>
-        <UIcon
-          name="i-lucide-chevron-down"
-          class="gc-chev size-5"
-          :class="{ up: !collapsed }"
-        />
+        <span class="gc-chev gc-chev-d">
+          <UIcon
+            name="i-lucide-chevron-down"
+            class="size-5"
+            :class="{ up: !collapsed }"
+          />
+          {{ collapsed ? 'عرض' : 'طيّ' }}
+        </span>
       </button>
       <UDropdownMenu
         v-if="canEdit"
@@ -173,15 +192,40 @@ const menu = computed<DropdownMenuItem[]>(() => [
 .gc-kicker { font-size: 12px; font-weight: 600; color: var(--band-sub); }
 .gc.complete .gc-kicker { color: var(--green); }
 .gc-name { font-size: 18px; font-weight: 600; color: var(--band-ink); line-height: 1.55; text-wrap: balance; }
-.gc-ring { flex: none; position: relative; width: 56px; display: grid; justify-items: center; }
-.gc-ring svg { width: 48px; height: 48px; transform: rotate(-90deg); }
-.gc-ring circle { fill: none; stroke-width: 5; }
+.gc-ring { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.gc-dial { position: relative; width: 64px; height: 64px; }
+.gc-dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gc-ring circle { fill: none; stroke-width: 4.5; }
 .gc-ring .track { stroke: color-mix(in srgb, var(--band-ink) 22%, transparent); }
 .gc-ring .fill { stroke: var(--green); stroke-linecap: round; transition: stroke-dasharray .4s var(--ease-out); }
-.gc-ring b { position: absolute; top: 14px; font-size: 12px; color: var(--band-ink); font-variant-numeric: tabular-nums; }
-.gc-ring small { font-size: 11px; color: var(--band-sub); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.gc-chev { color: var(--band-sub); transition: transform .2s var(--ease-out); flex: none; }
-.gc-chev.up { transform: rotate(180deg); }
+.gc-dial b {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 17px; font-weight: 700; color: var(--band-ink); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.gc-dial b small { font-size: 11px; font-weight: 600; margin-inline-start: 1px; opacity: .85; }
+.gc-dial b { grid-auto-flow: column; justify-content: center; align-content: center; align-items: baseline; }
+.gc-frac {
+  font-size: 11.5px; font-weight: 600; color: var(--band-sub); white-space: nowrap; font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--band-ink) 12%, transparent); border-radius: 999px; padding: 1px 8px;
+}
+/* الشاشةُ الكبيرة: شريطٌ أفقيّ (طلب المستخدم)، والحلقةُ للجوال وحده */
+.gc-dial, .gc-frac { display: none; }
+.gc-line { display: flex; flex-direction: column; gap: 6px; width: 200px; }
+.gc-line-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.gc-line-top b { font-size: 20px; font-weight: 700; color: var(--band-ink); font-variant-numeric: tabular-nums; line-height: 1; }
+.gc-line-top span { font-size: 12px; font-weight: 600; color: var(--band-sub); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gc-track { display: block; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--band-ink) 20%, transparent); overflow: hidden; }
+.gc-track i { display: block; height: 100%; border-radius: 999px; background: var(--green); transition: width .4s var(--ease-out); }
+.gc-lead { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.gc-chev {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  color: var(--band-ink); background: color-mix(in srgb, var(--band-ink) 14%, transparent); border-radius: 999px;
+}
+.gc-chev :deep(svg), .gc-chev > span { transition: transform .2s var(--ease-out); }
+.gc-chev .up { transform: rotate(180deg); }
+.gc-chev-d { min-height: 34px; padding: 0 12px 0 10px; font-size: 13px; font-weight: 600; }
+.gc-chev-m { display: none; width: 30px; height: 30px; }
+.gc-toggle:hover .gc-chev { background: color-mix(in srgb, var(--band-ink) 24%, transparent); }
 .gc-tasks { list-style: none; margin: 0; padding: 0; }
 .gc-tasks > :first-child { border-top: 0; }
 .gc-empty { padding: 12px 16px; color: var(--ink-3); font-size: 13px; }
@@ -193,15 +237,20 @@ const menu = computed<DropdownMenuItem[]>(() => [
 .gc-add:hover { border-color: var(--blue); color: var(--blue-ink); background: var(--blue-soft); }
 .gc-add:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 @media (max-width: 640px) {
-  .gc-toggle { gap: 10px; padding: 12px 10px 12px 4px; align-items: flex-start; }
+  .gc-toggle { gap: 10px 12px; padding: 12px 10px 12px 4px; align-items: flex-start; flex-wrap: wrap; }
+  .gc-title { flex: 1 1 calc(100% - 60px); }
+  /* الحلقةُ تحت العنوان على سطرٍ بعرضها، فلا يضيق العنوان */
+  .gc-ring { order: 3; flex-direction: row; gap: 10px; margin-inline-start: 44px; }
   .gc-name { font-size: 16px; }
   .gc-no { width: 32px; height: 32px; font-size: 14px; }
-  .gc-ring { width: 40px; }
-  .gc-ring svg { width: 40px; height: 40px; }
-  .gc-ring b { top: 12px; font-size: 11px; }
-  .gc-ring small, .gc-chev { display: none; }
+  .gc-line { display: none; }
+  .gc-dial { display: block; width: 58px; height: 58px; }
+  .gc-frac { display: inline-block; }
+  .gc-dial b { font-size: 16px; }
+  .gc-chev-d { display: none; }
+  .gc-chev-m { display: inline-flex; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gc-chev, .gc-ring .fill { transition: none; }
+  .gc-chev .up, .gc-ring .fill, .gc-track i { transition: none; }
 }
 </style>

@@ -58,7 +58,7 @@ const dayState = computed(() => shown.value.pending && shown.value.held // سط�
 const reportOpen = ref(false)
 const offBusy = ref(false)
 function openReport() {
-  if (keepsEdits()) reportOpen.value = true
+  if (!keepsEdits()) reportOpen.value = true
 }
 async function runOff(act: () => Promise<boolean>, done: string) {
   offBusy.value = true

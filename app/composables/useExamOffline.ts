@@ -26,22 +26,29 @@ export function useExamOffline(passMark: Ref<number | null>) {
 
   async function saveOnDevice(item: { id: string, studentName: string, title: string }, payload: ExamPayload): Promise<void> {
     if (!uid.value) return
-    await queue.put(newExamEntry(uid.value, item, payload))
+    // RLS يشترط `examiner_id = auth.uid()`، وكشفُ الردّ الضائع عند الرفع يقارن الراصدَ بصاحب السطر
+    await queue.put(newExamEntry(uid.value, item, { ...payload, examiner_id: uid.value }))
   }
 
   const rejected = computed(() => queue.rejected.value.map(e => ({ key: e.key, label: e.studentName, error: e.error })))
 
   /**
    * الطابورُ المعروض: ما جلبته الشاشةُ دون ما رُصد على الجهاز، ودون ما رُفع الآن — فبعد حذف سطره من الصندوق وقبل
-   * أن يعود `refresh()` لا يعود البندُ إلى الطابور لحظةً (رمشة). وما رُفع يُمحى حين تصل الشاشةَ نسخةٌ جديدة.
+   * أن يعود `refresh()` لا يعود البندُ إلى الطابور لحظةً (رمشة). و«ما رُفع» يُعرف من خروج سطرٍ **معلَّق** من الصندوق
+   * (مراقبةٌ متزامنة): `useOfflineQueue` يحذف السطرَ ثم ينتظر `settle` ثم يضبط `lastUploaded`، وبين الخطوتين رسمٌ.
+   * والمرفوضُ المتروك (discard) لا يُسجَّل — بندُه يعود للطابور. ويُمحى الإسقاطُ لبندٍ حين تصل نسخةٌ **لا تحويه**
+   * (نسخةٌ قديمة وصلت بعد رفعٍ ثانٍ تحويه فيبقى مُسقطاً حتى تصل التي بعدها).
    */
   function rowsFor<T extends { id: string }>(fetched: Ref<T[] | undefined>) {
     const uploaded = shallowRef<string[]>([])
-    watch(queue.lastUploaded, (u) => {
-      if (u) uploaded.value = [...uploaded.value, (u.entry as ExamEntry).itemId]
-    })
-    watch(fetched, () => {
-      uploaded.value = []
+    watch(queue.entries, (now, prev) => {
+      const keys = new Set(now.map(e => e.key))
+      const gone = prev.filter(e => e.status === 'pending' && !keys.has(e.key)).map(e => e.itemId)
+      if (gone.length) uploaded.value = [...uploaded.value, ...gone]
+    }, { flush: 'sync' })
+    watch(fetched, (rows) => {
+      const ids = new Set((rows ?? []).map(r => r.id))
+      uploaded.value = uploaded.value.filter(id => ids.has(id))
     })
     return computed(() => {
       const rows = withoutPending(fetched.value ?? [], queue.entries.value)

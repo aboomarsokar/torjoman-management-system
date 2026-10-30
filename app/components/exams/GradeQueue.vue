@@ -12,6 +12,7 @@ import { examTargetText, type WithdrawTarget } from '~/utils/exams/nomination'
 import { EXAMS_QUEUE_KEY, fetchExamQueue, type ExamQueueRaw } from '~/utils/fieldScreens'
 import { queueOnline as online } from '~/composables/useOfflineQueue'
 import { useExamOffline } from '~/composables/useExamOffline'
+import { offlineOwnerUid } from '~/utils/offlineSnapshot'
 import { isOnlineNow } from '~/utils/reachability'
 
 const emit = defineEmits<{ graded: [] }>()
@@ -29,11 +30,12 @@ const { pending: onDevice, rejected, rowsFor, retry, discard, lastUploaded } = u
 /** صفُّ الطابور المعروض. */
 type QueueRow = { id: string, student: { id: string, full_name: string } | null, name: string, halaqa: string, teacher: string, title: string, detail: string, span: string }
 
-// خطأُ الخادم والاتصالُ قائم يُرمى داخل `wrap` فلا تُكتب نسخةٌ فارغة، ويُعرض خارجه؛ وتعثّرٌ بلا اتصال يردّ فارغاً فيرجع `wrap` إلى النسخة
+// خطأُ الخادم والاتصالُ قائم يُرمى داخل `wrap` فلا تُكتب نسخةٌ فارغة، ويُعرض خارجه؛ وتعثّرٌ بلا اتصال يردّ فارغاً فيرجع `wrap` إلى النسخة.
+// والمديران (بلا `uid`: لا نسخةَ لهما) يُرمى لهما الخطأُ دائماً ويُعرض كما كان قبل العمل بلا اتصال
 const copied = wrap(EXAMS_QUEUE_KEY, async () => {
   void quran.load()
   return fetchExamQueue(supabase).catch((err) => {
-    if (isOnlineNow()) throw err
+    if (isOnlineNow() || !offlineOwnerUid()) throw err
     return []
   })
 })
@@ -81,6 +83,12 @@ async function onGraded() {
   emit('graded')
 }
 
+/** تركُ سطرٍ مرفوض يُعيد بندَه إلى الطابور — يُجلب من جديد كي يظهر قابلاً للرصد. */
+async function onDiscard(key: string) {
+  await discard(key)
+  await refresh()
+}
+
 const withdrawTarget = ref<WithdrawTarget | null>(null)
 function askWithdraw(r: QueueRow) {
   withdrawTarget.value = { itemId: r.id, studentName: r.name, cycleTitle: r.title }
@@ -100,7 +108,7 @@ function askWithdraw(r: QueueRow) {
       title="لم تقبلها القاعدة"
       :entries="rejected"
       @retry="retry"
-      @discard="discard"
+      @discard="onDiscard"
     />
     <h3 class="sec-title">
       الاختبارات الواردة <span class="count">{{ rows.length }}</span>

@@ -57,6 +57,11 @@ describe('useExamOffline', () => {
     expect(queued[0]!.payload.exam_date).toBe(day)
   })
 
+  it('saveOnDevice يثبّت examiner_id صاحبَ الجهاز في الحمولة (شرطُ RLS وكشفُ الردّ الضائع)', async () => {
+    await useExamOffline(ref(80)).saveOnDevice(item('i1'), payload({ examiner_id: null }))
+    expect(queued[0]!.payload.examiner_id).toBe('u')
+  })
+
   it('saveOnDevice بلا uid لا يضع شيئاً', async () => {
     owner = null
     await useExamOffline(ref(80)).saveOnDevice(item('i1'), payload())
@@ -114,23 +119,62 @@ describe('useExamOffline', () => {
       expect(useExamOffline(ref(80)).rowsFor(fetched).value).toEqual([{ id: 'c' }])
     })
 
-    it('ما رُفع الآن يبقى مُسقطاً قبل أن تصل نسخةٌ أحدث: لا رمشة بعد حذف سطره من الصندوق', async () => {
+    it('لا رمشة: السطرُ يُحذف من الصندوق قبل ضبط lastUploaded والبندُ لا يظهر بينهما', () => {
+      rows.value = [entry('a')]
       const fetched = ref([{ id: 'a' }, { id: 'c' }])
       const shown = useExamOffline(ref(80)).rowsFor(fetched)
-      expect(shown.value).toHaveLength(2)
+      expect(shown.value).toEqual([{ id: 'c' }])
+      // `useOfflineQueue`: يُحذف السطرُ ثم `await settle` ثم `lastUploaded` — وبينهما رسم
+      rows.value = []
+      expect(shown.value).toEqual([{ id: 'c' }])
       lastUploaded.value = { entry: entry('a'), data: null, at: 1 }
-      await nextTick()
       expect(shown.value).toEqual([{ id: 'c' }])
     })
 
-    it('وتصل النسخةُ الأحدث فينتهي الإسقاط (البندُ يعود إن أعادته القاعدة)', async () => {
+    it('مرفوضٌ يُتجاهَل (discard) يعود إلى الطابور ولا يُسجَّل مرفوعاً', () => {
+      rows.value = [{ ...entry('a'), status: 'rejected' }]
       const fetched = ref([{ id: 'a' }, { id: 'c' }])
       const shown = useExamOffline(ref(80)).rowsFor(fetched)
-      lastUploaded.value = { entry: entry('a'), data: null, at: 1 }
+      rows.value = []
+      expect(shown.value).toEqual([{ id: 'a' }, { id: 'c' }])
+    })
+
+    it('معلَّقٌ صار مرفوضاً (يبقى مفتاحُه) لا يُسجَّل مرفوعاً', () => {
+      rows.value = [entry('a')]
+      const fetched = ref([{ id: 'a' }, { id: 'c' }])
+      const shown = useExamOffline(ref(80)).rowsFor(fetched)
+      rows.value = [{ ...entry('a'), status: 'rejected' }]
+      rows.value = []
+      expect(shown.value).toEqual([{ id: 'a' }, { id: 'c' }])
+    })
+
+    it('تصل نسخةٌ لا تحويه فينتهي الإسقاطُ (يعود إن أعادته القاعدة لاحقاً)', async () => {
+      rows.value = [entry('a')]
+      const fetched = ref([{ id: 'a' }, { id: 'c' }])
+      const shown = useExamOffline(ref(80)).rowsFor(fetched)
+      rows.value = []
+      fetched.value = [{ id: 'c' }]
       await nextTick()
+      expect(shown.value).toEqual([{ id: 'c' }])
       fetched.value = [{ id: 'a' }, { id: 'c' }]
       await nextTick()
       expect(shown.value).toHaveLength(2)
+    })
+
+    it('سباقُ رفعين: نسخةٌ قديمةٌ تصل بعد الرفع الثاني لا تُعيد بندَه', async () => {
+      rows.value = [entry('a'), entry('b')]
+      const fetched = ref([{ id: 'a' }, { id: 'b' }, { id: 'c' }])
+      const shown = useExamOffline(ref(80)).rowsFor(fetched)
+      rows.value = [entry('b')] // رُفع a
+      rows.value = [] // ثم رُفع b
+      // نسخةُ refresh الأوّل (بدأت بعد رفع a وقبل رفع b) تصل وفيها b
+      fetched.value = [{ id: 'b' }, { id: 'c' }]
+      await nextTick()
+      expect(shown.value).toEqual([{ id: 'c' }])
+      // نسخةُ refresh الثاني: بلا b فينتهي إسقاطُه
+      fetched.value = [{ id: 'c' }]
+      await nextTick()
+      expect(shown.value).toEqual([{ id: 'c' }])
     })
   })
 })

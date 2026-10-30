@@ -24,7 +24,7 @@ const { candidates, staff, loading, busy } = api
 onMounted(() => {
   void api.load()
   void api.loadStaff()
-  if (canManage.value) void api.loadInviteTemplate()
+  void api.loadInviteTemplate() // لا يُشترط الدور هنا: الملفُّ قد لا يكون حُمّل بعدُ، والإعداداتُ يقرؤها كلُّ حساب
 })
 const names = computed(() => Object.fromEntries(staff.value.map(s => [s.id, s.name])))
 
@@ -69,6 +69,10 @@ async function saveEvaluation(scores: (number | null)[], notes: string) {
 // رسالةُ الدعوة SMS — نافذةٌ بالصيغة والمعاينة قبل الإرسال (تُحسب من رصيد الرسائل)
 const smsFor = ref<Candidate[]>([])
 const smsOpen = computed({ get: () => smsFor.value.length > 0, set: v => !v && (smsFor.value = []) })
+const templateOpen = ref(false)
+async function saveTemplate(t: string) {
+  if (await api.saveInviteTemplate(t)) templateOpen.value = false
+}
 const pendingSms = computed(() => candidates.value.filter(c => c.status === 'invited' && c.interview_at && !c.invite_sms_at))
 async function sendSms(ids: string[], template: string, save: boolean) {
   if (await api.sendInviteSms(ids, template, save)) selected.value = []
@@ -136,6 +140,15 @@ async function copyJoinLink() {
         variant="outline"
         to="/candidates/sheet"
         :ui="{ base: 'rounded-[12px] min-h-11' }"
+      />
+      <UButton
+        v-if="isAdmin"
+        label="صيغة رسالة الدعوة"
+        icon="i-lucide-file-pen-line"
+        color="neutral"
+        variant="outline"
+        :ui="{ base: 'rounded-[12px] min-h-11' }"
+        @click="templateOpen = true"
       />
       <UButton
         v-if="pendingSms.length"
@@ -240,6 +253,15 @@ async function copyJoinLink() {
       :can-save="isAdmin"
       :busy="busy"
       @send="sendSms"
+    />
+    <CandidatesSmsModal
+      v-model:open="templateOpen"
+      :candidates="[]"
+      :template="api.inviteTemplate.value"
+      :can-save="isAdmin"
+      :busy="busy"
+      template-only
+      @save-template="saveTemplate"
     />
     <UiConfirmModal
       v-model:open="confirmRemove"

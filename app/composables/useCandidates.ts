@@ -121,6 +121,15 @@ export function useCandidates() {
     if (data?.candidate_invite_sms) inviteTemplate.value = data.candidate_invite_sms
   }
 
+  /** اعتمادُ الصيغة دون إرسال (المدير الإداريّ — سياسة settings_write). */
+  async function saveInviteTemplate(template: string): Promise<boolean> {
+    const t = template.trim()
+    if (t.length < 10) return warn('اكتب نصّ الرسالة.')
+    const ok = await run(() => supabase.from('app_settings').update({ candidate_invite_sms: t }).eq('id', 1), 'اعتُمدت صيغة رسالة الدعوة.')
+    if (ok) inviteTemplate.value = t
+    return ok
+  }
+
   /**
    * رسالةُ الدعوة SMS للمدعوّين على دفعاتٍ من `SMS_REQUEST_CHUNK` (النصُّ يُبنى في الخادم لكلٍّ باسمه وموعده من الصيغة).
    * `save` يعتمد الصيغةَ (المدير الإداريّ) مع الدفعة الأولى.
@@ -153,5 +162,5 @@ export function useCandidates() {
     return total.sent > 0
   }
 
-  return { candidates, staff, loading, busy, inviteTemplate, load, loadStaff, loadInviteTemplate, schedule, decide, remove, evaluate, sendInviteSms }
+  return { candidates, staff, loading, busy, inviteTemplate, load, loadStaff, loadInviteTemplate, saveInviteTemplate, schedule, decide, remove, evaluate, sendInviteSms }
 }

@@ -2,14 +2,15 @@
 /**
  * إرسالُ دعوة المقابلة SMS (طلب المستخدم 2026-10-30): الصيغةُ المعتمدة قابلةً للتعديل بمتغيّراتها، ومعاينةٌ حيّة لرسالة كلّ
  * مرشّحٍ بموعده وعددُ مقاطعها، والمستلمون (المدعوّون بموعدٍ وحدهم). المدير الإداريّ يعتمد الصيغة المعدّلة للمرّات القادمة.
+ * وبلا مستلمين (`templateOnly`) تصير محرّرَ الصيغة وحده: معاينةٌ بمرشّحٍ مثال وزرُّ «اعتمد الصيغة» بلا إرسال.
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { DEFAULT_INVITE_SMS, INVITE_SMS_VARS, MAX_INVITE_SMS_TEMPLATE } from '~/constants/candidates'
 import { renderInviteSms } from '~/utils/candidates'
 import { SMS_MAX_SEGMENTS, smsSegments } from '~/utils/sms'
 
-const props = defineProps<{ candidates: Candidate[], template: string, canSave: boolean, busy: boolean }>()
-const emit = defineEmits<{ send: [ids: string[], template: string, save: boolean] }>()
+const props = defineProps<{ candidates: Candidate[], template: string, canSave: boolean, busy: boolean, templateOnly?: boolean }>()
+const emit = defineEmits<{ send: [ids: string[], template: string, save: boolean], saveTemplate: [template: string] }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const text = ref('')
@@ -21,7 +22,14 @@ watch(open, (o) => {
 })
 const ready = computed(() => props.candidates.filter(c => c.status === 'invited' && c.interview_at))
 const already = computed(() => ready.value.filter(c => c.invite_sms_at).length)
-const previews = computed(() => ready.value.map(c => ({
+/** مرشّحُ المعاينة في محرّر الصيغة: غداً العاشرة صباحاً. */
+const sample = computed(() => {
+  const at = new Date()
+  at.setDate(at.getDate() + 1)
+  at.setHours(10, 0, 0, 0)
+  return [{ id: 'sample', full_name: 'أحمد محمد سالم', gender: 'male' as const, invite_sms_at: null, interview_at: at.toISOString(), interview_place: 'مقر المشروع' }]
+})
+const previews = computed(() => (props.templateOnly ? sample.value : ready.value).map(c => ({
   id: c.id, name: c.full_name, sent: !!c.invite_sms_at,
   text: renderInviteSms(text.value, { ...c, interview_at: c.interview_at! })
 })))
@@ -29,7 +37,7 @@ const previews = computed(() => ready.value.map(c => ({
 const maxSegments = computed(() => Math.max(0, ...previews.value.map(p => smsSegments(p.text).segments)))
 const totalSegments = computed(() => previews.value.reduce((n, p) => n + smsSegments(p.text).segments, 0))
 const problem = computed(() => {
-  if (!ready.value.length) return 'لا مدعوَّ بموعدٍ بين المحدّدين — ادعُهم للمقابلة أوّلاً.'
+  if (!props.templateOnly && !ready.value.length) return 'لا مدعوَّ بموعدٍ بين المحدّدين — ادعُهم للمقابلة أوّلاً.'
   if (text.value.trim().length < 10) return 'اكتب نصّ الرسالة.'
   if (maxSegments.value > SMS_MAX_SEGMENTS) return `الرسالة أطول من ${SMS_MAX_SEGMENTS} مقاطع — اختصرها.`
   return null
@@ -40,12 +48,21 @@ const changed = computed(() => text.value.trim() !== props.template.trim())
 <template>
   <UModal
     v-model:open="open"
-    title="إرسال دعوة المقابلة SMS"
+    :title="templateOnly ? 'صيغة رسالة الدعوة SMS' : 'إرسال دعوة المقابلة SMS'"
     :ui="{ content: 'sm:max-w-xl' }"
   >
     <template #body>
       <div class="sm">
-        <p class="sm-who">
+        <p
+          v-if="templateOnly"
+          class="sm-who"
+        >
+          الصيغةُ المعتمدة لكلّ دعوات المقابلة القادمة — المعاينةُ بمرشّحٍ مثال.
+        </p>
+        <p
+          v-else
+          class="sm-who"
+        >
           ستُرسل إلى <b>{{ ready.length }}</b> مرشّح، كلٌّ بموعده ومكانه<template v-if="candidates.length > ready.length">
             · ويُترك {{ candidates.length - ready.length }} غيرُ مدعوّ بموعد
           </template><template v-if="already">
@@ -80,14 +97,14 @@ const changed = computed(() => text.value.trim() !== props.template.trim())
               v-for="p in previews"
               :key="p.id"
             >
-              <small>{{ p.name }}<template v-if="p.sent"> · وصلته من قبل</template></small>
+              <small>{{ templateOnly ? 'مثال' : p.name }}<template v-if="p.sent"> · وصلته من قبل</template></small>
               <p>{{ p.text }}</p>
             </li>
           </ul>
         </section>
         <div class="sm-tools">
           <UCheckbox
-            v-if="canSave && changed"
+            v-if="canSave && changed && !templateOnly"
             v-model="save"
             label="اعتمِد هذه الصيغة للمرّات القادمة"
           />
@@ -113,7 +130,7 @@ const changed = computed(() => text.value.trim() !== props.template.trim())
     </template>
     <template #footer>
       <div class="sm-foot">
-        <span>تُحسب من رصيد الرسائل</span>
+        <span>{{ templateOnly ? 'لا تُرسَل أيُّ رسالة' : 'تُحسب من رصيد الرسائل' }}</span>
         <div class="flex gap-2">
           <UButton
             label="إلغاء"
@@ -123,6 +140,17 @@ const changed = computed(() => text.value.trim() !== props.template.trim())
             @click="open = false"
           />
           <UButton
+            v-if="templateOnly"
+            label="اعتمد الصيغة"
+            icon="i-lucide-check"
+            color="primary"
+            :loading="busy"
+            :disabled="!!problem || !changed"
+            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+            @click="emit('saveTemplate', text.trim())"
+          />
+          <UButton
+            v-else
             :label="`أرسل إلى ${ready.length}`"
             icon="i-lucide-send"
             color="primary"

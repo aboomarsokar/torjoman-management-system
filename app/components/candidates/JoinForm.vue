@@ -5,8 +5,9 @@
  * الأرقامُ العربية تُقبل وتُحوَّل، والتحقّقُ في `candidateDraftError` قبل الإرسال وفي القاعدة بعده.
  */
 import { TAJWEED_LEVELS } from '~/constants/profileChoices'
-import { CANDIDATE_PHONE_LENGTH, CANDIDATE_RESIDENCES, HALAQA_AREAS, MAX_ADDRESS_DETAIL, MAX_CANDIDATE_LONG, OTHER_AREA, SMALL_NUMBER_DIGITS } from '~/constants/candidates'
+import { CANDIDATE_PHONE_LENGTH, CANDIDATE_RESIDENCES, HALAQA_AREAS, MAX_ADDRESS_DETAIL, MAX_EXPERIENCE_YEARS, MAX_CANDIDATE_LONG, OTHER_AREA, SMALL_NUMBER_DIGITS } from '~/constants/candidates'
 import { IDENTITY_LENGTH } from '~/constants/identity'
+import { PROGRAM_JUZ_COUNT } from '~/constants/quran'
 import { blankCandidate } from '~/composables/useCandidateRegistration'
 
 const emit = defineEmits<{ lookup: [] }>()
@@ -179,6 +180,7 @@ async function submit() {
         <UiDigitsInput
           v-model="form.quran_parts"
           :max="SMALL_NUMBER_DIGITS"
+          :max-value="PROGRAM_JUZ_COUNT"
           placeholder="0 – 30"
           size="xl"
           class="w-full"
@@ -203,6 +205,7 @@ async function submit() {
         <UiDigitsInput
           v-model="form.experience_years"
           :max="SMALL_NUMBER_DIGITS"
+          :max-value="MAX_EXPERIENCE_YEARS"
           size="xl"
           class="w-full"
         />

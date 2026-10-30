@@ -115,26 +115,29 @@ const audience = computed(() => form.mode === 'group'
         :ui="{ base: 'rounded-[12px] min-h-12' }"
       />
     </UFormField>
-    <UFormField
-      label="التفاصيل (اختياريّة)"
-      :hint="`${form.body.trim().length}/${MAX_MESSAGE_BODY}`"
-    >
-      <UTextarea
-        v-model="form.body"
-        :rows="3"
-        autoresize
-        class="w-full"
-        :maxlength="MAX_MESSAGE_BODY"
+    <div class="cf-body">
+      <UFormField
+        label="التفاصيل (اختياريّة)"
+        :hint="`${form.body.trim().length}/${MAX_MESSAGE_BODY}`"
+      >
+        <UTextarea
+          v-model="form.body"
+          :rows="4"
+          autoresize
+          class="w-full"
+          :maxlength="MAX_MESSAGE_BODY"
+          :ui="{ base: 'rounded-[12px]' }"
+        />
+      </UFormField>
+      <MessagesRewriteActions
+        :busy="ai.busy.value"
+        :can-undo="ai.canUndo.value"
+        :disabled="(!form.title.trim() && !form.body.trim()) || busy"
+        @rewrite="ai.rewrite('announcement', audience)"
+        @undo="ai.undo"
       />
-    </UFormField>
-    <MessagesRewriteActions
-      :busy="ai.busy.value"
-      :can-undo="ai.canUndo.value"
-      :disabled="(!form.title.trim() && !form.body.trim()) || busy"
-      @rewrite="ai.rewrite('announcement', audience)"
-      @undo="ai.undo"
-    />
-    <div class="cf-row">
+    </div>
+    <div class="cf-row cf-foot">
       <UFormField label="زرٌّ يفتح صفحة (اختياريّ)">
         <UiSelect
           v-model="form.link"
@@ -168,8 +171,19 @@ const audience = computed(() => form.mode === 'group'
 </template>
 
 <style scoped>
-.cf { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.cf {
+  display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; border-radius: 16px;
+  background: var(--surface); box-shadow: var(--shadow); container: cf / inline-size;
+}
 .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
+.cf-body { display: flex; flex-direction: column; gap: 8px; }
+.cf-foot { padding-top: 16px; border-top: 1px solid var(--line); }
+/* في عمودٍ ضيّق (الشاشة العريضة بعمودين، أو الجوال) تتراصّ الحقول */
+@container cf (max-width: 560px) {
+  .cf-row { grid-template-columns: 1fr; }
+  .cf-actions { justify-content: stretch; }
+  .cf-actions > * { flex: 1; justify-content: center; }
+}
 .cf-roles { display: flex; flex-wrap: wrap; gap: 10px 18px; min-height: 48px; align-items: center; }
 .cf-actions { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 640px) {

@@ -4,7 +4,8 @@
  */
 import { defineOfflineQueue } from '~/composables/useOfflineQueue'
 import type { AttendanceMirror } from '~/composables/useOfflineMirror'
-import { keptAbsences, type OutboxEntry } from '~/utils/attendanceOutbox'
+import type { OutboxEntry } from '~/utils/attendanceOutbox'
+import { settleAttendanceEntry, uploadAttendanceEntry } from '~/utils/attendanceUpload'
 import { idbGet, idbPut } from '~/utils/offlineDb'
 import { entryAsRecord, quranMirrorKey, type QuranEntry, type QuranMirror } from '~/utils/quranOutbox'
 import type { AckEntry } from '~/utils/ackOutbox'
@@ -26,15 +27,13 @@ export const EXAM_QUEUE = 'exams'
 defineOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, {
   store: 'outbox',
   order: (a, b) => a.day.localeCompare(b.day),
-  upload: (supabase, e) => supabase.rpc('save_attendance_day', {
-    p_halaqa: e.halaqaId, p_day: e.day, p_absences: e.absences, p_recorded_at: e.recordedAt
-  }),
-  // اليومُ المرفوع يدخل نسخةَ الجهاز مسجَّلاً — بلا من تخطّاهم الرفع (لم يعودوا في الحلقة)
+  // حضورٌ أو بلاغ «لم تنعقد» أو سحبُه بحسب نوع السطر (`uploadAttendanceEntry`)
+  upload: uploadAttendanceEntry,
+  // أثرُ السطر المرفوع يدخل نسخةَ الجهاز: يومٌ مسجَّل، أو بلاغٌ معلّق، أو بلاغٌ سُحب
   async settle(e, data) {
     const mirror = await idbGet<AttendanceMirror>('mirror', e.uid)
     if (!mirror || mirror.halaqa?.id !== e.halaqaId) return
-    const skipped = (data as { skipped?: string[] } | null)?.skipped ?? []
-    mirror.days[e.day] = { held: true, absences: keptAbsences(e.absences, skipped) }
+    settleAttendanceEntry(mirror, e, data)
     await idbPut('mirror', mirror)
   }
 })

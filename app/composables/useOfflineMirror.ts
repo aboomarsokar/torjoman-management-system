@@ -7,6 +7,7 @@ import type { Database } from '~/types/database.types'
 import { MIRROR_DAYS } from '~/constants/offline'
 import type { AbsenceKind } from '~/composables/useAttendanceDay'
 import type { MirrorDay } from '~/utils/attendanceOutbox'
+import { OFF_REASONS, type OffDay, type OffReason, type OffStatus } from '~/utils/offDays'
 import { idbGet, idbPut } from '~/utils/offlineDb'
 
 export type MirrorStudent = { id: string, full_name: string, enrollment_date: string | null }
@@ -21,6 +22,10 @@ export interface AttendanceMirror {
   from: string
   /** شهورٌ رصدُها معتمَد (`YYYY-MM`) — أيامُها للقراءة. */
   approvedMonths: string[]
+  /** بلاغاتُ «لم تنعقد» المرفوعة بمفتاح اليوم — الغائبُ (نسخةُ جهازٍ قديمة) = لا بلاغات. */
+  offDays?: Record<string, OffDay>
+  /** الإجازاتُ العامة (يوم ← سبب) من `from` بلا حدٍّ أعلى — الغائبُ = لا إجازات. */
+  holidays?: Record<string, string>
   /** آخرُ تحديثٍ من القاعدة (ISO). */
   syncedAt: string
 }
@@ -41,6 +46,23 @@ export function buildMirrorDays(days: { day: string }[], absences: { day: string
     day.absences[a.student_id] = a.kind as AbsenceKind
   }
   return out
+}
+
+const OFF_STATUSES: readonly OffStatus[] = ['pending', 'approved', 'rejected']
+
+/** يبني بلاغاتِ النسخة من صفوف القاعدة؛ صفٌّ بسببٍ أو حالةٍ غير معروفين يُسقط (لا يُعرض ما لا تفهمه الشاشة). */
+export function buildOffDays(rows: { day: string, reason: string, note: string | null, status: string, review_note: string | null }[]): Record<string, OffDay> {
+  const out: Record<string, OffDay> = {}
+  for (const r of rows) {
+    if (!(OFF_REASONS as readonly string[]).includes(r.reason) || !(OFF_STATUSES as readonly string[]).includes(r.status)) continue
+    out[r.day] = { reason: r.reason as OffReason, note: r.note, status: r.status as OffStatus, reviewNote: r.review_note }
+  }
+  return out
+}
+
+/** يبني إجازاتِ النسخة (يوم ← سبب) من صفوف القاعدة. */
+export function buildHolidays(rows: { day: string, reason: string }[]): Record<string, string> {
+  return Object.fromEntries(rows.map(r => [r.day, r.reason]))
 }
 
 export function useOfflineMirror() {
@@ -65,21 +87,28 @@ export function useOfflineMirror() {
       let students: MirrorStudent[] = []
       let days: Record<string, MirrorDay> = {}
       let approvedMonths: string[] = []
+      let offDays: Record<string, OffDay> = {}
+      let holidays: Record<string, string> = {}
       const from = mirrorFrom(today, projectStart)
       if (halaqa) {
-        const [st, ds, ab, rp] = await Promise.all([
+        const [st, ds, ab, rp, od, hl] = await Promise.all([
           supabase.from('students').select('id, full_name, enrollment_date').eq('halaqa_id', halaqa.id).eq('status', 'active').order('full_name'),
           supabase.from('attendance_days').select('day').eq('halaqa_id', halaqa.id).gte('day', from),
           supabase.from('attendance_absences').select('day, student_id, kind').eq('halaqa_id', halaqa.id).gte('day', from),
-          supabase.from('monthly_reports').select('report_year, report_month').eq('halaqa_id', halaqa.id).eq('status', 'approved')
+          supabase.from('monthly_reports').select('report_year, report_month').eq('halaqa_id', halaqa.id).eq('status', 'approved'),
+          supabase.from('attendance_off_days').select('day, reason, note, status, review_note').eq('halaqa_id', halaqa.id).gte('day', from),
+          // الإجازاتُ بلا حدٍّ أعلى: إجازةٌ مُعلَنةٌ لما بعد اليوم تظهر بلا اتصال
+          supabase.from('attendance_holidays').select('day, reason').gte('day', from)
         ])
-        const failure = st.error ?? ds.error ?? ab.error ?? rp.error
+        const failure = st.error ?? ds.error ?? ab.error ?? rp.error ?? od.error ?? hl.error
         if (failure) throw failure
         students = st.data ?? []
         days = buildMirrorDays(ds.data ?? [], ab.data ?? [])
         approvedMonths = (rp.data ?? []).map(r => `${r.report_year}-${String(r.report_month).padStart(2, '0')}`)
+        offDays = buildOffDays(od.data ?? [])
+        holidays = buildHolidays(hl.data ?? [])
       }
-      const next: AttendanceMirror = { uid, fullName, halaqa: halaqa ?? null, students, days, from, approvedMonths, syncedAt: new Date().toISOString() }
+      const next: AttendanceMirror = { uid, fullName, halaqa: halaqa ?? null, students, days, from, approvedMonths, offDays, holidays, syncedAt: new Date().toISOString() }
       await idbPut('mirror', next)
       await idbPut('meta', uid, 'current')
       mirror.value = next
@@ -89,15 +118,26 @@ export function useOfflineMirror() {
     }
   }
 
-  /** يومٌ أقدمُ من النسخة يُقرأ من القاعدة عند الطلب (متّصلاً) ويُضاف إليها. */
+  /** يومٌ أقدمُ من النسخة يُقرأ من القاعدة عند الطلب (متّصلاً) ويُضاف إليها، ومعه بلاغُه وإجازتُه إن وُجدا. */
   async function loadDay(halaqaId: string, day: string) {
-    const [ds, ab] = await Promise.all([
+    const [ds, ab, od, hl] = await Promise.all([
       supabase.from('attendance_days').select('day').eq('halaqa_id', halaqaId).eq('day', day),
-      supabase.from('attendance_absences').select('day, student_id, kind').eq('halaqa_id', halaqaId).eq('day', day)
+      supabase.from('attendance_absences').select('day, student_id, kind').eq('halaqa_id', halaqaId).eq('day', day),
+      supabase.from('attendance_off_days').select('day, reason, note, status, review_note').eq('halaqa_id', halaqaId).eq('day', day),
+      supabase.from('attendance_holidays').select('day, reason').eq('day', day)
     ])
-    const failure = ds.error ?? ab.error
+    const failure = ds.error ?? ab.error ?? od.error ?? hl.error
     if (failure) throw failure
-    await setDay(day, buildMirrorDays(ds.data ?? [], ab.data ?? [])[day] ?? { held: false, absences: {} })
+    if (!mirror.value) return
+    const offDays = { ...mirror.value.offDays }
+    const holidays = { ...mirror.value.holidays }
+    delete offDays[day]
+    delete holidays[day]
+    Object.assign(offDays, buildOffDays(od.data ?? []))
+    Object.assign(holidays, buildHolidays(hl.data ?? []))
+    const value = buildMirrorDays(ds.data ?? [], ab.data ?? [])[day] ?? { held: false, absences: {} }
+    mirror.value = { ...mirror.value, days: { ...mirror.value.days, [day]: value }, offDays, holidays }
+    await idbPut('mirror', mirror.value)
   }
 
   /** يكتب يوماً رُفع إلى النسخة (بلا انتظار تحديثٍ كامل). */

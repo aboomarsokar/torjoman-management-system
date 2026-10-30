@@ -252,6 +252,8 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
         </div>
       </template>
       <template v-else-if="showOverview">
+        <!-- بلاغاتُ «لم تنعقد» المعلّقة: للمدير الإداري لا لمشرف المشروع، ولا تظهر ما لم يكن بند -->
+        <DashboardOffDayQueue v-if="isAdmin" />
         <!-- بطاقات إحصائية: كلُّ فئةٍ بقسميها البنين والبنات متجاورَين (طلب المستخدم 2026-10-22) -->
         <DashboardGenderSplit :items="splitItems" />
 
@@ -312,6 +314,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 
       <template v-else-if="isSupervisor">
         <ClientOnly>
+          <DashboardOffDayQueue />
           <!-- بطاقات إحصائية -->
           <!-- رصدُ الاختبارات للمختبِر لا للمشرف، فلا بطاقةَ له هنا (طلب المستخدم 2026-10-21) -->
           <div class="stats stats-2">
@@ -418,6 +421,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 
       <template v-else-if="isSectionHead">
         <ClientOnly>
+          <DashboardOffDayQueue />
           <div class="stats stats-4">
             <UiStatCard
               icon="i-lucide-shield-check"

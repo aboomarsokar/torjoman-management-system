@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { newEntry, newOffEntry, newWithdrawEntry } from './attendanceOutbox'
+import { recordingStatus, teacherActions } from './teacherDashboard'
 import { localDay, queuedToday, withLocalWork, type DashLike } from './teacherDashboardOffline'
 
 const dash = (): DashLike => ({
@@ -51,18 +52,40 @@ describe('بلاغُ «لم تنعقد» لليوم في اللوحة', () => {
     expect(queuedToday(undefined, held)).toEqual({ day: { held: true, absent: 1 } })
   })
 
-  it('قراءةُ القاعدة اليوم تُعرض، وسطرُ الصندوق يغلبها', () => {
-    const d = { ...dash(), today: { isFriday: false, held: false, absent: 0, off: 'approved' as const } }
-    expect(withLocalWork(d, { ...base, day: null }).today.off).toBe('approved')
-    expect(withLocalWork(d, { ...base, day: { held: true, absent: 0 }, queuedOff: null }).today.off).toBeNull()
-    expect(withLocalWork(dash(), { ...base, day: { held: false, absent: 0 }, queuedOff: 'pending' }).today.off).toBe('pending')
+  // اللقطةُ قرأت حالاً من القاعدة، ثمّ تغيّر الجهازُ بعدها
+  const snap = (off: 'pending' | 'approved' | 'rejected') => ({ ...dash(), today: { isFriday: false, held: false, absent: 0, off } })
+  const att = (today: DashLike['today']) => teacherActions({
+    today: T, todayAttendance: today, recording: recordingStatus([], T), recordedCount: 0, studentCount: 0,
+    incentive: { allocated: 0, status: null, returned: false }, newAlerts: 0, money: String, day: String
+  }).find(a => a.key === 'att')
+
+  it('تراجعٌ ثمّ حضورٌ بعد اللقطة (النسخةُ مسجَّلة بلا offDays): بندُ الحضور المسجَّل لا «بانتظار الاعتماد»', () => {
+    const local = queuedToday(undefined, { held: true, absences: {} })
+    const out = withLocalWork(snap('pending'), { ...base, day: local.day, mirrorOff: null })
+    expect(out.today.off).toBeNull()
+    expect(att(out.today)).toMatchObject({ tone: 'done', title: 'سُجّل حضور اليوم' })
   })
 
-  it('لا تعرفه القاعدة (نسخةُ يومٍ مضى أو بلا الحقل): نسخةُ الجهاز احتياطاً، وإلا لا بلاغ', () => {
-    const d = { ...dash(), today: { isFriday: false, held: false, absent: 0, off: 'approved' as const } }
-    expect(withLocalWork(d, { ...base, savedOn: '2026-10-26', day: null }).today.off).toBeNull()
-    expect(withLocalWork(d, { ...base, savedOn: '2026-10-26', day: null, mirrorOff: 'pending' }).today.off).toBe('pending')
-    expect(withLocalWork(dash(), { ...base, day: null, mirrorOff: 'rejected' }).today.off).toBe('rejected')
-    expect(withLocalWork(dash(), { ...base, day: null }).today.off).toBeNull()
+  it('سحبٌ بعد اللقطة (النسخةُ بلا يومٍ ولا offDays): «سجّل الحضور»', () => {
+    const local = queuedToday(undefined, undefined)
+    const out = withLocalWork(snap('pending'), { ...base, day: local.day, mirrorOff: null })
+    expect(out.today.off).toBeNull()
+    expect(att(out.today)).toMatchObject({ tone: 'todo', cta: 'سجّل الحضور' })
+  })
+
+  it('بلاغٌ في النسخة معلّقٌ والقاعدةُ اعتمدته: «معتمَد»', () => {
+    const out = withLocalWork(snap('approved'), { ...base, day: null, mirrorOff: 'pending' })
+    expect(out.today.off).toBe('approved')
+    expect(att(out.today)).toMatchObject({ tone: 'done', detail: 'معتمَد' })
+  })
+
+  it('سطرُ الصندوق يغلب: البلاغُ المنتظِر معلّقٌ ولو قالت القاعدةُ غيره، والسحبُ بلا بلاغ', () => {
+    expect(withLocalWork(snap('rejected'), { ...base, day: { held: false, absent: 0 }, queuedOff: 'pending', mirrorOff: 'rejected' }).today.off).toBe('pending')
+    expect(withLocalWork(snap('pending'), { ...base, day: { held: false, absent: 0 }, queuedOff: null, mirrorOff: 'pending' }).today.off).toBeNull()
+  })
+
+  it('نسخةُ يومٍ مضى: حالُ النسخة بلا قراءة القاعدة؛ ولا بلاغَ على الجهاز = لا بلاغ', () => {
+    expect(withLocalWork(snap('approved'), { ...base, savedOn: '2026-10-26', day: null, mirrorOff: 'pending' }).today.off).toBe('pending')
+    expect(withLocalWork(snap('approved'), { ...base, day: null }).today.off).toBeNull()
   })
 })

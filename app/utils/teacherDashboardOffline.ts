@@ -66,9 +66,15 @@ export function withLocalWork<D extends DashLike>(d: D, local: {
   const base = local.day
     ? { isFriday: isFriday(local.today), ...local.day }
     : stale ? { isFriday: isFriday(local.today), held: false, absent: 0 } : d.today
-  // البلاغ: سطرُ الصندوق يغلب، ثمّ قراءةُ القاعدة اليوم (أحدثُ بقرار المعتمِد)، ثمّ نسخةُ الجهاز
+  // وجودُ البلاغ من الجهاز وحده (المعلّمُ ينشئه من `/t` و`settle` يكتبه في النسخة): سطرُ الصندوق ثمّ النسخة —
+  // فلقطةٌ قديمة لا تُبقي «بانتظار الاعتماد» بعد سحبٍ أو حضور. وقراءةُ القاعدة اليوم تضيف الحكمَ وحده لبلاغٍ في النسخة
+  // (قرارُ المعتمِد لا يصل النسخة)، ولا شأنَ لها ببلاغٍ ينتظر الرفع. ويومٌ مسجَّلٌ لا بلاغَ فيه.
   const serverOff = stale ? null : d.today.off ?? null
-  const off = local.queuedOff !== undefined ? local.queuedOff : serverOff ?? local.mirrorOff ?? null
+  const off = base.held
+    ? null
+    : local.queuedOff !== undefined
+      ? local.queuedOff
+      : local.mirrorOff ? serverOff ?? local.mirrorOff : null
   const today = { ...base, off }
   const { year, month } = d.recording.period
   const queued = new Set(local.quranPending

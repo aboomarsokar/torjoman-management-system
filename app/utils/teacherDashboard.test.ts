@@ -99,6 +99,21 @@ describe('لوحة المعلم — المطلوب منك الآن', () => {
     expect(rec).toMatchObject({ tone: 'todo', title: 'رصد شهر ⁦10-2026⁩: رُصد 2 من 6', detail: 'يُرسَل ابتداءً من 2026-10-31' })
   })
 
+  it('يومُ إجازة: بندُ الإجازة هادئاً بدل «لم تسجّل حضور اليوم»', () => {
+    const acts = teacherActions({ ...base, todayAttendance: { isFriday: false, held: false, absent: 0, holiday: 'عيد' } })
+    const att = acts.find(a => a.key === 'att')
+    expect(att).toMatchObject({ tone: 'done', icon: 'i-lucide-calendar-off', title: 'اليوم إجازة: عيد', to: '/t' })
+    expect(att?.cta).toBeUndefined()
+    expect(acts.some(a => a.title === 'لم تسجّل حضور اليوم بعد')).toBe(false)
+  })
+
+  it('إجازةٌ null أو غائبة: الحضورُ كما كان', () => {
+    for (const holiday of [null, undefined]) {
+      const att = teacherActions({ ...base, todayAttendance: { isFriday: false, held: false, absent: 0, holiday } }).find(a => a.key === 'att')
+      expect(att?.title).toBe('لم تسجّل حضور اليوم بعد')
+    }
+  })
+
   it('الجمعةُ بلا بند حضور، ولا كشفَ حوافز بلا مخصّصٍ ولا كشف', () => {
     const keys = teacherActions({ ...base, todayAttendance: { isFriday: true, held: false, absent: 0 } }).map(a => a.key)
     expect(keys).toEqual(['rec'])

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daysLeft, isLagging, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort, type RecordingRow } from './recordingStatus'
+import { dayReasonText, daysLeft, isLagging, isReasonState, parseRecent, recordingSummary, reportState, sortByLag, weekdayName, weekdayShort, type DayState, type RecordingRow } from './recordingStatus'
 
 const row = (name: string, o: Partial<RecordingRow> = {}): RecordingRow => ({
   halaqa_id: name, halaqa_name: name, gender: 'male', teacher_name: null, teacher_phone: null, teacher_whatsapp: null,
@@ -53,11 +53,42 @@ describe('isLagging / sortByLag / recordingSummary', () => {
   })
 })
 
+describe('dayReasonText / isReasonState', () => {
+  it('الحالاتُ التي يُقرأ سببُها', () => {
+    expect(['holiday', 'off', 'off_pending'].every(s => isReasonState(s as DayState))).toBe(true)
+    expect(['held', 'missed', 'today', 'before'].some(s => isReasonState(s as DayState))).toBe(false)
+  })
+  it('الإجازةُ بنصّ المدير الإداري، ولا تُعدّ ناقصة', () => {
+    expect(dayReasonText('holiday', { reason: 'عيد الفطر' }, false)).toBe('إجازةٌ عامة — عيد الفطر. لا يُعدّ يوماً ناقصاً.')
+  })
+  it('المعتمَد: تسميةُ السبب العربية والملاحظة', () => {
+    expect(dayReasonText('off', { reason: 'security', note: 'قصف' }, false))
+      .toBe('لم تنعقد الحلقة — ظرف أمني · قصف. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.')
+  })
+  it('المعلّق: بجنس الحلقة، ويُعدّ ناقصاً', () => {
+    expect(dayReasonText('off_pending', { reason: 'teacher_sick' }, true))
+      .toBe('بلّغت المعلّمةُ أنّ الحلقة لم تنعقد — مرض المعلم أو عذر طارئ. بانتظار اعتماد المشرف، ويُعدّ ناقصاً حتى يُعتمد.')
+    expect(dayReasonText('off_pending', { reason: 'other', note: null }, false)).toContain('بلّغ المعلّمُ')
+  })
+  it('سببٌ غائب: بلا شرطة', () => {
+    expect(dayReasonText('off', { reason: null }, false)).toBe('لم تنعقد الحلقة. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.')
+  })
+})
+
 describe('parseRecent / weekdayName', () => {
   it('يُسقط ما لا يُفهم', () => {
     expect(parseRecent([{ day: '2026-10-22', state: 'today' }, { day: 3, state: 'held' }, { day: '2026-10-21', state: 'x' }]))
       .toEqual([{ day: '2026-10-22', state: 'today' }])
     expect(parseRecent(null)).toEqual([])
+  })
+  it('يقبل حالاتِ الإجازة والبلاغ الثلاث', () => {
+    const raw = [
+      { day: '2026-10-27', state: 'holiday' },
+      { day: '2026-10-28', state: 'off' },
+      { day: '2026-10-29', state: 'off_pending' }
+    ]
+    expect(parseRecent(raw)).toEqual(raw)
+    expect(parseRecent([{ day: '2026-10-29', state: 'off_pending' }])).toEqual([{ day: '2026-10-29', state: 'off_pending' }])
   })
   it('اسمُ اليوم', () => {
     expect(weekdayName('2026-10-22')).toBe('الخميس')

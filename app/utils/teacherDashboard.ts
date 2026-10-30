@@ -142,7 +142,8 @@ export interface TeacherAction {
 
 export interface ActionsInput {
   today: string
-  todayAttendance: { isFriday: boolean, held: boolean, absent: number }
+  /** `holiday`: سببُ إجازة اليوم العامة إن وُجدت (قراءةٌ متّصلة، `useTodayHoliday`)، وإلا `null`/غائب. */
+  todayAttendance: { isFriday: boolean, held: boolean, absent: number, holiday?: string | null }
   recording: ReturnType<typeof recordingStatus>
   recordedCount: number
   studentCount: number
@@ -164,8 +165,10 @@ export function teacherActions(i: ActionsInput): TeacherAction[] {
   // «10-2026» بعد كلامٍ عربيّ تنقلب «2026-10» (الشَّرطةُ لا تصل أرقاماً تلي حروفاً عربية) — تُعزل لاتينيّاً
   const month = isolateLtr(r.label)
 
-  // حضور اليوم (الجمعة بلا حلقة)
-  if (!i.todayAttendance.isFriday) {
+  // حضور اليوم (الجمعة بلا حلقة) — ويومُ الإجازة العامة بندٌ هادئٌ بدله: لا حضورَ مطلوباً ولا تقصير
+  if (i.todayAttendance.holiday) {
+    out.push({ key: 'att', tone: 'done', icon: 'i-lucide-calendar-off', title: `اليوم إجازة: ${i.todayAttendance.holiday}`, to: '/t' })
+  } else if (!i.todayAttendance.isFriday) {
     out.push(i.todayAttendance.held
       ? { key: 'att', tone: 'done', icon: 'i-lucide-calendar-check', title: 'سُجّل حضور اليوم', detail: i.todayAttendance.absent ? `غاب ${i.todayAttendance.absent}` : 'الجميع حاضر', to: '/t' }
       : { key: 'att', tone: 'todo', icon: 'i-lucide-calendar-plus', title: 'لم تسجّل حضور اليوم بعد', detail: 'علّم الغائبين ثم اضغط «حفظ الحضور».', to: '/t', cta: 'سجّل الحضور' })

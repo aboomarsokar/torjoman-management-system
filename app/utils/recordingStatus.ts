@@ -3,6 +3,7 @@
  * المقصّرُ: حلقةٌ فاتها يومُ دوامٍ بلا رصد حضور (عدا اليوم الجاري)، أو رصدُ شهرٍ قرآنيٍّ تجاوز مهلتَه بلا إرسال.
  * اليومُ الجاري بلا رصدٍ «لم يُرصد بعد» لا تقصير — اليومُ قائم.
  */
+import { OFF_REASON_LABELS, type OffReason } from './offDays'
 import { isBeforeProjectStart } from './projectStart'
 
 export interface RecordingRow {
@@ -27,7 +28,11 @@ export interface RecordingRow {
 
 /** `none`: الشهرُ المستحقّ قبل بداية المشروع (10/2026) فلا رصدَ له — كان يظهر «رصد 9/2026: متأخّر» (2026-10-25). */
 export type ReportState = 'approved' | 'submitted' | 'late' | 'due' | 'none'
-export type DayState = 'held' | 'missed' | 'today' | 'before'
+/**
+ * حالُ اليوم في الشريط: `holiday` إجازةٌ عامة، و`off` يومٌ لم تنعقد فيه الحلقةُ باعتماد المشرف، و`off_pending` بلاغٌ
+ * بانتظار الاعتماد (يبقى في `missed_days` حتى يُعتمد — بلاغ «لم تنعقد» 2026-10-30).
+ */
+export type DayState = 'held' | 'missed' | 'today' | 'before' | 'holiday' | 'off' | 'off_pending'
 export interface RecentDay { day: string, state: DayState }
 
 /** حالُ رصد الشهر المستحقّ: معتمَدٌ، أو مُرسَلٌ، أو متأخّرٌ (فاتت المهلة بلا إرسال)، أو مستحقٌّ بعدُ في مهلته. */
@@ -63,7 +68,7 @@ export function recordingSummary(rows: RecordingRow[]) {
   }
 }
 
-const DAY_STATES: readonly DayState[] = ['held', 'missed', 'today', 'before']
+const DAY_STATES: readonly DayState[] = ['held', 'missed', 'today', 'before', 'holiday', 'off', 'off_pending']
 /** شريطُ الأيام الأخيرة من الردّ — يُسقط ما لا يُفهم بدل أن يُخطئ في رسمه. */
 export function parseRecent(raw: unknown): RecentDay[] {
   if (!Array.isArray(raw)) return []
@@ -83,4 +88,20 @@ export function weekdayName(day: string): string {
 /** اختصارُه بثلاثة أحرف — الحرفُ الأولُ وحده يلتبس (الأحد والأربعاء). */
 export function weekdayShort(day: string): string {
   return WEEKDAYS_SHORT[dow(day)]!
+}
+
+/** الأيامُ التي يُقرأ سببُها عند الفتح: إجازةٌ عامة، أو بلاغٌ معتمَد، أو بلاغٌ بانتظار الاعتماد. */
+export type ReasonState = 'holiday' | 'off' | 'off_pending'
+export const isReasonState = (s: DayState): s is ReasonState => s === 'holiday' || s === 'off' || s === 'off_pending'
+
+/**
+ * نصُّ تفصيل يومٍ إجازةٍ أو بلاغ: السببُ (تسميةُ البلاغ العربية أو نصُّ الإجازة كما عيّنها المدير الإداري) والملاحظةُ إن وُجدت،
+ * وحكمُ اليوم: الإجازةُ والمعتمَدُ لا يُعدّان ناقصَين، والمعلّقُ يُعدّ ناقصاً حتى يُعتمد.
+ */
+export function dayReasonText(state: ReasonState, info: { reason: string | null, note?: string | null }, female: boolean): string {
+  const label = info.reason ? (OFF_REASON_LABELS[info.reason as OffReason] ?? info.reason) : null
+  const why = label ? ` — ${label}${info.note ? ` · ${info.note}` : ''}` : ''
+  if (state === 'holiday') return `إجازةٌ عامة${why}. لا يُعدّ يوماً ناقصاً.`
+  if (state === 'off') return `لم تنعقد الحلقة${why}. اعتمده المشرف فلا يُعدّ يوماً ناقصاً.`
+  return `${female ? 'بلّغت المعلّمةُ' : 'بلّغ المعلّمُ'} أنّ الحلقة لم تنعقد${why}. بانتظار اعتماد المشرف، ويُعدّ ناقصاً حتى يُعتمد.`
 }

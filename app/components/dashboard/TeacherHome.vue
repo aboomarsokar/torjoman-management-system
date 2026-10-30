@@ -19,13 +19,16 @@ const { dash, pending, refresh, savedAt } = useTeacherDashboard()
 const { online, needsNetwork, blockIfOffline } = useOfflineNav()
 const savedTime = computed(() => (savedAt.value ? formatSavedAt(savedAt.value) : null))
 
+// إجازةُ اليوم العامة: قراءةٌ متّصلة وصامتة، فلا طلبَ إضافياً بلا إنترنت (يظهر بندُها في «المطلوب منك»)
+const { reason: holiday } = useTodayHoliday()
+
 const d = computed(() => (dash.value && dash.value.halaqa ? dash.value : null))
 const noHalaqa = computed(() => !pending.value && dash.value?.halaqa === null)
 
 const actions = computed(() => d.value
   ? teacherActions({
       today: gazaToday(),
-      todayAttendance: d.value.today,
+      todayAttendance: { ...d.value.today, holiday: holiday.value },
       recording: d.value.recording,
       recordedCount: d.value.recordedCount,
       studentCount: d.value.studentCount,

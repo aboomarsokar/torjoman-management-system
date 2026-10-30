@@ -73,9 +73,12 @@ const DAY_META: Record<DayState, { icon: string | null, word: string }> = {
   held: { icon: 'i-lucide-check', word: 'مرصود' },
   missed: { icon: 'i-lucide-x', word: 'فات بلا رصد' },
   today: { icon: null, word: 'اليوم — لم يُرصد بعد' },
-  before: { icon: null, word: 'قبل بدء الحلقة' }
+  before: { icon: null, word: 'قبل بدء الحلقة' },
+  holiday: { icon: 'i-lucide-calendar-off', word: 'إجازة' },
+  off: { icon: 'i-lucide-calendar-x', word: 'لم تنعقد — معتمَد' },
+  off_pending: { icon: 'i-lucide-calendar-clock', word: 'لم تنعقد — بانتظار الاعتماد' }
 }
-const LEGEND: DayState[] = ['held', 'missed', 'today', 'before']
+const LEGEND: DayState[] = ['held', 'missed', 'today', 'before', 'holiday', 'off', 'off_pending']
 /** شهرُ رابط «رصد الشهر»: المستحقّ، أو أوّلُ شهرٍ في المشروع إن وقع المستحقُّ قبله. */
 const reportLinkMonth = (r: RecordingRow) => clampToProjectStart({ year: r.report_year, month: r.report_month })
 const REPORT_META: Record<ReportState, { color: 'success' | 'info' | 'error' | 'warning', text: (r: RecordingRow) => string }> = {
@@ -381,6 +384,14 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                   </p>
                 </template>
               </template>
+              <!-- إجازةٌ أو بلاغ: السببُ يُقرأ عند الفتح -->
+              <DashboardRecordingDayReason
+                v-else-if="open.state === 'holiday' || open.state === 'off' || open.state === 'off_pending'"
+                :state="open.state"
+                :halaqa-id="r.halaqa_id"
+                :day="open.day"
+                :female="open.female"
+              />
               <p
                 v-else
                 class="rf-d-note"
@@ -390,7 +401,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                   : open.state === 'today' ? 'اليومُ قائم ولم يُرصد بعد.' : 'قبل بدء الحلقة — لا رصدَ مطلوب.' }}
               </p>
               <UButton
-                v-if="open.state !== 'before'"
+                v-if="open.state !== 'before' && open.state !== 'holiday'"
                 :to="`/attendance?h=${r.halaqa_id}&d=${open.day}`"
                 :label="fem ? 'افتحي اليوم في صفحة الحضور' : 'افتح اليوم في صفحة الحضور'"
                 icon="i-lucide-calendar-check"
@@ -424,6 +435,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 .rf-legend .s-missed .rf-key { background: var(--err); }
 .rf-legend .s-today .rf-key { border: 1.5px dashed var(--ink-3); }
 .rf-legend .s-before .rf-key { background: var(--surface-2); border: 1px solid var(--line); }
+.rf-legend .s-holiday .rf-key { background: var(--surface-2); border: 1px solid var(--ink-3); }
+.rf-legend .s-off .rf-key { background: var(--blue-soft); border: 1px solid var(--blue); }
+.rf-legend .s-off_pending .rf-key { background: var(--chip-warn-bg); border: 1px solid var(--chip-warn-ink); }
 .rf-clean { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 14px; border-radius: 13px; background: var(--green-soft); color: var(--green-ink); font-size: 14px; font-weight: 600; }
 
 .rf-rows { list-style: none; margin: 0; padding: 0; }
@@ -469,6 +483,10 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 .s-today.rf-day { background: var(--surface); color: var(--ink); border: 1.5px dashed var(--ink-3); }
 .s-before.rf-day { background: var(--surface-2); color: var(--ink-3); cursor: default; }
 .s-before.rf-day:hover { transform: none; }
+/* إجازةٌ عامة: هادئةٌ محايدة. لم تنعقد: أزرقُ المعتمَد، وعنبريُّ المعلّق (يُعدّ ناقصاً حتى يُعتمد) */
+.s-holiday.rf-day { background: var(--surface-2); color: var(--ink-2); border-color: var(--line); }
+.s-off.rf-day { background: var(--blue-soft); color: var(--blue-ink); border-color: color-mix(in srgb, var(--blue) 35%, transparent); }
+.s-off_pending.rf-day { background: var(--chip-warn-bg); color: var(--chip-warn-ink); border-color: color-mix(in srgb, var(--chip-warn-ink) 35%, transparent); }
 @media (prefers-reduced-motion: reduce) { .rf-day { transition: none; } .rf-day:hover { transform: none; } }
 
 .rf-detail { padding: 12px 14px; border-radius: 13px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
@@ -477,7 +495,9 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 .rf-d-state { font-size: 12.5px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
 .d-held .rf-d-state { background: var(--green-soft); color: var(--green-ink); }
 .d-missed .rf-d-state { background: var(--err-soft); color: var(--err); }
-.d-today .rf-d-state, .d-before .rf-d-state { background: var(--surface); color: var(--ink-2); }
+.d-today .rf-d-state, .d-before .rf-d-state, .d-holiday .rf-d-state { background: var(--surface); color: var(--ink-2); }
+.d-off .rf-d-state { background: var(--blue-soft); color: var(--blue-ink); }
+.d-off_pending .rf-d-state { background: var(--chip-warn-bg); color: var(--chip-warn-ink); }
 .rf-d-close { margin-inline-start: auto; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 9px; background: none; color: var(--ink-3); cursor: pointer; }
 .rf-d-close:hover { background: var(--surface); color: var(--ink); }
 .rf-d-counts { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13.5px; color: var(--ink-2); }

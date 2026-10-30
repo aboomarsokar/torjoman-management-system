@@ -238,6 +238,9 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
       </p>
     </div>
 
+    <!-- إجازةُ اليوم العامة لكلّ لوحات الكادر؛ والمعلّمُ تظهر له ببند «المطلوب منك» -->
+    <DashboardHolidayLine v-if="role && role !== 'student' && role !== 'teacher'" />
+
     <ClientOnly>
       <!-- المعلّمُ (من ملفّه المحفوظ على الجهاز) يرى هيكلَ لوحته لا مربّعاتِ الإحصاء -->
       <DashboardTeacherSkeleton v-if="profilePending && cachedRole === 'teacher'" />

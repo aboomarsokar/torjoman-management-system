@@ -5,7 +5,8 @@
  * الأرقامُ العربية تُقبل وتُحوَّل، والتحقّقُ في `candidateDraftError` قبل الإرسال وفي القاعدة بعده.
  */
 import { TAJWEED_LEVELS } from '~/constants/profileChoices'
-import { CANDIDATE_RESIDENCES, HALAQA_AREAS, MAX_ADDRESS_DETAIL, MAX_CANDIDATE_LONG, OTHER_AREA } from '~/constants/candidates'
+import { CANDIDATE_PHONE_LENGTH, CANDIDATE_RESIDENCES, HALAQA_AREAS, MAX_ADDRESS_DETAIL, MAX_CANDIDATE_LONG, OTHER_AREA, SMALL_NUMBER_DIGITS } from '~/constants/candidates'
+import { IDENTITY_LENGTH } from '~/constants/identity'
 import { blankCandidate } from '~/composables/useCandidateRegistration'
 
 const emit = defineEmits<{ lookup: [] }>()
@@ -53,24 +54,21 @@ async function submit() {
         label="رقم الهوية"
         required
       >
-        <UInput
+        <UiDigitsInput
           v-model="form.national_id"
-          inputmode="numeric"
-          dir="ltr"
+          :max="IDENTITY_LENGTH"
           size="xl"
           class="w-full"
-          maxlength="9"
         />
       </UFormField>
       <UFormField
         label="رقم الجوال"
         required
       >
-        <UInput
+        <UiDigitsInput
           v-model="form.phone"
-          inputmode="tel"
+          :max="CANDIDATE_PHONE_LENGTH"
           autocomplete="tel"
-          dir="ltr"
           placeholder="05XXXXXXXX"
           size="xl"
           class="w-full"
@@ -178,10 +176,9 @@ async function submit() {
         label="عدد الأجزاء المحفوظة"
         required
       >
-        <UInput
+        <UiDigitsInput
           v-model="form.quran_parts"
-          inputmode="numeric"
-          dir="ltr"
+          :max="SMALL_NUMBER_DIGITS"
           placeholder="0 – 30"
           size="xl"
           class="w-full"
@@ -203,10 +200,9 @@ async function submit() {
         label="سنوات الخبرة في التحفيظ"
         required
       >
-        <UInput
+        <UiDigitsInput
           v-model="form.experience_years"
-          inputmode="numeric"
-          dir="ltr"
+          :max="SMALL_NUMBER_DIGITS"
           size="xl"
           class="w-full"
         />

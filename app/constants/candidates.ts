@@ -113,3 +113,6 @@ export const ADVANCED_TAJWEED_LEVELS = ['عليا', 'تأهيل سند', 'سند
 export const MAX_ADDRESS_DETAIL = 200
 export const MAX_HALAQA_AREA = 80
 export const MAX_EXPERIENCE_YEARS = 60
+/** طولُ رقم الجوال (05XXXXXXXX)، وأقصى خاناتِ الأجزاء وسنوات الخبرة. */
+export const CANDIDATE_PHONE_LENGTH = 10
+export const SMALL_NUMBER_DIGITS = 2

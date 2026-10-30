@@ -42,11 +42,12 @@ const { useOffDayQueue, visibleQueue, offDayLine } = await import('./useOffDayQu
 
 const row = (id: string, gender: string | null, over: Record<string, unknown> = {}) => ({
   id, halaqa_id: `h-${id}`, day: '2026-10-28', reason: 'security', note: null, reported_at: '2026-10-28T06:00:00Z',
-  halaqa: { name: `حلقة ${id}`, gender }, reporter: { full_name: 'أحمد' }, ...over
+  halaqa: { name: `حلقة ${id}`, gender, teacher: { full_name: 'أحمد', phone: '0599111222', whatsapp: '' } },
+  reporter: { full_name: 'أحمد' }, ...over
 })
 const item = (id: string, gender: string | null) => ({
   id, halaqaId: `h-${id}`, halaqaName: id, halaqaGender: gender, day: '2026-10-28', reason: 'security' as const,
-  note: null, reporterName: null, reportedAt: '2026-10-28T06:00:00Z'
+  note: null, reporterName: null, reportedAt: '2026-10-28T06:00:00Z', teacherName: null, teacherPhone: null, teacherWhatsapp: null
 })
 
 describe('visibleQueue — ما للدور وحده', () => {
@@ -83,6 +84,8 @@ describe('useOffDayQueue', () => {
     await q.load()
     expect(q.items.value).toHaveLength(1)
     expect(q.items.value[0]).toMatchObject({ id: 'a', halaqaName: 'حلقة a', halaqaGender: 'male', note: 'مطر', reporterName: 'أحمد' })
+    // معلّمُ الحلقة وجوالُه، والواتس أب الفارغُ null لا نصٌّ فارغ
+    expect(q.items.value[0]).toMatchObject({ teacherName: 'أحمد', teacherPhone: '0599111222', teacherWhatsapp: null })
     expect(q.loading.value).toBe(false)
   })
 

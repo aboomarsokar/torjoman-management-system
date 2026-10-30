@@ -24,9 +24,13 @@ export interface OffDayQueueItem {
   note: string | null
   reporterName: string | null
   reportedAt: string
+  /** معلّمُ الحلقة الحاليّ وجوالُه — ليتواصل معه المعتمِدُ قبل قراره (طلب المستخدم 2026-10-30). */
+  teacherName: string | null
+  teacherPhone: string | null
+  teacherWhatsapp: string | null
 }
 
-/** صفُّ القاعدة بعد الربط بالحلقة والمبلِّغ. */
+/** صفُّ القاعدة بعد الربط بالحلقة (ومعلّمها) والمبلِّغ. */
 interface QueueRow {
   id: string
   halaqa_id: string
@@ -34,7 +38,11 @@ interface QueueRow {
   reason: string
   note: string | null
   reported_at: string
-  halaqa: { name: string, gender: string | null } | null
+  halaqa: {
+    name: string
+    gender: string | null
+    teacher: { full_name: string, phone: string | null, whatsapp: string | null } | null
+  } | null
   reporter: { full_name: string } | null
 }
 
@@ -60,7 +68,10 @@ function toItem(row: QueueRow): OffDayQueueItem | null {
     reason: row.reason as OffReason,
     note: row.note,
     reporterName: row.reporter?.full_name ?? null,
-    reportedAt: row.reported_at
+    reportedAt: row.reported_at,
+    teacherName: row.halaqa?.teacher?.full_name ?? null,
+    teacherPhone: row.halaqa?.teacher?.phone || null,
+    teacherWhatsapp: row.halaqa?.teacher?.whatsapp || null
   }
 }
 
@@ -88,7 +99,7 @@ export function useOffDayQueue() {
     loading.value = true
     try {
       const { data, error } = await supabase.from('attendance_off_days')
-        .select('id, halaqa_id, day, reason, note, reported_at, halaqa:halaqa_id(name, gender), reporter:profiles!attendance_off_days_reported_by_fkey(full_name)')
+        .select('id, halaqa_id, day, reason, note, reported_at, halaqa:halaqa_id(name, gender, teacher:profiles!halaqat_teacher_id_fkey(full_name, phone, whatsapp)), reporter:profiles!attendance_off_days_reported_by_fkey(full_name)')
         .eq('status', 'pending')
         .order('day', { ascending: true })
         .order('reported_at', { ascending: true })

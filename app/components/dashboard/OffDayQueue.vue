@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
  * بطاقةُ «أيامٌ لم تنعقد — بانتظار الاعتماد» في لوحات المعتمِدين (2026-10-30): المشرفُ الميداني والمدير الإداري والمدير الفنيّ
- * والمديرةُ الإدارية. لكلّ بلاغٍ معلّق في نطاق الدور: الحلقةُ واليومُ (dd/mm واسمُ اليوم) والسببُ والملاحظةُ ومن بلّغ، ثمّ
+ * والمديرةُ الإدارية. لكلّ بلاغٍ معلّق في نطاق الدور: الحلقةُ واليومُ (dd/mm واسمُ اليوم) والسببُ والملاحظةُ والمعلّمُ بجواله
+ * (اتصالٌ وواتس أب — طلب المستخدم 2026-10-30)، ثمّ
  * «قبول» فورياً، و«رفض» يفتح نافذةً صغيرة لسببٍ اختياريّ يراه المعلّم، و«فتح اليوم» إلى «الحضور اليوميّ». لا تُصيَّر شيئاً
  * ما لم يكن في الطابور بند (ولا هيكلَ فارغاً أثناء الجلب)، وتجلب بياناتها بنفسها عند التركيب. المنطقُ في `useOffDayQueue`.
  */
 import { OFF_NOTE_MAX, OFF_REASON_LABELS } from '~/utils/offDays'
 import { offDayLine, useOffDayQueue, type OffDayQueueItem } from '~/composables/useOffDayQueue'
+import { whatsappLink } from '~/utils/halaqatAchievement'
 
 const { items, load, review } = useOffDayQueue()
 const toast = useToast()
@@ -48,6 +50,11 @@ async function confirmReject() {
 }
 
 const dayLink = (i: OffDayQueueItem) => `/attendance?h=${i.halaqaId}&d=${i.day}`
+// المعلّمُ وجوالُه للتواصل قبل القرار (طلب المستخدم 2026-10-30) — «المعلّمة» لحلقات البنات
+const teacherWord = (i: OffDayQueueItem) => (i.halaqaGender === 'female' ? 'المعلّمة' : 'المعلّم')
+const telLink = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`
+// من بلّغ يُذكر وحده إن لم يكن معلّمَ الحلقة الحاليّ (تبدّل المعلّم بعد البلاغ)
+const otherReporter = (i: OffDayQueueItem) => (i.reporterName && i.reporterName !== i.teacherName ? i.reporterName : null)
 </script>
 
 <template>
@@ -78,9 +85,35 @@ const dayLink = (i: OffDayQueueItem) => `/attendance?h=${i.halaqaId}&d=${i.day}`
           <span class="odq-day"><bdi>{{ offDayLine(i.day) }}</bdi></span>
           <span class="odq-reason">{{ OFF_REASON_LABELS[i.reason] }}<template v-if="i.note"> — {{ i.note }}</template></span>
           <span
-            v-if="i.reporterName"
+            v-if="i.teacherName"
+            class="odq-teacher"
+          >
+            {{ teacherWord(i) }}: <b>{{ i.teacherName }}</b>
+            <template v-if="i.teacherPhone">
+              ·
+              <a
+                :href="telLink(i.teacherPhone)"
+                class="odq-phone"
+                :aria-label="`اتصل بـ${teacherWord(i)} ${i.teacherName}`"
+              ><bdi>{{ i.teacherPhone }}</bdi></a>
+            </template>
+            <UButton
+              v-if="whatsappLink(i.teacherWhatsapp || i.teacherPhone)"
+              :to="whatsappLink(i.teacherWhatsapp || i.teacherPhone)!"
+              target="_blank"
+              rel="noopener"
+              icon="i-simple-icons-whatsapp"
+              color="success"
+              variant="soft"
+              size="xs"
+              :aria-label="`واتس أب ${teacherWord(i)} ${i.teacherName}`"
+              :ui="{ base: 'min-h-11 min-w-11 rounded-[10px] justify-center', leadingIcon: 'size-4' }"
+            />
+          </span>
+          <span
+            v-if="otherReporter(i)"
             class="odq-by"
-          >بلّغ {{ i.reporterName }}</span>
+          >بلّغ {{ otherReporter(i) }}</span>
         </div>
         <div class="odq-acts">
           <UButton
@@ -166,6 +199,10 @@ const dayLink = (i: OffDayQueueItem) => `/attendance?h=${i.halaqaId}&d=${i.day}`
 .odq-day { font-size: 14px; font-weight: 600; color: var(--chip-warn-ink); font-variant-numeric: tabular-nums; }
 .odq-reason { font-size: 14px; color: var(--ink-2); line-height: 1.7; }
 .odq-by { font-size: 13px; color: var(--ink-3); }
+.odq-teacher { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 14px; color: var(--ink-2); }
+.odq-teacher b { font-weight: 700; color: var(--ink); }
+.odq-phone { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 600; font-variant-numeric: tabular-nums; text-decoration: none; }
+.odq-phone:hover { text-decoration: underline; }
 .odq-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 @media (max-width: 520px) {
   .odq { padding: 16px; }

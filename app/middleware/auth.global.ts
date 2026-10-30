@@ -17,7 +17,7 @@ import { hasOfflineOwner } from '~/utils/offlineDb'
 import { offlineOwnerRole } from '~/utils/offlineSnapshot'
 import { isOnlineNow } from '~/utils/reachability'
 
-const PUBLIC_PATHS = ['/', '/login']
+const PUBLIC_PATHS = ['/', '/login', '/join']
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 

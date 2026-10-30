@@ -1,0 +1,263 @@
+<script setup lang="ts">
+/**
+ * ملفُّ المرشّح (طلب المستخدم 2026-10-30): بياناتُه، وموعدُ مقابلته ولجنتُه، وتقييماتُ اللجنة بالمتوسّط وتفصيل البنود،
+ * والقرار (مقبول · احتياط · مرفوض)، ونسخُ رسالة الدعوة، وإنشاءُ حساب معلّمٍ للمقبول (للمدير الإداريّ).
+ */
+import type { Candidate } from '~/composables/useCandidates'
+import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
+import { averageScore, criterionAverages, inviteMessage, weightedScore } from '~/utils/candidates'
+
+interface Props {
+  candidate: Candidate | null
+  names: Record<string, string>
+  me: string | null
+  canManage: boolean
+  isAdmin: boolean
+  busy: boolean
+}
+const props = defineProps<Props>()
+const emit = defineEmits<{ evaluate: [], schedule: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [] }>()
+const open = defineModel<boolean>('open', { required: true })
+const toast = useToast()
+
+const note = ref('')
+watch(() => props.candidate?.id, () => (note.value = props.candidate?.decision_note ?? ''), { immediate: true })
+const avg = computed(() => props.candidate ? averageScore(props.candidate.evaluations) : null)
+const perCriterion = computed(() => props.candidate ? criterionAverages(props.candidate.evaluations) : [])
+const canEvaluate = computed(() => !!props.candidate && !!props.me && (props.canManage || props.candidate.committee.includes(props.me))
+  && ['invited', 'interviewed'].includes(props.candidate.status))
+const when = (iso: string) => new Date(iso).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Asia/Gaza', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const facts = computed(() => {
+  const c = props.candidate
+  if (!c) return []
+  return [
+    ['الهوية', c.national_id], ['الجوال', c.phone], ['الجنس', c.gender === 'female' ? 'أنثى' : 'ذكر'],
+    ['الأجزاء المحفوظة', c.quran_parts ?? '—'], ['التجويد', c.tajweed_level ?? '—'], ['السكن', c.residence ?? '—'],
+    ['أقرب مسجد', c.nearest_mosque ?? '—'], ['المؤهل', c.education ?? '—']
+  ] as [string, string | number][]
+})
+
+async function copyInvite() {
+  const c = props.candidate
+  if (!c?.interview_at) return
+  const text = inviteMessage(c.full_name, c.gender, when(c.interview_at), c.interview_place)
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.add({ title: 'نُسخت رسالة الدعوة.', color: 'success', icon: 'i-lucide-copy-check' })
+  } catch {
+    toast.add({ title: 'تعذّر النسخ — انسخها يدوياً.', description: text, color: 'warning' })
+  }
+}
+</script>
+
+<template>
+  <USlideover
+    v-model:open="open"
+    side="left"
+    :title="candidate?.full_name ?? ''"
+    :ui="{ content: 'max-w-xl' }"
+  >
+    <template #body>
+      <div
+        v-if="candidate"
+        class="cd"
+      >
+        <div class="cd-head">
+          <UBadge
+            :label="CANDIDATE_STATUS_LABEL[candidate.status]"
+            :color="CANDIDATE_STATUS_COLOR[candidate.status]"
+            variant="soft"
+          />
+          <span
+            v-if="avg !== null"
+            class="cd-score"
+            :class="{ pass: avg >= CANDIDATE_PASS_MARK }"
+          ><b dir="ltr">{{ avg }}</b> / 100 · {{ candidate.evaluations.length }} تقييم</span>
+        </div>
+
+        <dl class="cd-facts">
+          <div
+            v-for="[k, v] in facts"
+            :key="k"
+          >
+            <dt>{{ k }}</dt><dd>{{ v }}</dd>
+          </div>
+        </dl>
+        <p
+          v-if="candidate.experience"
+          class="cd-text"
+        >
+          <b>الخبرة:</b> {{ candidate.experience }}
+        </p>
+        <p
+          v-if="candidate.about"
+          class="cd-text"
+        >
+          <b>إضافة:</b> {{ candidate.about }}
+        </p>
+
+        <section class="cd-sec">
+          <h3>المقابلة</h3>
+          <p v-if="candidate.interview_at">
+            {{ when(candidate.interview_at) }}<template v-if="candidate.interview_place">
+              · {{ candidate.interview_place }}
+            </template>
+          </p>
+          <p
+            v-else
+            class="muted"
+          >
+            لم تُحدَّد بعد.
+          </p>
+          <p
+            v-if="candidate.committee.length"
+            class="muted"
+          >
+            اللجنة: {{ candidate.committee.map(id => names[id] ?? '—').join('، ') }}
+          </p>
+          <div class="cd-actions">
+            <UButton
+              v-if="canManage && ['new', 'invited', 'reserve'].includes(candidate.status)"
+              :label="candidate.interview_at ? 'عدّل الموعد واللجنة' : 'ادعُه للمقابلة'"
+              icon="i-lucide-calendar-plus"
+              color="primary"
+              variant="soft"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="emit('schedule')"
+            />
+            <UButton
+              v-if="candidate.interview_at && canManage"
+              label="انسخ رسالة الدعوة"
+              icon="i-lucide-copy"
+              color="neutral"
+              variant="soft"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="copyInvite"
+            />
+            <UButton
+              v-if="canEvaluate"
+              label="قيّم المرشّح"
+              icon="i-lucide-clipboard-pen"
+              color="primary"
+              :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+              @click="emit('evaluate')"
+            />
+          </div>
+        </section>
+
+        <section
+          v-if="candidate.evaluations.length"
+          class="cd-sec"
+        >
+          <h3>تقييمات اللجنة</h3>
+          <ul class="cd-evals">
+            <li
+              v-for="e in candidate.evaluations"
+              :key="e.evaluator_id"
+            >
+              <span>{{ names[e.evaluator_id] ?? '—' }}</span><b dir="ltr">{{ weightedScore(e.scores) }}</b>
+              <small v-if="e.notes">{{ e.notes }}</small>
+            </li>
+          </ul>
+          <table class="cd-crit">
+            <tbody>
+              <tr
+                v-for="(c, i) in CANDIDATE_CRITERIA"
+                :key="c.key"
+              >
+                <th>{{ c.label }}</th>
+                <td dir="ltr">
+                  {{ perCriterion[i] ?? '—' }} / 5
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section
+          v-if="canManage"
+          class="cd-sec"
+        >
+          <h3>القرار</h3>
+          <UTextarea
+            v-model="note"
+            :rows="2"
+            autoresize
+            placeholder="ملاحظة القرار (اختيارية)"
+            class="w-full"
+          />
+          <div class="cd-actions">
+            <UButton
+              label="مقبول"
+              icon="i-lucide-circle-check"
+              color="success"
+              :variant="candidate.status === 'accepted' ? 'solid' : 'soft'"
+              :loading="busy"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="emit('decide', 'accepted', note)"
+            />
+            <UButton
+              label="احتياط"
+              icon="i-lucide-clock"
+              color="primary"
+              :variant="candidate.status === 'reserve' ? 'solid' : 'soft'"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="emit('decide', 'reserve', note)"
+            />
+            <UButton
+              label="مرفوض"
+              icon="i-lucide-circle-x"
+              color="error"
+              :variant="candidate.status === 'rejected' ? 'solid' : 'soft'"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="emit('decide', 'rejected', note)"
+            />
+          </div>
+          <UButton
+            v-if="isAdmin && candidate.status === 'accepted'"
+            label="أنشئ له حساب معلّم"
+            icon="i-lucide-user-plus"
+            color="primary"
+            block
+            :loading="busy"
+            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+            @click="emit('hire')"
+          />
+          <UButton
+            v-if="isAdmin"
+            label="احذف المرشّح"
+            icon="i-lucide-trash-2"
+            color="error"
+            variant="ghost"
+            :ui="{ base: 'rounded-[12px] min-h-11 self-start' }"
+            @click="emit('remove')"
+          />
+        </section>
+      </div>
+    </template>
+  </USlideover>
+</template>
+
+<style scoped>
+.cd { display: flex; flex-direction: column; gap: 18px; }
+.cd-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cd-score { color: var(--ink-3); font-size: 13px; }
+.cd-score b { font-size: 22px; color: var(--err); font-variant-numeric: tabular-nums; }
+.cd-score.pass b { color: var(--green-ink); }
+.cd-facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.cd-facts dt { font-size: 12px; color: var(--ink-3); }
+.cd-facts dd { margin: 0; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cd-text { margin: 0; color: var(--ink-2); line-height: 1.8; white-space: pre-line; }
+.cd-sec { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+.cd-sec h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
+.cd-sec p { margin: 0; color: var(--ink-2); }
+.muted { color: var(--ink-3) !important; font-size: 13.5px; }
+.cd-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cd-evals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cd-evals li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 12px; border-radius: 10px; background: var(--surface-3); }
+.cd-evals b { font-variant-numeric: tabular-nums; color: var(--ink); }
+.cd-evals small { grid-column: 1 / -1; color: var(--ink-2); }
+.cd-crit { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.cd-crit th { text-align: start; font-weight: 500; color: var(--ink-2); padding: 5px 0; border-bottom: 1px solid var(--line); }
+.cd-crit td { text-align: end; font-variant-numeric: tabular-nums; color: var(--ink); border-bottom: 1px solid var(--line); }
+</style>

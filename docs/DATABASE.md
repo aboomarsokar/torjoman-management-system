@@ -1234,3 +1234,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 - **`chat_messages.deleted_at`** — وقتُ الحذف؛ والمحذوفةُ نصُّها فارغ (القيد: نصٌّ 1–2000 لغير المحذوفة، وفارغٌ للمحذوفة).
 - **`delete_chat_message(message)`** — للمرسِل وحده: يمحو النصَّ ويضع الوقت، ويحدّث `last_message` إلى «🚫 حُذفت رسالة» إن كانت الأخيرة.
+
+
+## 29. مقابلاتُ المرشّحين: `candidates` و`candidate_committee` و`candidate_evaluations` (2026-10-30)
+
+> الهجرة `20261030143013_candidates`.
+
+- **`candidates`**: طلبُ الالتحاق (الاسم 3–120، `national_id` تسعةُ أرقامٍ **فريد**، `phone` بصيغة `05XXXXXXXX`، `gender`، وتاريخُ الميلاد والسكنُ وأقربُ مسجدٍ والأجزاءُ (0–30) والتجويدُ والمؤهّلُ والخبرة)، و`status` من النوع `candidate_status`: `new`/`invited`/`interviewed`/`accepted`/`reserve`/`rejected`/`hired`، و`interview_at`/`interview_place`، و`decision_note`، و`status_changed_by`/`status_changed_at` يضعهما الحارس `candidates_touch`.
+- **`candidate_committee`**: لجنةُ المرشّح (`candidate_id`, `profile_id` من العاملين النشطين — `candidate_committee_guard`).
+- **`candidate_evaluations`**: تقييمُ كلّ عضو (`candidate_id`, `evaluator_id` مفتاحٌ مركّب)، و`scores smallint[]` عشرُ خاناتٍ كلٌّ 0–5 بترتيب بنود الاستمارة (الأوزانُ في `app/constants/candidates.ts`)، و`notes`. أوّلُ تقييمٍ لمدعوٍّ ينقله إلى `interviewed` (`candidate_evaluations_touch`).
+- **النطاق:** `can_view_candidates_of(gender)` (الإداريّ ومشرفُ المشروع الكلّ، والفنيّ البنين، والمديرةُ البنات) للقراءة، و`can_manage_candidates_of(gender)` (بلا مشرف المشروع) للكتابة، و`my_candidate_ids()` لعضو اللجنة. الحذفُ للمدير الإداريّ. التقييمُ لكاتبه وحده: مديرٌ في النطاق أو عضوٌ في اللجنة.
+- **العامّ:** الزائرُ (`anon`) بلا أيّ منحٍ على الجداول، وله الدالّتان `register_candidate(...)` (تمنع تكرار الهوية، وكبحُ 40 تسجيلاً في الدقيقة) و`candidate_status_lookup(national_id, phone)` (الحالةُ والموعدُ للمدعوّ، بالهوية والجوال معاً).

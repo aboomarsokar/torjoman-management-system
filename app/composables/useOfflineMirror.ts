@@ -9,6 +9,7 @@ import type { AbsenceKind } from '~/composables/useAttendanceDay'
 import type { MirrorDay } from '~/utils/attendanceOutbox'
 import { OFF_REASONS, OFF_STATUSES, type OffDay, type OffReason, type OffStatus } from '~/utils/offDays'
 import { idbGet, idbPut } from '~/utils/offlineDb'
+import { withoutKey } from '~/utils/withoutKey'
 
 export type MirrorStudent = { id: string, full_name: string, enrollment_date: string | null }
 
@@ -127,12 +128,8 @@ export function useOfflineMirror() {
     const failure = ds.error ?? ab.error ?? od.error ?? hl.error
     if (failure) throw failure
     if (!mirror.value) return
-    const offDays = { ...mirror.value.offDays }
-    const holidays = { ...mirror.value.holidays }
-    delete offDays[day]
-    delete holidays[day]
-    Object.assign(offDays, buildOffDays(od.data ?? []))
-    Object.assign(holidays, buildHolidays(hl.data ?? []))
+    const offDays = { ...withoutKey(mirror.value.offDays, day), ...buildOffDays(od.data ?? []) }
+    const holidays = { ...withoutKey(mirror.value.holidays, day), ...buildHolidays(hl.data ?? []) }
     const value = buildMirrorDays(ds.data ?? [], ab.data ?? [])[day] ?? { held: false, absences: {} }
     mirror.value = { ...mirror.value, days: { ...mirror.value.days, [day]: value }, offDays, holidays }
     await idbPut('mirror', mirror.value)

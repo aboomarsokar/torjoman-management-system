@@ -3,6 +3,7 @@
  * وترتيبُ القائمة (القادمةُ أولاً)، وتشذيبُ السبب، ونصُّ التأكيد قبل الإضافة. التواريخُ `YYYY-MM-DD` أيامٌ تقويميةٌ بلا منطقة.
  */
 import { HOLIDAY_HORIZON_DAYS, HOLIDAY_REASON_MAX } from '~/constants/holidays'
+import { daysCount } from '~/utils/attendanceOutbox'
 import { isFriday } from '~/utils/reportWindow'
 
 export interface Holiday { day: string, reason: string }
@@ -53,6 +54,6 @@ export function holidayConfirmMessage(days: number, halaqat: number, skipped: nu
   const kept = halaqat > 0
     ? `وسجّلت فيها ${halaqat} حلقة حضوراً يبقى كما هو`
     : 'ولم تسجّل فيها أيُّ حلقةٍ حضوراً'
-  const extra = skipped > 0 ? ` (تُخطّي ${skipped} يوم لأنّه إجازةٌ أصلاً)` : ''
-  return `${days} يوم، ${kept}.${extra}`
+  const extra = skipped > 0 ? ` (تُخطّي ${daysCount(skipped)}: إجازةٌ أصلاً)` : ''
+  return `${daysCount(days)}، ${kept}.${extra}`
 }

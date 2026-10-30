@@ -58,10 +58,15 @@ describe('holidayHorizon', () => {
 
 describe('holidayConfirmMessage', () => {
   it('يذكر الأيامَ والحلقات ويبقى الحضور كما هو', () => {
-    expect(holidayConfirmMessage(3, 5, 0)).toBe('3 يوم، وسجّلت فيها 5 حلقة حضوراً يبقى كما هو.')
+    expect(holidayConfirmMessage(3, 5, 0)).toBe('3 أيام، وسجّلت فيها 5 حلقة حضوراً يبقى كما هو.')
   })
 
   it('بلا حلقاتٍ مسجِّلة، ومع المتخطّى', () => {
-    expect(holidayConfirmMessage(2, 0, 1)).toBe('2 يوم، ولم تسجّل فيها أيُّ حلقةٍ حضوراً. (تُخطّي 1 يوم لأنّه إجازةٌ أصلاً)')
+    expect(holidayConfirmMessage(2, 0, 1)).toBe('يومان، ولم تسجّل فيها أيُّ حلقةٍ حضوراً. (تُخطّي يومٌ واحد: إجازةٌ أصلاً)')
+  })
+
+  it('عددُ الأيام بصيغته العربية: واحد · أحد عشر', () => {
+    expect(holidayConfirmMessage(1, 2, 0)).toMatch(/^يومٌ واحد، /)
+    expect(holidayConfirmMessage(11, 2, 0)).toMatch(/^11 يوماً، /)
   })
 })

@@ -8,6 +8,7 @@ import type { Database } from '~/types/database.types'
 import type { MirrorDay, OutboxEntry } from '~/utils/attendanceOutbox'
 import { entryKind, keptAbsences } from '~/utils/attendanceOutbox'
 import { asOffStatus, normalizeOffNote, type OffDay } from '~/utils/offDays'
+import { withoutKey } from '~/utils/withoutKey'
 
 /** ما يلزم من النسخة ليُحدَّث بعد الرفع — النسخةُ الكاملة تحقّق هذا الشكل. */
 export interface SettleTarget {
@@ -48,10 +49,10 @@ export function settleAttendanceEntry(mirror: SettleTarget, e: OutboxEntry, data
     // الحالةُ ممّا ردّته الدالّة: إعادةُ رفعٍ بعد ردٍّ ضائع تردّ الصفَّ الموجود وقد يكون معتمَداً أو مرفوضاً
     const status = asOffStatus((data as { status?: unknown } | null)?.status) ?? 'pending'
     mirror.offDays = { ...mirror.offDays, [e.day]: { reason: e.off.reason, note: normalizeOffNote(e.off.note), status, reviewNote: null } }
-    delete mirror.days[e.day]
+    mirror.days = withoutKey(mirror.days, e.day)
     return
   }
-  if (mirror.offDays) delete mirror.offDays[e.day]
+  if (mirror.offDays) mirror.offDays = withoutKey(mirror.offDays, e.day)
   if (kind === 'withdraw') return
   // اليومُ المرفوع يدخل مسجَّلاً — بلا من تخطّاهم الرفع (لم يعودوا في الحلقة)
   const skipped = (data as { skipped?: string[] } | null)?.skipped ?? []

@@ -1,5 +1,5 @@
 /**
- * مقابلاتُ المرشّحين (طلب المستخدم 2026-10-30): بنودُ استمارة التحكيم العشرة وأوزانُها (المجموع 100، كلُّ بندٍ من 5)،
+ * مقابلاتُ المرشّحين (طلب المستخدم 2026-10-30): بنودُ استمارة التحكيم العشرة وأوزانُها (المجموع 100، كلُّ بندٍ من 10)،
  * وحالاتُ الطلب وألوانُها، وحدودُ الحقول (تطابق قيود القاعدة).
  */
 import type { Database } from '~/types/database.types'
@@ -7,7 +7,7 @@ import type { Database } from '~/types/database.types'
 export type CandidateStatus = Database['public']['Enums']['candidate_status']
 
 /** كلُّ بندٍ يُقيَّم من هذا العدد، ثم يُحوَّل بوزنه. */
-export const CRITERION_MAX = 5
+export const CRITERION_MAX = 10
 
 /** بنودُ الاستمارة بترتيبها في الورقة — والقاعدةُ تحفظ الدرجات مصفوفةً بهذا الترتيب نفسه (عشرُ خانات). */
 export const CANDIDATE_CRITERIA = [

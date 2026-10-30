@@ -15,16 +15,16 @@ describe('مقابلات المرشحين', () => {
   })
 
   it('التحويل بالأوزان', () => {
-    expect(weightedScore(Array(10).fill(5))).toBe(100)
+    expect(weightedScore(Array(10).fill(10))).toBe(100)
     expect(weightedScore(Array(10).fill(0))).toBe(0)
     // معالجة المواقف (25) كاملة وحدها
-    expect(weightedScore([0, 0, 0, 0, 5, 0, 0, 0, 0, 0])).toBe(25)
-    expect(weightedScore([3, 3, 3, 3, 3, 3, 3, 3, 3, 3])).toBe(60)
+    expect(weightedScore([0, 0, 0, 0, 10, 0, 0, 0, 0, 0])).toBe(25)
+    expect(weightedScore([6, 6, 6, 6, 6, 6, 6, 6, 6, 6])).toBe(60)
   })
 
   it('متوسط اللجنة ومتوسط البنود', () => {
     expect(averageScore([])).toBeNull()
-    expect(averageScore([{ scores: Array(10).fill(5) }, { scores: Array(10).fill(3) }])).toBe(80)
+    expect(averageScore([{ scores: Array(10).fill(10) }, { scores: Array(10).fill(6) }])).toBe(80)
     const avg = criterionAverages([{ scores: [5, 4, 3, 2, 1, 0, 5, 5, 5, 5] }, { scores: [3, 4, 3, 2, 1, 0, 5, 5, 5, 4] }])
     expect(avg[0]).toBe(4)
     expect(avg[9]).toBe(4.5)

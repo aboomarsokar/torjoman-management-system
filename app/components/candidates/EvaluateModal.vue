@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * تقييمُ عضو اللجنة لمرشّحٍ من حسابه (طلب المستخدم 2026-10-30): البنودُ العشرة كلٌّ من 0 إلى 5 بأزرارٍ كبيرة، والمجموعُ
+ * تقييمُ عضو اللجنة لمرشّحٍ من حسابه (طلب المستخدم 2026-10-30): البنودُ العشرة كلٌّ من 0 إلى 10 بأزرارٍ كبيرة، والمجموعُ
  * بالأوزان من 100 يتحدّث مباشرةً، وملاحظة. يُعبّأ بتقييمه السابق إن وُجد.
  */
 import type { Candidate } from '~/composables/useCandidates'
@@ -101,13 +101,13 @@ const total = computed(() => weightedScore(scores.value.map(s => s ?? 0)))
 
 <style scoped>
 .ev { display: flex; flex-direction: column; gap: 4px; }
-.ev-row { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.ev-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ev-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ev-label { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 12px; min-width: 0; }
 .ev-label b { font-weight: 600; color: var(--ink); }
 .ev-label span { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.ev-steps { display: flex; gap: 6px; }
+.ev-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 6px; }
 .ev-step {
-  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+  min-width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
   color: var(--ink-2); font: inherit; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer;
   transition: background-color .15s var(--ease-out), color .15s var(--ease-out);
 }
@@ -117,7 +117,4 @@ const total = computed(() => weightedScore(scores.value.map(s => s ?? 0)))
 .ev-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap; }
 .ev-total { color: var(--ink-2); font-size: 14px; }
 .ev-total b { font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
-@media (max-width: 560px) {
-  .ev-steps { width: 100%; justify-content: space-between; }
-}
 </style>

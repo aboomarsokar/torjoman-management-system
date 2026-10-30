@@ -8,7 +8,7 @@ import {
 } from '~/constants/candidates'
 import { IDENTITY_LENGTH, normalizeDigits } from '~/constants/identity'
 
-/** مجموعُ تقييمٍ واحد من 100: كلُّ بندٍ (من 5) × وزنه ÷ 5، بخانةٍ عشريّةٍ واحدة. */
+/** مجموعُ تقييمٍ واحد من 100: كلُّ بندٍ (من 10) × وزنه ÷ 10، بخانةٍ عشريّةٍ واحدة. */
 export function weightedScore(scores: readonly number[]): number {
   const total = CANDIDATE_CRITERIA.reduce((sum, c, i) => sum + (Number(scores[i] ?? 0) / CRITERION_MAX) * c.weight, 0)
   return Math.round(total * 10) / 10
@@ -21,7 +21,7 @@ export function averageScore(evaluations: readonly { scores: readonly number[] }
   return Math.round((sum / evaluations.length) * 10) / 10
 }
 
-/** متوسّطُ كلّ بندٍ بين المقيّمين (من 5) — لعرض التفصيل. */
+/** متوسّطُ كلّ بندٍ بين المقيّمين (من 10) — لعرض التفصيل. */
 export function criterionAverages(evaluations: readonly { scores: readonly number[] }[]): (number | null)[] {
   return CANDIDATE_CRITERIA.map((_, i) => {
     if (!evaluations.length) return null

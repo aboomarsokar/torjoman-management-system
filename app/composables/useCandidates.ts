@@ -12,7 +12,7 @@ export interface Candidate extends Row { committee: string[], evaluations: Candi
 export interface CandidateStaffOption { id: string, name: string, role: Role, gender: 'male' | 'female' | null }
 export interface CandidateScheduleDraft { ids: string[], at: string, place: string, committee: string[] }
 
-/** خطأُ تقييم العضو: عشرُ درجاتٍ كلٌّ من 0 إلى 5. */
+/** خطأُ تقييم العضو: عشرُ درجاتٍ كلٌّ من 0 إلى 10. */
 export function evaluationError(scores: (number | null)[], notes: string): string | null {
   if (scores.length !== CANDIDATE_CRITERIA.length || scores.some(s => s === null)) return 'قيّم البنود كلّها.'
   if (scores.some(s => !Number.isInteger(s) || (s as number) < 0 || (s as number) > CRITERION_MAX)) return `كلُّ بندٍ من 0 إلى ${CRITERION_MAX}.`

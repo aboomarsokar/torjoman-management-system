@@ -4,7 +4,7 @@
  * والقرار (مقبول · احتياط · مرفوض)، ونسخُ رسالة الدعوة، وإنشاءُ حساب معلّمٍ للمقبول (للمدير الإداريّ).
  */
 import type { Candidate } from '~/composables/useCandidates'
-import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
+import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CRITERION_MAX, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
 import { averageScore, criterionAverages, eligibilityIssues, inviteMessage, weightedScore } from '~/utils/candidates'
 
 interface Props {
@@ -182,7 +182,7 @@ async function copyInvite() {
               >
                 <th>{{ c.label }}</th>
                 <td dir="ltr">
-                  {{ perCriterion[i] ?? '—' }} / 5
+                  {{ perCriterion[i] ?? '—' }} / {{ CRITERION_MAX }}
                 </td>
               </tr>
             </tbody>

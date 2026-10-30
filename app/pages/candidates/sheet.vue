@@ -3,7 +3,7 @@
  * استمارةُ تحكيم المرشّحين للطباعة (طلب المستخدم 2026-10-30) — بشكل الاستمارة الورقية المعتمدة: أعضاءُ اللجنة، وبنودُ التقييم
  * العشرة بأوزانها، و14 صفّاً في الصفحة. تُعبّأ بمرشّحي يوم مقابلةٍ يُختار، أو تُطبع فارغة. أفقيّة A4.
  */
-import { CANDIDATE_CRITERIA } from '~/constants/candidates'
+import { CANDIDATE_CRITERIA, CRITERION_MAX } from '~/constants/candidates'
 import type { Candidate } from '~/composables/useCandidates'
 
 definePageMeta({ layout: false })
@@ -80,7 +80,7 @@ const print = () => window.print()
       <header class="sh-head">
         <div>
           <h1>استمارة تحكيم المرشّحين</h1>
-          <p>يُقيَّم كلُّ بندٍ من 5 · تحويلُ العلامات حسب الأوزان يتمّ لاحقاً</p>
+          <p>يُقيَّم كلُّ بندٍ من {{ CRITERION_MAX }} · تحويلُ العلامات حسب الأوزان يتمّ لاحقاً</p>
           <span class="sh-chip">المرشّحون</span>
         </div>
         <div class="sh-side">
@@ -125,7 +125,7 @@ const print = () => window.print()
           </tr>
           <tr class="sh-weights">
             <td colspan="7">
-              <b>ضع لكلّ بندٍ علامةً من 5</b> — الأرقام التالية أوزان التحويل ←
+              <b>ضع لكلّ بندٍ علامةً من {{ CRITERION_MAX }}</b> — الأرقام التالية أوزان التحويل ←
             </td>
             <td
               v-for="c in CANDIDATE_CRITERIA"

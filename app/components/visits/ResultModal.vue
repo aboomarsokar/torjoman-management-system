@@ -32,7 +32,7 @@ const emit = defineEmits<{ 'update:open': [boolean], 'saved': [] }>()
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { isAdmin, isTechnical, isTeacher } = usePermissions()
+const { isAdmin, isTechnical, isWomenAdmin, isTeacher } = usePermissions()
 
 const { pendingFor, shouldQueue, saveOnDevice, discardRejectedFor } = useVisitOffline()
 // البنودُ ثابتة: تُجلب مرّةً للجلسة، ولها نسخةٌ على جهاز المشرف
@@ -62,7 +62,8 @@ const editable = computed(() => props.canEdit && !locked.value)
 /** زيارةٌ نُفّذت قبل النموذج (بحقولها القديمة) ولا يكتبها أحدٌ الآن. */
 const legacy = computed(() => !!props.visit?.executed_at && props.visit.deductions == null && !editable.value)
 const hasResult = computed(() => editable.value || !!props.visit?.executed_at)
-const canUnlock = computed(() => locked.value && (isAdmin.value || isTechnical.value))
+// والمديرةُ الإدارية تفتح المقفلة في نطاقها (unlock_visit_result — 2026-10-30)
+const canUnlock = computed(() => locked.value && (isAdmin.value || isTechnical.value || isWomenAdmin.value))
 const canAck = computed(() => locked.value && isTeacher.value && !props.visit?.teacher_ack_at)
 
 async function save() {

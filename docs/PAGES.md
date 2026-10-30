@@ -19,7 +19,7 @@
 | ~~ضبط كلمة المرور بعد الاستعادة~~ — **بلا استعمال** منذ إلغاء الاستعادة بالبريد (الإعادة للمدير الإداري)؛ يبقى الملف حتى يُحذف بإذن | `pages/auth/confirm.vue` | 🔵 | §4.1 |
 | الهيكل العام Shell — الجرس في الشريط العلوي بقسمين: «بانتظارك» (محسوب) و«الإشعارات» (مخزّنة، آخر 30، تعليم المقروء)، وعدّادُ غير المقروء، والاهتزاز والرنين عند الوصول (مع `prefers-reduced-motion` تُعطَّل الحركة)؛ قوائم الأدوار الثمانية؛ مشرف المشروع يرى القوائم كلّها بلا كتابة | `layouts/dashboard.vue` + `components/NotificationsBell.vue` | ✅ | §4.2 |
 | خطة القسم الشهرية (أهداف وأنشطة بمواعيد ومسؤولين، حالةٌ يحدّثها المسؤول، تذكيرات، تقرير القسم، نسخ الشهر السابق، تصدير Excel) | `pages/plan.vue` + `components/plan/*` | ✅ | — |
-| الالتحاق بمعلّمي ترجمان (عامّة بلا حساب: تسجيلٌ واستعلامٌ عن الطلب) | `pages/join.vue` + `components/candidates/JoinIntro.vue` (الرؤية والمقدّمة والشروط), `JoinForm.vue`, `YesNo.vue`, `JoinDone.vue`, `StatusLookup.vue` | ✅ | — |
+| الالتحاق بمعلّمي ترجمان (عامّة بلا حساب: تسجيلٌ واستعلامٌ عن الطلب) | `pages/join.vue` + `components/candidates/JoinIntro.vue` (الرؤية والمقدّمة والشروط), `JoinForm.vue`, `JoinCommitment.vue`, `YesNo.vue`, `JoinDone.vue`, `StatusLookup.vue` | ✅ | — |
 | مقابلات المرشّحين (فرز، دعوة بموعد ولجنة، تقييم كل عضو، قرار، حساب معلّم) | `pages/candidates/index.vue` + `components/candidates/*` | ✅ | — |
 | استمارة تحكيم المرشّحين للطباعة (أفقية A4) | `pages/candidates/sheet.vue` | ✅ | — |
 | حماية المسارات (+ حاجز الكلمة المؤقّتة وإخراج غير النشط) | `middleware/auth.global.ts` | ✅ | §4.3 |

@@ -4,7 +4,7 @@ import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues
 
 const draft = (o: Partial<CandidateDraft> = {}): CandidateDraft => ({
   full_name: 'محمد أحمد سالم', national_id: '123456789', phone: '0599123456', gender: 'male', birth_date: '',
-  residence: 'غزة', residence_other: '', halaqa_area: 'الرمال', nearest_mosque: 'مسجد الهدى', address_detail: 'شارع الوحدة',
+  residence: 'غزة', residence_other: '', halaqa_area: 'الرمال', halaqa_area_other: '', nearest_mosque: 'مسجد الهدى', address_detail: 'شارع الوحدة',
   quran_parts: '10', tajweed_level: 'عليا', experience_years: '6', can_gather: true, daily_commitment: true, terms_accepted: true,
   education: '', experience: '', about: '', ...o
 })
@@ -47,6 +47,8 @@ describe('مقابلات المرشحين', () => {
     expect(candidateDraftError(draft({ residence: 'أخرى' }))).toBe('اكتب مكان السكن.')
     expect(candidateDraftError(draft({ residence: 'أخرى', residence_other: 'رفح' }))).toBeNull()
     expect(candidateDraftError(draft({ halaqa_area: '' }))).toBe('اختر منطقة الحلقة.')
+    expect(candidateDraftError(draft({ halaqa_area: 'أخرى' }))).toBe('اكتب منطقة الحلقة.')
+    expect(candidateDraftError(draft({ halaqa_area: 'أخرى', halaqa_area_other: 'جباليا' }))).toBeNull()
     expect(candidateDraftError(draft({ address_detail: ' ' }))).toBe('اكتب العنوان بالتفصيل.')
     expect(candidateDraftError(draft({ can_gather: null }))).toBe('أجب: هل تستطيع جمع 15 طالباً؟')
     expect(candidateDraftError(draft({ daily_commitment: false }))).toBeNull()

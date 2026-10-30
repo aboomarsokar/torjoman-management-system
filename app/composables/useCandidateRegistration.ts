@@ -4,12 +4,12 @@
  */
 import type { Database } from '~/types/database.types'
 import { normalizeDigits } from '~/constants/identity'
-import { candidateDraftError, draftResidence, normalizePhone, type CandidateDraft } from '~/utils/candidates'
+import { candidateDraftError, draftHalaqaArea, draftResidence, normalizePhone, type CandidateDraft } from '~/utils/candidates'
 
 export interface CandidateLookup { full_name: string, status: Database['public']['Enums']['candidate_status'], interview_at: string | null, interview_place: string | null }
 
 export const blankCandidate = (): CandidateDraft => ({
-  full_name: '', national_id: '', phone: '', gender: '', birth_date: '', residence: '', residence_other: '', halaqa_area: '',
+  full_name: '', national_id: '', phone: '', gender: '', birth_date: '', residence: '', residence_other: '', halaqa_area: '', halaqa_area_other: '',
   nearest_mosque: '', address_detail: '', quran_parts: '', tajweed_level: '', experience_years: '', can_gather: null,
   daily_commitment: null, terms_accepted: false, education: '', experience: '', about: ''
 })
@@ -30,7 +30,7 @@ export function useCandidateRegistration() {
       p_phone: normalizePhone(d.phone),
       p_gender: d.gender as 'male' | 'female',
       p_residence: draftResidence(d),
-      p_halaqa_area: d.halaqa_area,
+      p_halaqa_area: draftHalaqaArea(d),
       p_nearest_mosque: d.nearest_mosque.trim(),
       p_address_detail: d.address_detail.trim(),
       p_quran_parts: Number(normalizeDigits(d.quran_parts)),

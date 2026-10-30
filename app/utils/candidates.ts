@@ -46,7 +46,9 @@ export interface CandidateDraft {
   /** من قائمة السكن، أو «أخرى» مع `residence_other`. */
   residence: string
   residence_other: string
+  /** من قائمة المناطق، أو «أخرى» مع `halaqa_area_other`. */
   halaqa_area: string
+  halaqa_area_other: string
   nearest_mosque: string
   address_detail: string
   quran_parts: string
@@ -64,6 +66,10 @@ export interface CandidateDraft {
 export const draftResidence = (d: Pick<CandidateDraft, 'residence' | 'residence_other'>) =>
   (d.residence === OTHER_AREA ? d.residence_other : d.residence).trim()
 
+/** منطقةُ الحلقة كما تُحفظ: الخيارُ، أو النصُّ المكتوب عند «أخرى». */
+export const draftHalaqaArea = (d: Pick<CandidateDraft, 'halaqa_area' | 'halaqa_area_other'>) =>
+  (d.halaqa_area === OTHER_AREA ? d.halaqa_area_other : d.halaqa_area).trim()
+
 const toInt = (v: string) => v.trim() === '' ? null : Number(normalizeDigits(v))
 
 /** خطأُ نموذج التسجيل بالعربية، أو null. */
@@ -75,7 +81,7 @@ export function candidateDraftError(d: CandidateDraft): string | null {
   if (!/^05\d{8}$/.test(normalizePhone(d.phone))) return 'رقم الجوال يبدأ بـ 05 ومن 10 أرقام.'
   if (!d.gender) return 'اختر الجنس.'
   if (!draftResidence(d)) return d.residence === OTHER_AREA ? 'اكتب مكان السكن.' : 'اختر مكان السكن.'
-  if (!d.halaqa_area) return 'اختر منطقة الحلقة.'
+  if (!draftHalaqaArea(d)) return d.halaqa_area === OTHER_AREA ? 'اكتب منطقة الحلقة.' : 'اختر منطقة الحلقة.'
   if (!d.nearest_mosque.trim()) return 'اكتب اسم المسجد أو المصلّى.'
   if (!d.address_detail.trim()) return 'اكتب العنوان بالتفصيل.'
   const parts = toInt(d.quran_parts)
@@ -86,7 +92,7 @@ export function candidateDraftError(d: CandidateDraft): string | null {
   if (d.can_gather === null) return 'أجب: هل تستطيع جمع 15 طالباً؟'
   if (d.daily_commitment === null) return 'أجب: هل تستطيع التفرّغ ساعتين يومياً؟'
   if ([draftResidence(d), d.nearest_mosque, d.education].some(v => v.trim().length > MAX_CANDIDATE_TEXT)) return `الحقول القصيرة لا تتجاوز ${MAX_CANDIDATE_TEXT} حرف.`
-  if (d.halaqa_area.length > MAX_HALAQA_AREA || d.address_detail.trim().length > MAX_ADDRESS_DETAIL) return `العنوان لا يتجاوز ${MAX_ADDRESS_DETAIL} حرف.`
+  if (draftHalaqaArea(d).length > MAX_HALAQA_AREA || d.address_detail.trim().length > MAX_ADDRESS_DETAIL) return `العنوان لا يتجاوز ${MAX_ADDRESS_DETAIL} حرف.`
   if ([d.experience, d.about].some(v => v.trim().length > MAX_CANDIDATE_LONG)) return `الحقول الطويلة لا تتجاوز ${MAX_CANDIDATE_LONG} حرف.`
   if (!d.terms_accepted) return 'أقرّ بقراءة الشروط قبل الإرسال.'
   return null

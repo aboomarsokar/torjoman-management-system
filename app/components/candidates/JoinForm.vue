@@ -137,6 +137,17 @@ async function submit() {
         />
       </UFormField>
       <UFormField
+        v-if="form.halaqa_area === OTHER_AREA"
+        label="اكتب منطقة الحلقة"
+        required
+      >
+        <UInput
+          v-model="form.halaqa_area_other"
+          size="xl"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField
         label="اسم المسجد أو المصلّى"
         required
       >
@@ -233,25 +244,10 @@ async function submit() {
       </UFormField>
     </fieldset>
 
-    <fieldset class="jf-group jf-yn">
-      <legend>الالتزام</legend>
-      <CandidatesYesNo
-        v-model="form.can_gather"
-        label="هل تستطيع جمع 15 طالباً ضمن شروط المشروع؟"
-        class="span-2"
-      />
-      <CandidatesYesNo
-        v-model="form.daily_commitment"
-        label="هل تستطيع تفريغ ساعتين يومياً للحلقة؟"
-        class="span-2"
-      />
-    </fieldset>
-
-    <UCheckbox
-      v-model="form.terms_accepted"
-      label="قرأتُ الشروط وأقرّ بانطباقها عليّ، وبالتزامي بعدم ازدواجية الحلقة."
-      required
-      class="jf-terms"
+    <CandidatesJoinCommitment
+      v-model:gather="form.can_gather"
+      v-model:daily="form.daily_commitment"
+      v-model:terms="form.terms_accepted"
     />
 
     <p
@@ -282,8 +278,6 @@ async function submit() {
 .jf-group { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
 .jf-group legend { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 12px; padding: 0; }
 .span-2 { grid-column: span 2; }
-.jf-yn { gap: 12px; }
-.jf-terms { padding: 14px 16px; border-radius: 12px; background: var(--surface-3); }
 .jf-err { margin: 0; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--err-soft); color: var(--err); font-weight: 600; font-size: 14px; }
 @media (max-width: 560px) {
   .jf-group { grid-template-columns: 1fr; }

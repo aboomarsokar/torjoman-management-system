@@ -103,7 +103,7 @@ export const OTHER_AREA = 'أخرى'
 export const CANDIDATE_RESIDENCES = ['غزة', 'الوسطى', 'النصيرات', 'الزوايدة', 'دير البلح', 'خانيونس', OTHER_AREA] as const
 /** المنطقةُ التي يُقبل منها التسجيل الآن (مدينة غزة). */
 export const ELIGIBLE_RESIDENCE = 'غزة'
-export const HALAQA_AREAS = ['الدرج', 'التفاح', 'الرمال', 'الشاطئ الجنوبي', 'الشاطئ الشمالي والنصر', 'الشيخ رضوان', 'الصبرة', 'تل الهوا', 'الزيتون'] as const
+export const HALAQA_AREAS = ['الدرج', 'التفاح', 'الرمال', 'الشاطئ الجنوبي', 'الشاطئ الشمالي والنصر', 'الشيخ رضوان', 'الصبرة', 'تل الهوا', 'الزيتون', OTHER_AREA] as const
 
 /** حدودُ الشروط (تطابق نصوص الشروط أعلاه). */
 export const MIN_TEACHER_PARTS = 5

@@ -24,7 +24,7 @@ const { candidates, staff, loading, busy } = api
 onMounted(() => {
   void api.load()
   void api.loadStaff()
-  void api.loadInviteTemplate() // لا يُشترط الدور هنا: الملفُّ قد لا يكون حُمّل بعدُ، والإعداداتُ يقرؤها كلُّ حساب
+  void api.loadInviteTemplate() // لا يُشترط الدور هنا: الملفُّ قد لا يكون حُمّل بعدُ، والإعداداتُ يقرؤها كلُّ حساب (والإرسالُ للمدير الإداري)
 })
 const names = computed(() => Object.fromEntries(staff.value.map(s => [s.id, s.name])))
 
@@ -151,7 +151,7 @@ async function copyJoinLink() {
         @click="templateOpen = true"
       />
       <UButton
-        v-if="pendingSms.length"
+        v-if="isAdmin && pendingSms.length"
         :label="`أرسل الدعوات المعلّقة SMS (${pendingSms.length})`"
         icon="i-lucide-message-square-text"
         color="primary"
@@ -189,6 +189,7 @@ async function copyJoinLink() {
         @click="openSchedule(candidates.filter(c => selected.includes(c.id)))"
       />
       <UButton
+        v-if="isAdmin"
         label="أرسل الدعوة SMS"
         icon="i-lucide-message-square-text"
         color="neutral"

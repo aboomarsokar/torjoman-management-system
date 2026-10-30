@@ -150,7 +150,7 @@ async function copyInvite() {
               @click="emit('schedule')"
             />
             <UButton
-              v-if="candidate.status === 'invited' && candidate.interview_at && canManage"
+              v-if="candidate.status === 'invited' && candidate.interview_at && isAdmin"
               :label="candidate.invite_sms_at ? 'أعد إرسال الدعوة SMS' : 'أرسل الدعوة SMS'"
               icon="i-lucide-message-square-text"
               color="primary"

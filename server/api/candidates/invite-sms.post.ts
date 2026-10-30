@@ -7,11 +7,12 @@ import { MAX_INVITE_SMS_TEMPLATE } from '~/constants/candidates'
 
 /**
  * رسالةُ دعوة المقابلة SMS للمرشّحين المدعوّين (طلب المستخدم 2026-10-30): المعرّفاتُ والصيغةُ (اختيارية — وإلا المعتمدةُ في
- * `app_settings`) من الواجهة، والنصُّ يُبنى هنا لكلّ مرشّحٍ باسمه وموعده ومكانه. `save` يجعل الصيغةَ معتمدة (للمدير الإداريّ وحده). المرسِلُ من يرسل SMS ويدير المرشّحين: الإداريّ للقسمين، والفنيّ للبنين، والمديرةُ للبنات.
+ * `app_settings`) من الواجهة، والنصُّ يُبنى هنا لكلّ مرشّحٍ باسمه وموعده ومكانه. `save` يجعل الصيغةَ معتمدة (للمدير الإداريّ وحده). المرسِلُ المدير الإداريّ وحده (قرار المستخدم 2026-10-30).
  * يُسجَّل كلُّ إرسالٍ في `sms_log`، ويُختم `invite_sms_at` لمن وصلته.
  */
 export default defineEventHandler(async (event) => {
-  const { admin, caller, section } = await requireSmsSender(event)
+  const { admin, caller } = await requireSmsSender(event)
+  if (caller.role !== 'admin_manager') throw createError({ statusCode: 403, statusMessage: 'رسائلُ المرشّحين للمدير الإداري وحده.' })
   requireWritableSession(caller)
   const body = await readBody<{ ids?: unknown, template?: unknown, save?: unknown }>(event)
   const ids = Array.isArray(body?.ids) ? [...new Set(body.ids.filter((x): x is string => typeof x === 'string'))] : []
@@ -25,15 +26,11 @@ export default defineEventHandler(async (event) => {
     template = settings?.candidate_invite_sms ?? ''
   }
   if (template.length < 10) throw createError({ statusCode: 400, statusMessage: 'اكتب نصّ الرسالة.' })
-  if (body?.save === true && caller.role !== 'admin_manager') throw createError({ statusCode: 403, statusMessage: 'اعتمادُ الصيغة للمدير الإداري وحده.' })
 
   const { data, error } = await admin.from('candidates')
     .select('id, full_name, gender, phone, status, interview_at, interview_place').in('id', ids)
   if (error) throw createError({ statusCode: 500, statusMessage: 'تعذّر تحميل المرشّحين.' })
   const rows = data ?? []
-  if (section && rows.some(c => c.gender !== section)) {
-    throw createError({ statusCode: 403, statusMessage: `ترسل لمرشّحي ${section === 'male' ? 'البنين' : 'البنات'} وحدهم.` })
-  }
   const ready = rows.filter(c => c.status === 'invited' && c.interview_at && normalizeLocalPhone(c.phone))
   if (!ready.length) throw createError({ statusCode: 400, statusMessage: 'لا مرشّحَ مدعوٌّ بموعدٍ ورقمٍ صالح بين المحدّدين.' })
 

@@ -2,14 +2,19 @@
  * شاشةُ حضور المعلّم بلا إنترنت (`/t` — البند 14، نمطُ الصحابة، 2026-10-26): تجمع نسخةَ الجهاز وصندوقَ الرفع
  * واليومَ المعروض. الإقلاعُ من الجهاز أوّلاً (يعمل بلا شبكة)، ثمّ — إن وُجد اتصال — يُعرف الدورُ وتُحدَّث النسخة
  * ويُرفع الصندوق. والدورُ بلا شبكةٍ يُستدلّ عليه بوجود نسخة معلّمٍ على الجهاز.
+ * وبلاغُ «لم تنعقد الحلقة» (2026-10-30) سطرٌ في الصندوق نفسه بمفتاح اليوم: يومُ الإجازة والبلاغُ المعروض يُخفيان القائمة.
  */
 import type { Database } from '~/types/database.types'
 import { PROJECT_START_DATE } from '~/constants/project'
 import type { AttendanceChoice } from '~/composables/useAttendanceDay'
-import { absencesFor, effectiveDay, syncStatusLine, type Absences, type OutboxEntry } from '~/utils/attendanceOutbox'
+import {
+  absencesFor, effectiveDay, entryKind, newOffEntry, newWithdrawEntry, syncStatusLine,
+  type Absences, type OutboxEntry, type OutboxKind
+} from '~/utils/attendanceOutbox'
 import { attendanceStrip, lastSchoolDays } from '~/utils/attendanceStrip'
+import { normalizeOffNote, offDayBlock, offInputError, type OffReason } from '~/utils/offDays'
 import { isOnlineNow } from '~/utils/reachability'
-import { gazaToday, isFriday, schoolDayOnOrBefore } from '~/utils/reportWindow'
+import { formatDay, gazaToday, isFriday, schoolDayOnOrBefore } from '~/utils/reportWindow'
 import { gazaClock12 } from '~/utils/time'
 
 /** هل في المسوّدة تغييرٌ عن اليوم المعروض لطلاب القائمة. */
@@ -81,8 +86,16 @@ export function useOfflineAttendance() {
   const studentIds = computed(() => students.value.map(s => s.id))
   const entry = computed(() => (halaqaId.value ? outbox.entryFor(halaqaId.value, day.value) : undefined))
   const inMirror = computed(() => !!mirror.value && (day.value in mirror.value.days || (!!mirror.value.from && day.value >= mirror.value.from)))
-  const shown = computed(() => effectiveDay(mirror.value?.days[day.value], entry.value))
+  const shown = computed(() => effectiveDay(mirror.value?.days[day.value], entry.value, mirror.value?.offDays?.[day.value]))
   const locked = computed(() => !!mirror.value?.approvedMonths.includes(day.value.slice(0, 7)))
+  // نسخةُ جهازٍ قديمة بلا الحقلين = لا إجازات ولا بلاغات
+  const holidays = computed(() => mirror.value?.holidays ?? {})
+  /** سببُ الإجازة العامة لليوم المعروض، أو `null`. */
+  const holiday = computed(() => holidays.value[day.value] ?? null)
+  /** البلاغُ المعروض لليوم (على الجهاز أو مرفوعاً)، أو `null`. */
+  const off = computed(() => shown.value.off)
+  /** سببُ منع البلاغ عن اليوم — بنصوص حارس القاعدة نفسها. */
+  const reportBlock = computed(() => offDayBlock(day.value, today, mirror.value?.approvedMonths ?? [], holidays.value))
 
   const draft = ref<Absences>({})
   watch([day, () => shown.value.absences], () => {
@@ -103,8 +116,16 @@ export function useOfflineAttendance() {
     await loadDay(halaqaId.value, day.value).catch(() => undefined)
   })
 
-  const canWrite = computed(() => access.value === 'teacher' && !!halaqaId.value && !locked.value
-    && !isFriday(day.value) && students.value.length > 0 && !dayUnknown.value && !isReadOnlyNow())
+  /** صاحبُ الحلقة في جلسته، لا في نيابة القراءة. */
+  const teacherSession = computed(() => access.value === 'teacher' && !!halaqaId.value && !isReadOnlyNow())
+  /** يومٌ تُعرض فيه القائمة: طلابٌ ملتحقون، ومعروفٌ حالُه. */
+  const listDay = computed(() => teacherSession.value && students.value.length > 0 && !dayUnknown.value)
+  const canWrite = computed(() => listDay.value && !locked.value && !isFriday(day.value) && !holiday.value && !off.value)
+  /** يُرى زرُّ البلاغ تحت القائمة (معطَّلاً مع سببه إن مُنع) — لا في الجمعة ولا الإجازة ولا يومٍ فيه بلاغ. */
+  const reportShown = computed(() => listDay.value && !isFriday(day.value) && !holiday.value && !off.value)
+  const canReport = computed(() => listDay.value && reportBlock.value === null && !holiday.value && off.value?.status !== 'approved')
+  /** «تراجع»: بلاغٌ معروضٌ غيرُ معتمَد. */
+  const canWithdraw = computed(() => teacherSession.value && !!off.value && off.value.status !== 'approved')
 
   function setChoice(studentId: string, choice: AttendanceChoice) {
     const { [studentId]: _removed, ...rest } = draft.value
@@ -115,6 +136,28 @@ export function useOfflineAttendance() {
   async function save(): Promise<boolean> {
     if (!canWrite.value || !halaqaId.value) return false
     await outbox.enqueue(halaqaId.value, day.value, absencesFor(draft.value, studentIds.value))
+    return true
+  }
+
+  /** «لم تنعقد الحلقة»: سطرُ بلاغٍ لليوم يحلّ محلّ أيّ سطرٍ سابقٍ له (حضورٌ مسجَّلٌ يمحوه البلاغُ في القاعدة). */
+  async function reportOff(reason: OffReason, note: string | null): Promise<boolean> {
+    if (!canReport.value || !halaqaId.value || !uid.value || offInputError(reason, note ?? '')) return false
+    await outbox.put(newOffEntry(uid.value, halaqaId.value, day.value, reason, normalizeOffNote(note)))
+    return true
+  }
+
+  /**
+   * «تراجع — الحلقة انعقدت»: بلاغٌ على الجهاز لم يُرفع (بلا اتصال، أو رفضته القاعدة فلا يُرفع) يُحذف فلا يُرفع شيء؛
+   * وغيرُ ذلك سطرُ سحبٍ بمفتاح اليوم — فمتّصلاً قد يكون البلاغُ في الطريق، والرفعُ متتابعٌ فيلحقه السحب.
+   */
+  async function withdrawOff(): Promise<boolean> {
+    if (!canWithdraw.value || !halaqaId.value || !uid.value) return false
+    const local = entry.value
+    if (local && entryKind(local) === 'off' && (!outbox.online.value || local.status === 'rejected')) {
+      await outbox.discard(local.key)
+      return true
+    }
+    await outbox.put(newWithdrawEntry(uid.value, halaqaId.value, day.value))
     return true
   }
 
@@ -129,15 +172,31 @@ export function useOfflineAttendance() {
   const retrying = computed(() => outbox.pending.value.some(e => e.attempts > 0))
 
   // شريطُ آخر 15 يومَ دوام
-  const strip = computed(() => attendanceStrip({
-    days: lastSchoolDays(today, PROJECT_START_DATE),
-    mirror: mirror.value?.days ?? {},
-    queued: new Set(outbox.pending.value.filter(e => e.halaqaId === halaqaId.value).map(e => e.day)),
-    approvedMonths: mirror.value?.approvedMonths ?? []
-  }))
+  const strip = computed(() => {
+    const mine = outbox.pending.value.filter(e => e.halaqaId === halaqaId.value)
+    const daysOf = (kind: OutboxKind) => new Set(mine.filter(e => entryKind(e) === kind).map(e => e.day))
+    return attendanceStrip({
+      days: lastSchoolDays(today, PROJECT_START_DATE),
+      mirror: mirror.value?.days ?? {},
+      queued: daysOf('attendance'),
+      approvedMonths: mirror.value?.approvedMonths ?? [],
+      offDays: mirror.value?.offDays,
+      holidays: mirror.value?.holidays,
+      queuedOff: daysOf('off'),
+      queuedWithdraw: daysOf('withdraw')
+    })
+  })
+
+  /** ما رفضته القاعدة: اليومُ بتاريخه، والبلاغُ أو سحبُه «بلاغ dd-mm-yyyy». */
+  const rejectedRows = computed(() => outbox.rejected.value.map(e => ({
+    key: e.key,
+    label: entryKind(e) === 'attendance' ? formatDay(e.day) : `بلاغ ${formatDay(e.day)}`,
+    error: e.error
+  })))
 
   return {
     ready, access, mirror, refreshing, outbox, start, today, day, students, shown, locked, draft, dirty,
-    dayUnknown, canWrite, setChoice, save, statusText, retrying, strip
+    dayUnknown, canWrite, setChoice, save, statusText, retrying, strip, rejectedRows,
+    holiday, off, reportBlock, reportShown, canReport, canWithdraw, reportOff, withdrawOff
   }
 }

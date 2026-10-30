@@ -5,16 +5,19 @@
  * بسيطةٌ عن قصد (طلب المستخدم 2026-10-26): لا بطاقةَ للحلقة، وسطرُ حالةٍ رفيعٌ يقول ما ينتظر الرفعَ بعدده، وشريطُ آخر 15 يومَ دوامٍ يُري ما لم يُسجَّل، و«حفظ الحضور» يُكتب على الجهاز
  * فوراً ويُرفع في الخلفية يوماً يوماً؛ وما رفضته الإدارةُ يُعرض للمعلّم بإعادةٍ أو ترك. في قالب اللوحة (القائمةُ والجرسُ
  * والصورة — طلب المستخدم 2026-10-26)، والقالبُ يقرأ بلا إنترنت آخرَ ما عُرف (`offlineCache`).
+ * و«لم تنعقد الحلقة» (2026-10-30): يومُ الإجازة شريطٌ وحده، ويومُ البلاغ شريطُه بلا قائمة، وغيرُهما زرُّ البلاغ بجانب الحفظ.
  */
 import { formatDay, isFriday } from '~/utils/reportWindow'
 import { weekdayName } from '~/utils/recordingStatus'
+import type { OffReason } from '~/utils/offDays'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'حضور حلقتي — ترجمان', robots: 'noindex' })
 
 const {
   ready, access, mirror, outbox, start, today, day, students, shown, locked, draft, dirty,
-  dayUnknown, canWrite, setChoice, save, statusText, retrying, strip
+  dayUnknown, canWrite, setChoice, save, statusText, retrying, strip, rejectedRows,
+  holiday, off, reportBlock, reportShown, canReport, canWithdraw, reportOff, withdrawOff
 } = useOfflineAttendance()
 const { state: readiness } = useOfflineReadiness()
 onMounted(start)
@@ -46,11 +49,29 @@ const dayModel = computed<string>({
     if (!keepsEdits()) day.value = v
   }
 })
-const dayState = computed(() => shown.value.pending
+const dayState = computed(() => shown.value.pending && shown.value.held // سطرُ سحبٍ بانتظار الرفع: اليومُ غيرُ مسجَّل
   ? { cls: 'queued', icon: 'i-lucide-cloud-upload', text: `حضور ${formatDay(day.value)} محفوظ على جهازك — بانتظار الرفع.` }
   : shown.value.held
     ? { cls: 'on', icon: 'i-lucide-calendar-check', text: 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' }
     : { cls: '', icon: 'i-lucide-calendar-clock', text: 'لم يُسجَّل حضور هذا اليوم — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' })
+
+// ── «لم تنعقد الحلقة»: النافذةُ معبّأةٌ بالبلاغ المعروض إن وُجد («عدّل البلاغ»)، وفارغةٌ من زرّ القائمة ──
+const reportOpen = ref(false)
+const offBusy = ref(false)
+function openReport() {
+  if (keepsEdits()) reportOpen.value = true
+}
+async function runOff(act: () => Promise<boolean>, done: string) {
+  offBusy.value = true
+  const ok = await act().catch((err: unknown) => void handle(err))
+  offBusy.value = false
+  if (ok) toast.add({ title: done, color: 'success', icon: 'i-lucide-circle-check' })
+  return ok
+}
+async function onReport(reason: OffReason, note: string | null) {
+  if (await runOff(() => reportOff(reason, note), outbox.online.value ? 'أُرسل البلاغ، ويُرفع الآن.' : 'حُفظ البلاغ على جهازك — يُرفع حين يعود الاتصال.')) reportOpen.value = false
+}
+const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود اليومُ للتسجيل.')
 </script>
 
 <template>
@@ -66,9 +87,9 @@ const dayState = computed(() => shown.value.pending
       @retry="outbox.flush()"
     />
     <OfflineRejectedDays
-      v-if="outbox.rejected.value.length"
+      v-if="rejectedRows.length"
       title="أيامٌ لم تقبلها الإدارة"
-      :entries="outbox.rejected.value.map(e => ({ key: e.key, label: formatDay(e.day), error: e.error }))"
+      :entries="rejectedRows"
       @retry="outbox.retry"
       @discard="outbox.discard"
     />
@@ -157,6 +178,20 @@ const dayState = computed(() => shown.value.pending
           icon="i-lucide-calendar-off"
           title="الجمعة عطلة — لا يُسجَّل فيها حضور"
         />
+        <AttendanceHolidayBanner
+          v-else-if="holiday"
+          :reason="holiday"
+        />
+        <AttendanceOffDayBanner
+          v-else-if="off"
+          :day-label="formatDay(day)"
+          :off="off"
+          :can-withdraw="canWithdraw"
+          :can-edit="canReport"
+          :busy="offBusy"
+          @withdraw="onWithdraw"
+          @edit="openReport"
+        />
         <UiEmptyState
           v-else-if="dayUnknown"
           icon="i-lucide-cloud-off"
@@ -194,20 +229,42 @@ const dayState = computed(() => shown.value.pending
               class="save-note"
               :class="{ warn: dirty }"
             >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
-            <!-- لا جديدَ يُحفظ: إطارٌ هادئ لا زرٌّ ممتلئٌ باهت (طلب المستخدم 2026-10-28) -->
-            <UButton
-              label="حفظ الحضور"
-              icon="i-lucide-save"
-              :color="canSave ? 'primary' : 'neutral'"
-              :variant="canSave ? 'solid' : 'outline'"
-              size="lg"
-              :loading="saving"
-              :disabled="!canSave"
-              :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
-              @click="onSave"
-            />
+            <div class="save-acts">
+              <AttendanceOffDayAction
+                v-if="reportShown && !shown.held"
+                :disabled="!canReport"
+                :block="reportBlock"
+                @open="openReport"
+              />
+              <!-- لا جديدَ يُحفظ: إطارٌ هادئ لا زرٌّ ممتلئٌ باهت (طلب المستخدم 2026-10-28) -->
+              <UButton
+                label="حفظ الحضور"
+                icon="i-lucide-save"
+                :color="canSave ? 'primary' : 'neutral'"
+                :variant="canSave ? 'solid' : 'outline'"
+                size="lg"
+                :loading="saving"
+                :disabled="!canSave"
+                :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
+                @click="onSave"
+              />
+            </div>
           </div>
+          <AttendanceOffDayAction
+            v-if="reportShown && (shown.held || !canWrite)"
+            link
+            :disabled="!canReport"
+            :block="reportBlock"
+            @open="openReport"
+          />
         </template>
+        <AttendanceOffDayModal
+          v-model:open="reportOpen"
+          :day-label="formatDay(day)"
+          :held="shown.held"
+          :initial="off"
+          @confirm="onReport"
+        />
       </div>
     </div>
   </div>
@@ -236,7 +293,8 @@ const dayState = computed(() => shown.value.pending
 .save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
 .save-note { font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .save-note.warn { color: var(--err); }
+.save-acts { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 520px) {
-  .save-bar :deep(button) { flex: 1 1 100%; }
+  .save-acts, .save-acts > :deep(*) { flex: 1 1 100%; }
 }
 </style>

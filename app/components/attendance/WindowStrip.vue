@@ -3,11 +3,13 @@
  * شريطُ آخر 15 يومَ دوام في شاشة حضور المعلّم (طلب المستخدم 2026-10-26 — نمطُ الصحابة): مربّعٌ لكلّ يومٍ برقمه ولونِ
  * حاله — مسجَّل · بانتظار الرفع · لم يُسجَّل · شهرٌ معتمَد — والضغطُ يفتح اليوم. الناقصُ أبرزُها لونًا، وحدُّ النافذة
  * يُقال دائماً كي لا يُقرأ «الكلُّ مسجَّل» على الشهر كلّه. والمربّعُ 44px يُضغط بالإبهام في الحلقة.
+ * وبلاغُ «لم تنعقد» (2026-10-30): الإجازةُ والبلاغُ المعتمَد هادئان لا يُشبهان الناقص، والمعلّقُ بإطارٍ متقطّعٍ يُعدّ ناقصاً؛
+ * ومفاتيحُها تظهر حين تقع في النافذة وحدها.
  */
 import type { StripDay, StripState } from '~/utils/attendanceStrip'
 import { formatDay } from '~/utils/reportWindow'
 
-defineProps<{ days: StripDay[], missing: number, selected: string }>()
+const props = defineProps<{ days: StripDay[], missing: number, selected: string }>()
 const emit = defineEmits<{ select: [day: string] }>()
 
 const LABEL: Record<StripState, string> = {
@@ -19,6 +21,13 @@ const LABEL: Record<StripState, string> = {
   off: 'لم تنعقد الحلقة — معتمَد',
   off_pending: 'لم تنعقد الحلقة — بانتظار الاعتماد'
 }
+/** حالاتٌ نادرة في المفتاح حين تقع في النافذة. */
+const OPTIONAL_LEGEND: { state: StripState, label: string }[] = [
+  { state: 'off_pending', label: 'بلاغٌ بانتظار الاعتماد' },
+  { state: 'off', label: 'لم تنعقد — معتمَد' },
+  { state: 'holiday', label: 'إجازة' }
+]
+const extraLegend = computed(() => OPTIONAL_LEGEND.filter(l => props.days.some(d => d.state === l.state)))
 </script>
 
 <template>
@@ -57,6 +66,10 @@ const LABEL: Record<StripState, string> = {
       <span><i class="missing" />لم يُسجَّل</span>
       <span><i class="recorded" />مسجَّل</span>
       <span><i class="queued" />بانتظار الرفع</span>
+      <span
+        v-for="l in extraLegend"
+        :key="l.state"
+      ><i :class="l.state" />{{ l.label }}</span>
     </div>
   </div>
 </template>
@@ -73,6 +86,10 @@ const LABEL: Record<StripState, string> = {
 .ws-day.queued { background: var(--blue-soft); border-color: color-mix(in srgb, var(--blue) 55%, transparent); color: var(--blue-ink); }
 .ws-day.missing { background: var(--chip-warn-bg); border-color: color-mix(in srgb, var(--chip-warn-ink) 45%, transparent); color: var(--chip-warn-ink); }
 .ws-day.locked { background: var(--surface-2); border-color: var(--line); color: var(--ink-3); }
+/* الإجازةُ والمعتمَدُ هادئان (لا يُعدّان ناقصاً)؛ والمعتمَدُ رقمُه مشطوبٌ كتقويمٍ مشطوب، والمعلّقُ إطارٌ متقطّع بلون الناقص */
+.ws-day.holiday { background: var(--surface-2); border-color: var(--line-2); border-style: dashed; color: var(--ink-2); }
+.ws-day.off { background: var(--chip-muted-bg); border-color: var(--line-2); color: var(--ink-2); text-decoration: line-through; }
+.ws-day.off_pending { background: var(--surface); border-color: var(--chip-warn-ink); border-style: dashed; color: var(--chip-warn-ink); }
 .ws-day.sel { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--navy); }
 .ws-day:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .ws-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-3); }
@@ -81,4 +98,7 @@ const LABEL: Record<StripState, string> = {
 .ws-legend i.missing { background: var(--chip-warn-ink); opacity: .7; }
 .ws-legend i.recorded { background: var(--green); }
 .ws-legend i.queued { background: var(--blue); }
+.ws-legend i.holiday { background: var(--surface-2); border: 1.5px dashed var(--ink-3); }
+.ws-legend i.off { background: var(--ink-3); opacity: .55; }
+.ws-legend i.off_pending { border: 1.5px dashed var(--chip-warn-ink); }
 </style>

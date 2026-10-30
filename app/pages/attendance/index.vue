@@ -229,6 +229,7 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
           :day-label="formatDay(day)"
           :off="offDay"
           :can-review="canReview"
+          :locked="locked"
           :busy="reviewing"
           @review="review"
         />

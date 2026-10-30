@@ -14,6 +14,8 @@ const props = defineProps<{
   off: DayOffReport
   /** القبولُ والرفض متاحان لهذا المستخدم على هذه الحلقة (`canReviewOffDayRole`). */
   canReview: boolean
+  /** رصدُ شهر اليوم معتمَد: يبقى قبولُ المعلّق ورفضُه، ولا يُعكس قرارٌ سابق (الخادم يرفضه). */
+  locked?: boolean
   busy?: boolean
 }>()
 const emit = defineEmits<{ review: [approve: boolean, note: string | null] }>()
@@ -26,6 +28,8 @@ watch(() => props.off.id, () => {
   reviewNote.value = ''
 })
 
+// شهرٌ معتمَد: القرارُ السابق (قبول أو رفض) لا يُعكس، فلا أزرارَ على غير المعلّق
+const frozen = computed(() => !!props.locked && props.off.status !== 'pending')
 const status = computed(() => offStatusLabel({ ...props.off, queued: false }))
 const reportedLine = computed(() => {
   const who = props.off.reporterName ? `بلّغ ${props.off.reporterName}` : 'بلاغ'
@@ -72,7 +76,13 @@ function confirmReject() {
       سببُ الرفض: {{ off.reviewNote }}
     </p>
 
-    <template v-if="canReview">
+    <p
+      v-if="canReview && frozen"
+      class="orp-by"
+    >
+      الشهر معتمَد — لا يُغيَّر قرارٌ سابق.
+    </p>
+    <template v-else-if="canReview">
       <div
         v-if="rejecting"
         class="orp-form"

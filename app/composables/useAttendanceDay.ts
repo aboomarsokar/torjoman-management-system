@@ -105,6 +105,9 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
       holiday.value = null
       return
     }
+    // بلاغُ اليوم السابق وإجازتُه لا يبقيان أثناء القراءة: لا يُعتمد بلاغٌ بمعرّفٍ قديم بعد تبديل اليوم أو الحلقة
+    offDay.value = null
+    holiday.value = null
     loading.value = true
     try {
       const [dayRow, absenceRows, approved, offRow, holidayRow] = await Promise.all([
@@ -223,7 +226,7 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
    */
   async function reviewOffDay(approve: boolean, note: string | null): Promise<boolean> {
     const off = offDay.value
-    if (!off) return false
+    if (!off || loading.value) return false
     reviewing.value = true
     try {
       const reason = approve ? undefined : note?.trim() || undefined

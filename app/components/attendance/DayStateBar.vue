@@ -19,7 +19,7 @@ const emit = defineEmits<{ cancel: [] }>()
       :name="held ? 'i-lucide-calendar-check' : 'i-lucide-calendar-clock'"
       class="size-5"
     />
-    <span>{{ held ? 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' : canWrite ? 'لم يُسجَّل حضور هذا اليوم بعد — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' : 'لم يُسجَّل حضور هذا اليوم.' }}</span>
+    <span>{{ held ? (canWrite ? 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' : 'سُجّل حضور هذا اليوم.') : canWrite ? 'لم يُسجَّل حضور هذا اليوم بعد — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' : 'لم يُسجَّل حضور هذا اليوم.' }}</span>
     <button
       v-if="held && canWrite"
       type="button"

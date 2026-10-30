@@ -14,7 +14,10 @@ const LABEL: Record<StripState, string> = {
   recorded: 'مسجَّل',
   queued: 'بانتظار الرفع',
   missing: 'لم يُسجَّل',
-  locked: 'شهرٌ معتمَد'
+  locked: 'شهرٌ معتمَد',
+  holiday: 'إجازة',
+  off: 'لم تنعقد الحلقة — معتمَد',
+  off_pending: 'لم تنعقد الحلقة — بانتظار الاعتماد'
 }
 </script>
 

@@ -6,11 +6,18 @@
  */
 import { RETRY_DELAYS_MS } from '~/constants/offline'
 import type { AbsenceKind } from '~/composables/useAttendanceDay'
+import type { OffDay, OffReason, ShownOff } from '~/utils/offDays'
 
 export type Absences = Record<string, AbsenceKind>
 
 /** يومٌ في نسخة الجهاز: سُجّل (انعقدت الحلقة) وغياباتُه. */
 export interface MirrorDay { held: boolean, absences: Absences }
+
+/**
+ * نوعُ سطر الصندوق (بلاغ «لم تنعقد» 2026-10-30): `attendance` ← `save_attendance_day` · `off` ← `report_off_day` ·
+ * `withdraw` ← `withdraw_off_day`. اليومُ سطرٌ واحد مهما كان نوعُه والأحدثُ يغلب.
+ */
+export type OutboxKind = 'attendance' | 'off' | 'withdraw'
 
 export interface OutboxEntry {
   /** `uid|halaqa|day` — يومٌ واحدٌ لكلّ معلّمٍ وحلقة. */
@@ -25,6 +32,15 @@ export interface OutboxEntry {
   /** `rejected`: رفضته القاعدةُ رفضاً لا تُصلحه الإعادة (شهرٌ اعتُمد، جمعة…) — ينتظر قرارَ المعلّم. */
   status: 'pending' | 'rejected'
   error?: string
+  /** نوعُ السطر — الغائبُ = `attendance` (سطورٌ حُفظت على الأجهزة قبل التحديث بلا هذا الحقل). */
+  kind?: OutboxKind
+  /** سببُ البلاغ وملاحظتُه — لسطر `off` وحده. */
+  off?: { reason: OffReason, note: string | null }
+}
+
+/** نوعُ السطر؛ سطرٌ قديمٌ بلا `kind` حضورٌ كما كان. */
+export function entryKind(e: OutboxEntry): OutboxKind {
+  return e.kind ?? 'attendance'
 }
 
 export function entryKey(uid: string, halaqaId: string, day: string): string {
@@ -32,13 +48,43 @@ export function entryKey(uid: string, halaqaId: string, day: string): string {
 }
 
 export function newEntry(uid: string, halaqaId: string, day: string, absences: Absences, now: Date = new Date()): OutboxEntry {
-  return { key: entryKey(uid, halaqaId, day), uid, halaqaId, day, absences: { ...absences }, recordedAt: now.toISOString(), attempts: 0, status: 'pending' }
+  return { key: entryKey(uid, halaqaId, day), uid, halaqaId, day, kind: 'attendance', absences: { ...absences }, recordedAt: now.toISOString(), attempts: 0, status: 'pending' }
 }
 
-/** اليومُ كما يُعرض: ما في الصندوق يغلب نسخةَ الجهاز (هو الأحدث)، ويُعدّ اليومُ مسجَّلاً. */
-export function effectiveDay(mirror: MirrorDay | undefined, entry: OutboxEntry | undefined): MirrorDay & { pending: boolean } {
-  if (entry) return { held: true, absences: { ...entry.absences }, pending: true }
-  return { held: mirror?.held ?? false, absences: { ...(mirror?.absences ?? {}) }, pending: false }
+/** سطرُ بلاغ «لم تنعقد الحلقة» — نفسُ مفتاح اليوم، فيحلّ محلّ أيّ سطرٍ سابقٍ له ويحلّ محلَّه الأحدث. */
+export function newOffEntry(uid: string, halaqaId: string, day: string, reason: OffReason, note: string | null, now: Date = new Date()): OutboxEntry {
+  return { key: entryKey(uid, halaqaId, day), uid, halaqaId, day, kind: 'off', off: { reason, note }, absences: {}, recordedAt: now.toISOString(), attempts: 0, status: 'pending' }
+}
+
+/** سطرُ «تراجع — الحلقة انعقدت»: يسحب بلاغاً مرفوعاً عند عودة الاتصال. */
+export function newWithdrawEntry(uid: string, halaqaId: string, day: string, now: Date = new Date()): OutboxEntry {
+  return { key: entryKey(uid, halaqaId, day), uid, halaqaId, day, kind: 'withdraw', absences: {}, recordedAt: now.toISOString(), attempts: 0, status: 'pending' }
+}
+
+/**
+ * اليومُ كما يُعرض: ما في الصندوق يغلب نسخةَ الجهاز (هو الأحدث).
+ * حضور ← مسجَّل · بلاغ ← غيرُ مسجَّل وبلاغٌ «على الجهاز» · سحبٌ ← غيرُ مسجَّل بلا بلاغ · بلا سطر ← النسخة كما هي
+ * مع بلاغها المرفوع (`off`) إن وُجد. `off` الغائبُ (نسخةُ جهازٍ قديمة) = لا بلاغ.
+ */
+export function effectiveDay(
+  mirror: MirrorDay | undefined,
+  entry: OutboxEntry | undefined,
+  off?: OffDay
+): MirrorDay & { pending: boolean, off: ShownOff | null } {
+  if (entry) {
+    const kind = entryKind(entry)
+    if (kind === 'off' && entry.off) {
+      return { held: false, absences: {}, pending: true, off: { ...entry.off, status: 'pending', reviewNote: null, queued: true } }
+    }
+    if (kind === 'withdraw') return { held: false, absences: {}, pending: true, off: null }
+    return { held: true, absences: { ...entry.absences }, pending: true, off: null }
+  }
+  return {
+    held: mirror?.held ?? false,
+    absences: { ...(mirror?.absences ?? {}) },
+    pending: false,
+    off: off ? { ...off, queued: false } : null
+  }
 }
 
 /** غياباتُ مَن في القائمة وحدَهم — مَن لم يعد في الحلقة لا يُرفع غيابُه. */

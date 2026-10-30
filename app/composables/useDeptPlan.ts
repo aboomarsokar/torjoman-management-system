@@ -4,7 +4,7 @@
  */
 import type { Database } from '~/types/database.types'
 import type { Role } from '~/constants/roles'
-import { MAX_GOAL_TITLE, MAX_REPORT_FIELD, MAX_TASK_NOTES, MAX_TASK_TITLE, type DeptReportKey, type DeptTaskStatus } from '~/constants/deptPlan'
+import { DEPT_PLAN_FULL_VIEWERS, MAX_GOAL_TITLE, MAX_REPORT_FIELD, MAX_TASK_NOTES, MAX_TASK_TITLE, type DeptReportKey, type DeptTaskStatus } from '~/constants/deptPlan'
 import { carryDueDate, dueRange, shiftPlanMonth } from '~/utils/deptPlan'
 
 export type DeptPlan = Database['public']['Tables']['dept_plans']['Row']
@@ -80,10 +80,10 @@ export function useDeptPlan(year: Ref<number>, month: Ref<number>) {
     tasks.value = (t.data ?? []).map(x => ({ ...x, owners: owners.get(x.id) ?? [] }))
   }
 
-  /** العاملون النشطون (مسؤولو الأنشطة) — للمدير الإداريّ عند الإسناد، ولأسماء المسؤولين عند الجميع. */
+  /** القياداتُ النشطون (مسؤولو الأنشطة — `dept_owner_guard`) — للمدير الإداريّ عند الإسناد، ولأسماء المسؤولين. */
   async function loadStaff() {
     const { data, error } = await supabase.from('profiles').select('id, full_name, role, gender')
-      .neq('role', 'student').eq('status', 'active').order('full_name')
+      .in('role', [...DEPT_PLAN_FULL_VIEWERS]).eq('status', 'active').order('full_name')
     if (error) return handle(error)
     staff.value = (data ?? []).map(s => ({ id: s.id, name: s.full_name, role: s.role, gender: s.gender }))
   }

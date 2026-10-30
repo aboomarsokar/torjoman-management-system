@@ -1223,3 +1223,5 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 
 > **2026-10-30 — `20261030114254_women_admin_visits`:** المديرةُ الإدارية زائرةٌ لحلقات البنات (سياستا `visits_insert`/`visits_update` وحارسُ `guard_visit_visitor`: المشرفُ لحلقاته، والمديرُ الفنيّ لحلقات البنين، والمديرةُ الإدارية لحلقات البنات)، و`unlock_visit_result` يقبلها في نطاقها. و`private.quality_month_compute` يحسب زياراتِ `field_supervisor` و`technical_manager` و`women_admin` في متوسّط الزيارات (كان المشرفَ وحده منذ `20261026081420`).
+
+> **2026-10-30 — `20261030134225_dept_plan_leaders_only`:** `dept_owner_guard` يقصر مسؤولي أنشطة خطة القسم على `admin_manager` و`technical_manager` و`women_admin` و`project_supervisor` (كان أيَّ عاملٍ نشط)، فلا يرى الخطةَ غيرُ القيادات.

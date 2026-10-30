@@ -41,7 +41,7 @@ export const DEPT_TASK_STATUS_ICON: Record<DeptTaskStatus, string> = {
   not_done: 'i-lucide-circle-x'
 }
 
-/** من يقرأ الخطة كاملة (يطابق `can_view_full_dept_plan`)؛ غيرُهم يرى أنشطته وحده. */
+/** من يرى خطة القسم (يطابق `can_view_full_dept_plan`)، ومنهم وحدهم مسؤولو الأنشطة (`dept_owner_guard`) — القائمةُ لا تُظهرها لغيرهم. */
 export const DEPT_PLAN_FULL_VIEWERS = ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor'] as const
 
 export const DEPT_REPORT_FIELDS = [

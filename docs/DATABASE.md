@@ -1207,3 +1207,38 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **RLS:** القراءةُ للمدير الإداريّ ومشرف المشروع، ولا كتابةَ مباشرة؛ حارسُ النيابة على الجدولين.
 - **المشغّل** `booklet_deliveries_stock` (`private.booklet_stock_on_delivery`، بعد الإدراج والحذف وتعديل الملزمة أو النسخ): يخصم ويرفض إن لم يكفِ الرصيد، ويُرجع صافيَ ما خُصم للتسليم عند حذفه أو تعديله.
 - **الدوال:** `set_booklet_stock(booklet, quantity, alert_at, note, moved_on)` جرد، و`add_booklet_stock(booklet, copies, note, moved_on)` توريد، و`update_booklet_stock_move(move, note, moved_on)` تعديلُ الملاحظة والتاريخ (التاريخُ للتوريد والجرد) — للمدير الإداريّ. (هجرتا `…092410_booklet_stock_move_note` و`…092604_booklet_stock_move_date`.)
+
+## «لم تنعقد الحلقة» والإجازاتُ العامة (2026-10-30)
+> هجرة `20261030111156_attendance_off_days`. التصميم: `docs/superpowers/specs/2026-10-30-halaqa-off-day-design.md`.
+
+- **`attendance_off_days`** — بلاغُ المعلّم أنّ الحلقة لم تنعقد يوماً:
+  - **الأعمدة:**
+    - `halaqa_id`، `day` (فريدٌ معاً)؛
+    - `reason` (`official_holiday` · `security` · `teacher_sick` · `other`)، و`note` (≤ 300، إلزاميةٌ مع `other`)؛
+    - `status` (`pending` · `approved` · `rejected`)؛
+    - `reported_by`، `reported_at` (وقتُ الجهاز، لا يتجاوز الرفع)؛
+    - `reviewed_by`، `reviewed_at`، `review_note` (سببُ الرفض).
+  - **RLS:** القراءةُ بنمط `visible_halaqa_ids()`، ولا كتابةَ مباشرة. وحارسُ النيابة عليه.
+- **`attendance_holidays`** — إجازةٌ عامة للشبكة كلّها:
+  - **الأعمدة:** `day` (مفتاح)، `reason` (≤ 80)، `created_by` (يضبطه الحارسُ بالمستدعي).
+  - **RLS:** القراءةُ لكلّ مسجَّل، والإدراجُ والحذفُ لـ`admin_manager` وحده، ولا تعديل.
+  - **حارسُها** `private.guard_attendance_holidays` يرفض الجمعة وما قبل 1/10/2026.
+- **«يومٌ واحد = حضورٌ أو بلاغ»** في `private.guard_attendance_days`، عند إدراج يوم حضور:
+  - يومُ الإجازة يُرفض، إلا يوماً سُجّل قبل تعيينها فيُعاد حفظُه.
+  - البلاغُ المعتمَد يُرفض.
+  - البلاغُ المعلّق أو المرفوض يُحذف.
+
+  و`save_attendance_day` لم تتغيّر.
+- **الدوال** (كلُّها definer بمسارٍ فارغ، وتبدأ بـ`assert_session_writable`):
+  - **`report_off_day(halaqa, day, reason, note, reported_at)`** — لمعلّم الحلقة الحاليّ:
+    - **النافذة:** الشهرُ الجاري والسابق ما دام غيرَ معتمَد. لا جمعة، ولا إجازة، ولا يومٌ آتٍ (`private.off_day_window_ok`).
+    - **الأثر:** يمحو حضورَ اليوم، ويُشعر بـ`off_day_reported` المشرفَ ومعه المديرَ الفنيّ (بنين) أو المديرةَ الإدارية (بنات).
+    - **إعادةُ الرفع** بالمحتوى نفسه تردّ الصفَّ بلا أثر.
+  - **`withdraw_off_day(halaqa, day)`** — يسحب المعلّقَ أو المرفوض. والمعتمَدُ لا يُسحب.
+  - **`review_off_day(id, approve, note)`:**
+    - **المعتمِدون** (`private.can_review_off_day`): المشرف، والمدير الإداريّ، والمدير الفنيّ للبنين، والمديرة الإدارية للبنات.
+    - **الرفض** يُشعر المعلّمَ بـ`off_day_rejected`.
+    - **بعد اعتماد الشهر** يُقبل المعلّقُ وحده.
+- **`halaqat_recording_status`:**
+  - الإجازةُ والبلاغُ المعتمَد يخرجان من `expected_days` و`missed_days`، إلا يوماً منعقداً. والمعلّقُ يبقى ناقصاً.
+  - و`recent` يعرف `holiday` و`off` و`off_pending`.

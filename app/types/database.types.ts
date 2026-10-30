@@ -195,6 +195,105 @@ export type Database = {
           },
         ]
       }
+      attendance_holidays: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_holidays_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_off_days: {
+        Row: {
+          created_at: string
+          day: string
+          halaqa_id: string
+          id: string
+          note: string | null
+          reason: string
+          reported_at: string
+          reported_by: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          halaqa_id: string
+          id?: string
+          note?: string | null
+          reason: string
+          reported_at?: string
+          reported_by?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          halaqa_id?: string
+          id?: string
+          note?: string | null
+          reason?: string
+          reported_at?: string
+          reported_by?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_off_days_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_off_days_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_off_days_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booklet_deliveries: {
         Row: {
           booklet: number
@@ -468,6 +567,7 @@ export type Database = {
           body: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           sender_id: string | null
         }
@@ -475,6 +575,7 @@ export type Database = {
           body: string
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           sender_id?: string | null
         }
@@ -482,6 +583,7 @@ export type Database = {
           body?: string
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           sender_id?: string | null
         }
@@ -496,6 +598,195 @@ export type Database = {
           {
             foreignKeyName: "chat_messages_sender_id_fkey"
             columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dept_plan_goals: {
+        Row: {
+          created_at: string
+          id: string
+          plan_id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan_id: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan_id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dept_plan_goals_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "dept_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dept_plan_task_owners: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          profile_id: string
+          task_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          profile_id: string
+          task_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          profile_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dept_plan_task_owners_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dept_plan_task_owners_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dept_plan_task_owners_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "dept_plan_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dept_plan_tasks: {
+        Row: {
+          created_at: string
+          due_on: string
+          goal_id: string
+          id: string
+          notes: string | null
+          plan_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["dept_task_status"]
+          status_updated_at: string | null
+          status_updated_by: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          due_on: string
+          goal_id: string
+          id?: string
+          notes?: string | null
+          plan_id: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["dept_task_status"]
+          status_updated_at?: string | null
+          status_updated_by?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          due_on?: string
+          goal_id?: string
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["dept_task_status"]
+          status_updated_at?: string | null
+          status_updated_by?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dept_plan_tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "dept_plan_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dept_plan_tasks_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "dept_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dept_plan_tasks_status_updated_by_fkey"
+            columns: ["status_updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dept_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          plan_month: number
+          plan_year: number
+          report_achievements: string | null
+          report_not_done: string | null
+          report_obstacles: string | null
+          report_team_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          plan_month: number
+          plan_year: number
+          report_achievements?: string | null
+          report_not_done?: string | null
+          report_obstacles?: string | null
+          report_team_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          plan_month?: number
+          plan_year?: number
+          report_achievements?: string | null
+          report_not_done?: string | null
+          report_obstacles?: string | null
+          report_team_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dept_plans_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -595,6 +886,7 @@ export type Database = {
           created_at: string
           halaqa_id: string
           id: string
+          is_legacy: boolean
           status: Database["public"]["Enums"]["exam_list_status"]
           teacher_id: string
           updated_at: string
@@ -604,6 +896,7 @@ export type Database = {
           created_at?: string
           halaqa_id: string
           id?: string
+          is_legacy?: boolean
           status?: Database["public"]["Enums"]["exam_list_status"]
           teacher_id: string
           updated_at?: string
@@ -613,6 +906,7 @@ export type Database = {
           created_at?: string
           halaqa_id?: string
           id?: string
+          is_legacy?: boolean
           status?: Database["public"]["Enums"]["exam_list_status"]
           teacher_id?: string
           updated_at?: string
@@ -642,6 +936,7 @@ export type Database = {
           exam_list_item_id: string | null
           examiner_id: string | null
           id: string
+          is_legacy: boolean
           notes: string | null
           pass_mark_snapshot: number
           passed: boolean | null
@@ -665,6 +960,7 @@ export type Database = {
           exam_list_item_id?: string | null
           examiner_id?: string | null
           id?: string
+          is_legacy?: boolean
           notes?: string | null
           pass_mark_snapshot: number
           passed?: boolean | null
@@ -688,6 +984,7 @@ export type Database = {
           exam_list_item_id?: string | null
           examiner_id?: string | null
           id?: string
+          is_legacy?: boolean
           notes?: string | null
           pass_mark_snapshot?: number
           passed?: boolean | null
@@ -2770,6 +3067,7 @@ export type Database = {
         Args: { hid: string }
         Returns: boolean
       }
+      can_view_full_dept_plan: { Args: never; Returns: boolean }
       can_view_halaqa: { Args: { hid: string }; Returns: boolean }
       can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_view_statements_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -2802,6 +3100,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      delete_chat_message: { Args: { p_message: string }; Returns: undefined }
       deliver_booklet_request: {
         Args: { p_delivered_on: string; p_request: string }
         Returns: string
@@ -2896,6 +3195,7 @@ export type Database = {
           unread: number
         }[]
       }
+      my_dept_task_ids: { Args: never; Returns: string[] }
       my_exam_cycle_results: {
         Args: never
         Returns: {
@@ -2928,6 +3228,16 @@ export type Database = {
         Args: { p_ayah: number; p_surah: number }
         Returns: number
       }
+      report_off_day: {
+        Args: {
+          p_day: string
+          p_halaqa: string
+          p_note: string
+          p_reason: string
+          p_reported_at?: string
+        }
+        Returns: Json
+      }
       reschedule_visit: {
         Args: { p_new_time: string; p_reason: string; p_visit: string }
         Returns: undefined
@@ -2935,6 +3245,10 @@ export type Database = {
       return_statement: {
         Args: { p_note: string; p_statement: string }
         Returns: undefined
+      }
+      review_off_day: {
+        Args: { p_approve: boolean; p_id: string; p_note?: string }
+        Returns: Json
       }
       save_attendance_day: {
         Args: {
@@ -3031,12 +3345,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_my_dept_task: {
+        Args: {
+          p_notes?: string
+          p_status: Database["public"]["Enums"]["dept_task_status"]
+          p_task: string
+        }
+        Returns: undefined
+      }
       visible_halaqa_ids: { Args: never; Returns: string[] }
+      withdraw_off_day: {
+        Args: { p_day: string; p_halaqa: string }
+        Returns: Json
+      }
     }
     Enums: {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"
       alert_severity: "note" | "first_warning" | "final_warning"
       alert_status: "new" | "acknowledged"
+      dept_task_status: "not_started" | "in_progress" | "done" | "not_done"
       exam_list_status: "sent" | "in_progress" | "completed"
       gender_type: "male" | "female"
       halaqa_classification: "a" | "b"
@@ -3187,6 +3514,7 @@ export const Constants = {
       account_type: ["jawwalpay", "palpay", "bank_palestine"],
       alert_severity: ["note", "first_warning", "final_warning"],
       alert_status: ["new", "acknowledged"],
+      dept_task_status: ["not_started", "in_progress", "done", "not_done"],
       exam_list_status: ["sent", "in_progress", "completed"],
       gender_type: ["male", "female"],
       halaqa_classification: ["a", "b"],
@@ -3211,3 +3539,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -11,6 +11,18 @@ export function canApproveReportsRole(role: string | null | undefined): boolean 
   return REPORT_APPROVER_ROLES.includes(role ?? '')
 }
 
+/**
+ * هل يعتمد هذا الدور بلاغَ «لم تنعقد» لحلقةٍ بجنسٍ معيّن؟ مرآةٌ لـ`can_review_off_day`: المشرفُ الميدانيّ (حلقاتُه يقصرها
+ * RLS) والمدير الإداريّ لكلّ الحلقات، والمدير الفنيّ لحلقات البنين وحدها، والمديرةُ الإدارية لحلقات البنات وحدها.
+ * جنسٌ مجهول لا يُعتمد به فنيٌّ ولا مديرة. طبقةُ تجربةٍ فقط، والحكمُ للخادم.
+ */
+export function canReviewOffDayRole(role: string | null | undefined, halaqaGender: string | null): boolean {
+  if (role === 'admin_manager' || role === 'field_supervisor') return true
+  if (role === 'technical_manager') return halaqaGender === 'male'
+  if (role === 'women_admin') return halaqaGender === 'female'
+  return false
+}
+
 export function usePermissions() {
   const { role } = useProfile()
   const is = (r: string) => computed(() => role.value === r)

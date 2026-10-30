@@ -1,11 +1,14 @@
 import type { Ref } from 'vue'
 import type { Database } from '~/types/database.types'
+import { asOffStatus, OFF_REASON_LABELS, type OffDay, type OffReason } from '~/utils/offDays'
 
 /**
  * حضورُ يومٍ واحدٍ لحلقة: الحضورُ هو الأصل، والغياباتُ وحدها (بعذر / بلا عذر) تُسجَّل. التعديلُ في مسوّدةٍ
  * على الشاشة، و«حفظ الحضور» يكتبها ويفتح اليومَ إن لم يُسجَّل — فالحلقةُ «انعقدت» إذا سُجّل حضورُها، ولا زرَّ
  * منفصلاً (طلب المستخدم 2026-10-21). الفاشلُ يُعيد قراءةَ اليوم من القاعدة.
  * `locked` = رصدُ شهر اليوم معتمَد (الحارس في القاعدة يرفض الكتابة).
+ * ويقرأ بلاغَ «لم تنعقد» (`offDay`) والإجازةَ العامة (`holiday`) لليوم، ويعتمد البلاغَ أو يرفضه (`reviewOffDay`) —
+ * بلاغ 2026-10-30. وحفظُ الحضور ليومٍ فيه بلاغٌ معلّق أو مرفوض يمحو البلاغَ بحارس القاعدة.
  */
 export type AbsenceKind = 'excused' | 'unexcused'
 export type AttendanceChoice = 'present' | AbsenceKind
@@ -39,6 +42,41 @@ export function absenceDiff(saved: Record<string, AbsenceKind>, draft: Record<st
   return { remove, upsert }
 }
 
+/** بلاغُ يومٍ كما تعرضه الشاشة. */
+export type DayOffReport = OffDay & { id: string, reporterName: string | null, reportedAt: string }
+
+/** صفُّ `attendance_off_days` مع اسم المبلِّغ (join على `reported_by`). */
+export interface OffDayRow {
+  id: string
+  reason: string
+  note: string | null
+  status: string
+  review_note: string | null
+  reported_at: string
+  reporter: { full_name: string } | null
+}
+
+/** صفُّ القاعدة ← بلاغٌ معروض، أو `null` إن غاب الصفُّ أو جاءت قيمةٌ لا يعرفها التطبيق (لا يُعرض نصفُ بلاغ). */
+export function parseOffDayRow(row: OffDayRow | null | undefined): DayOffReport | null {
+  if (!row) return null
+  const status = asOffStatus(row.status)
+  if (!status || !(row.reason in OFF_REASON_LABELS)) return null
+  return {
+    id: row.id,
+    reason: row.reason as OffReason,
+    note: row.note,
+    status,
+    reviewNote: row.review_note,
+    reporterName: row.reporter?.full_name ?? null,
+    reportedAt: row.reported_at
+  }
+}
+
+/** هل يمحو «حفظ الحضور» بلاغاً قائماً؟ المعلّقُ والمرفوضُ يُمحيان بالحارس، والمعتمَدُ يمنع الحفظ أصلاً. */
+export function saveWouldRemoveReport(off: Pick<OffDay, 'status'> | null): boolean {
+  return off?.status === 'pending' || off?.status === 'rejected'
+}
+
 export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>) {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()
@@ -46,6 +84,9 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
   const held = ref(false)
   const absences = ref<Record<string, AbsenceKind>>({})
   const locked = ref(false)
+  const offDay = ref<DayOffReport | null>(null)
+  const holiday = ref<string | null>(null)
+  const reviewing = ref(false)
   const loading = ref(false)
   // آخرُ قراءةٍ تغلب ما سبقها: تبديلُ اليوم أو الحلقة بسرعةٍ لا يُظهر نتيجةَ طلبٍ قديم
   let generation = 0
@@ -60,23 +101,31 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
       held.value = false
       absences.value = {}
       locked.value = false
+      offDay.value = null
+      holiday.value = null
       return
     }
     loading.value = true
     try {
-      const [dayRow, absenceRows, approved] = await Promise.all([
+      const [dayRow, absenceRows, approved, offRow, holidayRow] = await Promise.all([
         supabase.from('attendance_days').select('day').eq('halaqa_id', hid).eq('day', d).maybeSingle(),
         supabase.from('attendance_absences').select('student_id, kind').eq('halaqa_id', hid).eq('day', d),
         supabase.from('monthly_reports').select('id').eq('halaqa_id', hid)
           .eq('report_month', Number(d.slice(5, 7))).eq('report_year', Number(d.slice(0, 4)))
-          .eq('status', 'approved').limit(1)
+          .eq('status', 'approved').limit(1),
+        supabase.from('attendance_off_days')
+          .select('id, reason, note, status, review_note, reported_at, reporter:profiles!attendance_off_days_reported_by_fkey(full_name)')
+          .eq('halaqa_id', hid).eq('day', d).maybeSingle(),
+        supabase.from('attendance_holidays').select('reason').eq('day', d).maybeSingle()
       ])
-      const failure = dayRow.error ?? absenceRows.error ?? approved.error
+      const failure = dayRow.error ?? absenceRows.error ?? approved.error ?? offRow.error ?? holidayRow.error
       if (failure) throw failure
       if (mine !== generation) return
       held.value = !!dayRow.data
       absences.value = Object.fromEntries((absenceRows.data ?? []).map(r => [r.student_id, r.kind as AbsenceKind]))
       locked.value = (approved.data?.length ?? 0) > 0
+      offDay.value = parseOffDayRow(offRow.data)
+      holiday.value = holidayRow.data?.reason ?? null
     } catch (err) {
       if (mine === generation) handle(err)
     } finally {
@@ -146,6 +195,8 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
       if (hid === halaqaId.value && d === day.value) {
         held.value = true
         absences.value = { ...draft.value }
+        // الحارسُ في القاعدة محا البلاغَ المعلّق أو المرفوض مع تسجيل الحضور
+        offDay.value = null
       }
       return true
     } finally {
@@ -166,5 +217,23 @@ export function useAttendanceDay(halaqaId: Ref<string | null>, day: Ref<string>)
     return ok
   }
 
-  return { held, absences, draft, locked, loading, saving, load, setDraft, isDirty, save, cancelDay }
+  /**
+   * اعتمادُ البلاغ أو رفضُه (`review_off_day`): الخادمُ يفحص الدورَ والنطاق، وبعد النجاح يُعاد قراءةُ اليوم.
+   * `note` سببُ الرفض (اختياريّ، يراه المعلّم) ويُهمَل مع القبول.
+   */
+  async function reviewOffDay(approve: boolean, note: string | null): Promise<boolean> {
+    const off = offDay.value
+    if (!off) return false
+    reviewing.value = true
+    try {
+      const reason = approve ? undefined : note?.trim() || undefined
+      const ok = await write(() => supabase.rpc('review_off_day', { p_id: off.id, p_approve: approve, p_note: reason }))
+      if (ok) await load()
+      return ok
+    } finally {
+      reviewing.value = false
+    }
+  }
+
+  return { held, absences, draft, locked, loading, saving, offDay, holiday, reviewing, load, setDraft, isDirty, save, cancelDay, reviewOffDay }
 }

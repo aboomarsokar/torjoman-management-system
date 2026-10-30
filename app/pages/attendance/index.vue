@@ -5,19 +5,21 @@
  * وتُسجَّل الغياباتُ وحدَها (بعذر / بلا عذر) في مسوّدةٍ يكتبها «حفظ الحضور»؛ والحلقةُ «انعقدت» في اليوم إذا
  * سُجّل حضورُه — لا زرَّ منفصلاً (طلب المستخدم 2026-10-21). والتعديلُ غيرُ المحفوظ يُنبَّه إليه قبل المغادرة.
  * شهرٌ رصدُه معتمَد يُقفل (قراءة)، ومشرف المشروع قراءةٌ فقط. الحكمُ الأخير لـRLS وحارسَي القاعدة.
+ * وبلاغ «لم تنعقد» (2026-10-30): يومُ إجازةٍ عامة ← شريطُ الإجازة، ويومٌ فيه بلاغٌ ← لوحةُ البلاغ بقبولٍ ورفضٍ لمعتمِده؛
+ * والبلاغُ المعلّق أو المرفوض يُترك لمن يكتب الحضورَ «حفظ الحضور» بعد تنبيهٍ بأنّه سيمحو البلاغ.
  */
 import type { Database } from '~/types/database.types'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'الحضور اليوميّ — ترجمان' })
 
-type NameRow = { id: string, name: string }
+type NameRow = { id: string, name: string, gender: string | null }
 type StudentRow = { id: string, full_name: string, enrollment_date: string | null }
 
 const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
 const { handle } = useErrorHandler()
-const { isTeacher, canApprove, isReadOnly } = usePermissions()
+const { isTeacher, isAdmin, canApprove, isReadOnly } = usePermissions()
 // المعلّمُ يسجّل حضورَه في `/t` التي تعمل بلا إنترنت (البند 14) — شاشةٌ واحدةٌ له كي لا يتسابق حفظان على اليوم نفسه
 watch(isTeacher, (teacher) => {
   if (teacher) navigateTo('/t', { replace: true })
@@ -38,7 +40,7 @@ const halaqaId = ref<string | null>(typeof route.query.h === 'string' ? route.qu
 // حلقة المعلم تلقائياً، وغيرُه يرى الحلقات التي تسمح له بها RLS
 const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<NameRow[]>('attendance-halaqat', async () => {
   if (!role.value) return []
-  const query = supabase.from('halaqat').select('id, name').order('name')
+  const query = supabase.from('halaqat').select('id, name, gender').order('name')
   if (role.value === 'teacher') {
     const { data } = await query.eq('teacher_id', profile.value?.id ?? '').limit(1)
     return data ?? []
@@ -60,7 +62,8 @@ const halaqaPick = computed<string>({
   }
 })
 const halaqaItems = computed(() => halaqat.value.map(h => ({ label: h.name, value: h.id })))
-const halaqaName = computed(() => halaqat.value.find(h => h.id === halaqaId.value)?.name ?? '')
+const currentHalaqa = computed(() => halaqat.value.find(h => h.id === halaqaId.value))
+const halaqaName = computed(() => currentHalaqa.value?.name ?? '')
 
 // الطلاب النشطون في الحلقة؛ من التحق بعد اليوم المعروض لا يظهر فيه
 const students = ref<StudentRow[]>([])
@@ -82,13 +85,16 @@ watch(halaqaId, async (hid) => {
 }, { immediate: true })
 const enrolled = computed(() => students.value.filter(s => !s.enrollment_date || s.enrollment_date <= day.value))
 
-const { held, draft, locked, loading, saving, load, setDraft, isDirty, save, cancelDay: cancelHeldDay } = useAttendanceDay(halaqaId, day)
+const { held, draft, locked, loading, saving, offDay, holiday, reviewing, load, setDraft, isDirty, save, cancelDay: cancelHeldDay, reviewOffDay } = useAttendanceDay(halaqaId, day)
 watch([halaqaId, day], load, { immediate: true })
 
-const canWrite = computed(() => !isReadOnly.value && (isTeacher.value || canApprove.value) && !locked.value && !dayIsFriday.value)
+// إجازةٌ عامة أو بلاغٌ معتمَد ← لا كتابة؛ والمعلّقُ والمرفوضُ يبقى «حفظ الحضور» لهما (يمحوهما)
+const canWrite = computed(() => !isReadOnly.value && (isTeacher.value || canApprove.value) && !locked.value && !dayIsFriday.value
+  && !holiday.value && offDay.value?.status !== 'approved')
+// الإجازة تُخفي القائمة إلا إن سُجّل فيها حضورٌ قبل تعيينها (يبقى قراءةً)، والبلاغُ يُخفيها عمّن لا يكتب
+const showList = computed(() => (!holiday.value || held.value) && (!offDay.value || canWrite.value))
+const canReview = computed(() => !isReadOnly.value && canReviewOffDayRole(role.value, currentHalaqa.value?.gender ?? null))
 const enrolledIds = computed(() => enrolled.value.map(s => s.id))
-const summary = computed(() => summarizeDay(enrolled.value, draft.value))
-const summaryText = computed(() => `حضر ${summary.value.present} · بعذر ${summary.value.excused} · بلا عذر ${summary.value.unexcused}`)
 
 // «حفظ الحضور» يسجّل اليومَ (فتنعقد الحلقة به) والغيابات معاً — متاحٌ ليومٍ لم يُسجَّل ولو بلا تعديل
 const dirty = computed(() => isDirty(enrolledIds.value))
@@ -96,6 +102,21 @@ const canSave = computed(() => canWrite.value && enrolled.value.length > 0 && (!
 const toast = useToast()
 async function saveAttendance() {
   if (await save(enrolledIds.value)) toast.add({ title: 'حُفظ الحضور.', color: 'success', icon: 'i-lucide-circle-check' })
+}
+// يومٌ فيه بلاغٌ معلّق أو مرفوض: الحفظُ يمحو البلاغ (حارس القاعدة) فيُؤكَّد أولاً
+const confirmSave = ref(false)
+function requestSave() {
+  if (saveWouldRemoveReport(offDay.value)) confirmSave.value = true
+  else saveAttendance()
+}
+async function confirmedSave() {
+  confirmSave.value = false
+  await saveAttendance()
+}
+async function review(approve: boolean, note: string | null) {
+  if (await reviewOffDay(approve, note)) {
+    toast.add({ title: approve ? 'اعتُمد البلاغ.' : 'رُفض البلاغ.', color: 'success', icon: 'i-lucide-circle-check' })
+  }
 }
 
 // تعديلٌ لم يُحفظ: تأكيدٌ قبل تبديل اليوم أو الحلقة أو مغادرة الشاشة
@@ -124,7 +145,22 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
     <UiPageHeader
       title="الحضور اليوميّ"
       subtitle="الجميعُ حاضرٌ افتراضاً — سجّل الغياباتِ وحدَها ثم «حفظ الحضور»."
-    />
+    >
+      <template
+        v-if="isAdmin"
+        #actions
+      >
+        <UButton
+          label="أيام الإجازة"
+          icon="i-lucide-calendar-heart"
+          color="neutral"
+          variant="outline"
+          size="lg"
+          to="/attendance/holidays"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
+        />
+      </template>
+    </UiPageHeader>
 
     <UiEmptyState
       v-if="role && !halaqatPending && !halaqat.length"
@@ -133,55 +169,20 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
     />
 
     <template v-else>
-      <div class="card pick">
-        <div
-          v-if="!isTeacher"
-          class="pf"
-        >
-          <label>الحلقة</label>
-          <UiSelect
-            v-model="halaqaPick"
-            :items="halaqaItems"
-            size="lg"
-          />
-        </div>
-        <div
-          v-else
-          class="pf"
-        >
-          <label>الحلقة</label>
-          <div class="halqa-auto">
-            <UIcon
-              name="i-lucide-book-open"
-              class="size-5"
-            />
-            {{ halaqaName }}
-          </div>
-        </div>
-        <div class="pf">
-          <label>اليوم</label>
-          <AttendanceDayPicker
-            v-model="dayModel"
-            :max="today"
-          />
-        </div>
-      </div>
+      <AttendancePickCard
+        v-model:halaqa="halaqaPick"
+        v-model:day="dayModel"
+        :fixed="isTeacher"
+        :halaqa-name="halaqaName"
+        :items="halaqaItems"
+        :max="today"
+      />
 
       <!-- يومَ الجمعة: عطلةٌ بلا رصد، والشاشةُ على الخميس قبلها -->
-      <div
+      <AttendanceFridayNotice
         v-if="fridayToday"
-        class="holiday"
-        role="status"
-      >
-        <UIcon
-          name="i-lucide-calendar-off"
-          class="size-6 shrink-0"
-        />
-        <div>
-          <b>اليوم الجمعة — عطلةُ الحلقات</b>
-          <span>لا يُسجَّل فيه حضور. يُعرض الخميس <bdi class="holiday-day">{{ formatDay(schoolDayOnOrBefore(today)) }}</bdi> لتُكمل حضوره إن لزم.</span>
-        </div>
-      </div>
+        :thursday-label="formatDay(schoolDayOnOrBefore(today))"
+      />
 
       <div
         v-if="locked"
@@ -218,79 +219,53 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
       />
 
       <template v-else-if="halaqaId">
+        <AttendanceHolidayBanner
+          v-if="holiday"
+          :reason="holiday"
+          class="mb-4"
+        />
+        <AttendanceOffDayReviewPanel
+          v-if="offDay"
+          :day-label="formatDay(day)"
+          :off="offDay"
+          :can-review="canReview"
+          :busy="reviewing"
+          @review="review"
+        />
+
         <!-- حالُ اليوم: الحلقةُ «انعقدت» إذا سُجّل حضورُها — لا زرَّ منفصلاً -->
-        <div
-          class="day-state"
-          :class="{ on: held }"
-        >
-          <UIcon
-            :name="held ? 'i-lucide-calendar-check' : 'i-lucide-calendar-clock'"
-            class="size-5"
-          />
-          <span>{{ held ? 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' : canWrite ? 'لم يُسجَّل حضور هذا اليوم بعد — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' : 'لم يُسجَّل حضور هذا اليوم.' }}</span>
-          <button
-            v-if="held && canWrite"
-            type="button"
-            class="cancel-link"
-            @click="confirmCancel = true"
-          >
-            إلغاء حضور هذا اليوم
-          </button>
-        </div>
+        <AttendanceDayStateBar
+          v-if="showList"
+          :held="held"
+          :can-write="canWrite"
+          @cancel="confirmCancel = true"
+        />
 
         <UiEmptyState
-          v-if="!enrolled.length"
+          v-if="showList && !enrolled.length"
           icon="i-lucide-users"
           title="لا طلاب نشطون ملتحقون في هذا اليوم"
         />
         <UiEmptyState
-          v-else-if="!held && !canWrite"
+          v-else-if="showList && !held && !canWrite"
           icon="i-lucide-calendar-x"
           title="لم تنعقد الحلقة في هذا اليوم"
         />
-        <template v-else>
-          <p
-            class="summary"
-            aria-live="polite"
-          >
-            {{ summaryText }}
-          </p>
-          <ul class="card list">
-            <li
-              v-for="s in enrolled"
-              :key="s.id"
-              class="row"
-            >
-              <span class="name">{{ s.full_name }}</span>
-              <AttendanceStatusSegment
-                :model-value="draft[s.id] ?? 'present'"
-                :name="s.full_name"
-                :disabled="!canWrite"
-                @update:model-value="setDraft(s.id, $event)"
-              />
-            </li>
-          </ul>
-
-          <div
+        <template v-else-if="showList">
+          <AttendanceStudentList
+            :students="enrolled"
+            :draft="draft"
+            :disabled="!canWrite"
+            @set="setDraft"
+          />
+          <AttendanceSaveBar
             v-if="canWrite"
-            class="save-bar"
-            data-float-above
-          >
-            <span
-              class="save-note"
-              :class="{ warn: dirty }"
-            >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
-            <UButton
-              label="حفظ الحضور"
-              icon="i-lucide-save"
-              color="primary"
-              size="lg"
-              :loading="saving"
-              :disabled="!canSave"
-              :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
-              @click="saveAttendance"
-            />
-          </div>
+            :dirty="dirty"
+            :held="held"
+            :saving="saving"
+            :can-save="canSave"
+            @save="requestSave"
+          />
         </template>
       </template>
     </template>
@@ -303,40 +278,20 @@ const pending = computed(() => !role.value || halaqatPending.value || studentsLo
       :loading="cancelling"
       @confirm="cancelDay"
     />
+    <UiConfirmModal
+      v-model:open="confirmSave"
+      title="حفظ الحضور يمحو البلاغ"
+      message="لهذا اليوم بلاغُ «لم تنعقد الحلقة» لم يُعتمد. بحفظ الحضور يُحذف البلاغ ويُعدّ اليومُ يوماً انعقدت فيه الحلقة."
+      confirm-label="احفظ الحضور وامحُ البلاغ"
+      confirm-color="primary"
+      confirm-icon="i-lucide-save"
+      :loading="saving"
+      @confirm="confirmedSave"
+    />
   </div>
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
-.pick { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
-.pf { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; }
-.pf label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.halqa-auto { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 0 16px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); font-size: 15.5px; font-weight: 600; color: var(--ink); }
-
 .locked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
-.holiday { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; margin-bottom: 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent); background: var(--blue-soft); color: var(--blue-ink); line-height: 1.6; }
-.holiday b { display: block; font-size: 15.5px; font-weight: 700; }
-.holiday span { font-size: 14.5px; font-weight: 500; }
-.holiday-day { white-space: nowrap; font-variant-numeric: tabular-nums; }
-
-.day-state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--blue-soft); color: var(--blue-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
-.day-state.on { background: var(--green-soft); color: var(--green-ink); }
-.day-state > span { flex: 1 1 220px; }
-.cancel-link { border: none; background: none; padding: 0; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--err); text-decoration: underline; cursor: pointer; min-height: 44px; }
-
-.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; padding: 12px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
-.save-note { font-size: 14px; font-weight: 600; color: var(--ink-3); }
-.save-note.warn { color: var(--err); }
-
-.summary { margin: 0 4px 12px; font-size: 15px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.list { list-style: none; margin: 0; padding: 6px 20px; }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 10px 0; }
-.row + .row { border-top: 1px solid var(--line); }
-.name { font-size: 15.5px; font-weight: 600; color: var(--ink); min-width: 0; }
-
-@media (max-width: 520px) {
-  .row { flex-direction: column; align-items: stretch; gap: 8px; }
-  .save-bar :deep(button) { flex: 1 1 100%; }
-}
 </style>

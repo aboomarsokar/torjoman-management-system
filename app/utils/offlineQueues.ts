@@ -11,6 +11,8 @@ import type { AckEntry } from '~/utils/ackOutbox'
 import { incentiveSnapshotKey, settledSnapshot, uploadIncentiveDraft, type IncentiveEntry, type IncentiveSnapshot } from '~/utils/incentiveOutbox'
 import { patchSnapshot } from '~/utils/offlineSnapshot'
 import { SCREEN_KEYS } from '~/utils/teacherScreens'
+import { EXAMS_QUEUE_KEY, type ExamQueueRaw } from '~/utils/fieldScreens'
+import { uploadExamResult, type ExamEntry } from '~/utils/examOutbox'
 import { settledVisits, uploadVisitResult, type VisitEntry } from '~/utils/visitOutbox'
 import type { VisitRow } from '~/types/visits'
 
@@ -19,6 +21,7 @@ export const QURAN_QUEUE = 'quran'
 export const ACK_QUEUE = 'acks'
 export const INCENTIVE_QUEUE = 'incentives'
 export const VISIT_QUEUE = 'visits'
+export const EXAM_QUEUE = 'exams'
 
 defineOfflineQueue<OutboxEntry>(ATTENDANCE_QUEUE, {
   store: 'outbox',
@@ -89,5 +92,15 @@ defineOfflineQueue<VisitEntry>(VISIT_QUEUE, {
   // الصفُّ المرفوع (قفلُه ومجموعُه من القاعدة) يدخل نسخةَ الزيارات — فيبقى مقفلاً إن فُتحت الشاشةُ بلا اتصالٍ بعد الرفع
   async settle(e, data) {
     await patchSnapshot<VisitRow[]>(e.uid, SCREEN_KEYS.visits, rows => settledVisits(rows, e.visitId, data as Partial<VisitRow>))
+  }
+})
+
+defineOfflineQueue<ExamEntry>(EXAM_QUEUE, {
+  store: 'exam_outbox',
+  order: (a, b) => a.recordedAt.localeCompare(b.recordedAt),
+  upload: uploadExamResult,
+  // البندُ المرصود يخرج من نسخة الطابور — فلا يعود إن فُتحت الشاشةُ بلا اتصالٍ بعد الرفع
+  async settle(e) {
+    await patchSnapshot<ExamQueueRaw[]>(e.uid, EXAMS_QUEUE_KEY, rows => rows.filter(r => r.id !== e.itemId))
   }
 })

@@ -5,8 +5,9 @@
  * يفتح نافذةَ الرصد (ExamsGradeModal)، وللمديرَين سحبُ الترشيح المعلّق. على الجوال بطاقات.
  */
 import type { Database } from '~/types/database.types'
-import { cycleSpanLabel, toExamCycle, type ExamCycleRow } from '~/utils/exams/cycles'
+import { cycleSpanLabel, toExamCycle } from '~/utils/exams/cycles'
 import { examTargetText, type WithdrawTarget } from '~/utils/exams/nomination'
+import { EXAMS_QUEUE_KEY, fetchExamQueue, type ExamQueueRaw } from '~/utils/fieldScreens'
 
 const emit = defineEmits<{ graded: [] }>()
 
@@ -16,35 +17,17 @@ const { isManager } = usePermissions()
 const { handle } = useErrorHandler()
 const quran = useQuranReference()
 
-type QueueRaw = {
-  id: string
-  student: { id: string, full_name: string } | null
-  exam_cycle: ExamCycleRow | null
-  exam_list: { halaqa: { name: string } | null, teacher: { full_name: string } | null } | null
-  exam_results: { id: string }[] | null
-}
 /** صفُّ الطابور المعروض. */
 type QueueRow = { id: string, student: { id: string, full_name: string } | null, name: string, halaqa: string, teacher: string, title: string, detail: string, span: string }
 
-/** سقفُ الطابور المعروض (الأحدثُ أولاً) — دون سقف PostgREST (1000) كي لا يُقصّ بصمت. */
-const QUEUE_LIMIT = 500
-
-const { data: raw, refresh, pending } = useLazyAsyncData<QueueRaw[]>('exams-queue', async () => {
+const { data: raw, refresh, pending } = useLazyAsyncData<ExamQueueRaw[]>(EXAMS_QUEUE_KEY, async () => {
   void quran.load()
-  // المعلّقُ وحده يُصفّى في الخادم: ضمٌّ عكسيّ (البنودُ التي لا نتيجةَ لها)
-  const { data, error } = await supabase
-    .from('exam_list_items')
-    .select('id, student:student_id(id, full_name), exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), exam_list:exam_list_id(halaqa:halaqa_id(name), teacher:teacher_id(full_name)), exam_results(id)')
-    .not('exam_cycle_id', 'is', null)
-    .is('exam_results', null)
-    .order('created_at', { ascending: false })
-    .limit(QUEUE_LIMIT)
-    .returns<QueueRaw[]>()
-  if (error) {
+  try {
+    return await fetchExamQueue(supabase)
+  } catch (error) {
     handle(error)
     return []
   }
-  return data ?? []
 }, { server: false, default: () => [], watch: [role] })
 
 const rows = computed<QueueRow[]>(() => (raw.value ?? []).map((i) => {

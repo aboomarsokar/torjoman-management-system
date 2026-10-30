@@ -17,9 +17,9 @@ export default defineEventHandler(async (event) => {
   if (!ALLOWED[kind].includes(caller.role)) {
     throw createError({ statusCode: 403, statusMessage: 'إعادة الصياغة لمن يكتب هذه الرسائل.' })
   }
-  const audience = AUDIENCES.find(a => a === body.audience) ?? 'mixed'
-  const title = String(body.title ?? '').trim()
-  const text = String(body.body ?? '').trim()
+  const audience = AUDIENCES.find(a => a === body?.audience) ?? 'mixed'
+  const title = String(body?.title ?? '').trim()
+  const text = String(body?.body ?? '').trim()
   if (!title && !text) throw createError({ statusCode: 400, statusMessage: 'اكتب الرسالة أوّلاً ثمّ أعد صياغتها.' })
   if (title.length + text.length > REWRITE_MAX_INPUT) {
     throw createError({ statusCode: 400, statusMessage: `النصّ أطول من ${REWRITE_MAX_INPUT} حرف.` })

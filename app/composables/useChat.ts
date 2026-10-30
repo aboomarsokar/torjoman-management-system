@@ -27,7 +27,7 @@ export function totalUnread(rows: Pick<ChatRow, 'unread'>[]): number {
  */
 export function mergeMessage(list: ChatMessage[], msg: ChatMessage): ChatMessage[] {
   const old = list.find(m => m.id === msg.id)
-  if (old && old.created_at === msg.created_at && old.body === msg.body) return list
+  if (old && old.created_at === msg.created_at && old.body === msg.body && old.deleted_at === msg.deleted_at) return list
   return [...list.filter(m => m.id !== msg.id), msg].sort((a, b) => a.created_at.localeCompare(b.created_at))
 }
 

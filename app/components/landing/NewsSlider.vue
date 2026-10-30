@@ -4,6 +4,8 @@
  * قابل للتمرير، مع أزرار تنقّل ونقاط مؤشّر. كل بطاقة تفتح شاشة قراءة الخبر
  * الكاملة (`/news/[id]`).
  */
+import type { ComponentPublicInstance } from 'vue'
+
 type NewsItem = {
   id: string
   cat: string
@@ -19,8 +21,9 @@ const trackEl = ref<HTMLElement | null>(null)
 const cardEls = ref<(HTMLElement | null)[]>([])
 const activeIndex = ref(0)
 
-function setCardEl(el: Element | null, i: number) {
-  cardEls.value[i] = el as HTMLElement | null
+/** مرجعُ الدالّة يُعطى عنصراً أو مكوّناً (أنواعُ Vue) — والبطاقةُ هنا عنصرُ article دائماً. */
+function setCardEl(el: Element | ComponentPublicInstance | null, i: number) {
+  cardEls.value[i] = el instanceof HTMLElement ? el : null
 }
 
 function goTo(i: number) {
@@ -63,7 +66,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <article
         v-for="(n, i) in news"
         :key="n.id"
-        :ref="(el: Element | null) => setCardEl(el, i)"
+        :ref="(el: Element | ComponentPublicInstance | null) => setCardEl(el, i)"
         class="news-card"
       >
         <NuxtLink

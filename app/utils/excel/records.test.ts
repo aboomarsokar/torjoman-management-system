@@ -27,7 +27,11 @@ describe('الرسائل والطلبات', () => {
       .toMatchObject({ by: 'المدير', count: 40 })
     expect(staffMessagesSheet([{ created_at: '2026-10-27T10:00:00Z', sent_by: 'a', roles: ['teacher'], section: 'male', target_id: null, recipients: 22, title: 'ت', body: null }] as never[], c).rows[0])
       .toMatchObject({ to: 'المعلّمون · البنين', count: 22 })
-    expect(studentRequestsSheet([{ created_at: '2026-10-27T10:00:00Z', halaqa_id: 'h1', requested_by: 't1', full_name: 'أحمد', national_id: '400000001', status: 'rejected', reject_note: 'مكرّر', closed_at: null }] as never[], c).rows[0])
-      .toMatchObject({ halaqa: 'الصبرة', by: 'محمود', status: 'رُفض', reason: 'مكرّر' })
+    const rows = studentRequestsSheet([
+      { created_at: '2026-10-27T10:00:00Z', kind: 'add', halaqa_id: 'h1', requested_by: 't1', full_name: 'أحمد', national_id: '400000001', status: 'rejected', reject_note: 'مكرّر', note: null, closed_at: null },
+      { created_at: '2026-10-28T10:00:00Z', kind: 'remove', halaqa_id: 'h1', requested_by: 't1', full_name: 'باسم', national_id: null, status: 'removed', reject_note: null, note: 'انتقل لمدرسة أخرى', closed_at: null }
+    ] as never[], c).rows
+    expect(rows[1]).toMatchObject({ kind: 'إضافة', halaqa: 'الصبرة', by: 'محمود', status: 'رُفض', reason: 'مكرّر' })
+    expect(rows[0]).toMatchObject({ kind: 'حذف', status: 'أُنهي التحاقه', note: 'انتقل لمدرسة أخرى' })
   })
 })

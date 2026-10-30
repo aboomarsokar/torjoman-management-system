@@ -16,11 +16,16 @@ describe('totalUnread', () => {
 })
 
 describe('mergeMessage', () => {
-  const m = (id: string, at: string) => ({ id, created_at: at, body: id, conversation_id: 'c', sender_id: 's' }) as ChatMessage
+  const m = (id: string, at: string) => ({ id, created_at: at, body: id, conversation_id: 'c', sender_id: 's', deleted_at: null }) as ChatMessage
   it('لا يكرّر ويحفظ الترتيب', () => {
     const list = [m('a', '2026-10-27T10:00:00Z'), m('c', '2026-10-27T10:02:00Z')]
     expect(mergeMessage(list, m('a', '2026-10-27T10:00:00Z'))).toBe(list)
     expect(mergeMessage(list, m('b', '2026-10-27T10:01:00Z')).map(x => x.id)).toEqual(['a', 'b', 'c'])
+  })
+  it('الحذفُ يستبدل النسخة', () => {
+    const list = [m('a', '2026-10-27T10:00:00Z')]
+    const out = mergeMessage(list, { ...m('a', '2026-10-27T10:00:00Z'), body: '', deleted_at: '2026-10-29T10:00:00Z' })
+    expect(out[0]).toMatchObject({ body: '', deleted_at: '2026-10-29T10:00:00Z' })
   })
   it('يستبدل نسخةً بوقتٍ خاطئ بنسخة الخادم فيعود ترتيبُها', () => {
     const list = [m('mine', '2026-10-26T21:54:00Z'), m('a', '2026-10-28T11:24:00Z')]

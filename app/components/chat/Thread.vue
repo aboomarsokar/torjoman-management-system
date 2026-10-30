@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * المحادثةُ المفتوحة (طلب المستخدم 2026-10-27): رأسٌ بالاسم و«متصل الآن / آخر ظهور» (أو عددِ أعضاء المجموعة)،
- * والرسائلُ بفواصل الأيام واسمِ المرسِل في المجموعة وعلامةِ «قُرئت» في الفردية، وخانةُ الكتابة (Enter يرسل).
+ * والرسائلُ بفواصل الأيام واسمِ المرسِل في المجموعة وعلامةِ «قُرئت»، وخانةُ الكتابة (Enter يرسل). الضغطُ على رسالتك يُظهر
+ * «حذف» — تُحذف للجميع ويبقى مكانُها «حُذفت هذه الرسالة» (2026-10-29).
  */
 import { chatTitle, type ChatRow } from '~/composables/useChat'
 import { CHAT_MAX_BODY } from '~/constants/chat'
@@ -12,7 +13,25 @@ const props = defineProps<{ chat: ChatRow, me: string | null, now: number, initi
 const emit = defineEmits<{ back: [] }>()
 
 const id = computed(() => props.chat.id)
-const { messages, members, loading, sending, send } = useChatThread(id)
+const { messages, members, loading, sending, send, remove } = useChatThread(id)
+/** رسالتُك المختارة (تُظهر زرَّ الحذف)، والتي تنتظر تأكيدَ حذفها. */
+const picked = ref<string | null>(null)
+const toDelete = ref<string | null>(null)
+const deleting = ref(false)
+function pick(m: { id: string, sender_id: string | null, deleted_at: string | null }) {
+  if (m.sender_id !== props.me || m.deleted_at) return
+  picked.value = picked.value === m.id ? null : m.id
+}
+async function confirmDelete() {
+  if (!toDelete.value) return
+  deleting.value = true
+  const ok = await remove(toDelete.value)
+  deleting.value = false
+  if (ok) {
+    toDelete.value = null
+    picked.value = null
+  }
+}
 const draft = ref(props.initialDraft ?? '')
 const scroller = ref<HTMLElement | null>(null)
 
@@ -114,26 +133,62 @@ function onKey(e: KeyboardEvent) {
         </div>
         <div
           class="th-msg"
-          :class="{ mine: m.sender_id === me }"
+          :class="{ mine: m.sender_id === me, deleted: !!m.deleted_at, picked: picked === m.id }"
+          @click="pick(m)"
         >
           <b
             v-if="isGroup && m.sender_id !== me && m.sender_id !== messages[i - 1]?.sender_id"
             class="th-from"
           >{{ nameOf.get(m.sender_id ?? '') ?? 'عضوٌ سابق' }}</b>
-          <p>{{ m.body }}</p>
+          <p
+            v-if="m.deleted_at"
+            class="th-gone"
+          >
+            <UIcon
+              name="i-lucide-ban"
+              class="size-4"
+            />حُذفت هذه الرسالة
+          </p>
+          <p v-else>
+            {{ m.body }}
+          </p>
           <span class="th-meta">
             {{ messageTime(m.created_at) }}
             <UIcon
-              v-if="m.sender_id === me"
+              v-if="m.sender_id === me && !m.deleted_at"
               :name="readByOthers(m.created_at, members, me ?? '') ? 'i-lucide-check-check' : 'i-lucide-check'"
               class="th-tick"
               :class="{ read: readByOthers(m.created_at, members, me ?? '') }"
               :aria-label="readByOthers(m.created_at, members, me ?? '') ? (isGroup ? 'قرأها الجميع' : 'قُرئت') : 'أُرسلت'"
             />
           </span>
+          <div
+            v-if="picked === m.id"
+            class="th-acts"
+          >
+            <UButton
+              label="حذف للجميع"
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="soft"
+              size="sm"
+              :ui="{ base: 'rounded-full min-h-9 px-3' }"
+              @click.stop="toDelete = m.id"
+            />
+          </div>
         </div>
       </template>
     </div>
+
+    <UiConfirmModal
+      :open="!!toDelete"
+      title="حذفُ الرسالة"
+      message="تُحذف الرسالة عند الجميع، ويظهر مكانها «حُذفت هذه الرسالة». لا يمكن التراجع."
+      confirm-label="احذف"
+      :loading="deleting"
+      @confirm="confirmDelete"
+      @update:open="(v: boolean) => { if (!v) toDelete = null }"
+    />
 
     <form
       class="th-compose"
@@ -184,6 +239,11 @@ function onKey(e: KeyboardEvent) {
 .th-msg p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; color: var(--ink); font-size: 15px; }
 .th-meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .th-tick { width: 16px; height: 16px; color: var(--ink-3); }
+.th-msg.mine:not(.deleted) { cursor: pointer; }
+.th-msg.picked { box-shadow: 0 0 0 2px var(--blue); }
+.th-msg.deleted { background: transparent; border: 1px dashed var(--line); }
+.th-gone { display: flex; align-items: center; gap: 6px; color: var(--ink-3) !important; font-style: italic; font-size: 14px !important; }
+.th-acts { display: flex; justify-content: flex-end; margin-top: 6px; }
 .th-tick.read { color: var(--blue); }
 .th-compose { display: flex; gap: 8px; align-items: flex-end; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--surface); }
 @media (max-width: 900px) { .th-back { display: inline-flex; } }

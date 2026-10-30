@@ -89,14 +89,26 @@ const otherReporter = (i: OffDayQueueItem) => (i.reporterName && i.reporterName 
             class="odq-teacher"
           >
             {{ teacherWord(i) }}: <b>{{ i.teacherName }}</b>
-            <template v-if="i.teacherPhone">
-              ·
-              <a
-                :href="telLink(i.teacherPhone)"
-                class="odq-phone"
-                :aria-label="`اتصل بـ${teacherWord(i)} ${i.teacherName}`"
-              ><bdi>{{ i.teacherPhone }}</bdi></a>
-            </template>
+          </span>
+          <span
+            v-if="i.teacherName"
+            class="odq-contact"
+          >
+            <UButton
+              v-if="i.teacherPhone"
+              :to="telLink(i.teacherPhone)"
+              icon="i-lucide-phone"
+              color="primary"
+              variant="soft"
+              :aria-label="`اتصل بـ${teacherWord(i)} ${i.teacherName}`"
+              :ui="{ base: 'min-h-11 rounded-[10px] font-semibold', leadingIcon: 'size-4' }"
+            >
+              <bdi class="odq-num">{{ i.teacherPhone }}</bdi>
+            </UButton>
+            <span
+              v-else
+              class="odq-nophone"
+            >لا رقم جوال مسجَّل</span>
             <UButton
               v-if="whatsappLink(i.teacherWhatsapp || i.teacherPhone)"
               :to="whatsappLink(i.teacherWhatsapp || i.teacherPhone)!"
@@ -201,8 +213,9 @@ const otherReporter = (i: OffDayQueueItem) => (i.reporterName && i.reporterName 
 .odq-by { font-size: 13px; color: var(--ink-3); }
 .odq-teacher { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 14px; color: var(--ink-2); }
 .odq-teacher b { font-weight: 700; color: var(--ink); }
-.odq-phone { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 600; font-variant-numeric: tabular-nums; text-decoration: none; }
-.odq-phone:hover { text-decoration: underline; }
+.odq-contact { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.odq-num { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.odq-nophone { font-size: 13px; color: var(--ink-3); }
 .odq-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 @media (max-width: 520px) {
   .odq { padding: 16px; }

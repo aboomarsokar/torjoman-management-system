@@ -104,6 +104,8 @@ const mainNav: Item[] = [
   // متابعةُ رصد الحضور والشهر القرآنيّ لمعرفة المقصّر (طلب المستخدم 2026-10-22)
   { key: 'follow-up', label: 'متابعة الرصد', icon: 'i-lucide-list-checks', to: '/follow-up', roles: [PS, ADMIN, TECH, WOMEN, FIELD], group: 'quran' },
   { key: 'attendance', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/attendance', roles: ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor'], group: 'quran' },
+  // أيامُ الإجازة العامة (بلاغ «لم تنعقد» 2026-10-30): للمدير الإداري وحده
+  { key: 'holidays', label: 'أيام الإجازة', icon: 'i-lucide-calendar-off', to: '/attendance/holidays', roles: ['admin_manager'], group: 'quran', isNew: true },
   // المعلّمُ يسجّل حضورَه في الشاشة التي تعمل بلا إنترنت (البند 14، 2026-10-26)
   { key: 'attendance-offline', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/t', roles: ['teacher'], group: 'quran', isNew: true },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً

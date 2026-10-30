@@ -4,7 +4,8 @@
  */
 import type { Database } from '~/types/database.types'
 import type { Role } from '~/constants/roles'
-import { CANDIDATE_CRITERIA, CRITERION_MAX, MAX_CANDIDATE_LONG, MAX_INTERVIEW_PLACE, type CandidateStatus } from '~/constants/candidates'
+import { CANDIDATE_CRITERIA, CRITERION_MAX, DEFAULT_INVITE_SMS, MAX_CANDIDATE_LONG, MAX_INTERVIEW_PLACE, type CandidateStatus } from '~/constants/candidates'
+import { SMS_REQUEST_CHUNK } from '~/utils/sms'
 
 type Row = Database['public']['Tables']['candidates']['Row']
 export interface CandidateEvaluation { evaluator_id: string, scores: number[], notes: string | null, updated_at: string }
@@ -114,24 +115,43 @@ export function useCandidates() {
     }, { onConflict: 'candidate_id,evaluator_id' }), 'حُفظ تقييمك.')
   }
 
-  /** رسالةُ الدعوة SMS للمدعوّين (النصُّ يُبنى في الخادم لكلٍّ باسمه وموعده). */
-  async function sendInviteSms(ids: string[]): Promise<boolean> {
+  const inviteTemplate = ref(DEFAULT_INVITE_SMS)
+  async function loadInviteTemplate() {
+    const { data } = await supabase.from('app_settings').select('candidate_invite_sms').eq('id', 1).maybeSingle()
+    if (data?.candidate_invite_sms) inviteTemplate.value = data.candidate_invite_sms
+  }
+
+  /**
+   * رسالةُ الدعوة SMS للمدعوّين على دفعاتٍ من `SMS_REQUEST_CHUNK` (النصُّ يُبنى في الخادم لكلٍّ باسمه وموعده من الصيغة).
+   * `save` يعتمد الصيغةَ (المدير الإداريّ) مع الدفعة الأولى.
+   */
+  async function sendInviteSms(ids: string[], template: string, save: boolean): Promise<boolean> {
     if (!ids.length) return warn('اختر مرشّحاً واحداً على الأقلّ.')
     busy.value = true
+    const total = { sent: 0, failed: 0, skipped: 0, error: null as string | null }
     try {
-      const r = await $fetch<{ sent: number, failed: number, skipped: number, error: string | null }>('/api/candidates/invite-sms', { method: 'POST', body: { ids } })
-      if (r.sent) toast.add({ title: `أُرسلت رسالة الدعوة إلى ${r.sent}.`, color: 'success', icon: 'i-lucide-circle-check' })
-      if (r.failed) toast.add({ title: `تعذّر الإرسال إلى ${r.failed}: ${r.error ?? ''}`, color: 'error', icon: 'i-lucide-circle-alert' })
-      if (r.skipped) toast.add({ title: `تُرك ${r.skipped} بلا دعوةٍ بموعد أو رقمٍ صالح.`, color: 'warning', icon: 'i-lucide-info' })
-      await load()
-      return r.sent > 0
+      for (let i = 0; i < ids.length; i += SMS_REQUEST_CHUNK) {
+        const r = await $fetch<{ sent: number, failed: number, skipped: number, error: string | null }>('/api/candidates/invite-sms', {
+          method: 'POST', body: { ids: ids.slice(i, i + SMS_REQUEST_CHUNK), template, save: save && i === 0 }
+        })
+        total.sent += r.sent
+        total.failed += r.failed
+        total.skipped += r.skipped
+        total.error ??= r.error
+        if (!r.sent && r.failed) break // خطأُ حساب (رصيد/مرسل) — لا جدوى من الدفعات التالية
+      }
+      if (save) inviteTemplate.value = template
     } catch (err) {
       handle(err, 'تعذّر إرسال رسالة الدعوة.')
-      return false
     } finally {
       busy.value = false
     }
+    if (total.sent) toast.add({ title: `أُرسلت رسالة الدعوة إلى ${total.sent}.`, color: 'success', icon: 'i-lucide-circle-check' })
+    if (total.failed) toast.add({ title: `تعذّر الإرسال إلى ${total.failed}: ${total.error ?? ''}`, color: 'error', icon: 'i-lucide-circle-alert' })
+    if (total.skipped) toast.add({ title: `تُرك ${total.skipped} بلا دعوةٍ بموعد أو رقمٍ صالح.`, color: 'warning', icon: 'i-lucide-info' })
+    await load()
+    return total.sent > 0
   }
 
-  return { candidates, staff, loading, busy, load, loadStaff, schedule, decide, remove, evaluate, sendInviteSms }
+  return { candidates, staff, loading, busy, inviteTemplate, load, loadStaff, loadInviteTemplate, schedule, decide, remove, evaluate, sendInviteSms }
 }

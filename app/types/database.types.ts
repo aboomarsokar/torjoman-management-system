@@ -73,6 +73,7 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          candidate_invite_sms: string
           created_at: string
           id: number
           pass_mark: number
@@ -84,6 +85,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          candidate_invite_sms?: string
           created_at?: string
           id?: number
           pass_mark?: number
@@ -95,6 +97,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          candidate_invite_sms?: string
           created_at?: string
           id?: number
           pass_mark?: number

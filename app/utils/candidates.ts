@@ -127,11 +127,21 @@ export function interviewWhen(iso: string): string {
   return new Date(iso).toLocaleString('ar-EG-u-nu-latn', { timeZone: 'Asia/Gaza', weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-/** رسالةُ SMS قصيرة (مقطعان في الغالب) بموعد المقابلة ومكانها. */
-export function inviteSms(name: string, gender: 'male' | 'female', iso: string, place: string | null): string {
-  const you = gender === 'female' ? 'الأخت' : 'الأخ'
-  const first = name.trim().split(/\s+/)[0] ?? ''
-  return `${you} ${first}، يسرّنا دعوتك لمقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية يوم ${interviewWhen(iso)}${place ? ` في ${place}` : ''}.`
+export interface InviteSmsTarget { full_name: string, gender: 'male' | 'female', interview_at: string, interview_place: string | null }
+
+/**
+ * رسالةُ الدعوة SMS من صيغتها: {الأخ/الأخت} {الاسم} (الاسمُ الأوّل) {الموعد} (بتوقيت غزة) {المكان}.
+ * بلا مكانٍ تُحذف «في {المكان}» كلُّها كي لا يبقى «في» معلّقاً.
+ */
+export function renderInviteSms(template: string, c: InviteSmsTarget): string {
+  const place = c.interview_place?.trim() ?? ''
+  const t = place ? template : template.replace(/\s*في\s*\{المكان\}/g, '')
+  return t
+    .replaceAll('{الأخ/الأخت}', c.gender === 'female' ? 'الأخت' : 'الأخ')
+    .replaceAll('{الاسم}', c.full_name.trim().split(/\s+/)[0] ?? '')
+    .replaceAll('{الموعد}', interviewWhen(c.interview_at))
+    .replaceAll('{المكان}', place)
+    .trim()
 }
 
 /** رسالةُ دعوة المقابلة جاهزةً للنسخ (واتس). */

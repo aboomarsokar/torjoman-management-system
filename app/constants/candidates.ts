@@ -61,6 +61,11 @@ export const MAX_CANDIDATE_TEXT = 120
 export const MAX_CANDIDATE_LONG = 1000
 export const MAX_INTERVIEW_PLACE = 200
 
+/** صيغةُ رسالة الدعوة SMS الافتراضية (تطابق قيمة `app_settings.candidate_invite_sms` الابتدائية) ومتغيّراتُها. */
+export const DEFAULT_INVITE_SMS = '{الأخ/الأخت} {الاسم}، يسرّنا دعوتك لمقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية يوم {الموعد} في {المكان}.'
+export const INVITE_SMS_VARS = ['{الأخ/الأخت}', '{الاسم}', '{الموعد}', '{المكان}'] as const
+export const MAX_INVITE_SMS_TEMPLATE = 500
+
 /** أدوارُ لجنة التحكيم: الإداريون والمختبرون (طلب المستخدم 2026-10-30) — يطابق `private.candidate_committee_guard`. */
 export const CANDIDATE_COMMITTEE_ROLES = ['admin_manager', 'project_supervisor', 'technical_manager', 'examiner'] as const
 

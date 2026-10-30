@@ -24,6 +24,7 @@ const { candidates, staff, loading, busy } = api
 onMounted(() => {
   void api.load()
   void api.loadStaff()
+  if (canManage.value) void api.loadInviteTemplate()
 })
 const names = computed(() => Object.fromEntries(staff.value.map(s => [s.id, s.name])))
 
@@ -65,11 +66,12 @@ const evalOpen = ref(false)
 async function saveEvaluation(scores: (number | null)[], notes: string) {
   if (current.value && me.value && await api.evaluate(current.value.id, me.value, scores, notes)) evalOpen.value = false
 }
-// رسالةُ الدعوة SMS — تأكيدٌ قبل الإرسال (تُحسب من رصيد الرسائل)
+// رسالةُ الدعوة SMS — نافذةٌ بالصيغة والمعاينة قبل الإرسال (تُحسب من رصيد الرسائل)
 const smsFor = ref<Candidate[]>([])
-const smsReady = computed(() => smsFor.value.filter(c => c.status === 'invited' && c.interview_at))
-async function sendSms() {
-  if (await api.sendInviteSms(smsReady.value.map(c => c.id))) selected.value = []
+const smsOpen = computed({ get: () => smsFor.value.length > 0, set: v => !v && (smsFor.value = []) })
+const pendingSms = computed(() => candidates.value.filter(c => c.status === 'invited' && c.interview_at && !c.invite_sms_at))
+async function sendSms(ids: string[], template: string, save: boolean) {
+  if (await api.sendInviteSms(ids, template, save)) selected.value = []
   smsFor.value = []
 }
 const confirmRemove = ref(false)
@@ -134,6 +136,14 @@ async function copyJoinLink() {
         variant="outline"
         to="/candidates/sheet"
         :ui="{ base: 'rounded-[12px] min-h-11' }"
+      />
+      <UButton
+        v-if="pendingSms.length"
+        :label="`أرسل الدعوات المعلّقة SMS (${pendingSms.length})`"
+        icon="i-lucide-message-square-text"
+        color="primary"
+        :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+        @click="smsFor = pendingSms"
       />
     </div>
 
@@ -223,16 +233,13 @@ async function copyJoinLink() {
       :busy="busy"
       @save="saveEvaluation"
     />
-    <UiConfirmModal
-      :open="smsFor.length > 0"
-      title="إرسال دعوة المقابلة SMS"
-      :message="smsReady.length ? `ستُرسل رسالةٌ بموعد المقابلة ومكانها إلى ${smsReady.length} مرشّح${smsReady.length < smsFor.length ? `، ويُترك ${smsFor.length - smsReady.length} غيرُ مدعوّ بموعد` : ''}. تُحسب من رصيد الرسائل.` : 'لا مدعوَّ بموعدٍ بين المحدّدين — ادعُهم للمقابلة أوّلاً.'"
-      confirm-label="أرسل"
-      confirm-color="primary"
-      confirm-icon="i-lucide-send"
-      :loading="busy"
-      @update:open="v => !v && (smsFor = [])"
-      @confirm="smsReady.length ? sendSms() : (smsFor = [])"
+    <CandidatesSmsModal
+      v-model:open="smsOpen"
+      :candidates="smsFor"
+      :template="api.inviteTemplate.value"
+      :can-save="isAdmin"
+      :busy="busy"
+      @send="sendSms"
     />
     <UiConfirmModal
       v-model:open="confirmRemove"

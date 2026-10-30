@@ -2,7 +2,7 @@
 /**
  * نافذةُ «لم تنعقد الحلقة» (2026-10-30) في شاشة حضور المعلّم: أربعةُ أسبابٍ بأزرارٍ كبيرة تُضغط بالإبهام، وملاحظةٌ تصير
  * إلزاميةً مع «سبب آخر»، و«تأكيد». ومع يومٍ سُجّل حضورُه تنبيهٌ أنّه سيُمحى. تُفتح فارغةً أو معبّأةً («عدّل البلاغ»)،
- * والحفظُ (`reportOff`) في `useOfflineAttendance`.
+ * والحفظُ (`reportOff`) في `useOfflineAttendance`: كتابةٌ على الجهاز فوريّة فلا حالةَ انشغال، ونقرٌ مزدوجٌ يكتب السطرَ نفسَه.
  */
 import { OFF_NOTE_MAX, OFF_REASONS, OFF_REASON_LABELS, offInputError, type OffReason } from '~/utils/offDays'
 
@@ -13,7 +13,6 @@ const props = defineProps<{
   held: boolean
   /** تعبئةٌ مسبقة لتعديل بلاغٍ مرفوض. */
   initial?: { reason: OffReason, note: string | null } | null
-  busy?: boolean
 }>()
 const emit = defineEmits<{ confirm: [reason: OffReason, note: string | null] }>()
 const open = defineModel<boolean>('open', { required: true })
@@ -113,7 +112,6 @@ function onConfirm() {
           label="تأكيد"
           icon="i-lucide-check"
           color="primary"
-          :loading="busy"
           :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
           @click="onConfirm"
         />

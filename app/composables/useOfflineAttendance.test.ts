@@ -11,11 +11,12 @@ vi.stubGlobal('ref', ref)
 vi.stubGlobal('watch', watch)
 const rows = ref<OutboxEntry[]>([])
 const online = ref(false)
+const syncing = ref(false)
 vi.stubGlobal('useOfflineQueue', () => ({
   entries: computed(() => rows.value),
   pending: computed(() => rows.value.filter(e => e.status === 'pending')),
   rejected: computed(() => rows.value.filter(e => e.status === 'rejected')),
-  syncing: ref(false), lastUploaded: ref(null), online,
+  syncing, lastUploaded: ref(null), online,
   load: vi.fn(), flush: vi.fn(), retry: vi.fn(),
   put: vi.fn(async (e: OutboxEntry) => {
     rows.value = [...rows.value.filter(r => r.key !== e.key), e]
@@ -53,6 +54,7 @@ function screen() {
 beforeEach(() => {
   rows.value = []
   online.value = false
+  syncing.value = false
   mirror.value = baseMirror()
 })
 
@@ -113,6 +115,24 @@ describe('بلاغ «لم تنعقد الحلقة» في /t', () => {
     expect(await s.withdrawOff()).toBe(true)
     expect(rows.value).toHaveLength(1)
     expect(rows.value[0]!.kind).toBe('withdraw')
+  })
+
+  it('withdrawOff بلا اتصالٍ والرفعُ جارٍ: سطرُ سحبٍ لا حذف (قد يكون البلاغُ وصل)', async () => {
+    const s = screen()
+    await s.reportOff('security', null)
+    syncing.value = true
+    expect(await s.withdrawOff()).toBe(true)
+    expect(rows.value).toHaveLength(1)
+    expect(rows.value[0]!.kind).toBe('withdraw')
+  })
+
+  it('withdrawOff لبلاغٍ رفضته القاعدة: يُحذف ولو متّصلاً', async () => {
+    const s = screen()
+    await s.reportOff('security', null)
+    rows.value = rows.value.map(e => ({ ...e, status: 'rejected' as const }))
+    online.value = true
+    expect(await s.withdrawOff()).toBe(true)
+    expect(rows.value).toHaveLength(0)
   })
 
   it('بلاغٌ في النسخة pending ← withdrawOff يضع سطرَ withdraw', async () => {

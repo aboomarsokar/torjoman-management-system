@@ -147,13 +147,15 @@ export function useOfflineAttendance() {
   }
 
   /**
-   * «تراجع — الحلقة انعقدت»: بلاغٌ على الجهاز لم يُرفع (بلا اتصال، أو رفضته القاعدة فلا يُرفع) يُحذف فلا يُرفع شيء؛
-   * وغيرُ ذلك سطرُ سحبٍ بمفتاح اليوم — فمتّصلاً قد يكون البلاغُ في الطريق، والرفعُ متتابعٌ فيلحقه السحب.
+   * «تراجع — الحلقة انعقدت»: بلاغٌ على الجهاز لم يُرفع (بلا اتصالٍ ولا رفعٍ جارٍ، أو رفضته القاعدة) يُحذف فلا
+   * يُرفع شيء؛ وغيرُ ذلك سطرُ سحبٍ بمفتاح اليوم — فقد يكون البلاغُ في الطريق، والرفعُ متتابعٌ فيلحقه السحب.
    */
   async function withdrawOff(): Promise<boolean> {
     if (!canWithdraw.value || !halaqaId.value || !uid.value) return false
     const local = entry.value
-    if (local && entryKind(local) === 'off' && (!outbox.online.value || local.status === 'rejected')) {
+    // رفعٌ بدأ قبل الانقطاع قد يكون أوصل البلاغ — فلا حذفَ إلا والصندوقُ ساكن
+    const idle = !outbox.online.value && !outbox.syncing.value
+    if (local && entryKind(local) === 'off' && (idle || local.status === 'rejected')) {
       await outbox.discard(local.key)
       return true
     }

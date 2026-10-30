@@ -55,7 +55,6 @@ const dayState = computed(() => shown.value.pending && shown.value.held // سط�
     ? { cls: 'on', icon: 'i-lucide-calendar-check', text: 'سُجّل حضور هذا اليوم — عدّل ثم احفظ إن لزم.' }
     : { cls: '', icon: 'i-lucide-calendar-clock', text: 'لم يُسجَّل حضور هذا اليوم — الجميع حاضر افتراضاً، سجّل الغيابات ثم احفظ.' })
 
-// ── «لم تنعقد الحلقة»: النافذةُ معبّأةٌ بالبلاغ المعروض إن وُجد («عدّل البلاغ»)، وفارغةٌ من زرّ القائمة ──
 const reportOpen = ref(false)
 const offBusy = ref(false)
 function openReport() {
@@ -69,7 +68,7 @@ async function runOff(act: () => Promise<boolean>, done: string) {
   return ok
 }
 async function onReport(reason: OffReason, note: string | null) {
-  if (await runOff(() => reportOff(reason, note), outbox.online.value ? 'أُرسل البلاغ، ويُرفع الآن.' : 'حُفظ البلاغ على جهازك — يُرفع حين يعود الاتصال.')) reportOpen.value = false
+  if (await runOff(() => reportOff(reason, note), outbox.online.value ? 'حُفظ البلاغ، ويُرفع الآن.' : 'حُفظ البلاغ على جهازك — يُرفع حين يعود الاتصال.')) reportOpen.value = false
 }
 const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود اليومُ للتسجيل.')
 </script>
@@ -188,6 +187,7 @@ const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود
           :off="off"
           :can-withdraw="canWithdraw"
           :can-edit="canReport"
+          :edit-block="reportBlock"
           :busy="offBusy"
           @withdraw="onWithdraw"
           @edit="openReport"
@@ -230,12 +230,6 @@ const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود
               :class="{ warn: dirty }"
             >{{ dirty ? 'لديك تعديلٌ لم يُحفظ' : shown.held ? 'كلُّ شيءٍ محفوظ' : 'لم يُحفظ بعد' }}</span>
             <div class="save-acts">
-              <AttendanceOffDayAction
-                v-if="reportShown && !shown.held"
-                :disabled="!canReport"
-                :block="reportBlock"
-                @open="openReport"
-              />
               <!-- لا جديدَ يُحفظ: إطارٌ هادئ لا زرٌّ ممتلئٌ باهت (طلب المستخدم 2026-10-28) -->
               <UButton
                 label="حفظ الحضور"
@@ -247,6 +241,12 @@ const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود
                 :disabled="!canSave"
                 :ui="{ base: 'min-h-12 rounded-xl font-semibold justify-center px-6' }"
                 @click="onSave"
+              />
+              <AttendanceOffDayAction
+                v-if="reportShown && !shown.held"
+                :disabled="!canReport"
+                :block="reportBlock"
+                @open="openReport"
               />
             </div>
           </div>

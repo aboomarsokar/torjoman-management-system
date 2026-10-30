@@ -14,6 +14,8 @@ const props = defineProps<{
   canWithdraw: boolean
   /** «عدّل البلاغ» متاح (اليومُ يقبل البلاغ). */
   canEdit: boolean
+  /** سببُ منع التعديل ظاهراً تحت الزرّ حين يُعطَّل (لا يُخفى)، أو `null`. */
+  editBlock?: string | null
   busy?: boolean
 }>()
 const emit = defineEmits<{ withdraw: [], edit: [] }>()
@@ -77,6 +79,10 @@ const icon = computed(() => props.off.queued
         :ui="{ base: 'min-h-11 rounded-xl font-semibold justify-center' }"
         @click="emit('edit')"
       />
+      <small
+        v-if="off.status === 'rejected' && !canEdit && editBlock"
+        class="ob-block"
+      >{{ editBlock }}</small>
     </div>
   </section>
 </template>
@@ -93,7 +99,8 @@ const icon = computed(() => props.off.queued
 .ob-status { font-size: 13.5px; font-weight: 600; }
 .ob-note, .ob-review { margin: 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
 .ob-review { font-weight: 600; color: var(--err); }
-.ob-acts { display: flex; flex-wrap: wrap; gap: 10px; }
+.ob-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ob-block { flex: 1 1 100%; font-size: 12.5px; font-weight: 600; color: var(--ink-2); line-height: 1.5; }
 @media (max-width: 520px) {
   .ob-acts :deep(button) { flex: 1 1 100%; }
 }

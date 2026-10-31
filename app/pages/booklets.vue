@@ -237,11 +237,13 @@ async function confirmDelete() {
   .booklets.fit { display: flex; flex-direction: column; height: calc(100dvh - 76px - 2 * var(--content-pad, 24px) - 60px); min-height: 480px; }
   .booklets.fit > * { flex: none; }
   .booklets.fit :deep(.log) { flex: 1; min-height: 0; }
-  /* الأرقامُ مضغوطةٌ في صفٍّ واحد لكلّ بطاقة فيتّسع الجدول */
-  .booklets.fit :deep(.stat.stacked) { flex-direction: row; align-items: center; gap: 14px; padding: 14px 18px; }
-  .booklets.fit :deep(.stat.stacked .ico) { margin-bottom: 0; width: 42px; height: 42px; }
-  .booklets.fit :deep(.stat.stacked .num) { font-size: 26px; }
-  .booklets.fit :deep(.stat.stacked .lbl) { margin-top: 4px; font-size: 14px; }
+  /* التبويباتُ بعرضها لا بعرض الصفحة، كما في العروض الأخرى */
+  .booklets.fit > .views { align-self: flex-start; }
+  /* الأرقامُ مضغوطةٌ في صفٍّ واحد لكلّ بطاقة في كلّ العروض (2026-10-31: كانت في السجلّ وحده فيتبدّل شكلُ الصفحة) */
+  .booklets :deep(.stat.stacked) { flex-direction: row; align-items: center; gap: 14px; padding: 14px 18px; }
+  .booklets :deep(.stat.stacked .ico) { margin-bottom: 0; width: 42px; height: 42px; }
+  .booklets :deep(.stat.stacked .num) { font-size: 26px; }
+  .booklets :deep(.stat.stacked .lbl) { margin-top: 4px; font-size: 14px; }
 }
 .views { margin-bottom: 16px; }
 /* خمسةُ تبويباتٍ لا تتّسع لعرض الجوال: تُمرَّر أفقياً بدل أن تنضغط */

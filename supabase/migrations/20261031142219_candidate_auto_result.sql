@@ -38,6 +38,7 @@ declare
   v_avg numeric;
   v_status public.candidate_status;
 begin
+  perform private.assert_session_writable(); -- (طُبّق في الإنتاج بالهجرة التالية 20261031142738)
   select round(avg(private.candidate_weighted(scores)), 1) into v_avg
     from public.candidate_evaluations where candidate_id = p_candidate;
   v_status := coalesce(private.candidate_auto_status(v_avg), 'interviewed');

@@ -616,6 +616,7 @@ export type Database = {
           can_gather: boolean | null
           created_at: string
           daily_commitment: boolean | null
+          decision_manual: boolean
           decision_note: string | null
           education: string | null
           experience: string | null
@@ -647,6 +648,7 @@ export type Database = {
           can_gather?: boolean | null
           created_at?: string
           daily_commitment?: boolean | null
+          decision_manual?: boolean
           decision_note?: string | null
           education?: string | null
           experience?: string | null
@@ -678,6 +680,7 @@ export type Database = {
           can_gather?: boolean | null
           created_at?: string
           daily_commitment?: boolean | null
+          decision_manual?: boolean
           decision_note?: string | null
           education?: string | null
           experience?: string | null
@@ -1658,6 +1661,62 @@ export type Database = {
           },
         ]
       }
+      library_items: {
+        Row: {
+          audience: string
+          booklet: number | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string
+          size_bytes: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          booklet?: number | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type: string
+          size_bytes: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          booklet?: number | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string
+          size_bytes?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_minutes: {
         Row: {
           agenda: string | null
@@ -2607,6 +2666,38 @@ export type Database = {
             foreignKeyName: "sms_log_sent_by_fkey"
             columns: ["sent_by"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_id_cards: {
+        Row: {
+          file_path: string
+          mime_type: string
+          profile_id: string
+          size_bytes: number
+          uploaded_at: string
+        }
+        Insert: {
+          file_path: string
+          mime_type: string
+          profile_id: string
+          size_bytes: number
+          uploaded_at?: string
+        }
+        Update: {
+          file_path?: string
+          mime_type?: string
+          profile_id?: string
+          size_bytes?: number
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_id_cards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

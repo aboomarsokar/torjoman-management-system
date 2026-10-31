@@ -15,6 +15,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const form = reactive<LibraryDraft>({ title: '', description: '', category: DEFAULT_CATEGORY, audience: 'all' })
 const file = ref<File | null>(null)
+const picker = ref<HTMLInputElement | null>(null)
 watch(open, (o) => {
   if (!o) return
   const i = props.item
@@ -41,11 +42,24 @@ function onFile(e: Event) {
       <div class="dm">
         <UFormField :label="item ? 'استبدل الملفّ (اختياريّ)' : 'الملفّ'">
           <input
+            ref="picker"
             type="file"
             :accept="LIBRARY_ACCEPT"
-            class="dm-file"
+            class="sr-only"
+            aria-label="اختر الملفّ"
             @change="onFile"
           >
+          <button
+            type="button"
+            class="dm-file"
+            @click="picker?.click()"
+          >
+            <UIcon
+              :name="file ? 'i-lucide-file-check' : 'i-lucide-upload'"
+              class="size-5"
+            />
+            <span>{{ file ? `${file.name} · ${fileSize(file.size)}` : 'اختر الملفّ من جهازك' }}</span>
+          </button>
           <template #help>
             PDF أو صورة أو Word أو Excel أو PowerPoint، حتى 50 ميغا.
             <template v-if="item && !file">
@@ -120,5 +134,6 @@ function onFile(e: Event) {
 <style scoped>
 .dm { display: flex; flex-direction: column; gap: 14px; }
 .dm-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-.dm-file { width: 100%; min-height: 48px; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--line); background: var(--surface-2); color: var(--ink-2); }
+.dm-file { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px dashed var(--line); background: var(--surface-2); color: var(--ink-2); cursor: pointer; text-align: start; overflow-wrap: anywhere; }
+.dm-file:hover { border-color: var(--blue); color: var(--ink); }
 </style>

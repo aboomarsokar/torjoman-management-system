@@ -12,7 +12,7 @@ import { roleLabel, type Role } from '~/constants/roles'
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'صور الهويات — ترجمان' })
 
-const { isAdmin, isWomenAdmin } = usePermissions()
+const { role, isAdmin, isWomenAdmin } = usePermissions()
 const canView = computed(() => isAdmin.value || isWomenAdmin.value)
 const api = useIdCards()
 const { rows, loading, busy } = api
@@ -55,14 +55,14 @@ const columns = [
   <main class="idp">
     <UiPageHeader
       title="صور الهويات"
-      :subtitle="isAdmin ? 'صورُ هويات الكادر — يرفعها كلٌّ من حسابه' : 'صورُ هويات عاملات قسم البنات'"
+      :subtitle="isWomenAdmin ? 'صورُ هويات عاملات قسم البنات' : 'صورُ هويات الكادر — يرفعها كلٌّ من حسابه'"
     />
     <UiEmptyState
-      v-if="!canView"
+      v-if="role && !canView"
       icon="i-lucide-lock"
       title="هذه الصفحة للمدير الإداري والمديرة الإدارية."
     />
-    <template v-else>
+    <template v-else-if="canView">
       <div class="idp-bar">
         <p class="idp-count">
           رفع <b>{{ done }}</b> من <b>{{ rows.length }}</b>

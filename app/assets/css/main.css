@@ -164,6 +164,18 @@
 
   /* ألوان الهوية + نسخها النصّية (-ink) والخفيفة (-soft) */
   --navy: #094064;
+  /* استمارةُ الطباعة (ورقٌ أبيض في الوضعين) — مقابلات المرشّحين */
+  --sheet-bg: #FFFFFF;
+  --sheet-ink: #10293B;
+  --sheet-navy: #094064;
+  --sheet-head-line: #0D4F7A;
+  --sheet-muted: #4A6272;
+  --sheet-soft: #6B8293;
+  --sheet-line: #C9D6DF;
+  --sheet-grid: #B6C5CF;
+  --sheet-weight: #E8F0F7;
+  --sheet-female: #F1F6FC;
+  --sheet-male: #EFFAF5;
   --blue: #4C8BC9;
   --blue-ink: #2E70AE;
   --blue-soft: #E8F1FA;

@@ -224,6 +224,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `halaqa_id` | uuid FK → halaqat | |
 | `week_date` | date | تاريخ الأسبوع |
 | `status` | enum | `sent` / `in_progress` / `completed` |
+| `is_legacy` | boolean NOT NULL default false | **ترشيحٌ مستورَد** من سجلّاتٍ سابقةٍ لبداية المشروع (منذ `20261030054749_exam_legacy_import`): يُعفى من قيد `exam_lists_from_project_start` وحده، ولا يرفعه العميل (حارس `guard_legacy_flag`) — تكتبه الإدارة من القاعدة |
 
 **`exam_list_items` — الطلاب المرشّحون في القائمة:**
 
@@ -268,6 +269,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `q3_reflection` | numeric(3,1) | س3 تدبر (0–10، بخطوة نصف) |
 | `tajweed_score` | numeric(3,1) | الأحكام (**7–9**، قيد `exam_results_tajweed_score_check` منذ هجرة `20261019084101`، ومُفعَّل على القديم أيضاً منذ `20261019091015`) — مرة واحدة |
 | `total_score` | numeric(4,1) | يُحسب آلياً (المجموع من 99). **أنصافُ الدرجات مقبولة منذ `20261024111415_exam_results_half_marks`**: الدرجاتُ العشر `numeric(3,1)` بقيد `exam_results_half_steps` (كلُّ درجةٍ مضاعفُ 0.5)، و`total_score`/`passed` مولَّدان من جديد |
+| `is_legacy` | boolean NOT NULL default false | **نتيجةٌ مستورَدة** من سجلّاتٍ سابقةٍ لبداية المشروع (منذ `20261030054749`): تُعفى من قيد `exam_results_from_project_start` وحده، ولا يرفعها العميل (`guard_legacy_flag`). أوّلُ دفعة 2026-10-30: 42 نتيجةً لطالباتٍ من المنهج الجديد (27/8–7/10) بلا إشعارات، ورُفعت بها `quran_parts` بالقاعدة نفسها |
 | `pass_mark_snapshot` | int | علامة الاجتياز وقت الاعتماد (لا يُعاد احتسابها). **تضعها القاعدة** (`exam_results_guard_pass_mark`): عند الإدراج من `app_settings.pass_mark` مهما أرسل العميل، وعند التعديل لا تتغيّر |
 | `passed` | boolean | مجاز/غير مجاز (محسوب) |
 | `notes` | text | ملاحظات |
@@ -524,7 +526,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 ## قيدُ بداية المشروع `*_from_project_start` (منذ `20261024143005_project_start_dates`)
 
-المشروع بدأ في الشهر 10/2026 (قرار المستخدم 2026-10-24): قيودُ `check` ترفض أيّ تاريخ عملٍ قبل `2026-10-01` — `admin_alerts.alert_date`، `attendance_days.day`، `attendance_absences.day`، `booklet_deliveries.delivered_on`، `exam_lists.week_date`، `exam_results.exam_date`، `financial_transactions.transaction_date`، `incentive_statement_items.item_date`، `meeting_minutes.meeting_date`، `news.news_date`، `students.enrollment_date` (أو null)، `transport_trips.trip_date`، و`supervision_visits.scheduled_at`/`executed_at` (من `2026-10-01 00:00+03`) — وأيَّ شهرٍ قبل 10/2026 (`year * 100 + month >= 202610`) في `monthly_reports` و`incentive_statements` و`halaqa_incentives` و`monthly_salaries` و`teacher_quality_months`. لا قيدَ على `birth_date` ولا `hire_date`. اسمُ كلّ قيد `<الجدول>_from_project_start` (وللطالب `students_enrollment_from_project_start`)، و`useErrorHandler` يترجمه «لا يُقبل تاريخٌ قبل بداية المشروع (1/10/2026).». الواجهةُ تحدّ منتقياتها بـ`PROJECT_START` (`app/constants/project.ts`).
+المشروع بدأ في الشهر 10/2026 (قرار المستخدم 2026-10-24): قيودُ `check` ترفض أيّ تاريخ عملٍ قبل `2026-10-01` — `admin_alerts.alert_date`، `attendance_days.day`، `attendance_absences.day`، `booklet_deliveries.delivered_on`، `exam_lists.week_date`، `exam_results.exam_date`، `financial_transactions.transaction_date`، `incentive_statement_items.item_date`، `meeting_minutes.meeting_date`، `news.news_date`، `students.enrollment_date` (أو null)، `transport_trips.trip_date`، و`supervision_visits.scheduled_at`/`executed_at` (من `2026-10-01 00:00+03`) — وأيَّ شهرٍ قبل 10/2026 (`year * 100 + month >= 202610`) في `monthly_reports` و`incentive_statements` و`halaqa_incentives` و`monthly_salaries` و`teacher_quality_months`. لا قيدَ على `birth_date` ولا `hire_date`. واستثناءٌ واحد: `exam_lists`/`exam_results` حين `is_legacy` (نتائجُ مستوردةٌ سابقةٌ للمشروع — `20261030054749`). اسمُ كلّ قيد `<الجدول>_from_project_start` (وللطالب `students_enrollment_from_project_start`)، و`useErrorHandler` يترجمه «لا يُقبل تاريخٌ قبل بداية المشروع (1/10/2026).». الواجهةُ تحدّ منتقياتها بـ`PROJECT_START` (`app/constants/project.ts`).
 
 ## ملاحظات على الحساب (Computed — لا تُخزّن)
 
@@ -1257,3 +1259,27 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 
 > **2026-10-30 — `20261030114254_women_admin_visits`:** المديرةُ الإدارية زائرةٌ لحلقات البنات (سياستا `visits_insert`/`visits_update` وحارسُ `guard_visit_visitor`: المشرفُ لحلقاته، والمديرُ الفنيّ لحلقات البنين، والمديرةُ الإدارية لحلقات البنات)، و`unlock_visit_result` يقبلها في نطاقها. و`private.quality_month_compute` يحسب زياراتِ `field_supervisor` و`technical_manager` و`women_admin` في متوسّط الزيارات (كان المشرفَ وحده منذ `20261026081420`).
+
+> **2026-10-30 — `20261030134225_dept_plan_leaders_only`:** `dept_owner_guard` يقصر مسؤولي أنشطة خطة القسم على `admin_manager` و`technical_manager` و`women_admin` و`project_supervisor` (كان أيَّ عاملٍ نشط)، فلا يرى الخطةَ غيرُ القيادات.
+
+## حذفُ رسائل المحادثات (2026-10-29)
+
+> هجرة `20261029164617_chat_delete_message`.
+
+- **`chat_messages.deleted_at`** — وقتُ الحذف؛ والمحذوفةُ نصُّها فارغ (القيد: نصٌّ 1–2000 لغير المحذوفة، وفارغٌ للمحذوفة).
+- **`delete_chat_message(message)`** — للمرسِل وحده: يمحو النصَّ ويضع الوقت، ويحدّث `last_message` إلى «🚫 حُذفت رسالة» إن كانت الأخيرة.
+
+
+## 29. مقابلاتُ المرشّحين: `candidates` و`candidate_committee` و`candidate_evaluations` (2026-10-30)
+
+> الهجرة `20261030143013_candidates`.
+
+- **`candidates`**: طلبُ الالتحاق (الاسم 3–120، `national_id` تسعةُ أرقامٍ **فريد**، `phone` بصيغة `05XXXXXXXX`، `gender`، وتاريخُ الميلاد والسكنُ وأقربُ مسجدٍ والأجزاءُ (0–30) والتجويدُ والمؤهّلُ والخبرة)، و`status` من النوع `candidate_status`: `new`/`invited`/`interviewed`/`accepted`/`reserve`/`rejected`/`hired`، و`interview_at`/`interview_place`، و`decision_note`، و`status_changed_by`/`status_changed_at` يضعهما الحارس `candidates_touch`.
+- **`candidate_committee`**: لجنةُ المرشّح (`candidate_id`, `profile_id` من العاملين النشطين — `candidate_committee_guard`).
+- **`candidate_evaluations`**: تقييمُ كلّ عضو (`candidate_id`, `evaluator_id` مفتاحٌ مركّب)، و`scores smallint[]` عشرُ خاناتٍ كلٌّ 0–10 (كانت 0–5 ثم وُسّعت بالهجرة `20261030165300_candidate_scores_out_of_ten`) بترتيب بنود الاستمارة (الأوزانُ في `app/constants/candidates.ts`)، و`notes`. أوّلُ تقييمٍ لمدعوٍّ ينقله إلى `interviewed` (`candidate_evaluations_touch`).
+- **النطاق:** `can_view_candidates_of(gender)` (الإداريّ ومشرفُ المشروع الكلّ، والفنيّ البنين، والمديرةُ البنات) للقراءة، و`can_manage_candidates_of(gender)` (بلا مشرف المشروع) للكتابة، و`my_candidate_ids()` لعضو اللجنة. الحذفُ للمدير الإداريّ. التقييمُ لكاتبه وحده: مديرٌ في النطاق أو عضوٌ في اللجنة.
+- **رسالةُ الدعوة SMS (الهجرة `20261030172116_candidate_invite_sms`):** `invite_sms_at` وقتُ آخر إرسالٍ ناجح يضعه `server/api/candidates/invite-sms.post.ts`، والمشغّل `candidates_invite_sms_reset` يصفّره إن تغيّر الموعد أو المكان.
+- **صيغةُ رسالة الدعوة (الهجرة `20261030174305_candidate_invite_sms_template`):** `app_settings.candidate_invite_sms` (10–500 حرف) يعدّلها المدير الإداري، بمتغيّرات `{الأخ/الأخت}` `{الاسم}` `{الموعد}` `{المكان}`.
+- **لجنةُ التحكيم (الهجرة `20261030171417_candidate_committee_roles`):** `candidate_committee_guard` يقبل الإداريين والمختبرين النشطين وحدهم: `admin_manager` و`project_supervisor` و`technical_manager` و`examiner`.
+- **شروطُ الالتحاق (الهجرة `20261030145737_candidates_conditions`):** أعمدةٌ جديدة `halaqa_area` (≤80) و`address_detail` (≤200) و`experience_years` (0–60) و`can_gather` و`daily_commitment` و`terms_accepted_at`. و`register_candidate` صارت تشترط الإقرارَ بالشروط وتُلزم السكنَ ومنطقةَ الحلقة والمسجدَ والعنوانَ والأجزاءَ والتجويدَ وسنواتِ الخبرة وسؤالَي الالتزام. **من لا تنطبق عليه الشروط يسجّل ولا يُرفض آلياً** — العلامةُ تُحسب في الواجهة (`eligibilityIssues` في `app/utils/candidates.ts`).
+- **العامّ:** الزائرُ (`anon`) بلا أيّ منحٍ على الجداول، وله الدالّتان `register_candidate(...)` (تمنع تكرار الهوية، وكبحُ 40 تسجيلاً في الدقيقة) و`candidate_status_lookup(national_id, phone)` (الحالةُ والموعدُ للمدعوّ، بالهوية والجوال معاً).

@@ -5,7 +5,7 @@
 import type { DeptGoal, DeptPlan, DeptTask } from '~/composables/useDeptPlan'
 import { DEPT_REPORT_FIELDS, DEPT_TASK_STATUS_LABEL } from '~/constants/deptPlan'
 import { goalLabel, progressOf, shortDay, taskLabel } from '~/utils/deptPlan'
-import type { SheetSpec } from '~/utils/excel/workbook'
+import { downloadWorkbook, type SheetSpec } from '~/utils/excel/workbook'
 
 export function deptPlanSheets(plan: DeptPlan, goals: DeptGoal[], tasks: DeptTask[], names: Record<string, string>): SheetSpec[] {
   const rows: SheetSpec['rows'] = []
@@ -41,4 +41,9 @@ export function deptPlanSheets(plan: DeptPlan, goals: DeptGoal[], tasks: DeptTas
       rows: DEPT_REPORT_FIELDS.map(f => ({ label: f.label, text: plan[f.key] ?? '' }))
     }
   ]
+}
+
+/** ينزّل الخطة ملفّ Excel: «ترجمان — خطة القسم — 11-2026.xlsx». */
+export function exportDeptPlan(plan: DeptPlan, goals: DeptGoal[], tasks: DeptTask[], names: Record<string, string>, monthLabel: string): Promise<void> {
+  return downloadWorkbook(`ترجمان — خطة القسم — ${monthLabel}.xlsx`, deptPlanSheets(plan, goals, tasks, names))
 }

@@ -76,8 +76,10 @@ const mainNav: Item[] = [
   // ما أرسلته الإدارة، وبجانبه عددُ غير المقروء (طلب المستخدم 2026-10-25)
   { key: 'messages', label: 'رسائل الإدارة', icon: 'i-lucide-mail', to: '/messages', roles: [FIELD, 'teacher', 'examiner'], isNew: true },
   // المدير الفني قائمةً للقراءة (قرار 2026-10-20) — منها «ادخل بحسابه»؛ الأزرارُ الكاتبة للمدير الإداري وحده
-  // خطةُ القسم الشهرية (طلب المستخدم 2026-10-30) — كاملةً للقيادات، ومهامُّ المسؤول وحدها لغيرهم
-  { key: 'plan', label: 'خطة القسم', icon: 'i-lucide-target', to: '/plan', roles: [...LEADERS, WOMEN, FIELD, 'examiner'], isNew: true },
+  // خطةُ القسم الشهرية (طلب المستخدم 2026-10-30) — للقيادات وحدهم: المدير الإداريّ والفنيّ والمديرة الإدارية ومشرف المشروع
+  // مقابلاتُ المرشّحين (طلب المستخدم 2026-10-30) — الإدارة، وأعضاءُ اللجان من العاملين يرون من أُسند إليهم
+  { key: 'candidates', label: 'مقابلات المرشّحين', labelF: 'مقابلات المرشّحات', icon: 'i-lucide-user-search', to: '/candidates', roles: [...LEADERS, WOMEN, 'examiner'], isNew: true },
+  { key: 'plan', label: 'خطة القسم', icon: 'i-lucide-target', to: '/plan', roles: [...LEADERS, WOMEN], isNew: true },
   { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },

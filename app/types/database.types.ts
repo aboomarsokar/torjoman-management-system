@@ -73,6 +73,7 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          candidate_invite_sms: string
           created_at: string
           id: number
           pass_mark: number
@@ -84,6 +85,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          candidate_invite_sms?: string
           created_at?: string
           id?: number
           pass_mark?: number
@@ -95,6 +97,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          candidate_invite_sms?: string
           created_at?: string
           id?: number
           pass_mark?: number
@@ -478,6 +481,192 @@ export type Database = {
             columns: ["halaqa_id"]
             isOneToOne: false
             referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_committee: {
+        Row: {
+          assigned_by: string | null
+          candidate_id: string
+          created_at: string
+          profile_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          candidate_id: string
+          created_at?: string
+          profile_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          candidate_id?: string
+          created_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_committee_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_committee_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_committee_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_evaluations: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          evaluator_id: string
+          notes: string | null
+          scores: number[]
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          evaluator_id: string
+          notes?: string | null
+          scores: number[]
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          evaluator_id?: string
+          notes?: string | null
+          scores?: number[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_evaluations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidates: {
+        Row: {
+          about: string | null
+          address_detail: string | null
+          birth_date: string | null
+          can_gather: boolean | null
+          created_at: string
+          daily_commitment: boolean | null
+          decision_note: string | null
+          education: string | null
+          experience: string | null
+          experience_years: number | null
+          full_name: string
+          gender: Database["public"]["Enums"]["gender_type"]
+          halaqa_area: string | null
+          id: string
+          interview_at: string | null
+          interview_place: string | null
+          invite_sms_at: string | null
+          national_id: string
+          nearest_mosque: string | null
+          phone: string
+          quran_parts: number | null
+          residence: string | null
+          status: Database["public"]["Enums"]["candidate_status"]
+          status_changed_at: string | null
+          status_changed_by: string | null
+          tajweed_level: string | null
+          terms_accepted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          about?: string | null
+          address_detail?: string | null
+          birth_date?: string | null
+          can_gather?: boolean | null
+          created_at?: string
+          daily_commitment?: boolean | null
+          decision_note?: string | null
+          education?: string | null
+          experience?: string | null
+          experience_years?: number | null
+          full_name: string
+          gender: Database["public"]["Enums"]["gender_type"]
+          halaqa_area?: string | null
+          id?: string
+          interview_at?: string | null
+          interview_place?: string | null
+          invite_sms_at?: string | null
+          national_id: string
+          nearest_mosque?: string | null
+          phone: string
+          quran_parts?: number | null
+          residence?: string | null
+          status?: Database["public"]["Enums"]["candidate_status"]
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          tajweed_level?: string | null
+          terms_accepted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          about?: string | null
+          address_detail?: string | null
+          birth_date?: string | null
+          can_gather?: boolean | null
+          created_at?: string
+          daily_commitment?: boolean | null
+          decision_note?: string | null
+          education?: string | null
+          experience?: string | null
+          experience_years?: number | null
+          full_name?: string
+          gender?: Database["public"]["Enums"]["gender_type"]
+          halaqa_area?: string | null
+          id?: string
+          interview_at?: string | null
+          interview_place?: string | null
+          invite_sms_at?: string | null
+          national_id?: string
+          nearest_mosque?: string | null
+          phone?: string
+          quran_parts?: number | null
+          residence?: string | null
+          status?: Database["public"]["Enums"]["candidate_status"]
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          tajweed_level?: string | null
+          terms_accepted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3061,16 +3250,33 @@ export type Database = {
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_manage_candidates_of: {
+        Args: { p_gender: Database["public"]["Enums"]["gender_type"] }
+        Returns: boolean
+      }
       can_manage_halaqa: { Args: { hid: string }; Returns: boolean }
       can_manage_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_review_statement_in_halaqa: {
         Args: { hid: string }
         Returns: boolean
       }
+      can_view_candidates_of: {
+        Args: { p_gender: Database["public"]["Enums"]["gender_type"] }
+        Returns: boolean
+      }
       can_view_full_dept_plan: { Args: never; Returns: boolean }
       can_view_halaqa: { Args: { hid: string }; Returns: boolean }
       can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_view_statements_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      candidate_status_lookup: {
+        Args: { p_national_id: string; p_phone: string }
+        Returns: {
+          full_name: string
+          interview_at: string
+          interview_place: string
+          status: Database["public"]["Enums"]["candidate_status"]
+        }[]
+      }
       chat_contacts: {
         Args: never
         Returns: {
@@ -3172,6 +3378,7 @@ export type Database = {
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       mark_staff_messages_seen: { Args: { p_ids: string[] }; Returns: number }
       my_approved_pages: { Args: never; Returns: number }
+      my_candidate_ids: { Args: never; Returns: string[] }
       my_chat_contact_ids: { Args: never; Returns: string[] }
       my_chat_conversation_ids: { Args: never; Returns: string[] }
       my_chats: {
@@ -3227,6 +3434,29 @@ export type Database = {
       quran_page_of: {
         Args: { p_ayah: number; p_surah: number }
         Returns: number
+      }
+      register_candidate: {
+        Args: {
+          p_about?: string
+          p_address_detail: string
+          p_birth_date?: string
+          p_can_gather: boolean
+          p_daily_commitment: boolean
+          p_education?: string
+          p_experience?: string
+          p_experience_years: number
+          p_full_name: string
+          p_gender: Database["public"]["Enums"]["gender_type"]
+          p_halaqa_area: string
+          p_national_id: string
+          p_nearest_mosque: string
+          p_phone: string
+          p_quran_parts: number
+          p_residence: string
+          p_tajweed_level: string
+          p_terms_accepted: boolean
+        }
+        Returns: undefined
       }
       report_off_day: {
         Args: {
@@ -3363,6 +3593,14 @@ export type Database = {
       account_type: "jawwalpay" | "palpay" | "bank_palestine"
       alert_severity: "note" | "first_warning" | "final_warning"
       alert_status: "new" | "acknowledged"
+      candidate_status:
+        | "new"
+        | "invited"
+        | "interviewed"
+        | "accepted"
+        | "reserve"
+        | "rejected"
+        | "hired"
       dept_task_status: "not_started" | "in_progress" | "done" | "not_done"
       exam_list_status: "sent" | "in_progress" | "completed"
       gender_type: "male" | "female"
@@ -3514,6 +3752,15 @@ export const Constants = {
       account_type: ["jawwalpay", "palpay", "bank_palestine"],
       alert_severity: ["note", "first_warning", "final_warning"],
       alert_status: ["new", "acknowledged"],
+      candidate_status: [
+        "new",
+        "invited",
+        "interviewed",
+        "accepted",
+        "reserve",
+        "rejected",
+        "hired",
+      ],
       dept_task_status: ["not_started", "in_progress", "done", "not_done"],
       exam_list_status: ["sent", "in_progress", "completed"],
       gender_type: ["male", "female"],

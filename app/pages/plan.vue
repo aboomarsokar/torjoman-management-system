@@ -9,8 +9,7 @@ import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
 import { DEPT_PLAN_FULL_VIEWERS, type DeptTaskStatus } from '~/constants/deptPlan'
 import { filterTasks, isDueSoon, isOverdue, planMonthLabel, progressOf, shiftPlanMonth, type TaskFilter } from '~/utils/deptPlan'
 import { gazaToday } from '~/utils/reportWindow'
-import { deptPlanSheets } from '~/utils/excel/deptPlan'
-import { downloadWorkbook } from '~/utils/excel/workbook'
+import { exportDeptPlan } from '~/utils/excel/deptPlan'
 import { ALL_OWNERS } from '~/constants/deptPlan'
 
 definePageMeta({ layout: 'dashboard' })
@@ -41,10 +40,6 @@ onMounted(() => {
 const names = computed(() => Object.fromEntries(staff.value.map(s => [s.id, s.name])))
 
 const filter = ref<TaskFilter>('all')
-// الدورُ قد يصل بعد أوّل رسم: من لا يرى الخطة كاملة يبدأ بمهامّه
-watch(role, (r) => {
-  if (r) filter.value = fullView.value ? 'all' : 'mine'
-}, { immediate: true })
 // تصفيةٌ بالمسؤول (طلب المستخدم 2026-10-30)، وتُطبَّق قبل تبويبات الحالة
 const owner = ref<string>(ALL_OWNERS)
 watch([year, month], () => (owner.value = ALL_OWNERS))
@@ -108,7 +103,7 @@ const exporting = ref(false)
 async function exportPlan() {
   if (!plan.value) return
   exporting.value = true
-  await downloadWorkbook(`ترجمان — خطة القسم — ${planMonthLabel(year.value, month.value)}.xlsx`, deptPlanSheets(plan.value, goals.value, tasks.value, names.value))
+  await exportDeptPlan(plan.value, goals.value, tasks.value, names.value, planMonthLabel(year.value, month.value))
   exporting.value = false
 }
 </script>
@@ -117,10 +112,20 @@ async function exportPlan() {
   <main class="page">
     <UiPageHeader
       title="خطة القسم"
-      :subtitle="fullView ? 'أهداف القسم وأنشطته لكل شهر، ومتابعة إنجازها' : 'المهام المسندة إليك في خطة القسم'"
+      subtitle="أهداف القسم وأنشطته لكل شهر، ومتابعة إنجازها"
     />
 
-    <div class="bar">
+    <UiEmptyState
+      v-if="role && !fullView"
+      icon="i-lucide-lock"
+      title="خطة القسم للإدارة"
+      description="تظهر للمدير الإداري والمدير الفني والمديرة الإدارية ومشرف المشروع."
+    />
+
+    <div
+      v-else
+      class="bar"
+    >
       <PlanMonthNav
         :label="planMonthLabel(year, month)"
         @go="go"
@@ -151,11 +156,11 @@ async function exportPlan() {
     </div>
 
     <UiSkeletonCard
-      v-if="loading && !plan"
+      v-if="fullView && loading && !plan"
       :lines="4"
     />
 
-    <template v-else-if="!plan">
+    <template v-else-if="fullView && !plan">
       <UiEmptyState
         icon="i-lucide-target"
         :title="`لا خطة لشهر ${planMonthLabel(year, month)}`"
@@ -185,7 +190,7 @@ async function exportPlan() {
       </div>
     </template>
 
-    <template v-else>
+    <template v-else-if="fullView && plan">
       <PlanSummary
         v-bind="summary"
         @filter="(f: TaskFilter) => (filter = f)"

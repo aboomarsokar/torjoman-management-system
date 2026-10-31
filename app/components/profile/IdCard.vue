@@ -74,12 +74,17 @@ const uploadedOn = computed(() => card.value
 </template>
 
 <style scoped>
-.idc { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-sm); border-inline-start: 4px solid var(--warn, var(--ui-warning)); }
-.idc.done { border-inline-start-color: var(--ui-success); }
-.idc-ico { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--surface-2); color: var(--blue-ink); flex: none; }
-.idc.done .idc-ico { color: var(--green-ink); }
-.idc-body { flex: 1 1 220px; min-width: 0; }
+/* بطاقةٌ بمقاس ترويسة الملفّ وتباعدِها (حدٌّ وظلٌّ وهامشٌ سفليّ 18px) — والحالةُ في لون الأيقونة لا في حافّةٍ جانبية */
+.idc { display: flex; align-items: center; gap: 14px 18px; flex-wrap: wrap; padding: 20px 24px; margin-bottom: 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.idc-ico { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); flex: none; }
+.idc.done .idc-ico { background: var(--green-soft); color: var(--green-ink); }
+.idc-body { flex: 1 1 260px; min-width: 0; }
 .idc-body h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }
 .idc-body p { margin: 2px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.7; }
 .idc-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .idc { padding: 18px; }
+  .idc-acts { width: 100%; }
+  .idc-acts > * { flex: 1 1 auto; justify-content: center; }
+}
 </style>

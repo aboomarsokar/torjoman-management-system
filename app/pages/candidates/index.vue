@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * مقابلاتُ المرشّحين (طلب المستخدم 2026-10-30): الطلباتُ الواردة من صفحة الالتحاق العامّة (/join)، وتصفيتُها بالحالة والجنس
- * والبحث، ودعوةُ مرشّحٍ أو مجموعةٍ لمقابلةٍ بموعدٍ ولجنة وإبلاغُهم SMS، وتقييمُ كلّ عضوٍ من حسابه، والقرار، وإنشاءُ حساب المعلّم للمقبول.
+ * والبحث، ودعوةُ مرشّحٍ أو مجموعةٍ لمقابلةٍ بموعدٍ ولجنة وإبلاغُهم SMS، وتقييمُ كلّ عضوٍ من حسابه، والقرارُ وإبلاغُ النتيجة SMS
+ * وإنشاءُ حساب المعلّم للمقبول (للمدير الإداريّ وحده — 2026-10-31).
  * عضوُ اللجنة من غير الإدارة يرى من أُسند إليه وحده (RLS).
  */
 import type { Candidate } from '~/composables/useCandidates'
@@ -16,7 +17,6 @@ const { isAdmin, isTechnical, isWomenAdmin } = usePermissions()
 const { profile } = useProfile()
 const me = computed(() => profile.value?.id ?? null)
 const canManage = computed(() => isAdmin.value || isTechnical.value || isWomenAdmin.value)
-const toast = useToast()
 const { handle } = useErrorHandler()
 
 const api = useCandidates()
@@ -78,6 +78,7 @@ async function sendSms(ids: string[], template: string, save: boolean) {
   if (await api.sendInviteSms(ids, template, save)) selected.value = []
   smsFor.value = []
 }
+const resultSms = useTemplateRef<{ open: (list: Candidate[]) => void }>('resultSms')
 const confirmRemove = ref(false)
 async function remove() {
   if (current.value && await api.remove(current.value.id)) {
@@ -103,16 +104,6 @@ async function hire() {
     busy.value = false
   }
 }
-
-async function copyJoinLink() {
-  const link = `${location.origin}/join`
-  try {
-    await navigator.clipboard.writeText(link)
-    toast.add({ title: 'نُسخ رابط التسجيل.', description: link, color: 'success', icon: 'i-lucide-link' })
-  } catch {
-    toast.add({ title: 'رابط التسجيل', description: link, color: 'info' })
-  }
-}
 </script>
 
 <template>
@@ -125,22 +116,7 @@ async function copyJoinLink() {
       v-if="canManage"
       class="cp-bar"
     >
-      <UButton
-        label="انسخ رابط التسجيل"
-        icon="i-lucide-link"
-        color="neutral"
-        variant="outline"
-        :ui="{ base: 'rounded-[12px] min-h-11' }"
-        @click="copyJoinLink"
-      />
-      <UButton
-        label="استمارة التحكيم للطباعة"
-        icon="i-lucide-printer"
-        color="neutral"
-        variant="outline"
-        to="/candidates/sheet"
-        :ui="{ base: 'rounded-[12px] min-h-11' }"
-      />
+      <CandidatesLinks />
       <UButton
         v-if="isAdmin"
         label="صيغة رسالة الدعوة"
@@ -157,6 +133,12 @@ async function copyJoinLink() {
         color="primary"
         :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
         @click="smsFor = pendingSms"
+      />
+      <CandidatesResultSms
+        v-if="isAdmin"
+        ref="resultSms"
+        :candidates="candidates"
+        @sent="api.load()"
       />
     </div>
 
@@ -197,6 +179,14 @@ async function copyJoinLink() {
         :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
         @click="smsFor = candidates.filter(c => selected.includes(c.id))"
       />
+      <UButton
+        v-if="isAdmin"
+        label="أرسل النتيجة SMS"
+        icon="i-lucide-badge-check"
+        color="neutral"
+        :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+        @click="resultSms?.open(candidates.filter(c => selected.includes(c.id)))"
+      />
     </div>
 
     <UiSkeletonCard
@@ -228,6 +218,7 @@ async function copyJoinLink() {
       :busy="busy"
       @schedule="current && openSchedule([current])"
       @sms="current && (smsFor = [current])"
+      @result-sms="current && resultSms?.open([current])"
       @evaluate="evalOpen = true"
       @decide="(s: CandidateStatus, n: string) => current && api.decide(current.id, s, n)"
       @hire="hire"

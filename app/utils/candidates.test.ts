@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { CANDIDATE_CRITERIA, DEFAULT_INVITE_SMS } from '~/constants/candidates'
+import { CANDIDATE_CRITERIA, DEFAULT_INVITE_SMS, DEFAULT_RESULT_SMS, RESULT_SMS_KINDS } from '~/constants/candidates'
 import { smsSegments } from '~/utils/sms'
-import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, renderInviteSms, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
+import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, renderInviteSms, renderResultSms, resultKind, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
 
 const draft = (o: Partial<CandidateDraft> = {}): CandidateDraft => ({
   full_name: 'محمد أحمد سالم', national_id: '123456789', phone: '0599123456', gender: 'male', birth_date: '',
@@ -80,5 +80,29 @@ describe('مقابلات المرشحين', () => {
     const m = inviteMessage('فاطمة علي حسن', 'female', 'السبت 01-11 الساعة 10:00', 'مقر المشروع')
     expect(m).toContain('الأخت الكريمة فاطمة')
     expect(m).toContain('في مقر المشروع')
+  })
+})
+
+describe('رسالة النتيجة', () => {
+  it('صيغةُ الحالة: المعيَّنُ كالمقبول، وغيرُ المقرَّر بلا صيغة', () => {
+    expect(resultKind('accepted')).toBe('accepted')
+    expect(resultKind('hired')).toBe('accepted')
+    expect(resultKind('reserve')).toBe('reserve')
+    expect(resultKind('rejected')).toBe('rejected')
+    expect(resultKind('interviewed')).toBeNull()
+    expect(resultKind('new')).toBeNull()
+  })
+  it('المخاطبةُ والاسمُ الأوّل', () => {
+    expect(renderResultSms('{الأخ/الأخت} {الاسم}، مبارك.', { full_name: 'سارة أحمد علي', gender: 'female' })).toBe('الأخت سارة، مبارك.')
+    expect(renderResultSms(' {الأخ/الأخت} {الاسم} ', { full_name: 'محمد', gender: 'male' })).toBe('الأخ محمد')
+  })
+})
+
+describe('الصيغُ الأصلية للنتيجة', () => {
+  it('كلُّ صيغةٍ في مقطعين على الأكثر لأطول اسم', () => {
+    for (const k of RESULT_SMS_KINDS) {
+      const msg = renderResultSms(DEFAULT_RESULT_SMS[k], { full_name: 'عبدالرحمن', gender: 'female' })
+      expect(smsSegments(msg).segments).toBeLessThanOrEqual(2)
+    }
   })
 })

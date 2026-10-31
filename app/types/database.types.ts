@@ -74,6 +74,9 @@ export type Database = {
       app_settings: {
         Row: {
           candidate_invite_sms: string
+          candidate_result_sms_accepted: string
+          candidate_result_sms_rejected: string
+          candidate_result_sms_reserve: string
           created_at: string
           id: number
           pass_mark: number
@@ -86,6 +89,9 @@ export type Database = {
         }
         Insert: {
           candidate_invite_sms?: string
+          candidate_result_sms_accepted?: string
+          candidate_result_sms_rejected?: string
+          candidate_result_sms_reserve?: string
           created_at?: string
           id?: number
           pass_mark?: number
@@ -98,6 +104,9 @@ export type Database = {
         }
         Update: {
           candidate_invite_sms?: string
+          candidate_result_sms_accepted?: string
+          candidate_result_sms_rejected?: string
+          candidate_result_sms_reserve?: string
           created_at?: string
           id?: number
           pass_mark?: number
@@ -623,6 +632,7 @@ export type Database = {
           phone: string
           quran_parts: number | null
           residence: string | null
+          result_sms_at: string | null
           status: Database["public"]["Enums"]["candidate_status"]
           status_changed_at: string | null
           status_changed_by: string | null
@@ -653,6 +663,7 @@ export type Database = {
           phone: string
           quran_parts?: number | null
           residence?: string | null
+          result_sms_at?: string | null
           status?: Database["public"]["Enums"]["candidate_status"]
           status_changed_at?: string | null
           status_changed_by?: string | null
@@ -683,6 +694,7 @@ export type Database = {
           phone?: string
           quran_parts?: number | null
           residence?: string | null
+          result_sms_at?: string | null
           status?: Database["public"]["Enums"]["candidate_status"]
           status_changed_at?: string | null
           status_changed_by?: string | null

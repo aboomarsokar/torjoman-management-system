@@ -4,7 +4,7 @@
  */
 import {
   ADVANCED_TAJWEED_LEVELS, CANDIDATE_CRITERIA, CRITERION_MAX, ELIGIBLE_RESIDENCE, MAX_ADDRESS_DETAIL, MAX_CANDIDATE_LONG, MAX_CANDIDATE_TEXT,
-  MAX_EXPERIENCE_YEARS, MAX_HALAQA_AREA, MIN_EXPERIENCE_YEARS, MIN_TEACHER_PARTS, OTHER_AREA
+  MAX_EXPERIENCE_YEARS, MAX_HALAQA_AREA, MIN_EXPERIENCE_YEARS, MIN_TEACHER_PARTS, OTHER_AREA, RESULT_SMS_KINDS, type ResultSmsKind
 } from '~/constants/candidates'
 import { IDENTITY_LENGTH, normalizeDigits } from '~/constants/identity'
 
@@ -153,4 +153,18 @@ export function inviteMessage(name: string, gender: 'male' | 'female', when: str
     `يسرّنا دعوتك إلى مقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية يوم ${when}${place ? ` في ${place}` : ''}.`,
     'نرجو الحضور في الموعد، وجزاك الله خيراً.'
   ].join('\n')
+}
+
+/** صيغةُ رسالة النتيجة لحالة المرشّح، أو null إن لم يُقرَّر بعد (المعيَّنُ يُبلَّغ بصيغة المقبول). */
+export function resultKind(status: string): ResultSmsKind | null {
+  if (status === 'hired') return 'accepted'
+  return (RESULT_SMS_KINDS as readonly string[]).includes(status) ? status as ResultSmsKind : null
+}
+
+/** رسالةُ النتيجة لمرشّحٍ باسمه الأوّل ومخاطَبته. */
+export function renderResultSms(template: string, c: { full_name: string, gender: 'male' | 'female' }): string {
+  return template
+    .replaceAll('{الأخ/الأخت}', c.gender === 'female' ? 'الأخت' : 'الأخ')
+    .replaceAll('{الاسم}', c.full_name.trim().split(/\s+/)[0] ?? '')
+    .trim()
 }

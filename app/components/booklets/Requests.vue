@@ -21,9 +21,11 @@ const emit = defineEmits<{
 
 type View = 'pending' | 'cancelled'
 const view = ref<View>('pending')
+/** من الأقدم إلى الأحدث (طلب المستخدم 2026-10-31): الأسبقُ طلباً يُخدم أوّلاً. */
+const oldestFirst = computed(() => [...props.rows].sort((a, b) => a.created_at.localeCompare(b.created_at)))
 const byView = computed(() => ({
-  pending: props.rows.filter(r => isPendingRequest(r.status)),
-  cancelled: props.rows.filter(r => r.status === 'cancelled')
+  pending: oldestFirst.value.filter(r => isPendingRequest(r.status)),
+  cancelled: oldestFirst.value.filter(r => r.status === 'cancelled')
 }))
 const shown = computed(() => byView.value[view.value])
 const viewTabs = computed(() => [

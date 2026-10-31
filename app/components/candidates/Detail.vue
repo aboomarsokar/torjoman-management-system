@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * ملفُّ المرشّح (طلب المستخدم 2026-10-30): بياناتُه، وموعدُ مقابلته ولجنتُه، وتقييماتُ اللجنة بالمتوسّط وتفصيل البنود،
- * والقرار (مقبول · احتياط · مرفوض)، ونسخُ رسالة الدعوة وإرسالُها SMS، وإنشاءُ حساب معلّمٍ للمقبول (للمدير الإداريّ).
+ * ونسخُ رسالة الدعوة وإرسالُها SMS، والقرارُ وإبلاغُ النتيجة وإنشاءُ الحساب للمدير الإداريّ وحده (`CandidatesDecision`).
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CRITERION_MAX, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
@@ -16,12 +16,10 @@ interface Props {
   busy: boolean
 }
 const props = defineProps<Props>()
-const emit = defineEmits<{ evaluate: [], schedule: [], sms: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [] }>()
+const emit = defineEmits<{ evaluate: [], schedule: [], sms: [], resultSms: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
-const note = ref('')
-watch(() => props.candidate?.id, () => (note.value = props.candidate?.decision_note ?? ''), { immediate: true })
 const avg = computed(() => props.candidate ? averageScore(props.candidate.evaluations) : null)
 const perCriterion = computed(() => props.candidate ? criterionAverages(props.candidate.evaluations) : [])
 const canEvaluate = computed(() => !!props.candidate && !!props.me && (props.canManage || props.candidate.committee.includes(props.me))
@@ -208,65 +206,15 @@ async function copyInvite() {
           </table>
         </section>
 
-        <section
-          v-if="canManage"
-          class="cd-sec"
-        >
-          <h3>القرار</h3>
-          <UTextarea
-            v-model="note"
-            :rows="2"
-            autoresize
-            placeholder="ملاحظة القرار (اختيارية)"
-            class="w-full"
-          />
-          <div class="cd-actions">
-            <UButton
-              label="مقبول"
-              icon="i-lucide-circle-check"
-              color="success"
-              :variant="candidate.status === 'accepted' ? 'solid' : 'soft'"
-              :loading="busy"
-              :ui="{ base: 'rounded-[12px] min-h-11' }"
-              @click="emit('decide', 'accepted', note)"
-            />
-            <UButton
-              label="احتياط"
-              icon="i-lucide-clock"
-              color="primary"
-              :variant="candidate.status === 'reserve' ? 'solid' : 'soft'"
-              :ui="{ base: 'rounded-[12px] min-h-11' }"
-              @click="emit('decide', 'reserve', note)"
-            />
-            <UButton
-              label="مرفوض"
-              icon="i-lucide-circle-x"
-              color="error"
-              :variant="candidate.status === 'rejected' ? 'solid' : 'soft'"
-              :ui="{ base: 'rounded-[12px] min-h-11' }"
-              @click="emit('decide', 'rejected', note)"
-            />
-          </div>
-          <UButton
-            v-if="isAdmin && candidate.status === 'accepted'"
-            label="أنشئ له حساب معلّم"
-            icon="i-lucide-user-plus"
-            color="primary"
-            block
-            :loading="busy"
-            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
-            @click="emit('hire')"
-          />
-          <UButton
-            v-if="isAdmin"
-            label="احذف المرشّح"
-            icon="i-lucide-trash-2"
-            color="error"
-            variant="ghost"
-            :ui="{ base: 'rounded-[12px] min-h-11 self-start' }"
-            @click="emit('remove')"
-          />
-        </section>
+        <CandidatesDecision
+          v-if="isAdmin"
+          :candidate="candidate"
+          :busy="busy"
+          @decide="(s: CandidateStatus, n: string) => emit('decide', s, n)"
+          @result-sms="emit('resultSms')"
+          @hire="emit('hire')"
+          @remove="emit('remove')"
+        />
       </div>
     </template>
   </USlideover>

@@ -123,3 +123,15 @@ export const MAX_HALAQA_AREA = 80
 export const MAX_EXPERIENCE_YEARS = 60
 /** طولُ رقم الجوال (05XXXXXXXX). */
 export const CANDIDATE_PHONE_LENGTH = 10
+
+/** نتائجُ المرشّح التي تُبلَّغ برسالة (طلب المستخدم 2026-10-31) — المعيَّنُ يُبلَّغ بصيغة المقبول. */
+export const RESULT_SMS_KINDS = ['accepted', 'reserve', 'rejected'] as const
+export type ResultSmsKind = typeof RESULT_SMS_KINDS[number]
+export const RESULT_SMS_LABEL: Record<ResultSmsKind, string> = { accepted: 'المقبول', reserve: 'الاحتياط', rejected: 'المرفوض' }
+/** الصيغُ الأصليةُ — تطابق افتراضيّات `app_settings.candidate_result_sms_*`. */
+export const DEFAULT_RESULT_SMS: Record<ResultSmsKind, string> = {
+  accepted: '{الأخ/الأخت} {الاسم}، يسرّنا إبلاغك بقبولك ضمن معلّمي منصة ترجمان القرآنية، وسنتواصل معك قريباً لترتيب البدء.',
+  reserve: '{الأخ/الأخت} {الاسم}، شكراً لحضورك مقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية. أُدرج اسمك في قائمة الاحتياط، وسنتواصل معك عند توفّر حلقة.',
+  rejected: '{الأخ/الأخت} {الاسم}، شكراً لاهتمامك بالالتحاق بمعلّمي منصة ترجمان القرآنية. نعتذر عن عدم قبول طلبك في هذه المرحلة، ونسأل الله لك التوفيق.'
+}
+export const RESULT_SMS_VARS = ['{الأخ/الأخت}', '{الاسم}'] as const

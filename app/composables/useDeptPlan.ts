@@ -68,7 +68,8 @@ export function useDeptPlan(year: Ref<number>, month: Ref<number>) {
     }
     const [g, t, o] = await Promise.all([
       supabase.from('dept_plan_goals').select('*').eq('plan_id', p.id).order('sort_order').order('created_at'),
-      supabase.from('dept_plan_tasks').select('*').eq('plan_id', p.id).order('sort_order').order('created_at'),
+      // الأنشطةُ بتاريخ استحقاقها ثم بترتيب إضافتها (طلب المستخدم 2026-10-31)
+      supabase.from('dept_plan_tasks').select('*').eq('plan_id', p.id).order('due_on').order('sort_order').order('created_at'),
       supabase.from('dept_plan_task_owners').select('task_id, profile_id, dept_plan_tasks!inner(plan_id)').eq('dept_plan_tasks.plan_id', p.id)
     ])
     loading.value = false

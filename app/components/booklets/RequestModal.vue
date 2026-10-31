@@ -1,28 +1,29 @@
 <script setup lang="ts">
 /**
  * «اطلب ملازم» (المعلّم — طلب المستخدم 2026-10-25): الملزمةُ وعددُ النسخ وملاحظةٌ اختياريّة، والحلقةُ حلقتُه.
- * يُشعَر المديرُ الإداريّ بالطلب، والتحقّقُ في `useBookletRequests`.
+ * يُشعَر المديرُ الإداريّ بالطلب، والتحقّقُ في `useBookletRequests`. ومع `initial` يصير تعديلاً لطلبٍ لم يُسلَّم (2026-10-31).
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { RequestDraft } from '~/composables/useBookletRequests'
 
-defineProps<{ busy: boolean }>()
+const props = defineProps<{ busy: boolean, initial?: RequestDraft | null }>()
 const emit = defineEmits<{ save: [draft: RequestDraft] }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const blank = (): RequestDraft => ({ booklet: undefined, copies: '', note: '' })
 const form = reactive<RequestDraft>(blank())
 watch(open, (o) => {
-  if (o) Object.assign(form, blank())
+  if (o) Object.assign(form, props.initial ? { ...props.initial } : blank())
 })
+const editing = computed(() => !!props.initial)
 const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b.label}`, value: b.no }))
 </script>
 
 <template>
   <UModal
     v-model:open="open"
-    title="طلبُ ملازم"
-    description="يصل طلبُك إلى المدير الإداري ليجهّز النسخ."
+    :title="editing ? 'تعديلُ طلب الملازم' : 'طلبُ ملازم'"
+    :description="editing ? 'يصل التعديلُ إلى المدير الإداري، وإن كان قد أبلغك بالاستلام عاد الطلبُ جديداً.' : 'يصل طلبُك إلى المدير الإداري ليجهّز النسخ.'"
   >
     <template #body>
       <div class="rf">
@@ -68,8 +69,8 @@ const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b
           @click="open = false"
         />
         <UButton
-          label="أرسل الطلب"
-          icon="i-lucide-send"
+          :label="editing ? 'احفظ التعديل' : 'أرسل الطلب'"
+          :icon="editing ? 'i-lucide-check' : 'i-lucide-send'"
           color="primary"
           :loading="busy"
           :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"

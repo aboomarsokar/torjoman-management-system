@@ -26,3 +26,5 @@ export const BOOKLETS: Booklet[] = Array.from({ length: BOOKLET_COUNT }, (_, i) 
 export const MAX_BOOKLET_COPIES = 1000
 /** أقصى طول الملاحظة (قيدُ القاعدة). */
 export const MAX_BOOKLET_NOTE = 300
+/** أقصى طول سبب إلغاء طلب الملازم (قيدُ القاعدة). */
+export const MAX_CANCEL_REASON = 200

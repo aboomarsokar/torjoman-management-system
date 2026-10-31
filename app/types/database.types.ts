@@ -348,43 +348,72 @@ export type Database = {
       booklet_requests: {
         Row: {
           booklet: number
+          cancel_reason: string | null
+          cancelled_by: string | null
           closed_at: string | null
           copies: number
           created_at: string
           halaqa_id: string
           id: string
           note: string | null
+          notified_at: string | null
+          notified_by: string | null
           requested_by: string
           status: string
+          updated_at: string | null
         }
         Insert: {
           booklet: number
+          cancel_reason?: string | null
+          cancelled_by?: string | null
           closed_at?: string | null
           copies: number
           created_at?: string
           halaqa_id: string
           id?: string
           note?: string | null
+          notified_at?: string | null
+          notified_by?: string | null
           requested_by?: string
           status?: string
+          updated_at?: string | null
         }
         Update: {
           booklet?: number
+          cancel_reason?: string | null
+          cancelled_by?: string | null
           closed_at?: string | null
           copies?: number
           created_at?: string
           halaqa_id?: string
           id?: string
           note?: string | null
+          notified_at?: string | null
+          notified_by?: string | null
           requested_by?: string
           status?: string
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "booklet_requests_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "booklet_requests_halaqa_id_fkey"
             columns: ["halaqa_id"]
             isOneToOne: false
             referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booklet_requests_notified_by_fkey"
+            columns: ["notified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -3268,6 +3297,10 @@ export type Database = {
       can_view_halaqa: { Args: { hid: string }; Returns: boolean }
       can_view_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_view_statements_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      cancel_booklet_request: {
+        Args: { p_reason?: string; p_request: string }
+        Returns: undefined
+      }
       candidate_status_lookup: {
         Args: { p_national_id: string; p_phone: string }
         Returns: {
@@ -3374,6 +3407,7 @@ export type Database = {
       is_halaqa_teacher: { Args: { hid: string }; Returns: boolean }
       is_project_supervisor: { Args: never; Returns: boolean }
       is_women_admin: { Args: never; Returns: boolean }
+      mark_booklet_request_ready: { Args: { p_request: string }; Returns: Json }
       mark_chat_read: { Args: { p_conversation: string }; Returns: undefined }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       mark_staff_messages_seen: { Args: { p_ids: string[] }; Returns: number }
@@ -3562,6 +3596,15 @@ export type Database = {
       touch_presence: { Args: never; Returns: undefined }
       unlock_quality_month: { Args: { p_id: string }; Returns: undefined }
       unlock_visit_result: { Args: { p_visit: string }; Returns: undefined }
+      update_booklet_request: {
+        Args: {
+          p_booklet: number
+          p_copies: number
+          p_note: string
+          p_request: string
+        }
+        Returns: undefined
+      }
       update_booklet_stock_move: {
         Args: { p_move: string; p_moved_on?: string; p_note: string }
         Returns: undefined
@@ -3786,4 +3829,3 @@ export const Constants = {
     },
   },
 } as const
-

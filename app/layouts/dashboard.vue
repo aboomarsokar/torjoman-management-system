@@ -79,6 +79,10 @@ const mainNav: Item[] = [
   // خطةُ القسم الشهرية (طلب المستخدم 2026-10-30) — للقيادات وحدهم: المدير الإداريّ والفنيّ والمديرة الإدارية ومشرف المشروع
   // مقابلاتُ المرشّحين (طلب المستخدم 2026-10-30) — للإدارة؛ واللجنةُ تقيّم على الورق والمديرُ الإداريّ يُدخل العلامات (2026-10-31)
   { key: 'candidates', label: 'مقابلات المرشّحين', labelF: 'مقابلات المرشّحات', icon: 'i-lucide-user-search', to: '/candidates', roles: [...LEADERS, WOMEN], isNew: true },
+  // مكتبةُ المشروع (طلب المستخدم 2026-10-31) — الملازمُ والمستنداتُ لكلّ الأدوار، والطالبُ منهم
+  { key: 'library', label: 'المكتبة', icon: 'i-lucide-library-big', to: '/library', roles: [...LEADERS, WOMEN, 'field_supervisor', 'examiner', 'teacher', 'student'], isNew: true },
+  // صورُ هويات الكادر (طلب المستخدم 2026-10-31) — يتابعها المديرُ الإداريّ والمديرةُ الإدارية لقسمها
+  { key: 'id-cards', label: 'صور الهويات', icon: 'i-lucide-id-card', to: '/id-cards', roles: [ADMIN, WOMEN], isNew: true },
   { key: 'plan', label: 'خطة القسم', icon: 'i-lucide-target', to: '/plan', roles: [...LEADERS, WOMEN], isNew: true },
   { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },

@@ -1252,6 +1252,10 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-10-31 — النتيجةُ الآلية** (هجرة `20261031150000_candidate_auto_result`): `candidates.decision_manual`؛ `private.candidate_weighted(scores)` بالأوزان ذاتها في `CANDIDATE_CRITERIA`، و`private.candidate_auto_status(avg)` (≥80 `accepted` · ≥75 `reserve` = «تأهيل» · دونها `rejected`)، و`private.candidate_recompute(id)` يضبط الحالةَ من متوسّط التقييمات ما لم يكن القرارُ يدوياً (بعلَم المعاملة `torjoman.auto_decision` فيمرّ حارسُ `candidate_touch` ولا يُثبَّت يدوياً)، ويستدعيه المشغّل `candidate_evaluations_recompute` بعد كلّ إدراجٍ وتعديلٍ وحذف. `candidate_touch`: القرارُ المباشرُ من المدير يرفع `decision_manual`، والرجوعُ إلى `new`/`invited` يخفضه. سياساتُ الإدراج والتعديل على `candidate_evaluations` للمدير الإداريّ وحده، وصيغةُ رسالة «تأهيل» الجديدة.
 
+> **2026-10-31 — المكتبة** (هجرة `20261031160000_library`): `library_items` — `booklet` (1..15 فريد، أو null للمستند) · `title` · `description` · `category` · `audience` (`all`/`staff`، والملزمةُ `all` دائماً) · `file_path` (`booklets|docs/<uuid>.<ext>`) · `file_name` · `mime_type` · `size_bytes` (≤ 50 م.ب) · `created_by` · `created_at`/`updated_at`. RLS: القراءةُ لكلّ حسابٍ نشط والطالبُ ما جمهورُه `all`؛ الكتابةُ `is_admin_manager()`. المستودعُ الخاصّ `library` يُقرأ بـ`private.can_read_library_file(name)` ويرفع إليه المديرُ الإداريّ وحده. حارسُ النيابة.
+
+> **2026-10-31 — صورُ الهويات** (هجرة `20261031170000_staff_id_cards`): `staff_id_cards` — `profile_id` (مفتاح) · `file_path` (`<profile_id>/<uuid>.<jpg|png|webp|pdf>`) · `mime_type` · `size_bytes` (≤ 5 م.ب) · `uploaded_at`. `private.can_view_id_card(profile)`: صاحبُها، والمديرُ الإداريّ، والمديرةُ الإداريةُ لعاملةٍ في قسم البنات؛ `private.can_upload_id_card(profile)`: صاحبُها إن لم يكن طالباً. الحذفُ لصاحبها أو المدير الإداريّ. المستودعُ الخاصّ `id-cards` يُحرس بالدالّتين على المجلّد الأوّل. حارسُ النيابة.
+
 ## 28. خطةُ القسم الشهرية: `dept_plans` و`dept_plan_goals` و`dept_plan_tasks` و`dept_plan_task_owners` (2026-10-30)
 
 > الهجرة `20261030084203_department_plan`.

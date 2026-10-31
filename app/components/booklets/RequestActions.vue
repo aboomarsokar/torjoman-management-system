@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * أزرارُ طلب الملازم عند المدير الإداريّ (طلب المستخدم 2026-10-31): محادثةُ المعلّم، و«إبلاغ بالاستلام» للجديد،
- * و«تسليم» و«إلغاء» لما لم يُسلَّم. `block` لبطاقة الجوال.
+ * و«تسليم» و«إلغاء» لما لم يُسلَّم. `block` لبطاقة الجوال، وفي الجدول الضيّق أيقوناتٌ بتلميح.
  */
 import type { BookletRequest } from '~/composables/useBookletRequests'
 import { isPendingRequest } from '~/utils/bookletRequests'
@@ -32,26 +32,32 @@ const ui = computed(() => ({ base: props.block ? 'rounded-[12px] min-h-11 font-s
     </UTooltip>
     <UButton
       v-if="row.status === 'open'"
-      label="إبلاغ بالاستلام"
       icon="i-lucide-bell-ring"
       color="info"
       variant="soft"
       :block="block"
       :loading="busy"
+      aria-label="إبلاغ بالاستلام"
+      title="إبلاغ بالاستلام"
       :ui="ui"
       @click="emit('ready')"
-    />
+    >
+      <span class="ra-lbl">إبلاغ بالاستلام</span>
+    </UButton>
     <UButton
       v-if="pending"
-      label="تسليم"
       icon="i-lucide-package-check"
       color="success"
       variant="solid"
       :block="block"
       :loading="busy"
+      aria-label="تسليم"
+      title="تسليم"
       :ui="ui"
       @click="emit('deliver')"
-    />
+    >
+      <span class="ra-lbl">تسليم</span>
+    </UButton>
     <UTooltip
       v-if="pending"
       text="إلغاء الطلب"
@@ -75,4 +81,8 @@ const ui = computed(() => ({ base: props.block ? 'rounded-[12px] min-h-11 font-s
 .ra { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
 .ra-block { width: 100%; flex-wrap: wrap; }
 .ra-block > * { flex: 1 1 40%; }
+/* في الجدول الضيّق تكفي الأيقونة (والاسمُ في التلميح) فلا يتجاوز الجدولُ عرضَه */
+@container dt (max-width: 1099px) {
+  .ra:not(.ra-block) .ra-lbl { display: none; }
+}
 </style>

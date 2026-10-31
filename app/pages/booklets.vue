@@ -60,14 +60,16 @@ async function saveMove(id: string, note: string, movedOn: string | null) {
 }
 
 const route = useRoute()
-const view = ref<View>(route.query.view === 'requests' ? 'requests' : route.query.view === 'stock' ? 'stock' : 'halaqa')
-/** عروضُ الصفحة تبويباتٍ مقطّعةً بأيقوناتها (طلب المستخدم 2026-10-28: بدل شرائح الفلترة). */
+// يفتح على «الطلبات» افتراضاً (طلب المستخدم 2026-10-31)، و`?view=` يختار غيرَه
+const VIEWS: View[] = ['halaqa', 'booklet', 'log', 'requests', 'stock']
+const view = ref<View>(VIEWS.find(v => v === route.query.view) ?? 'requests')
+/** عروضُ الصفحة تبويباتٍ مقطّعةً بأيقوناتها (طلب المستخدم 2026-10-28: بدل شرائح الفلترة)؛ والطلباتُ والمخزونُ أوّلاً (2026-10-31). */
 const viewTabs = computed<SegmentTab<View>[]>(() => [
+  { key: 'requests', label: 'الطلبات', icon: 'i-lucide-inbox', count: openCount.value || undefined },
+  { key: 'stock', label: 'المخزون', icon: 'i-lucide-package', count: lowCount.value || undefined },
   { key: 'halaqa', label: 'حسب الحلقة', icon: 'i-lucide-users-round' },
   { key: 'booklet', label: 'حسب الملزمة', icon: 'i-lucide-book-copy' },
-  { key: 'log', label: 'السجلّ', icon: 'i-lucide-history', count: deliveries.value.length },
-  { key: 'requests', label: 'الطلبات', icon: 'i-lucide-inbox', count: openCount.value || undefined },
-  { key: 'stock', label: 'المخزون', icon: 'i-lucide-package', count: lowCount.value || undefined }
+  { key: 'log', label: 'السجلّ', icon: 'i-lucide-history', count: deliveries.value.length }
 ])
 
 const stats = computed(() => bookletStats(deliveries.value, halaqat.value.length))

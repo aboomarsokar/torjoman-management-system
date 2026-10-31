@@ -12,7 +12,7 @@ export const TEACHER_NAV_ORDER = [
   // عملُ اليوم
   'dashboard-teacher', 'attendance-offline', 'quran-offline', 'students-teacher',
   // الاختباراتُ والبرامج
-  'exams', 'examplan', 'programs',
+  'exams', 'examplan', 'programs', 'library',
   // ما يصل من الإدارة
   'messages', 'chat', 'alerts', 'visits', 'quality-mine',
   // الكشوفُ والطلبات
@@ -33,7 +33,7 @@ export function orderByKeys<T extends { key: string }>(items: T[], order: readon
  * بنودُ المعلّم التي لا تُبنى للعمل بلا إنترنت (قرار المستخدم 2026-10-27): نادرةُ الاستعمال، وطلبُ الطالب يُفحص في
  * القاعدة فورَ إرساله — فعليها شارةٌ دائمةٌ في القائمة تقول إنها تحتاج اتصالاً.
  */
-export const TEACHER_ONLINE_ONLY = ['my-booklets', 'student-requests', 'chat'] as const
+export const TEACHER_ONLINE_ONLY = ['my-booklets', 'student-requests', 'chat', 'library'] as const
 
 /** الشاشاتُ التي تعمل بلا إنترنت — غيرُها يُعتَم في القائمة ويُنبَّه عند ضغطه. */
 export const OFFLINE_PATHS = [

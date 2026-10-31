@@ -298,6 +298,12 @@ const pwOpen = ref(false)
           @change="pwOpen = true"
         />
 
+        <!-- صورة الهوية — للعاملين لا للطلاب (طلب المستخدم 2026-10-31) -->
+        <ProfileIdCard
+          v-if="isSelf && data.p.role !== 'student'"
+          :profile-id="data.p.id"
+        />
+
         <!-- النطاق -->
         <div
           v-if="data.scope.length"

@@ -16,6 +16,8 @@ function translateError(message?: string): string | null {
   if (m.includes('network') || m.includes('fetch')) return 'تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت.'
   if (m.includes('user not found')) return 'لا يوجد حساب بهذا الرقم.'
   if (m.includes('password')) return 'كلمة المرور لا تحقّق المتطلّبات.'
+  // رفضُ RLS بالإنجليزية (من المستودع خاصّةً) خارج النيابة: الصلاحيةُ أو جلسةٌ انتهت أو أُبطلت
+  if (m.includes('row-level security')) return 'لا صلاحية لهذه العملية — إن كانت من صلاحيتك فقد تكون جلستك انتهت: سجّل الخروج ثم ادخل من جديد.'
   // قيودُ `*_from_project_start` (الهجرة 20261024143005)
   if (m.includes('_from_project_start')) return 'لا يُقبل تاريخٌ قبل بداية المشروع (1/10/2026).'
   return null

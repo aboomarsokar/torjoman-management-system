@@ -3,7 +3,7 @@
  * طلباتُ الملازم في أرشيف الملازم (المدير الإداري — طلب المستخدم 2026-10-25)، بأربع حالات (2026-10-31):
  * «جديد» ← «أُبلغ المعلّم» (إبلاغٌ بالاستلام يفحص المخزون ويحجز النسخ ويُشعر المعلّم، وخلفيةُ الصفّ تتغيّر) ←
  * «تمّ التسليم»، أو «ملغى» بسببٍ يصل المعلّم. تحت كلّ طلبٍ قائمٍ حالُ مخزونه (لا يكفي / عند الحدّ / غيرُ مجرودة).
- * ثلاثةُ تبويبات: بانتظار التسليم · تمّ التسليم · ملغاة. مشرفُ المشروع يقرأ.
+ * تبويبان: بانتظار التسليم · ملغاة — والمسلَّمُ في «السجلّ» بملاحظة «بطلب المعلّم» (طلب المستخدم 2026-10-31). مشرفُ المشروع يقرأ.
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { BookletRequest } from '~/composables/useBookletRequests'
@@ -19,22 +19,19 @@ const emit = defineEmits<{
   chat: [row: BookletRequest]
 }>()
 
-type View = 'pending' | 'done' | 'cancelled'
+type View = 'pending' | 'cancelled'
 const view = ref<View>('pending')
 const byView = computed(() => ({
   pending: props.rows.filter(r => isPendingRequest(r.status)),
-  done: props.rows.filter(r => r.status === 'done'),
   cancelled: props.rows.filter(r => r.status === 'cancelled')
 }))
 const shown = computed(() => byView.value[view.value])
 const viewTabs = computed(() => [
   { key: 'pending' as const, label: 'بانتظار التسليم', icon: 'i-lucide-hourglass', count: byView.value.pending.length },
-  { key: 'done' as const, label: 'تمّ التسليم', icon: 'i-lucide-package-check', count: byView.value.done.length },
   { key: 'cancelled' as const, label: 'ملغاة', icon: 'i-lucide-package-x', count: byView.value.cancelled.length }
 ])
 const EMPTY: Record<View, { icon: string, title: string, description: string }> = {
-  pending: { icon: 'i-lucide-circle-check-big', title: 'لا طلباتٍ بانتظار التسليم', description: 'ما يُسلَّم يظهر في «تمّ التسليم».' },
-  done: { icon: 'i-lucide-inbox', title: 'لا طلباتٍ مسلَّمة بعد', description: 'ما تسلّمه يظهر هنا بتاريخه.' },
+  pending: { icon: 'i-lucide-circle-check-big', title: 'لا طلباتٍ بانتظار التسليم', description: 'ما يُسلَّم يظهر في «السجلّ» بملاحظة «بطلب المعلّم».' },
   cancelled: { icon: 'i-lucide-inbox', title: 'لا طلباتٍ ملغاة', description: 'ما يُلغيه المعلّمُ أو المديرُ يظهر هنا بسببه.' }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OFF_REASON_LABELS, OFF_REASONS, offDayBlock, offInputError, offStatusLabel, type ShownOff } from './offDays'
+import { OFF_REASON_CHOICES, OFF_REASON_LABELS, OFF_REASONS, offDayBlock, offInputError, offStatusLabel, type ShownOff } from './offDays'
 
 describe('offInputError', () => {
   it('بلا سبب: اختر سبباً', () => {
@@ -19,8 +19,12 @@ describe('offInputError', () => {
 })
 
 describe('OFF_REASON_LABELS', () => {
-  it('تسميةٌ لكلّ سبب', () => {
-    expect(OFF_REASONS.map(r => OFF_REASON_LABELS[r])).toEqual(['عطلة رسمية', 'ظرف أمني', 'مرض المعلم أو عذر طارئ', 'سبب آخر'])
+  it('تسميةٌ لكلّ سببٍ تقبله القاعدة', () => {
+    expect(OFF_REASONS.map(r => OFF_REASON_LABELS[r])).toEqual(['مرض المعلم', 'عذر طارئ', 'سبب آخر', 'عطلة رسمية', 'ظرف أمني'])
+  })
+
+  it('المعلّمُ يختار ثلاثةً وحدها: لا عطلةَ رسميةً ولا ظرفاً أمنياً (طلب المستخدم 2026-10-31)', () => {
+    expect([...OFF_REASON_CHOICES]).toEqual(['teacher_sick', 'emergency', 'other'])
   })
 })
 

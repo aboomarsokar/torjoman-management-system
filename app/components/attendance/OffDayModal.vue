@@ -4,7 +4,7 @@
  * إلزاميةً مع «سبب آخر»، و«تأكيد». ومع يومٍ سُجّل حضورُه تنبيهٌ أنّه سيُمحى. تُفتح فارغةً أو معبّأةً («عدّل البلاغ»)،
  * والحفظُ (`reportOff`) في `useOfflineAttendance`: كتابةٌ على الجهاز فوريّة فلا حالةَ انشغال، ونقرٌ مزدوجٌ يكتب السطرَ نفسَه.
  */
-import { OFF_NOTE_MAX, OFF_REASONS, OFF_REASON_LABELS, offInputError, type OffReason } from '~/utils/offDays'
+import { OFF_NOTE_MAX, OFF_REASON_CHOICES, OFF_REASON_LABELS, offInputError, type OffReason } from '~/utils/offDays'
 
 const props = defineProps<{
   /** اليومُ معروضاً (dd-mm-yyyy). */
@@ -28,10 +28,11 @@ watch(open, (o) => {
 })
 const error = computed(() => offInputError(reason.value, note.value))
 const ICONS: Record<OffReason, string> = {
-  official_holiday: 'i-lucide-calendar-off',
-  security: 'i-lucide-shield-alert',
   teacher_sick: 'i-lucide-thermometer',
-  other: 'i-lucide-message-square-more'
+  emergency: 'i-lucide-siren',
+  other: 'i-lucide-message-square-more',
+  official_holiday: 'i-lucide-calendar-off',
+  security: 'i-lucide-shield-alert'
 }
 
 function onConfirm() {
@@ -65,7 +66,7 @@ function onConfirm() {
           aria-label="سبب عدم الانعقاد"
         >
           <button
-            v-for="r in OFF_REASONS"
+            v-for="r in OFF_REASON_CHOICES"
             :key="r"
             type="button"
             role="radio"

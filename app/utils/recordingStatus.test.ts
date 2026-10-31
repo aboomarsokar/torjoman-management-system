@@ -67,7 +67,7 @@ describe('dayReasonText / isReasonState', () => {
   })
   it('المعلّق: بجنس الحلقة، ويُعدّ ناقصاً', () => {
     expect(dayReasonText('off_pending', { reason: 'teacher_sick' }, true))
-      .toBe('بلّغت المعلّمةُ أنّ الحلقة لم تنعقد — مرض المعلم أو عذر طارئ. بانتظار الاعتماد، ويُعدّ ناقصاً حتى يُعتمد.')
+      .toBe('بلّغت المعلّمةُ أنّ الحلقة لم تنعقد — مرض المعلم. بانتظار الاعتماد، ويُعدّ ناقصاً حتى يُعتمد.')
     expect(dayReasonText('off_pending', { reason: 'other', note: null }, false)).toContain('بلّغ المعلّمُ')
   })
   it('سببٌ غائب: بلا شرطة', () => {

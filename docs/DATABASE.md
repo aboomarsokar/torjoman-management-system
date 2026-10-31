@@ -1216,7 +1216,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **`attendance_off_days`** — بلاغُ المعلّم أنّ الحلقة لم تنعقد يوماً:
   - **الأعمدة:**
     - `halaqa_id`، `day` (فريدٌ معاً)؛
-    - `reason` (`official_holiday` · `security` · `teacher_sick` · `other`)، و`note` (≤ 300، إلزاميةٌ مع `other`)؛
+    - `reason` (`teacher_sick` مرض المعلم · `emergency` عذر طارئ · `other` سبب آخر — ما يختاره المعلّم منذ
+      `20261031112450_off_day_reasons`؛ و`official_holiday` · `security` مقبولان ومخفيّان)، و`note` (≤ 300، إلزاميةٌ مع `other`)؛
     - `status` (`pending` · `approved` · `rejected`)؛
     - `reported_by`، `reported_at` (وقتُ الجهاز، لا يتجاوز الرفع)؛
     - `reviewed_by`، `reviewed_at`، `review_note` (سببُ الرفض).

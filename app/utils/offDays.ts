@@ -6,14 +6,20 @@
 import { PROJECT_START_DATE } from '~/constants/project'
 import { isFriday } from '~/utils/reportWindow'
 
-export const OFF_REASONS = ['official_holiday', 'security', 'teacher_sick', 'other'] as const
+/** كلُّ سببٍ تقبله القاعدة (للقراءة والعرض) — «عطلة رسمية» و«ظرف أمني» أُخفيا عن المعلّم 2026-10-31 وبقيا مقبولَين
+ *  كي لا يُرفض بلاغٌ من جهازٍ لم يصله التحديث (العطلةُ والظرفُ العامّ إجازةٌ يعيّنها المدير الإداري). */
+export const OFF_REASONS = ['teacher_sick', 'emergency', 'other', 'official_holiday', 'security'] as const
 export type OffReason = typeof OFF_REASONS[number]
 
+/** ما يختاره المعلّمُ في نافذة البلاغ (طلب المستخدم 2026-10-31). */
+export const OFF_REASON_CHOICES: readonly OffReason[] = ['teacher_sick', 'emergency', 'other']
+
 export const OFF_REASON_LABELS: Record<OffReason, string> = {
+  teacher_sick: 'مرض المعلم',
+  emergency: 'عذر طارئ',
+  other: 'سبب آخر',
   official_holiday: 'عطلة رسمية',
-  security: 'ظرف أمني',
-  teacher_sick: 'مرض المعلم أو عذر طارئ',
-  other: 'سبب آخر'
+  security: 'ظرف أمني'
 }
 
 export const OFF_STATUSES = ['pending', 'approved', 'rejected'] as const

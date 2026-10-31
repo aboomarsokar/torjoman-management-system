@@ -2,7 +2,7 @@
 /**
  * صفحةُ «الملازم» للمعلّم بجداول (طلب المستخدم 2026-10-25 «على شكل جدول»): سطرُ خلاصةٍ (مجموعُ النسخ وعددُ
  * الملازم وزرُّ الطلب)، ثم جدولُ التسليمات تسليماً تسليماً (الملزمة والنسخ والتاريخ والملاحظة)، ثم جدولُ طلباته
- * بحالتها. وفي لوحته زرٌّ إليها.
+ * بحالتها (`BookletsTeacherRequests` — تعديلٌ وإلغاءٌ ما لم يُسلَّم). وفي لوحته زرٌّ إليها.
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { RequestDraft } from '~/composables/useBookletRequests'
@@ -20,7 +20,7 @@ const { data: deliveries, pending } = useLazyAsyncData<DeliveryRow[]>(`teacher-h
   return data ?? []
 }, { server: false, default: () => [] })
 
-const { requests, busy, addRequest } = useBookletRequests(props.halaqaId)
+const { requests, busy, addRequest, updateRequest, cancelRequest } = useBookletRequests(props.halaqaId)
 const requestOpen = ref(false)
 async function sendRequest(d: RequestDraft) {
   if (await addRequest(props.halaqaId, d)) requestOpen.value = false
@@ -36,13 +36,6 @@ const deliveryColumns = [
   { key: 'copies', label: 'النسخ', align: 'center' as const },
   { key: 'date', label: 'تاريخ التسليم' },
   { key: 'note', label: 'ملاحظة', class: 'col-note' }
-]
-const requestColumns = [
-  { key: 'num', label: '#' },
-  { key: 'booklet', label: 'الملزمة' },
-  { key: 'copies', label: 'النسخ', align: 'center' as const },
-  { key: 'date', label: 'تاريخ الطلب' },
-  { key: 'state', label: 'الحالة' }
 ]
 </script>
 
@@ -119,59 +112,12 @@ const requestColumns = [
     <h2 class="th-h">
       طلباتي
     </h2>
-    <UiEmptyState
-      v-if="!requests?.length"
-      icon="i-lucide-send"
-      title="لا طلباتِ ملازم بعد"
-      description="اطلب ما تحتاجه حلقتُك بزرّ «اطلب ملازم» فيصل طلبُك إلى المدير الإداري."
+    <BookletsTeacherRequests
+      :rows="requests ?? []"
+      :busy="busy"
+      @edit="updateRequest"
+      @cancel="cancelRequest"
     />
-    <UiDataTable
-      v-else
-      :columns="requestColumns"
-      :rows="requests"
-      row-key="id"
-    >
-      <template #num="{ index }">
-        <span class="seq-n">{{ index + 1 }}</span>
-      </template>
-      <template #booklet="{ row }">
-        <span class="bk">{{ label(row.booklet) }}</span>
-      </template>
-      <template #copies="{ row }">
-        <b class="n">{{ row.copies }}</b>
-      </template>
-      <template #date="{ row }">
-        <bdi
-          dir="ltr"
-          class="date"
-        >{{ deliveryDate(row.created_at) }}</bdi>
-      </template>
-      <template #state="{ row }">
-        <UBadge
-          :label="row.status === 'open' ? 'بانتظار التسليم' : 'تمّ التسليم'"
-          :color="row.status === 'open' ? 'warning' : 'success'"
-          variant="soft"
-        />
-      </template>
-      <template #card="{ row, index }">
-        <UiCardRow
-          :title="label(row.booklet)"
-          :subtitle="deliveryDate(row.created_at)"
-          :fields="[{ label: 'النسخ', value: String(row.copies) }]"
-        >
-          <template #lead>
-            <span class="seq-n">{{ index + 1 }}</span>
-          </template>
-          <template #badge>
-            <UBadge
-              :label="row.status === 'open' ? 'بانتظار التسليم' : 'تمّ التسليم'"
-              :color="row.status === 'open' ? 'warning' : 'success'"
-              variant="soft"
-            />
-          </template>
-        </UiCardRow>
-      </template>
-    </UiDataTable>
 
     <BookletsRequestModal
       v-model:open="requestOpen"

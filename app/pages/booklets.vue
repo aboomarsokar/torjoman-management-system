@@ -23,7 +23,7 @@ const { role, isAdmin, isReadOnly } = usePermissions()
 const canView = computed(() => isAdmin.value || isReadOnly.value)
 const { deliveries, halaqat, pending, busy, addDelivery, removeDelivery, refresh: refreshDeliveries } = useBooklets()
 // طلباتُ المعلّمين (2026-10-25) — إشعارُ الطلب يفتح هذا العرض (?view=requests)، والعددُ للمفتوحة الجديدة
-const { requests, openCount, busy: reqBusy, deliverRequest } = useBookletRequests()
+const { requests, openCount, busy: reqBusy, deliverRequest, markReady, cancelRequest } = useBookletRequests()
 /** «تمّ التسليم» يسجّل التسليمَ في الأرشيف — فتُحدَّث الأرقامُ والعروضُ معه. */
 async function deliver(id: string, deliveredOn: string) {
   const booklet = requests.value?.find(r => r.id === id)?.booklet
@@ -164,9 +164,12 @@ async function confirmDelete() {
         <BookletsRequests
           v-else-if="view === 'requests'"
           :rows="requests ?? []"
+          :stock="stock"
           :can-close="isAdmin"
           :busy="reqBusy"
           @deliver="deliver"
+          @ready="markReady"
+          @cancel="cancelRequest"
           @chat="(r: BookletRequest) => openWithDraft(r.requested_by, bookletReadyDraft(r.halaqa?.teacher?.full_name, r.booklet, r.copies, r.halaqa?.gender === 'female'))"
         />
         <template v-else>

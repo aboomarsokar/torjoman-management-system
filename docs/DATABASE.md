@@ -1246,6 +1246,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
   - الإجازةُ والبلاغُ المعتمَد يخرجان من `expected_days` و`missed_days`، إلا يوماً منعقداً. والمعلّقُ يبقى ناقصاً.
   - و`recent` يعرف `holiday` و`off` و`off_pending`.
 
+> **2026-10-31 — طلباتُ الملازم بأربع حالات** (هجرة `20261031122742_booklet_requests_flow`): `booklet_requests.status` ∈ `open`/`ready`/`done`/`cancelled`، وأعمدةُ `notified_at`، `notified_by`، `cancelled_by`، `cancel_reason` (≤200)، `updated_at`. **المحجوز** = نسخُ الطلبات `ready` (`private.booklet_reserved`)، والمتوفّر = الرصيد − المحجوز. الدوالّ (كلُّها `assert_session_writable`): `mark_booklet_request_ready(p_request)` للمدير الإداريّ — الجديدُ وحده، يرفض إن لم يكفِ المتوفّر (وغيرُ المجرودة تمرّ)، ويُشعر المعلّمَ `booklet_ready`، ويُعيد `{tracked, available, alert_at}`؛ `update_booklet_request(p_request, p_booklet, p_copies, p_note)` لمعلّم الحلقة ما لم يُسلَّم، والمُبلَغُ يعود `open`؛ `cancel_booklet_request(p_request, p_reason)` للمعلّم أو المدير، ويُشعر الطرفَ الآخر `booklet_request_cancelled`. `deliver_booklet_request` يقبل `open`/`ready` ويُغلق الطلبَ قبل إدراج التسليم، و`private.booklet_stock_on_delivery` يرفض ما يمسّ المحجوزَ لغيره. `private.booklet_stock_low_alert` يُشعر المديرين `booklet_stock_low` حين يبلغ المتوفّرُ `alert_at` (مرّةً ما دام السابقُ غيرَ مقروء، ويُدرج مباشرةً لأنّ `notify` لا يُشعر صاحبَ الفعل)، ويُستدعى بعد الإبلاغ والتسليم. وإشعارُ الطلب الجديد يذكر «المخزونُ لا يكفي» أو «غيرُ مجرودة».
+
 ## 28. خطةُ القسم الشهرية: `dept_plans` و`dept_plan_goals` و`dept_plan_tasks` و`dept_plan_task_owners` (2026-10-30)
 
 > الهجرة `20261030084203_department_plan`.

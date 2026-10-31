@@ -1250,6 +1250,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-10-31 — رسالةُ النتيجة والقرارُ للمدير الإداريّ** (هجرة `20261031131709_candidate_result_sms`): `app_settings.candidate_result_sms_accepted` / `_reserve` / `_rejected` (نصٌّ 10..500 بافتراضيّاتٍ تطابق `DEFAULT_RESULT_SMS`)، و`candidates.result_sms_at`. `private.candidate_touch` يرفض (`42501` «قرارُ المرشّح للمدير الإداري وحده») أن يغيّر غيرُ المدير الإداريّ الحالةَ إلى قرارٍ (`accepted`/`reserve`/`rejected`) أو منه، أو يمسّ `decision_note` — والخادمُ بلا جلسة يمرّ؛ ويُصفّر `result_sms_at` مع كلّ تغيّرٍ في الحالة.
 
+> **2026-10-31 — النتيجةُ الآلية** (هجرة `20261031150000_candidate_auto_result`): `candidates.decision_manual`؛ `private.candidate_weighted(scores)` بالأوزان ذاتها في `CANDIDATE_CRITERIA`، و`private.candidate_auto_status(avg)` (≥80 `accepted` · ≥75 `reserve` = «تأهيل» · دونها `rejected`)، و`private.candidate_recompute(id)` يضبط الحالةَ من متوسّط التقييمات ما لم يكن القرارُ يدوياً (بعلَم المعاملة `torjoman.auto_decision` فيمرّ حارسُ `candidate_touch` ولا يُثبَّت يدوياً)، ويستدعيه المشغّل `candidate_evaluations_recompute` بعد كلّ إدراجٍ وتعديلٍ وحذف. `candidate_touch`: القرارُ المباشرُ من المدير يرفع `decision_manual`، والرجوعُ إلى `new`/`invited` يخفضه. سياساتُ الإدراج والتعديل على `candidate_evaluations` للمدير الإداريّ وحده، وصيغةُ رسالة «تأهيل» الجديدة.
+
 ## 28. خطةُ القسم الشهرية: `dept_plans` و`dept_plan_goals` و`dept_plan_tasks` و`dept_plan_task_owners` (2026-10-30)
 
 > الهجرة `20261030084203_department_plan`.

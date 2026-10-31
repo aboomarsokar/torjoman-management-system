@@ -23,15 +23,19 @@ export const CANDIDATE_CRITERIA = [
   { key: 'tech', label: 'المهارات التقنية', weight: 5 }
 ] as const
 
-/** علامةُ الترشيح للقبول الافتراضية (تُعرض علامةً، والقرارُ للمدير). */
-export const CANDIDATE_PASS_MARK = 70
+/**
+ * عتباتُ النتيجة الآلية من متوسّط التقييم (طلب المستخدم 2026-10-31 — تطابق `private.candidate_auto_status`):
+ * مقبول ≥ 80 · تأهيل 75–79.9 · مرفوض < 75.
+ */
+export const CANDIDATE_PASS_MARK = 80
+export const CANDIDATE_QUALIFY_MARK = 75
 
 export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
   new: 'جديد',
   invited: 'مدعوّ للمقابلة',
   interviewed: 'قوبل',
   accepted: 'مقبول',
-  reserve: 'احتياط',
+  reserve: 'تأهيل',
   rejected: 'مرفوض',
   hired: 'صار معلّماً'
 }
@@ -52,7 +56,7 @@ export const CANDIDATE_PUBLIC_STATUS: Record<CandidateStatus, string> = {
   invited: 'دُعيت إلى المقابلة.',
   interviewed: 'أجريت المقابلة، والنتيجة قيد الاعتماد.',
   accepted: 'مبارك! قُبلت، وسنتواصل معك لاستكمال الإجراءات.',
-  reserve: 'أنت على قائمة الاحتياط، وسنتواصل معك عند الحاجة.',
+  reserve: 'نتيجتك تؤهّلك للالتحاق ببرنامج التأهيل، وسنتواصل معك بموعده.',
   rejected: 'نشكر اهتمامك، ولم يُقبل الطلب هذه المرّة.',
   hired: 'مبارك! أصبحت من معلّمي ترجمان.'
 }
@@ -124,14 +128,14 @@ export const MAX_EXPERIENCE_YEARS = 60
 /** طولُ رقم الجوال (05XXXXXXXX). */
 export const CANDIDATE_PHONE_LENGTH = 10
 
-/** نتائجُ المرشّح التي تُبلَّغ برسالة (طلب المستخدم 2026-10-31) — المعيَّنُ يُبلَّغ بصيغة المقبول. */
+/** نتائجُ المرشّح التي تُبلَّغ برسالة (طلب المستخدم 2026-10-31) — المعيَّنُ يُبلَّغ بصيغة المقبول، و`reserve` هو «تأهيل». */
 export const RESULT_SMS_KINDS = ['accepted', 'reserve', 'rejected'] as const
 export type ResultSmsKind = typeof RESULT_SMS_KINDS[number]
-export const RESULT_SMS_LABEL: Record<ResultSmsKind, string> = { accepted: 'المقبول', reserve: 'الاحتياط', rejected: 'المرفوض' }
+export const RESULT_SMS_LABEL: Record<ResultSmsKind, string> = { accepted: 'المقبول', reserve: 'التأهيل', rejected: 'المرفوض' }
 /** الصيغُ الأصليةُ — تطابق افتراضيّات `app_settings.candidate_result_sms_*`. */
 export const DEFAULT_RESULT_SMS: Record<ResultSmsKind, string> = {
   accepted: '{الأخ/الأخت} {الاسم}، يسرّنا إبلاغك بقبولك ضمن معلّمي منصة ترجمان القرآنية، وسنتواصل معك قريباً لترتيب البدء.',
-  reserve: '{الأخ/الأخت} {الاسم}، شكراً لحضورك مقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية. أُدرج اسمك في قائمة الاحتياط، وسنتواصل معك عند توفّر حلقة.',
+  reserve: '{الأخ/الأخت} {الاسم}، نتيجتك في مقابلة الالتحاق بمعلّمي منصة ترجمان القرآنية تؤهّلك للالتحاق ببرنامج التأهيل، وسنتواصل معك بموعده.',
   rejected: '{الأخ/الأخت} {الاسم}، شكراً لاهتمامك بالالتحاق بمعلّمي منصة ترجمان القرآنية. نعتذر عن عدم قبول طلبك في هذه المرحلة، ونسأل الله لك التوفيق.'
 }
 export const RESULT_SMS_VARS = ['{الأخ/الأخت}', '{الاسم}'] as const

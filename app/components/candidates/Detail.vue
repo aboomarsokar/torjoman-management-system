@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * ملفُّ المرشّح (طلب المستخدم 2026-10-30): بياناتُه، وموعدُ مقابلته ولجنتُه، وتقييماتُ اللجنة بالمتوسّط وتفصيل البنود،
- * ونسخُ رسالة الدعوة وإرسالُها SMS، والقرارُ وإبلاغُ النتيجة وإنشاءُ الحساب للمدير الإداريّ وحده (`CandidatesDecision`).
+ * ونسخُ رسالة الدعوة وإرسالُها SMS، والتقييمُ بالعلامات والقرارُ وإبلاغُ النتيجة وإنشاءُ الحساب للمدير الإداريّ وحده
+ * (`CandidatesDecision`)؛ والنتيجةُ تُحسب من تقييمه تلقائياً (2026-10-31).
  */
 import type { Candidate } from '~/composables/useCandidates'
 import { CANDIDATE_CRITERIA, CANDIDATE_PASS_MARK, CRITERION_MAX, CANDIDATE_STATUS_COLOR, CANDIDATE_STATUS_LABEL, type CandidateStatus } from '~/constants/candidates'
@@ -22,8 +23,10 @@ const toast = useToast()
 
 const avg = computed(() => props.candidate ? averageScore(props.candidate.evaluations) : null)
 const perCriterion = computed(() => props.candidate ? criterionAverages(props.candidate.evaluations) : [])
-const canEvaluate = computed(() => !!props.candidate && !!props.me && (props.canManage || props.candidate.committee.includes(props.me))
-  && ['invited', 'interviewed'].includes(props.candidate.status))
+// التقييمُ بالعلامات للمدير الإداريّ وحده (2026-10-31 — واللجنةُ على الورق)، ويُعاد بعد النتيجة فتُحسب من جديد
+const canEvaluate = computed(() => !!props.candidate && !!props.me && props.isAdmin
+  && ['invited', 'interviewed', 'accepted', 'reserve', 'rejected'].includes(props.candidate.status))
+const mine = computed(() => !!props.me && !!props.candidate?.evaluations.some(e => e.evaluator_id === props.me))
 const when = interviewWhen
 const yesNo = (v: boolean | null) => v === null ? '—' : v ? 'نعم' : 'لا'
 const facts = computed(() => {
@@ -74,7 +77,7 @@ async function copyInvite() {
             v-if="avg !== null"
             class="cd-score"
             :class="{ pass: avg >= CANDIDATE_PASS_MARK }"
-          ><b dir="ltr">{{ avg }}</b> / 100 · {{ candidate.evaluations.length }} تقييم</span>
+          ><b dir="ltr">{{ avg }}</b> / 100<template v-if="candidate.decision_manual"> · عُدّلت النتيجة يدوياً</template></span>
         </div>
 
         <div
@@ -168,7 +171,7 @@ async function copyInvite() {
             />
             <UButton
               v-if="canEvaluate"
-              label="قيّم المرشّح"
+              :label="mine ? 'عدّل التقييم' : 'قيّم المرشّح'"
               icon="i-lucide-clipboard-pen"
               color="primary"
               :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"

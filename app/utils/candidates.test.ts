@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CANDIDATE_CRITERIA, DEFAULT_INVITE_SMS, DEFAULT_RESULT_SMS, RESULT_SMS_KINDS } from '~/constants/candidates'
 import { smsSegments } from '~/utils/sms'
-import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, renderInviteSms, renderResultSms, resultKind, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
+import { averageScore, candidateDraftError, criterionAverages, eligibilityIssues, inviteMessage, renderInviteSms, renderResultSms, resultKind, autoResult, normalizePhone, weightedScore, type CandidateDraft } from './candidates'
 
 const draft = (o: Partial<CandidateDraft> = {}): CandidateDraft => ({
   full_name: 'محمد أحمد سالم', national_id: '123456789', phone: '0599123456', gender: 'male', birth_date: '',
@@ -104,5 +104,17 @@ describe('الصيغُ الأصلية للنتيجة', () => {
       const msg = renderResultSms(DEFAULT_RESULT_SMS[k], { full_name: 'عبدالرحمن', gender: 'female' })
       expect(smsSegments(msg).segments).toBeLessThanOrEqual(2)
     }
+  })
+})
+
+describe('autoResult — النتيجة الآلية', () => {
+  it('العتباتُ 80 و75 بلا تقريبٍ للأعلى', () => {
+    expect(autoResult(null)).toBeNull()
+    expect(autoResult(80)).toBe('accepted')
+    expect(autoResult(96.5)).toBe('accepted')
+    expect(autoResult(79.9)).toBe('reserve')
+    expect(autoResult(75)).toBe('reserve')
+    expect(autoResult(74.9)).toBe('rejected')
+    expect(autoResult(0)).toBe('rejected')
   })
 })

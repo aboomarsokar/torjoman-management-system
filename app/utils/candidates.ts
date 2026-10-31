@@ -4,7 +4,7 @@
  */
 import {
   ADVANCED_TAJWEED_LEVELS, CANDIDATE_CRITERIA, CRITERION_MAX, ELIGIBLE_RESIDENCE, MAX_ADDRESS_DETAIL, MAX_CANDIDATE_LONG, MAX_CANDIDATE_TEXT,
-  MAX_EXPERIENCE_YEARS, MAX_HALAQA_AREA, MIN_EXPERIENCE_YEARS, MIN_TEACHER_PARTS, OTHER_AREA, RESULT_SMS_KINDS, type ResultSmsKind
+  MAX_EXPERIENCE_YEARS, MAX_HALAQA_AREA, MIN_EXPERIENCE_YEARS, MIN_TEACHER_PARTS, OTHER_AREA, RESULT_SMS_KINDS, CANDIDATE_PASS_MARK, CANDIDATE_QUALIFY_MARK, type ResultSmsKind
 } from '~/constants/candidates'
 import { IDENTITY_LENGTH, normalizeDigits } from '~/constants/identity'
 
@@ -167,4 +167,11 @@ export function renderResultSms(template: string, c: { full_name: string, gender
     .replaceAll('{الأخ/الأخت}', c.gender === 'female' ? 'الأخت' : 'الأخ')
     .replaceAll('{الاسم}', c.full_name.trim().split(/\s+/)[0] ?? '')
     .trim()
+}
+
+/** النتيجةُ الآلية من المتوسّط (كما في القاعدة): مقبول ≥ 80 · تأهيل ≥ 75 · مرفوض دونها، أو null بلا تقييم. */
+export function autoResult(avg: number | null): ResultSmsKind | null {
+  if (avg === null) return null
+  if (avg >= CANDIDATE_PASS_MARK) return 'accepted'
+  return avg >= CANDIDATE_QUALIFY_MARK ? 'reserve' : 'rejected'
 }

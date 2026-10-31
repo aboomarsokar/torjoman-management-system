@@ -1234,3 +1234,18 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 - **`chat_messages.deleted_at`** — وقتُ الحذف؛ والمحذوفةُ نصُّها فارغ (القيد: نصٌّ 1–2000 لغير المحذوفة، وفارغٌ للمحذوفة).
 - **`delete_chat_message(message)`** — للمرسِل وحده: يمحو النصَّ ويضع الوقت، ويحدّث `last_message` إلى «🚫 حُذفت رسالة» إن كانت الأخيرة.
+
+
+## 29. مقابلاتُ المرشّحين: `candidates` و`candidate_committee` و`candidate_evaluations` (2026-10-30)
+
+> الهجرة `20261030143013_candidates`.
+
+- **`candidates`**: طلبُ الالتحاق (الاسم 3–120، `national_id` تسعةُ أرقامٍ **فريد**، `phone` بصيغة `05XXXXXXXX`، `gender`، وتاريخُ الميلاد والسكنُ وأقربُ مسجدٍ والأجزاءُ (0–30) والتجويدُ والمؤهّلُ والخبرة)، و`status` من النوع `candidate_status`: `new`/`invited`/`interviewed`/`accepted`/`reserve`/`rejected`/`hired`، و`interview_at`/`interview_place`، و`decision_note`، و`status_changed_by`/`status_changed_at` يضعهما الحارس `candidates_touch`.
+- **`candidate_committee`**: لجنةُ المرشّح (`candidate_id`, `profile_id` من العاملين النشطين — `candidate_committee_guard`).
+- **`candidate_evaluations`**: تقييمُ كلّ عضو (`candidate_id`, `evaluator_id` مفتاحٌ مركّب)، و`scores smallint[]` عشرُ خاناتٍ كلٌّ 0–10 (كانت 0–5 ثم وُسّعت بالهجرة `20261030165300_candidate_scores_out_of_ten`) بترتيب بنود الاستمارة (الأوزانُ في `app/constants/candidates.ts`)، و`notes`. أوّلُ تقييمٍ لمدعوٍّ ينقله إلى `interviewed` (`candidate_evaluations_touch`).
+- **النطاق:** `can_view_candidates_of(gender)` (الإداريّ ومشرفُ المشروع الكلّ، والفنيّ البنين، والمديرةُ البنات) للقراءة، و`can_manage_candidates_of(gender)` (بلا مشرف المشروع) للكتابة، و`my_candidate_ids()` لعضو اللجنة. الحذفُ للمدير الإداريّ. التقييمُ لكاتبه وحده: مديرٌ في النطاق أو عضوٌ في اللجنة.
+- **رسالةُ الدعوة SMS (الهجرة `20261030172116_candidate_invite_sms`):** `invite_sms_at` وقتُ آخر إرسالٍ ناجح يضعه `server/api/candidates/invite-sms.post.ts`، والمشغّل `candidates_invite_sms_reset` يصفّره إن تغيّر الموعد أو المكان.
+- **صيغةُ رسالة الدعوة (الهجرة `20261030174305_candidate_invite_sms_template`):** `app_settings.candidate_invite_sms` (10–500 حرف) يعدّلها المدير الإداري، بمتغيّرات `{الأخ/الأخت}` `{الاسم}` `{الموعد}` `{المكان}`.
+- **لجنةُ التحكيم (الهجرة `20261030171417_candidate_committee_roles`):** `candidate_committee_guard` يقبل الإداريين والمختبرين النشطين وحدهم: `admin_manager` و`project_supervisor` و`technical_manager` و`examiner`.
+- **شروطُ الالتحاق (الهجرة `20261030145737_candidates_conditions`):** أعمدةٌ جديدة `halaqa_area` (≤80) و`address_detail` (≤200) و`experience_years` (0–60) و`can_gather` و`daily_commitment` و`terms_accepted_at`. و`register_candidate` صارت تشترط الإقرارَ بالشروط وتُلزم السكنَ ومنطقةَ الحلقة والمسجدَ والعنوانَ والأجزاءَ والتجويدَ وسنواتِ الخبرة وسؤالَي الالتزام. **من لا تنطبق عليه الشروط يسجّل ولا يُرفض آلياً** — العلامةُ تُحسب في الواجهة (`eligibilityIssues` في `app/utils/candidates.ts`).
+- **العامّ:** الزائرُ (`anon`) بلا أيّ منحٍ على الجداول، وله الدالّتان `register_candidate(...)` (تمنع تكرار الهوية، وكبحُ 40 تسجيلاً في الدقيقة) و`candidate_status_lookup(national_id, phone)` (الحالةُ والموعدُ للمدعوّ، بالهوية والجوال معاً).

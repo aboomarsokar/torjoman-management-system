@@ -6,7 +6,7 @@
  */
 import type { DeptGoal, DeptTask, TaskDraft } from '~/composables/useDeptPlan'
 import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
-import { DEPT_PLAN_FULL_VIEWERS, type DeptTaskStatus } from '~/constants/deptPlan'
+import { DEPT_PLAN_EDITORS, DEPT_PLAN_FULL_VIEWERS, type DeptTaskStatus } from '~/constants/deptPlan'
 import { filterTasks, isDueSoon, isOverdue, planMonthLabel, progressOf, shiftPlanMonth, type TaskFilter } from '~/utils/deptPlan'
 import { gazaToday } from '~/utils/reportWindow'
 import { exportDeptPlan } from '~/utils/excel/deptPlan'
@@ -19,6 +19,7 @@ const { role, isAdmin } = usePermissions()
 const { profile } = useProfile()
 const me = computed(() => profile.value?.id ?? null)
 const fullView = computed(() => (DEPT_PLAN_FULL_VIEWERS as readonly string[]).includes(role.value ?? ''))
+const canEditPlan = computed(() => (DEPT_PLAN_EDITORS as readonly string[]).includes(role.value ?? ''))
 
 const today = gazaToday()
 const route = useRoute()
@@ -135,7 +136,7 @@ async function exportPlan() {
         class="tools"
       >
         <UButton
-          v-if="isAdmin"
+          v-if="canEditPlan"
           label="هدف جديد"
           icon="i-lucide-plus"
           color="primary"
@@ -164,10 +165,10 @@ async function exportPlan() {
       <UiEmptyState
         icon="i-lucide-target"
         :title="`لا خطة لشهر ${planMonthLabel(year, month)}`"
-        :description="isAdmin ? 'أنشئ خطة جديدة، أو انسخ خطة الشهر السابق وعدّلها.' : 'لم تُكتب خطة هذا الشهر بعد، أو لا مهام مسندة إليك فيها.'"
+        :description="canEditPlan ? 'أنشئ خطة جديدة، أو انسخ خطة الشهر السابق وعدّلها.' : 'لم تُكتب خطة هذا الشهر بعد، أو لا مهام مسندة إليك فيها.'"
       />
       <div
-        v-if="isAdmin"
+        v-if="canEditPlan"
         class="start"
       >
         <UButton
@@ -226,7 +227,8 @@ async function exportPlan() {
           :names="names"
           :today="today"
           :me="me"
-          :can-edit="isAdmin"
+          :can-edit="canEditPlan"
+          :can-remove="isAdmin"
           @edit-goal="openGoal"
           @remove-goal="askRemoveGoal"
           @add-task="(id: string) => openTask(null, id)"
@@ -238,7 +240,7 @@ async function exportPlan() {
           v-if="!visibleGoals.length"
           icon="i-lucide-list-checks"
           :title="goals.length ? 'لا أنشطة في هذا التصنيف' : 'لا أهداف بعد'"
-          :description="isAdmin && !goals.length ? 'ابدأ بإضافة هدف، ثم أنشطته.' : undefined"
+          :description="canEditPlan && !goals.length ? 'ابدأ بإضافة هدف، ثم أنشطته.' : undefined"
         />
       </div>
       <PlanReportPanel

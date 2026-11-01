@@ -19,6 +19,8 @@ interface Props {
   today: string
   me: string | null
   canEdit: boolean
+  /** المدير الإداري: حذفُ الهدف وأنشطته، وتحديثُ حالة أيّ نشاط (وغيرُه حالةَ ما أُسند إليه فقط). */
+  canRemove: boolean
 }
 const props = defineProps<Props>()
 const emit = defineEmits<{
@@ -41,12 +43,12 @@ watch(complete, (c) => {
 const RING = 2 * Math.PI * 20
 const dash = computed(() => `${(progress.value.pct / 100) * RING} ${RING}`)
 
-const canUpdate = (t: DeptTask) => props.canEdit || (!!props.me && t.owners.includes(props.me))
+const canUpdate = (t: DeptTask) => props.canRemove || (!!props.me && t.owners.includes(props.me))
 const ownerNames = (t: DeptTask) => t.owners.map(id => props.names[id] ?? '—').join('، ') || 'بلا مسؤول'
 const menu = computed<DropdownMenuItem[]>(() => [
   { label: 'نشاط جديد', icon: 'i-lucide-plus', onSelect: () => emit('addTask', props.goal.id) },
   { label: 'تعديل الهدف', icon: 'i-lucide-pencil', onSelect: () => emit('editGoal', props.goal) },
-  { label: 'حذف الهدف', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => emit('removeGoal', props.goal) }
+  ...(props.canRemove ? [{ label: 'حذف الهدف', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => emit('removeGoal', props.goal) }] : [])
 ])
 </script>
 
@@ -157,6 +159,7 @@ const menu = computed<DropdownMenuItem[]>(() => [
           :today="today"
           :can-update="canUpdate(t)"
           :can-edit="canEdit"
+          :can-remove="canRemove"
           @status="emit('status', t)"
           @edit="emit('editTask', t)"
           @remove="emit('removeTask', t)"

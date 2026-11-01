@@ -1277,6 +1277,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-10-30 — `20261030134225_dept_plan_leaders_only`:** `dept_owner_guard` يقصر مسؤولي أنشطة خطة القسم على `admin_manager` و`technical_manager` و`women_admin` و`project_supervisor` (كان أيَّ عاملٍ نشط)، فلا يرى الخطةَ غيرُ القيادات.
 
+> **2026-11-01 — `20261101113921_dept_plan_editors`:** `public.can_edit_dept_plan()` (المدير الإداريّ والفنيّ ومشرف المشروع) يحكم إدراجَ `dept_plans` وإدراجَ وتعديلَ `dept_plan_goals` و`dept_plan_tasks` وإدراجَ وحذفَ `dept_plan_task_owners`؛ وحذفُ الأهداف والأنشطة وتعديلُ `dept_plans` (تقريرُ القسم) للمدير الإداريّ وحده. و`dept_task_guard` يرفض تغييرَ الحالة أو الملاحظة إلا من المدير الإداريّ أو مسؤولي النشاط.
+
 ## حذفُ رسائل المحادثات (2026-10-29)
 
 > هجرة `20261029164617_chat_delete_message`.

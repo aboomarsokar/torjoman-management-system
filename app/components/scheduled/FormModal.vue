@@ -18,7 +18,7 @@ watch(open, (o) => {
 })
 
 const sectionItems = [{ label: 'القسمان', value: 'all' }, { label: 'البنين', value: 'male' }, { label: 'البنات', value: 'female' }]
-const recurrenceItems = [{ label: 'مرّة واحدة', value: 'once' }, { label: 'أسبوعياً', value: 'weekly' }, { label: 'شهرياً', value: 'monthly' }]
+const recurrenceItems = [{ label: 'مرّة واحدة', value: 'once' }, { label: 'يومياً (عدا الجمعة)', value: 'daily' }, { label: 'أسبوعياً', value: 'weekly' }, { label: 'شهرياً', value: 'monthly' }]
 const weekdayItems = WEEKDAYS.map((label, value) => ({ label, value })).filter(d => d.value !== 5) // الجمعةُ عطلة
 const monthDayItems = Array.from({ length: 28 }, (_, i) => ({ label: String(i + 1), value: i + 1 }))
 const times = timeOptions([form.run_time])
@@ -129,7 +129,7 @@ function toggleRole(key: string) {
             />
           </UFormField>
           <UFormField
-            v-else
+            v-else-if="form.recurrence === 'monthly'"
             label="يوم الشهر"
           >
             <UiSelect

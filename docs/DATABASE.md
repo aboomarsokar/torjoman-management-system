@@ -1256,7 +1256,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-10-31 — صورُ الهويات** (هجرة `20261031142223_staff_id_cards`): `staff_id_cards` — `profile_id` (مفتاح) · `file_path` (`<profile_id>/<uuid>.<jpg|png|webp|pdf>`) · `mime_type` · `size_bytes` (≤ 5 م.ب) · `uploaded_at`. `private.can_view_id_card(profile)`: صاحبُها، والمديرُ الإداريّ، والمديرةُ الإداريةُ لعاملةٍ في قسم البنات؛ `private.can_upload_id_card(profile)`: صاحبُها إن لم يكن طالباً. الحذفُ لصاحبها أو المدير الإداريّ. المستودعُ الخاصّ `id-cards` يُحرس بالدالّتين على المجلّد الأوّل. حارسُ النيابة.
 
-> **2026-11-01 — إشعارُ طلب الالتحاق** (هجرة `20261101090000_candidate_registered_notify`): نوعُ الإشعار `candidate_registered` في القيد و`private.notify`، و`private.notify_candidate_registered()` بمشغّل `candidates_registered_notify` (بعد الإدراج) يُشعر كلَّ مديرٍ إداريٍّ نشط، ورابطُه `/candidates`.
+> **2026-11-01 — إشعارُ طلب الالتحاق** (هجرة `20261101091504_candidate_registered_notify`): نوعُ الإشعار `candidate_registered` في القيد و`private.notify`، و`private.notify_candidate_registered()` بمشغّل `candidates_registered_notify` (بعد الإدراج) يُشعر كلَّ مديرٍ إداريٍّ نشط، ورابطُه `/candidates`.
 
 ## 28. خطةُ القسم الشهرية: `dept_plans` و`dept_plan_goals` و`dept_plan_tasks` و`dept_plan_task_owners` (2026-10-30)
 

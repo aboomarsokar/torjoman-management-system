@@ -3,7 +3,7 @@
  * والعميلُ لا يرسل كلمة مرورٍ أبداً (الخادم يولّد المؤقّتة).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { staffCredentials, studentCredentials, useAccountAdmin } from './useAccountAdmin'
+import { staffCredentials, studentCredentials, studentResetCredentials, useAccountAdmin } from './useAccountAdmin'
 
 const fetchMock = vi.fn()
 
@@ -47,5 +47,24 @@ describe('بيانات الدخول المعروضة', () => {
   it('الموظف بالرقم الوظيفي، والطالب بالهوية', () => {
     expect(staffCredentials('أحمد', '1002', 'pw', 'created')).toMatchObject({ loginLabel: 'الرقم الوظيفي', loginId: '1002', password: 'pw', title: 'تم إنشاء الحساب' })
     expect(studentCredentials('سارة', '401234567', 'pw', 'reset')).toMatchObject({ loginLabel: 'رقم الهوية', loginId: '401234567', title: 'أُعيد تعيين كلمة المرور' })
+  })
+})
+
+describe('إعادة تعيين كلمة الطالب مع معلّمه', () => {
+  const teacher = { teacher_id: 't1', teacher_name: 'سجى حسن', teacher_phone: '0595467160', female: true }
+  it('يضيف زرَّي واتساب والمحادثة للمعلّمة', () => {
+    const c = studentResetCredentials('لانا ماهر', '430117606', 'Ab12-xy', teacher)
+    expect(c.whatsapp?.label).toBe('أرسلها للمعلّمة على واتساب')
+    expect(c.chat).toMatchObject({ recipientId: 't1', label: 'أرسلها للمعلّمة عبر المحادثة' })
+    expect(c.chat?.text).toContain('430117606')
+  })
+  it('بلا معلّم: النافذةُ كما كانت', () => {
+    const c = studentResetCredentials('لانا ماهر', '430117606', 'Ab12-xy', null)
+    expect(c.whatsapp).toBeUndefined()
+    expect(c.chat).toBeUndefined()
+  })
+  it('resetPasswordWithTeacher يعيد الكلمةَ والمعلّم', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, temp_password: 'pw', teacher })
+    await expect(useAccountAdmin().resetPasswordWithTeacher('u1')).resolves.toEqual({ password: 'pw', teacher })
   })
 })

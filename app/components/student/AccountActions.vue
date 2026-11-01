@@ -6,7 +6,7 @@
  * حالة الدخول مستقلّةٌ عن حالة الطالب الدراسية (منقطع/متخرّج…) — قرارُها بيد المدير.
  */
 import type { Database } from '~/types/database.types'
-import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
+import { studentResetCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 
 type ProfileStatus = Database['public']['Enums']['profile_status']
 
@@ -22,7 +22,7 @@ const props = defineProps<Props>()
 const supabase = useSupabaseClient<Database>()
 const { handle } = useErrorHandler()
 const toast = useToast()
-const { resetPassword } = useAccountAdmin()
+const { resetPasswordWithTeacher } = useAccountAdmin()
 
 const { data: status, refresh } = useLazyAsyncData<ProfileStatus | null>(
   () => `student-account-${props.userId}`,
@@ -41,8 +41,8 @@ const credentials = ref<AccountCredentials | null>(null)
 async function doReset() {
   resetting.value = true
   try {
-    const password = await resetPassword(props.userId)
-    credentials.value = studentCredentials(props.studentName, props.nationalId ?? '—', password, 'reset')
+    const { password, teacher } = await resetPasswordWithTeacher(props.userId)
+    credentials.value = studentResetCredentials(props.studentName, props.nationalId, password, teacher)
     confirmReset.value = false
   } catch (err) {
     handle(err, 'تعذّرت إعادة التعيين.')

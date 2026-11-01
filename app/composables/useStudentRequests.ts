@@ -8,7 +8,7 @@ import type { AccountCredentials } from '~/composables/useAccountAdmin'
 import { normalizeDigits } from '~/constants/identity'
 import { REJECT_NOTE_MIN, REQUEST_NAME_MAX, REQUEST_NAME_MIN, REQUEST_NOTE_MAX, type StudentRequestKind, type StudentRequestStatus } from '~/constants/studentRequests'
 import { hasValidCheckDigit } from '~/utils/nationalId'
-import { teacherCredentialsMessage, whatsappMessageLink } from '~/utils/credentialsMessage'
+import { chatFor, whatsappFor } from '~/utils/credentialsMessage'
 
 export type StudentRequest = {
   id: string
@@ -61,7 +61,6 @@ export function studentRequestError(d: StudentRequestDraft): string | null {
   return null
 }
 
-/** زرُّ «أرسلها للمعلّم» برسالة بيانات الدخول، أو null إن لم يكن للمعلّم رقم. */
 /** ردُّ `POST /api/student-requests/:id/approve`. */
 interface ApproveResult {
   temp_password: string
@@ -72,23 +71,6 @@ interface ApproveResult {
   teacher_name: string | null
   teacher_phone: string | null
   request_closed: boolean
-}
-
-function whatsappFor(res: ApproveResult) {
-  const text = teacherCredentialsMessage({
-    teacherName: res.teacher_name, studentName: res.full_name, nationalId: res.national_id, password: res.temp_password, female: res.female
-  })
-  const url = whatsappMessageLink(res.teacher_phone, text)
-  return url ? { label: res.female ? 'أرسلها للمعلّمة على واتساب' : 'أرسلها للمعلّم على واتساب', url } : null
-}
-
-/** زرُّ «أرسلها عبر المحادثة» — الرسالةُ نفسها بلا تنسيق واتساب، أو null إن لم يكن للحلقة معلّم. */
-export function chatFor(res: Pick<ApproveResult, 'teacher_id' | 'teacher_name' | 'full_name' | 'national_id' | 'temp_password' | 'female'>) {
-  if (!res.teacher_id) return null
-  const text = teacherCredentialsMessage({
-    teacherName: res.teacher_name, studentName: res.full_name, nationalId: res.national_id, password: res.temp_password, female: res.female
-  }, true)
-  return { label: res.female ? 'أرسلها للمعلّمة عبر المحادثة' : 'أرسلها للمعلّم عبر المحادثة', recipientId: res.teacher_id, text }
 }
 
 const SELECT = 'id, kind, student_id, halaqa_id, full_name, national_id, birth_date, guardian_phone, tajweed_level, residence, nearest_mosque, note, status, reject_note, created_at, closed_at, requested_by, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))'

@@ -1258,6 +1258,8 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-11-01 — إشعارُ طلب الالتحاق** (هجرة `20261101091504_candidate_registered_notify`): نوعُ الإشعار `candidate_registered` في القيد و`private.notify`، و`private.notify_candidate_registered()` بمشغّل `candidates_registered_notify` (بعد الإدراج) يُشعر كلَّ مديرٍ إداريٍّ نشط، ورابطُه `/candidates`.
 
+> **2026-11-01 — عتباتُ النتيجة** (هجرة `20261101091830_candidate_thresholds_90_85`): `private.candidate_auto_status` صار ≥90 `accepted` · ≥85 `reserve` · دونها `rejected`، وأُعيد حسابُ المقيَّمين غيرِ اليدويين.
+
 ## 28. خطةُ القسم الشهرية: `dept_plans` و`dept_plan_goals` و`dept_plan_tasks` و`dept_plan_task_owners` (2026-10-30)
 
 > الهجرة `20261030084203_department_plan`.

@@ -33,7 +33,8 @@ export const NOTIFICATION_KINDS = [
   'plan_weekly_update',
   'booklet_ready',
   'booklet_request_cancelled',
-  'booklet_stock_low'
+  'booklet_stock_low',
+  'candidate_registered'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -61,6 +62,7 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   booklet_ready: 'i-lucide-package-open',
   booklet_request_cancelled: 'i-lucide-package-x',
   booklet_stock_low: 'i-lucide-triangle-alert',
+  candidate_registered: 'i-lucide-user-search',
   announcement: 'i-lucide-megaphone',
   student_requested: 'i-lucide-user-plus',
   student_request_closed: 'i-lucide-user-check',

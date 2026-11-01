@@ -1,12 +1,12 @@
 /**
- * الرسائلُ المجدولة (طلب المستخدم 2026-10-27): تذكيرٌ مرّةً أو أسبوعياً أو شهرياً لفئات الكادر والإدارة — داخل المنصّة
+ * الرسائلُ المجدولة (طلب المستخدم 2026-10-27): تذكيرٌ مرّةً أو يومياً عدا الجمعة (2026-11-01) أو أسبوعياً أو شهرياً لفئات الكادر والإدارة — داخل المنصّة
  * و/أو SMS. المديرُ الإداريّ للقسمين وبالقناتين، والمديرُ الفنيّ للبنين والمديرةُ الإدارية للبنات داخل المنصّة. الحكمُ
  * للقاعدة (`scheduled_messages` وحارسُها)، والمُطلِقُ `pg_cron` كلَّ خمس دقائق. الوصفُ والتحقّقُ نقيّان ومختبَران.
  */
 import type { Database } from '~/types/database.types'
 import { formatTime12 } from '~/utils/time'
 
-export type Recurrence = 'once' | 'weekly' | 'monthly'
+export type Recurrence = 'once' | 'daily' | 'weekly' | 'monthly'
 export type ScheduledRow = Database['public']['Tables']['scheduled_messages']['Row']
 
 /** الأحد 0 … السبت 6 (كـextract(dow) في القاعدة). */
@@ -41,8 +41,9 @@ export const blankSchedule = (section: ScheduleDraft['section'] = 'all'): Schedu
   recurrence: 'weekly', run_date: '', run_time: '08:00', weekday: 6, month_day: 1
 })
 
-/** «كلَّ سبت 8:00 ص» / «كلَّ شهر يوم 28 · 9:00 ص» / «مرّةً 31-10-2026 · 4:00 م». */
+/** «كلَّ يوم عدا الجمعة · 8:00 ص» / «كلَّ سبت 8:00 ص» / «كلَّ شهر يوم 28 · 9:00 ص» / «مرّةً 31-10-2026 · 4:00 م». */
 export function describeSchedule(r: Pick<ScheduledRow, 'recurrence' | 'run_at' | 'weekday' | 'month_day' | 'time_of_day'>): string {
+  if (r.recurrence === 'daily') return `كلَّ يوم عدا الجمعة · ${formatTime12(r.time_of_day)}`
   if (r.recurrence === 'weekly') return `كلَّ ${WEEKDAYS[r.weekday ?? 0]} · ${formatTime12(r.time_of_day)}`
   if (r.recurrence === 'monthly') return `كلَّ شهر يوم ${r.month_day} · ${formatTime12(r.time_of_day)}`
   if (!r.run_at) return 'مرّةً واحدة'

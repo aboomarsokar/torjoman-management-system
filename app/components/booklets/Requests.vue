@@ -4,12 +4,14 @@
  * «جديد» ← «أُبلغ المعلّم» (إبلاغٌ بالاستلام يفحص المخزون ويحجز النسخ ويُشعر المعلّم، وخلفيةُ الصفّ تتغيّر) ←
  * «تمّ التسليم»، أو «ملغى» بسببٍ يصل المعلّم. تحت كلّ طلبٍ قائمٍ حالُ مخزونه (لا يكفي / عند الحدّ / غيرُ مجرودة).
  * تبويبان: بانتظار التسليم · ملغاة — والمسلَّمُ في «السجلّ» بملاحظة «بطلب المعلّم» (طلب المستخدم 2026-10-31). مشرفُ المشروع يقرأ.
+ * وبحثٌ باسم المعلّم أو الحلقة يسري على التبويبين وعدّاديهما (طلب المستخدم 2026-11-01).
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { BookletRequest } from '~/composables/useBookletRequests'
 import type { StockRow } from '~/utils/bookletStock'
 import { deliveryDate } from '~/utils/booklets'
 import { isPendingRequest, requestStock, requestStockText, statusMeta } from '~/utils/bookletRequests'
+import { matchesSearch } from '~/utils/search'
 
 const props = defineProps<{ rows: BookletRequest[], stock: StockRow[], canClose: boolean, busy: boolean }>()
 const emit = defineEmits<{
@@ -23,10 +25,14 @@ type View = 'pending' | 'cancelled'
 const view = ref<View>('pending')
 /** من الأقدم إلى الأحدث (طلب المستخدم 2026-10-31): الأسبقُ طلباً يُخدم أوّلاً. */
 const oldestFirst = computed(() => [...props.rows].sort((a, b) => a.created_at.localeCompare(b.created_at)))
+const query = ref('')
+const matched = computed(() => oldestFirst.value.filter(r => matchesSearch(query.value, r.halaqa?.teacher?.full_name, r.halaqa?.name)))
 const byView = computed(() => ({
-  pending: oldestFirst.value.filter(r => isPendingRequest(r.status)),
-  cancelled: oldestFirst.value.filter(r => r.status === 'cancelled')
+  pending: matched.value.filter(r => isPendingRequest(r.status)),
+  cancelled: matched.value.filter(r => r.status === 'cancelled')
 }))
+const viewTotal = computed(() => oldestFirst.value.filter(r => view.value === 'pending' ? isPendingRequest(r.status) : r.status === 'cancelled').length)
+const searching = computed(() => query.value.trim().length > 0)
 const shown = computed(() => byView.value[view.value])
 const viewTabs = computed(() => [
   { key: 'pending' as const, label: 'بانتظار التسليم', icon: 'i-lucide-hourglass', count: byView.value.pending.length },
@@ -41,7 +47,7 @@ const label = (n: number) => BOOKLETS.find(b => b.no === n)?.label ?? `المل�
 const summary = (r: BookletRequest | null) => (r ? `${label(r.booklet)} × ${r.copies}` : '')
 
 /** حالُ مخزون كلّ طلبٍ قائم: النصُّ ولونُه. */
-const stockNotes = computed(() => new Map(byView.value.pending.map((r) => {
+const stockNotes = computed(() => new Map(oldestFirst.value.filter(r => isPendingRequest(r.status)).map((r) => {
   const s = requestStock(r, props.stock, props.rows)
   return [r.id, { text: requestStockText(s, r.copies), tone: s.kind === 'short' ? 'bad' : 'warn' }]
 })))
@@ -84,9 +90,31 @@ const columns = [
       :tabs="viewTabs"
       label="حالة طلبات الملازم"
     />
+    <UiSearchField
+      v-model="query"
+      placeholder="ابحث باسم المعلّم أو الحلقة"
+      :shown="shown.length"
+      :total="viewTotal"
+      class="req-search"
+    />
   </div>
   <UiEmptyState
-    v-if="rows.length && !shown.length"
+    v-if="rows.length && !shown.length && searching"
+    icon="i-lucide-search-x"
+    title="لا طلباتٍ مطابقة"
+    description="جرّب جزءاً من اسم المعلّم أو الحلقة."
+  >
+    <UButton
+      label="مسح البحث"
+      color="neutral"
+      variant="outline"
+      icon="i-lucide-x"
+      :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+      @click="query = ''"
+    />
+  </UiEmptyState>
+  <UiEmptyState
+    v-else-if="rows.length && !shown.length"
     v-bind="EMPTY[view]"
   />
   <UiDataTable
@@ -214,7 +242,9 @@ const columns = [
 </template>
 
 <style scoped>
-.req-view { margin-bottom: 14px; }
+.req-view { margin-bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.req-search { flex: 0 1 380px; }
+@media (max-width: 767px) { .req-search { flex-basis: 100%; } }
 .seq-n { color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .who { display: flex; flex-direction: column; line-height: 1.45; min-width: 180px; }
 .who b { color: var(--ink); font-weight: 600; white-space: nowrap; }

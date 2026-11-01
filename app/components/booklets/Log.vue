@@ -2,25 +2,33 @@
 /**
  * سجلُّ تسليمات الملازم جدولاً مرقّماً بصفحات (طلب المستخدم 2026-10-28) — الأحدثُ أوّلاً: التاريخُ والحلقةُ والملزمةُ
  * والنسخُ والملاحظة، وبطاقاتٌ على الجوال. زرُّ الحذف للمدير الإداري وحده (لتسليمٍ سُجّل خطأً) — والتأكيدُ في الصفحة.
+ * وبحثٌ باسم المعلّم أو الحلقة (طلب المستخدم 2026-11-01)، واسمُ المعلّم تحت الحلقة.
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { DeliveryRow } from '~/utils/booklets'
 import { deliveryDate } from '~/utils/booklets'
+import { matchesSearch } from '~/utils/search'
 
 const props = defineProps<{
   rows: DeliveryRow[]
   halaqaNames: Record<string, string>
+  /** اسمُ معلّم كلّ حلقة — للبحث والعرض. */
+  teacherNames: Record<string, string>
   canDelete: boolean
 }>()
 const emit = defineEmits<{ delete: [row: DeliveryRow] }>()
 
 const PAGE_SIZE = 12
-const items = computed(() => props.rows.map(r => ({
+const query = ref('')
+const all = computed(() => props.rows.map(r => ({
   ...r,
   halaqa: props.halaqaNames[r.halaqa_id] ?? '—',
+  teacher: props.teacherNames[r.halaqa_id] ?? '',
   bookletLabel: BOOKLETS[r.booklet - 1]?.label ?? `الملزمة ${r.booklet}`
 })))
-const { page, pageCount, total, pageSize, paged } = usePagination(items, PAGE_SIZE)
+const items = computed(() => all.value.filter(r => matchesSearch(query.value, r.teacher, r.halaqa)))
+const { page, pageCount, total, pageSize, paged, resetPage } = usePagination(items, PAGE_SIZE)
+watch(query, resetPage)
 const seq = (index: number) => (page.value - 1) * pageSize + index + 1
 const columns = computed(() => [
   { key: 'num', label: '#' },
@@ -35,7 +43,30 @@ const columns = computed(() => [
 
 <template>
   <div class="log">
+    <UiSearchField
+      v-model="query"
+      placeholder="ابحث باسم المعلّم أو الحلقة"
+      :shown="items.length"
+      :total="all.length"
+      class="log-search"
+    />
+    <UiEmptyState
+      v-if="!items.length"
+      icon="i-lucide-search-x"
+      title="لا تسليماتٍ مطابقة"
+      description="جرّب جزءاً من اسم المعلّم أو الحلقة."
+    >
+      <UButton
+        label="مسح البحث"
+        color="neutral"
+        variant="outline"
+        icon="i-lucide-x"
+        :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+        @click="query = ''"
+      />
+    </UiEmptyState>
     <UiDataTable
+      v-else
       :columns="columns"
       :rows="paged"
       row-key="id"
@@ -50,7 +81,13 @@ const columns = computed(() => [
         >{{ deliveryDate(row.delivered_on) }}</bdi>
       </template>
       <template #halaqa="{ row }">
-        <b class="halaqa">{{ row.halaqa }}</b>
+        <div class="hq">
+          <b class="halaqa">{{ row.halaqa }}</b>
+          <span
+            v-if="row.teacher"
+            class="muted"
+          >{{ row.teacher }}</span>
+        </div>
       </template>
       <template #bookletLabel="{ row }">
         <span class="chip">{{ row.bookletLabel }}</span>
@@ -122,6 +159,8 @@ const columns = computed(() => [
 .log > :last-child { flex: none; }
 .muted { color: var(--ink-3); font-size: 13px; }
 .num { font-variant-numeric: tabular-nums; }
+.log-search { flex: none; max-width: 460px; }
+.hq { display: flex; flex-direction: column; line-height: 1.45; }
 .halaqa { color: var(--ink); font-weight: 600; }
 .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; white-space: nowrap; }
 .copies { color: var(--navy); font-size: 16px; font-weight: 600; }

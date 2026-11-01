@@ -76,6 +76,7 @@ const stats = computed(() => bookletStats(deliveries.value, halaqat.value.length
 const byHalaqa = computed(() => halaqaBooklets(deliveries.value, halaqat.value))
 const byBooklet = computed(() => totalsByBooklet(deliveries.value))
 const halaqaNames = computed(() => Object.fromEntries(halaqat.value.map(h => [h.id, h.name])))
+const teacherNames = computed(() => Object.fromEntries(halaqat.value.map(h => [h.id, h.teacher?.full_name ?? ''])))
 
 const modalOpen = ref(false)
 async function save(draft: DeliveryDraft, today: string) {
@@ -185,6 +186,7 @@ async function confirmDelete() {
             v-else
             :rows="deliveries"
             :halaqa-names="halaqaNames"
+            :teacher-names="teacherNames"
             :can-delete="isAdmin"
             @delete="(r) => deleteTarget = r"
           />

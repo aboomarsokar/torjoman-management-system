@@ -44,6 +44,9 @@ export const DEPT_TASK_STATUS_ICON: Record<DeptTaskStatus, string> = {
 /** من يرى خطة القسم (يطابق `can_view_full_dept_plan`)، ومنهم وحدهم مسؤولو الأنشطة (`dept_owner_guard`) — القائمةُ لا تُظهرها لغيرهم. */
 export const DEPT_PLAN_FULL_VIEWERS = ['admin_manager', 'technical_manager', 'women_admin', 'project_supervisor'] as const
 
+/** من يضيف الأهداف والأنشطة ويعدّلها (يطابق `can_edit_dept_plan`) — الحذفُ وتقريرُ القسم للمدير الإداري وحده. */
+export const DEPT_PLAN_EDITORS = ['admin_manager', 'technical_manager', 'project_supervisor'] as const
+
 export const DEPT_REPORT_FIELDS = [
   { key: 'report_achievements', label: 'أهم إنجازات القسم هذا الشهر' },
   { key: 'report_not_done', label: 'ما الذي لم يتم ولماذا؟' },

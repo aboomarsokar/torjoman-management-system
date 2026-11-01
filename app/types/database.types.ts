@@ -3382,6 +3382,7 @@ export type Database = {
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_edit_dept_plan: { Args: never; Returns: boolean }
       can_manage_candidates_of: {
         Args: { p_gender: Database["public"]["Enums"]["gender_type"] }
         Returns: boolean

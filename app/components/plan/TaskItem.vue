@@ -15,6 +15,8 @@ interface Props {
   today: string
   canUpdate: boolean
   canEdit: boolean
+  /** حذفُ النشاط للمدير الإداري وحده. */
+  canRemove: boolean
 }
 const props = defineProps<Props>()
 const emit = defineEmits<{ status: [], edit: [], remove: [] }>()
@@ -22,7 +24,7 @@ const emit = defineEmits<{ status: [], edit: [], remove: [] }>()
 const flag = computed(() => isOverdue(props.task, props.today) ? 'overdue' : isDueSoon(props.task, props.today) ? 'soon' : '')
 const menu = computed<DropdownMenuItem[]>(() => [
   { label: 'تعديل النشاط', icon: 'i-lucide-pencil', onSelect: () => emit('edit') },
-  { label: 'حذف النشاط', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => emit('remove') }
+  ...(props.canRemove ? [{ label: 'حذف النشاط', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => emit('remove') }] : [])
 ])
 </script>
 

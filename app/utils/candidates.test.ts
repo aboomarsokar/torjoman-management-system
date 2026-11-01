@@ -108,13 +108,13 @@ describe('الصيغُ الأصلية للنتيجة', () => {
 })
 
 describe('autoResult — النتيجة الآلية', () => {
-  it('العتباتُ 80 و75 بلا تقريبٍ للأعلى', () => {
+  it('العتباتُ 90 و85 بلا تقريبٍ للأعلى', () => {
     expect(autoResult(null)).toBeNull()
-    expect(autoResult(80)).toBe('accepted')
+    expect(autoResult(90)).toBe('accepted')
     expect(autoResult(96.5)).toBe('accepted')
-    expect(autoResult(79.9)).toBe('reserve')
-    expect(autoResult(75)).toBe('reserve')
-    expect(autoResult(74.9)).toBe('rejected')
-    expect(autoResult(0)).toBe('rejected')
+    expect(autoResult(89.9)).toBe('reserve')
+    expect(autoResult(85)).toBe('reserve')
+    expect(autoResult(84.9)).toBe('rejected')
+    expect(autoResult(80)).toBe('rejected')
   })
 })

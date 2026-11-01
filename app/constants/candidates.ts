@@ -24,11 +24,11 @@ export const CANDIDATE_CRITERIA = [
 ] as const
 
 /**
- * عتباتُ النتيجة الآلية من متوسّط التقييم (طلب المستخدم 2026-10-31 — تطابق `private.candidate_auto_status`):
- * مقبول ≥ 80 · تأهيل 75–79.9 · مرفوض < 75.
+ * عتباتُ النتيجة الآلية من متوسّط التقييم (طلب المستخدم 2026-11-01 — تطابق `private.candidate_auto_status`):
+ * مقبول ≥ 90 · تأهيل 85–89.9 · مرفوض < 85.
  */
-export const CANDIDATE_PASS_MARK = 80
-export const CANDIDATE_QUALIFY_MARK = 75
+export const CANDIDATE_PASS_MARK = 90
+export const CANDIDATE_QUALIFY_MARK = 85
 
 export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
   new: 'جديد',

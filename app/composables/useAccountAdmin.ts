@@ -4,6 +4,16 @@
  * كلمة المرور المؤقّتة يولّدها الخادم ويعيدها مرّةً واحدة — تُعرض في AccountCredentialsModal ولا تُحفظ.
  */
 
+import { chatFor, whatsappFor } from '~/utils/credentialsMessage'
+
+/** معلّمُ حلقة الطالب في ردّ إعادة التعيين — null لموظفٍ أو طالبٍ بلا معلّم. */
+export interface ResetTeacher {
+  teacher_id: string
+  teacher_name: string
+  teacher_phone: string | null
+  female: boolean
+}
+
 /** ما تعرضه نافذة بيانات الدخول بعد الإنشاء أو إعادة التعيين. */
 export interface AccountCredentials {
   title: string
@@ -61,6 +71,16 @@ export function studentCredentials(name: string, nationalId: string, password: s
   }
 }
 
+/**
+ * بياناتُ دخول الطالب بعد إعادة التعيين، ومعها زرّا إرسالها لمعلّم حلقته (واتساب ومحادثة المنصّة) إن كان له معلّم.
+ */
+export function studentResetCredentials(name: string, nationalId: string | null, password: string, teacher: ResetTeacher | null): AccountCredentials {
+  const base = studentCredentials(name, nationalId ?? '—', password, 'reset')
+  if (!teacher || !nationalId) return base
+  const share = { ...teacher, full_name: name, national_id: nationalId, temp_password: password }
+  return { ...base, whatsapp: whatsappFor(share), chat: chatFor(share) }
+}
+
 export function useAccountAdmin() {
   function createStaff(body: StaffCreateBody) {
     return $fetch<{ id: string, employee_number: string, temp_password: string }>('/api/users', { method: 'POST', body })
@@ -72,8 +92,13 @@ export function useAccountAdmin() {
 
   /** يعيد الكلمة المؤقّتة الجديدة (ويرفع الخادم علَم التغيير قبلها). */
   async function resetPassword(userId: string): Promise<string> {
-    const res = await $fetch<{ ok: boolean, temp_password: string }>('/api/users/reset-password', { method: 'POST', body: { user_id: userId } })
-    return res.temp_password
+    return (await resetPasswordWithTeacher(userId)).password
+  }
+
+  /** كـ`resetPassword` ومعه معلّمُ حلقة الطالب (null لموظف) — لزرَّي الإرسال للمعلّم. */
+  async function resetPasswordWithTeacher(userId: string): Promise<{ password: string, teacher: ResetTeacher | null }> {
+    const res = await $fetch<{ ok: boolean, temp_password: string, teacher?: ResetTeacher | null }>('/api/users/reset-password', { method: 'POST', body: { user_id: userId } })
+    return { password: res.temp_password, teacher: res.teacher ?? null }
   }
 
   /** حذف الطالب مع ملف حسابه وحساب Auth — فلا يبقى دخولٌ لطالبٍ محذوف ويمكن إعادة إنشائه بهويته. */
@@ -86,5 +111,5 @@ export function useAccountAdmin() {
     return $fetch<{ ok: boolean }>(`/api/students/${studentId}/national-id`, { method: 'PATCH', body: { national_id: nationalId } })
   }
 
-  return { createStaff, createStudent, resetPassword, deleteStudent, changeStudentNationalId }
+  return { createStaff, createStudent, resetPassword, resetPasswordWithTeacher, deleteStudent, changeStudentNationalId }
 }

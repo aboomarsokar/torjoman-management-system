@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { teacherCredentialsMessage, whatsappMessageLink } from './credentialsMessage'
+import { chatFor, teacherCredentialsMessage, whatsappFor, whatsappMessageLink } from './credentialsMessage'
 
 const base = { teacherName: 'رشادالدين أشرف رشاد الحلو', studentName: 'مصطفى عاطف مصطفى التتر', nationalId: '432248433', password: 'Ab12-xy', female: false }
 
@@ -36,5 +36,32 @@ describe('whatsappMessageLink', () => {
   })
   it('null بلا رقم', () => {
     expect(whatsappMessageLink(null, 'x')).toBeNull()
+  })
+})
+
+describe('chatFor', () => {
+  const res = { teacher_id: 't1', teacher_name: 'سجى حسن', full_name: 'آية أحمد', national_id: '432248433', temp_password: 'Ab12-xy', female: true }
+  it('للمعلّمة بالمؤنّث وبالرسالة غير المنسّقة', () => {
+    const c = chatFor(res)!
+    expect(c.label).toBe('أرسلها للمعلّمة عبر المحادثة')
+    expect(c.recipientId).toBe('t1')
+    expect(c.text).toContain('Ab12-xy')
+    expect(c.text).not.toContain('*')
+  })
+  it('null لحلقةٍ بلا معلّم', () => {
+    expect(chatFor({ ...res, teacher_id: null })).toBeNull()
+  })
+})
+
+describe('whatsappFor', () => {
+  const res = { teacher_id: 't1', teacher_name: 'محمد عادل', teacher_phone: '0595985655', full_name: 'لانا ماهر', national_id: '430117606', temp_password: 'Ab12-xy', female: false }
+  it('رابطُ واتساب المعلّم بالرسالة', () => {
+    const w = whatsappFor(res)!
+    expect(w.label).toBe('أرسلها للمعلّم على واتساب')
+    expect(w.url).toContain('wa.me/970595985655')
+    expect(decodeURIComponent(w.url)).toContain('430117606')
+  })
+  it('null بلا رقم', () => {
+    expect(whatsappFor({ ...res, teacher_phone: null })).toBeNull()
   })
 })

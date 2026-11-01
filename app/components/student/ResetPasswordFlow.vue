@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
  * إعادةُ تعيين كلمة مرور طالبٍ من قائمة الطلاب (طلب المستخدم 2026-10-25 — كي لا يُفتح ملفُّ كلّ طالب): تأكيدٌ قصير،
- * ثم الكلمةُ المؤقّتة مرّةً واحدة في `AccountCredentialsModal` — الإجراءُ نفسُه الذي في ملفّ الطالب (`AccountActions`).
+ * ثم الكلمةُ المؤقّتة مرّةً واحدة في `AccountCredentialsModal` — الإجراءُ نفسُه الذي في ملفّ الطالب (`AccountActions`)،
+ * ومعها زرّا إرسال البيانات لمعلّم الحلقة واتساب أو محادثةً (2026-11-01).
  * نسخةٌ واحدة في الصفحة يُمرَّر إليها الطالبُ المختار (`v-model:student`)؛ وللمدير الإداريّ وحده (الخادمُ يتحقّق).
  */
-import { studentCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
+import { studentResetCredentials, type AccountCredentials } from '~/composables/useAccountAdmin'
 
 export type ResetTarget = { full_name: string, national_id: string | null, user_id: string | null }
 
 const student = defineModel<ResetTarget | null>('student', { required: true })
 const { handle } = useErrorHandler()
-const { resetPassword } = useAccountAdmin()
+const { resetPasswordWithTeacher } = useAccountAdmin()
 
 const resetting = ref(false)
 const credentials = ref<AccountCredentials | null>(null)
@@ -20,8 +21,8 @@ async function doReset() {
   if (!s?.user_id) return
   resetting.value = true
   try {
-    const password = await resetPassword(s.user_id)
-    credentials.value = studentCredentials(s.full_name, s.national_id ?? '—', password, 'reset')
+    const { password, teacher } = await resetPasswordWithTeacher(s.user_id)
+    credentials.value = studentResetCredentials(s.full_name, s.national_id, password, teacher)
     student.value = null
   } catch (err) {
     handle(err, 'تعذّرت إعادة التعيين.')

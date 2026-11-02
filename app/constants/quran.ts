@@ -10,10 +10,10 @@ export const PROGRAM_JUZ_COUNT = 30
 export const PAGES_PER_JUZ = 20
 
 /**
- * أوّلُ شهرٍ يُقسَّط فيه المطلوبُ بالحضور. رصدُ الحضور أُطلق في 19/10/2026، فالشهرُ 10 وما قبله
- * مطلوبُه كاملٌ للجميع (قرار 2026-10-19) — لا نسبةَ على شهرٍ لم يُسجَّل حضورُه كلُّه.
+ * أوّلُ شهرٍ يُقسَّط فيه المطلوبُ بالحضور: أوّلُ شهرٍ في المشروع (10-2026). كان من 11 (قرار 2026-10-19)
+ * ثم طلب المستخدم تقسيطَ أكتوبر أيضاً (2026-11-02) — ومرآتُه في القاعدة `halaqa_student_achievement`.
  */
-export const ATTENDANCE_PRORATION_FROM = { year: 2026, month: 11 } as const
+export const ATTENDANCE_PRORATION_FROM = { year: 2026, month: 10 } as const
 
 /** هل يُقسَّط مطلوبُ هذا الشهر بالحضور؟ */
 export function prorationApplies(year: number, month: number): boolean {

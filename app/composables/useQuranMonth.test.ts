@@ -122,9 +122,10 @@ describe('buildStudentRows — النتيجة والسجلّ', () => {
     expect(rows[0]!.daysAttended).toBe(0)
     expect(rows[0]!.outcome).toBe('unmeasured')
   })
-  it('صفحاتٌ ≥ المطلوب ← done، ودونه ← short', () => {
+  it('صفحاتٌ ≥ المطلوب ← done، و≥ 75% ← near، ودونها ← short', () => {
     expect(build({ records: [record({ pages_memorized: 35 })] })[0]!.outcome).toBe('done')
-    expect(build({ records: [record({ pages_memorized: 34 })] })[0]!.outcome).toBe('short')
+    expect(build({ records: [record({ pages_memorized: 34 })] })[0]!.outcome).toBe('near')
+    expect(build({ records: [record({ pages_memorized: 20 })] })[0]!.outcome).toBe('short')
   })
   it('يحوّل السجلّ إلى مواضع وحقولٍ مسمّاة', () => {
     const [row] = build({ records: [record({ pages_reviewed: 12, notes: 'ملاحظة' })] })
@@ -210,11 +211,11 @@ const row = (outcome: StudentMonthRow['outcome']) => ({ outcome }) as StudentMon
 
 describe('summarizeOutcomes', () => {
   it('يعدّ كلَّ نتيجة ويقرّب نسبة المرصودين', () => {
-    const s = summarizeOutcomes([row('done'), row('done'), row('short'), row('unrecorded'), row('unmeasured'), row('unrecorded')])
-    expect(s).toEqual({ done: 2, short: 1, unmeasured: 1, unrecorded: 2, recordedPct: 67 })
+    const s = summarizeOutcomes([row('done'), row('near'), row('short'), row('unrecorded'), row('unmeasured'), row('unrecorded')])
+    expect(s).toEqual({ done: 1, near: 1, short: 1, unmeasured: 1, unrecorded: 2, recordedPct: 67 })
   })
   it('قائمةٌ فارغة ← أصفار ولا قسمةَ على صفر', () => {
-    expect(summarizeOutcomes([])).toEqual({ done: 0, short: 0, unmeasured: 0, unrecorded: 0, recordedPct: 0 })
+    expect(summarizeOutcomes([])).toEqual({ done: 0, near: 0, short: 0, unmeasured: 0, unrecorded: 0, recordedPct: 0 })
   })
   it('الكلُّ مرصود ← 100', () => {
     expect(summarizeOutcomes([row('done'), row('short')]).recordedPct).toBe(100)

@@ -36,17 +36,22 @@ export function proratePlan(input: {
   return { required: Math.max(1, Math.round((required * daysAttended) / daysHeld)), full: required, basis: 'prorated' }
 }
 
-export type Outcome = 'done' | 'short' | 'unmeasured' | 'unrecorded'
+export type Outcome = 'done' | 'near' | 'short' | 'unmeasured' | 'unrecorded'
 
-/** حكمُ الشهر: لم يُرصد (null) · لا يُقاس (بلا مطلوب) · أنجز (≥ المطلوب) · مقصّر. */
+/** «قريب»: أنجز هذه النسبةَ من المطلوب فأكثر دون تمامه (قرار 2026-11-02 — مرآتُه في القاعدة `pages*4 >= required*3`). */
+export const NEAR_MIN_PCT = 75
+
+/** حكمُ الشهر: لم يُرصد (null) · لا يُقاس (بلا مطلوب) · أنجز (≥ المطلوب) · قريب (≥ 75%) · مقصّر. */
 export function outcomeOf(pages: number | null, plan: ProratedPlan): Outcome {
   if (pages === null) return 'unrecorded'
   if (plan.required === null) return 'unmeasured'
-  return pages >= plan.required ? 'done' : 'short'
+  if (pages >= plan.required) return 'done'
+  return pages * 100 >= plan.required * NEAR_MIN_PCT ? 'near' : 'short'
 }
 
 export const OUTCOME_LABELS: Record<Outcome, string> = {
   done: 'أنجز',
+  near: 'قريب',
   short: 'مقصّر',
   unmeasured: 'لا يُقاس',
   unrecorded: 'لم يُرصد'

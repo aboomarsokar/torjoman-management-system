@@ -64,14 +64,16 @@ describe('outcomeOf', () => {
     expect(outcomeOf(10, { required: null, full: 35, basis: 'absent' })).toBe('unmeasured')
   })
 
-  it('أنجز عند بلوغ المطلوب أو تجاوزه، ومقصّر دونه', () => {
+  it('أنجز عند بلوغ المطلوب، وقريب من 75% منه، ومقصّر دونها', () => {
     expect(outcomeOf(28, full)).toBe('done')
     expect(outcomeOf(40, full)).toBe('done')
-    expect(outcomeOf(27, full)).toBe('short')
+    expect(outcomeOf(27, full)).toBe('near')
+    expect(outcomeOf(21, full)).toBe('near')
+    expect(outcomeOf(20, full)).toBe('short')
     expect(outcomeOf(0, full)).toBe('short')
   })
 
   it('التسميات', () => {
-    expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', short: 'مقصّر', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
+    expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', near: 'قريب', short: 'مقصّر', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
   })
 })

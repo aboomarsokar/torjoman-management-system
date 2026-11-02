@@ -89,7 +89,7 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
           >
             <span class="ha-main">
               <span class="ha-name">{{ r.halaqa_name }}</span>
-              <span class="ha-sub">{{ fem ? 'المعلّمة' : 'المعلّم' }}: {{ r.teacher_name ?? '—' }}<template v-if="r.short"> · {{ fem ? 'مقصّرات' : 'مقصّرون' }} {{ r.short }}</template><template v-if="r.unrecorded"> · لم يُرصد {{ r.unrecorded }}</template></span>
+              <span class="ha-sub">{{ fem ? 'المعلّمة' : 'المعلّم' }}: {{ r.teacher_name ?? '—' }}<template v-if="r.near"> · {{ fem ? 'قريبات' : 'قريبون' }} {{ r.near }}</template><template v-if="r.short"> · {{ fem ? 'مقصّرات' : 'مقصّرون' }} {{ r.short }}</template><template v-if="r.unrecorded"> · لم يُرصد {{ r.unrecorded }}</template></span>
               <span
                 class="ha-bar"
                 :class="`b-${toneOf(achievementPct(r))}`"

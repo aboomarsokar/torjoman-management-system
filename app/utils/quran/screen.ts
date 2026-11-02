@@ -59,15 +59,16 @@ export const REPORT_STATUS_COLORS: Record<ReportStatus | 'none', 'neutral' | 'wa
   approved: 'success'
 }
 
-export const OUTCOME_COLORS: Record<Outcome, 'success' | 'warning' | 'neutral' | 'info'> = {
+export const OUTCOME_COLORS: Record<Outcome, 'success' | 'warning' | 'error' | 'neutral' | 'info'> = {
   done: 'success',
-  short: 'warning',
+  near: 'warning',
+  short: 'error',
   unmeasured: 'neutral',
   unrecorded: 'info'
 }
 
 /** ترتيبُ عدّادات الشريط. */
-export const OUTCOME_ORDER: Outcome[] = ['done', 'short', 'unmeasured', 'unrecorded']
+export const OUTCOME_ORDER: Outcome[] = ['done', 'near', 'short', 'unmeasured', 'unrecorded']
 
 /** حدُّ ملاحظة الإعادة وملاحظات السجلّ (قيدا القاعدة). */
 export const NOTE_MAX = 500

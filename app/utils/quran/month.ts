@@ -126,7 +126,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
 
 /** عدّادُ النتائج ونسبةُ المرصودين (غيرُ «لم يُرصد») مقرَّبةً؛ صفرٌ لقائمةٍ فارغة. */
 export function summarizeOutcomes(rows: StudentMonthRow[]): Record<Outcome, number> & { recordedPct: number } {
-  const summary = { done: 0, short: 0, unmeasured: 0, unrecorded: 0 }
+  const summary = { done: 0, near: 0, short: 0, unmeasured: 0, unrecorded: 0 }
   for (const r of rows) summary[r.outcome]++
   const recordedPct = rows.length ? Math.round(((rows.length - summary.unrecorded) / rows.length) * 100) : 0
   return { ...summary, recordedPct }

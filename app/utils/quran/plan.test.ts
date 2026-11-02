@@ -77,3 +77,19 @@ describe('outcomeOf', () => {
     expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', near: 'قريب', short: 'مقصّر', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
   })
 })
+
+describe('proratePlan — تخفيضُ الاختبار بالأثلاث (2026-11-02)', () => {
+  it('3 أجزاء الثلث، 5 الثلثان، 10 كامل المطلوب — قبل التقسيط', () => {
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 20, relief: 1 })).toMatchObject({ required: 20, full: 30, relief: 1 })
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 20, relief: 2 })).toMatchObject({ required: 10, relief: 2 })
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 10, relief: 1 })).toMatchObject({ required: 10, basis: 'prorated' })
+  })
+  it('كامل المطلوب: صفرٌ لا يرفعه التقسيط، فيُعدّ منجزاً بأيّ رصد', () => {
+    const plan = proratePlan({ required: 30, daysHeld: 20, daysAttended: 12, relief: 3 })
+    expect(plan.required).toBe(0)
+    expect(outcomeOf(0, plan)).toBe('done')
+  })
+  it('من لم يحضر يبقى بلا مطلوب ولو اختُبر', () => {
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 0, relief: 3 }).required).toBeNull()
+  })
+})

@@ -7,6 +7,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
 import type { QuranRecordRow, ReportHeader } from '~/utils/quran/month'
+import { examReliefThirds } from '~/constants/quran'
 import { HISTORY_MONTHS, latestEnds, monthRange } from '~/utils/quran/monthHistory'
 import type { HistoryRow } from '~/utils/quran/monthHistory'
 import type { Position } from '~/utils/quran/position'
@@ -30,6 +31,21 @@ export interface MonthInputs {
   absences: { student_id: string, day: string }[]
   /** المطلوبُ الشهريّ: لقطةُ الرأس إن وُجد، وإلا إعدادُ المشروع. */
   target: number | null
+  /** أثلاثُ تخفيض الاختبار لكلّ طالبٍ اختُبر في الشهر (أكبرُها) — اختياريٌّ لنسخ الجهاز المحفوظة قبل 2026-11-02. */
+  reliefs?: Record<string, number>
+}
+
+type ExamInMonth = { student_id: string, item: { cycle: { parts_from: number, parts_to: number } | null } | null }
+
+/** أكبرُ تخفيضٍ لكلّ طالب من اختبارات الشهر (`EXAM_RELIEF_THIRDS` بعدد أجزاء الدورة). */
+export function examReliefs(rows: ExamInMonth[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const r of rows) {
+    const c = r.item?.cycle
+    const thirds = c ? examReliefThirds(c.parts_to - c.parts_from + 1) : 0
+    if (thirds > (out[r.student_id] ?? 0)) out[r.student_id] = thirds
+  }
+  return out
 }
 
 /** يقرأ مدخلاتِ الشهر — يرمي أوّلَ خطأ. */
@@ -51,7 +67,7 @@ export async function fetchMonthInputs(supabase: SupabaseClient<Database>, hid: 
   // استعلامٌ واحد لكلّ جدول: سجلّاتُ الشهر، وتاريخُ نهايات الطلاب، وسجلّاتُ الشهر نفسه في حلقاتٍ أخرى. التاريخُ محدودٌ
   // بآخر HISTORY_MONTHS شهراً قبل الشهر المعروض على مستوى السنة (`latestEnds` يحسم الأدقّ) ومرتّبٌ بالأحدث
   const lowerYear = shiftMonth(y, m, -HISTORY_MONTHS).year
-  const [recordsRes, historyRes, elsewhereRes] = ids.length
+  const [recordsRes, historyRes, elsewhereRes, examsRes] = ids.length
     ? await Promise.all([
         reportRes.data
           ? supabase.from('quran_records').select('*').eq('report_id', reportRes.data.id).in('student_id', ids)
@@ -67,10 +83,14 @@ export async function fetchMonthInputs(supabase: SupabaseClient<Database>, hid: 
           .select('*, report:monthly_reports!inner(halaqa_id, report_year, report_month)')
           .in('student_id', ids)
           .eq('report.report_year', y).eq('report.report_month', m)
-          .neq('report.halaqa_id', hid)
+          .neq('report.halaqa_id', hid),
+        // اختباراتُ الشهر لتخفيض المطلوب (2026-11-02)
+        supabase.from('exam_results')
+          .select('student_id, item:exam_list_items!exam_results_exam_list_item_id_fkey(cycle:exam_cycles!exam_list_items_exam_cycle_id_fkey(parts_from, parts_to))')
+          .in('student_id', ids).gte('exam_date', range.from).lte('exam_date', range.to)
       ])
-    : [{ data: [] as QuranRecordRow[], error: null }, { data: [], error: null }, { data: [] as QuranRecordRow[], error: null }]
-  const failure2 = recordsRes.error ?? historyRes.error ?? elsewhereRes.error
+    : [{ data: [] as QuranRecordRow[], error: null }, { data: [], error: null }, { data: [] as QuranRecordRow[], error: null }, { data: [] as ExamInMonth[], error: null }]
+  const failure2 = recordsRes.error ?? historyRes.error ?? elsewhereRes.error ?? examsRes.error
   if (failure2) throw failure2
 
   const history = (historyRes.data ?? []) as HistoryRow[]
@@ -86,6 +106,7 @@ export async function fetchMonthInputs(supabase: SupabaseClient<Database>, hid: 
     approvedEnds: latestEnds(history, { year: y, month: m + 1 }, true),
     days: (daysRes.data ?? []).map(d => d.day),
     absences: absencesRes.data ?? [],
-    target: reportRes.data?.target_pages_snapshot ?? settings.data?.target_memorization_pages ?? null
+    target: reportRes.data?.target_pages_snapshot ?? settings.data?.target_memorization_pages ?? null,
+    reliefs: examReliefs((examsRes.data ?? []) as ExamInMonth[])
   }
 }

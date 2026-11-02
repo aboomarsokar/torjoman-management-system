@@ -1,6 +1,8 @@
 -- درجاتُ الإنجاز وتقسيطُ أكتوبر (طلب المستخدم 2026-11-02):
 -- · المطلوبُ يُقسَّط بالحضور من أوّل شهرٍ في المشروع (10-2026) لا من 11 — أُزيل الاستثناء.
 -- · ثلاثُ درجات: أنجز (≥ 100% من المطلوب) · قريب `near` (≥ 75%) · مقصّر (< 75%).
+-- · تخفيضُ الاختبار: من اختُبر في الشهر يُخصم من مطلوبه الكامل قبل التقسيط أثلاثٌ بعدد أجزاء الدورة — 3 أجزاء الثلث،
+--   5 الثلثان، 10 كاملاً (أكبرُها، نجح أو لم ينجح)؛ وما خُصم كلُّه لا يرفعه التقسيطُ إلى صفحة. مرآةُ `EXAM_RELIEF_THIRDS`.
 -- · إنجازُ المعلم في سجلّ الجودة: أعلى 12 طالباً بأوزان أنجز 1 · قريب ½ · مقصّر ولم يُرصد 0، مقسوماً على 12 دائماً
 --   (من 50): مجموعُ الأعلى = least(أنجز, 12) + ½ · least(قريب, 12 − least(أنجز, 12)).
 
@@ -19,6 +21,8 @@ declare
   v_month_days integer;
   v_held integer;
   v_att integer;
+  v_relief integer;
+  v_base integer;
   s record;
 begin
   select r.id, r.target_pages_snapshot into v_report_id, v_target
@@ -43,6 +47,13 @@ begin
     if v_target is null then
       required := null;
     else
+      select coalesce(max(case c.parts_to - c.parts_from + 1 when 3 then 1 when 5 then 2 when 10 then 3 else 0 end), 0)
+        into v_relief
+        from public.exam_results r
+        join public.exam_list_items li on li.id = r.exam_list_item_id
+        join public.exam_cycles c on c.id = li.exam_cycle_id
+       where r.student_id = s.id and r.exam_date between v_from and v_to;
+      v_base := v_target - round(v_target::numeric * v_relief / 3)::integer;
       select count(*) into v_held from public.attendance_days d
        where d.halaqa_id = p_halaqa and d.day between v_from and v_to
          and (s.enrollment_date is null or d.day >= s.enrollment_date);
@@ -51,10 +62,10 @@ begin
        where a.student_id = s.id and a.halaqa_id = p_halaqa and a.day between v_from and v_to
          and (s.enrollment_date is null or a.day >= s.enrollment_date);
       if v_held = 0 and v_month_days > 0 then required := null;
-      elsif v_held = 0 then required := v_target;
+      elsif v_held = 0 then required := v_base;
       elsif v_att <= 0 then required := null;
-      elsif v_att >= v_held then required := v_target;
-      else required := greatest(1, round(v_target::numeric * v_att / v_held)::integer);
+      elsif v_att >= v_held or v_base = 0 then required := v_base;
+      else required := greatest(1, round(v_base::numeric * v_att / v_held)::integer);
       end if;
     end if;
     state := case when required is null then 'unmeasured' when pages >= required then 'done'

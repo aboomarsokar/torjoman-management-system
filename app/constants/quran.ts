@@ -21,6 +21,23 @@ export function prorationApplies(year: number, month: number): boolean {
   return year > from.year || (year === from.year && month >= from.month)
 }
 
+/**
+ * تخفيضُ المطلوب الشهريّ لمن اختُبر في الشهر (قرار المستخدم 2026-11-02): المراجعةُ للاختبار تأخذ من وقت الحفظ الجديد.
+ * المفتاحُ عددُ أجزاء الدورة (`parts_to - parts_from + 1`)، والقيمةُ **أثلاثٌ** من المطلوب: 3 أجزاء الثلث، 5 الثلثان،
+ * 10 المطلوبُ كلُّه؛ مرّةً في الشهر بأكبرها، نجح أو لم ينجح. مرآتُها في القاعدة `private.halaqa_student_achievement`.
+ */
+export const EXAM_RELIEF_THIRDS: Readonly<Record<number, number>> = { 3: 1, 5: 2, 10: 3 }
+
+/** أثلاثُ التخفيض لاختبار دورةٍ بعدد أجزائها (0 لما لا يقابله تخفيض). */
+export function examReliefThirds(parts: number): number {
+  return EXAM_RELIEF_THIRDS[parts] ?? 0
+}
+
+/** «الثلث» / «الثلثان» / «كامل المطلوب» لشارة التخفيض. */
+export function reliefLabel(thirds: number): string {
+  return thirds >= 3 ? 'كامل المطلوب' : thirds === 2 ? 'الثلثان' : 'الثلث'
+}
+
 /** نهايةُ المسار: الفاتحة 1:7 — من بلغها ختم. */
 export const KHATM_POSITION = { surah: 1, ayah: 7 } as const
 

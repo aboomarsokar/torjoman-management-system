@@ -6,9 +6,11 @@ export type PlanBasis = 'full' | 'prorated' | 'absent' | 'unheld'
 export interface ProratedPlan {
   /** المطلوبُ بعد التقسيط؛ null إن لم يُقَس (بلا خطة أو لم يحضر). */
   required: number | null
-  /** المطلوبُ الكامل قبل التقسيط. */
+  /** المطلوبُ الكامل قبل التقسيط (وقبل تخفيض الاختبار). */
   full: number | null
   basis: PlanBasis
+  /** أثلاثٌ خُصمت من المطلوب الكامل لاختبارٍ في الشهر (`EXAM_RELIEF_THIRDS`: 1–3) — قبل التقسيط. */
+  relief?: number
 }
 
 /**
@@ -24,7 +26,22 @@ export function proratePlan(input: {
   daysAttended: number | null
   /** أيامُ الحلقة في الشهر كلِّه (قبل قصّها بالالتحاق)؛ غيابُه يُبقي سلوكَ «بلا أيام» كاملاً. */
   monthDays?: number | null
+  /** أثلاثُ تخفيض الاختبار (1–3) تُخصم من المطلوب الكامل قبل التقسيط: `round(المطلوب × أثلاث ÷ 3)`؛
+   *  وما بلغ الصفرَ لا يُطالَب بشيء (يُعدّ منجزاً بأيّ رصد). */
+  relief?: number
 }): ProratedPlan {
+  const { required, daysHeld, daysAttended, monthDays } = input
+  if (required === null) return prorateBase(input)
+  const relief = Math.min(Math.max(0, input.relief ?? 0), 3)
+  if (!relief) return prorateBase(input)
+  const base = required - Math.round((required * relief) / 3)
+  const plan = prorateBase({ required: base, daysHeld, daysAttended, monthDays })
+  // خُصم المطلوبُ كلُّه: لا تقسيطَ يرفعه إلى صفحة (من لم يحضر أو لم تنعقد له أيامٌ يبقى بلا مطلوب)
+  const reduced = base === 0 && plan.required !== null ? 0 : plan.required
+  return { ...plan, required: reduced, full: required, relief }
+}
+
+function prorateBase(input: { required: number | null, daysHeld: number | null, daysAttended: number | null, monthDays?: number | null }): ProratedPlan {
   const { required, daysHeld, daysAttended, monthDays } = input
 
   if (required === null) return { required: null, full: null, basis: 'full' }

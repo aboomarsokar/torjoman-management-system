@@ -203,6 +203,7 @@ const noDecision = () => Promise.resolve(false)
       <QuranMonthBar
         :status="status"
         :return-note="report?.return_note ?? null"
+        :approval-note="report?.approval_note ?? null"
         :period="period"
         :can-submit="!isReadOnly"
         :submit-block="submitBlock"

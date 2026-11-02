@@ -1,20 +1,30 @@
 <script setup lang="ts">
 /**
- * نافذةُ إعادة رصد الشهر إلى المعلم مسوّدةً — للمُرسَل («إعادة بملاحظة») وللمعتمَد («إعادة فتح»).
- * الملاحظةُ إلزاميةٌ (≤ 500 حرف) ويراها المعلم في شريطٍ أعلى شاشته؛ والقاعدةُ ترفض الإعادةَ بلا ملاحظة.
+ * نافذةُ ملاحظةٍ للمعلم على رصد الشهر: الإعادةُ مسوّدةً — للمُرسَل («إعادة بملاحظة») وللمعتمَد («إعادة فتح») —
+ * والملاحظةُ فيها إلزامية؛ و«الاعتماد» (`approve`، 2026-11-02) بملاحظةٍ اختيارية للشكر أو التوجيه تبدأ بـ`initial`.
+ * ≤ 500 حرف، ويراها المعلم في شريطٍ أعلى شاشته.
  */
 import { NOTE_MAX } from '~/utils/quran/screen'
 
-const props = defineProps<{ title: string, description: string, confirmLabel: string, loading?: boolean }>()
+const props = defineProps<{
+  title: string
+  description: string
+  confirmLabel: string
+  loading?: boolean
+  /** نافذةُ الاعتماد: الملاحظةُ اختيارية وزرُّها أخضر. */
+  approve?: boolean
+  /** نصٌّ مبدئيّ (ملاحظةُ اعتمادٍ محفوظة). */
+  initial?: string | null
+}>()
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{ confirm: [note: string] }>()
 
 const note = ref('')
 watch(open, (v) => {
-  if (v) note.value = ''
+  if (v) note.value = props.initial ?? ''
 })
 const trimmed = computed(() => note.value.trim())
-const valid = computed(() => trimmed.value.length > 0 && trimmed.value.length <= NOTE_MAX)
+const valid = computed(() => (props.approve || trimmed.value.length > 0) && trimmed.value.length <= NOTE_MAX)
 </script>
 
 <template>
@@ -26,8 +36,8 @@ const valid = computed(() => trimmed.value.length > 0 && trimmed.value.length <=
     <template #body>
       <div class="rm">
         <UFormField
-          label="الملاحظة للمعلم"
-          required
+          :label="props.approve ? 'كلمة للمعلم (اختيارية)' : 'الملاحظة للمعلم'"
+          :required="!props.approve"
           :hint="`${trimmed.length}/${NOTE_MAX}`"
         >
           <UTextarea
@@ -36,7 +46,7 @@ const valid = computed(() => trimmed.value.length > 0 && trimmed.value.length <=
             :maxlength="NOTE_MAX"
             size="lg"
             class="w-full"
-            placeholder="ما الذي يحتاج تصحيحاً؟"
+            :placeholder="props.approve ? 'شكرٌ أو توجيهٌ يراه المعلم مع الاعتماد' : 'ما الذي يحتاج تصحيحاً؟'"
             :ui="{ base: 'rounded-[13px]' }"
           />
         </UFormField>
@@ -51,9 +61,9 @@ const valid = computed(() => trimmed.value.length > 0 && trimmed.value.length <=
           />
           <UButton
             :label="confirmLabel"
-            color="warning"
+            :color="props.approve ? 'success' : 'warning'"
             size="lg"
-            icon="i-lucide-undo-2"
+            :icon="props.approve ? 'i-lucide-badge-check' : 'i-lucide-undo-2'"
             :disabled="!valid"
             :loading="loading"
             :ui="{ base: 'rounded-[13px] min-h-11 font-semibold' }"

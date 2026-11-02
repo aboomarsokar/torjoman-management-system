@@ -13,7 +13,7 @@ import { outcomeOf, proratePlan } from '~/utils/quran/plan'
 export type QuranRecordRow = Database['public']['Tables']['quran_records']['Row']
 export type ReportHeader = Pick<
   Database['public']['Tables']['monthly_reports']['Row'],
-  'id' | 'halaqa_id' | 'report_month' | 'report_year' | 'status' | 'return_note' | 'submitted_at' | 'approved_at' | 'target_pages_snapshot'
+  'id' | 'halaqa_id' | 'report_month' | 'report_year' | 'status' | 'return_note' | 'approval_note' | 'submitted_at' | 'approved_at' | 'target_pages_snapshot'
 >
 
 export interface MonthRecord {

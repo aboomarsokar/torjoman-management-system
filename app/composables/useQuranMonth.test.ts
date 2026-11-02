@@ -3,7 +3,7 @@
  * وملخّصُ الحلقة، وصلاحيةُ الاعتماد.
  */
 import { describe, expect, it } from 'vitest'
-import { buildStudentRows, canApproveReport, summarizeOutcomes } from './useQuranMonth'
+import { buildStudentRows, canApproveReport, reportStatusPayload, summarizeOutcomes } from './useQuranMonth'
 import type { StudentMonthRow } from './useQuranMonth'
 import type { ProgramJuz } from '~/utils/quran/position'
 
@@ -234,5 +234,18 @@ describe('canApproveReport', () => {
     for (const r of ['admin_manager', 'women_admin', 'technical_manager', 'teacher', 'project_supervisor', 'examiner', 'student', null]) {
       expect(canApproveReport(r, 'sup1', male)).toBe(false)
     }
+  })
+})
+
+describe('reportStatusPayload', () => {
+  it('الاعتمادُ بكلمةٍ اختيارية ويمحو ملاحظةَ الإعادة', () => {
+    expect(reportStatusPayload('approved', ' بارك الله فيك ')).toEqual({ status: 'approved', approval_note: 'بارك الله فيك', return_note: null })
+    expect(reportStatusPayload('approved')).toEqual({ status: 'approved', approval_note: null, return_note: null })
+  })
+  it('الإعادةُ بملاحظتها وتمحو كلمةَ الاعتماد', () => {
+    expect(reportStatusPayload('draft', 'صحّح الحضور')).toEqual({ status: 'draft', return_note: 'صحّح الحضور', approval_note: null })
+  })
+  it('الإرسالُ الحالةُ وحدها', () => {
+    expect(reportStatusPayload('submitted')).toEqual({ status: 'submitted' })
   })
 })

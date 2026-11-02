@@ -50,11 +50,13 @@ export function monthQueryRange(year: number, month: number): { from: string, to
 }
 
 /** يقرأ زياراتِ الشهر التي تسمح بها RLS (نطاقُ القارئ) ويجمعها لكلّ حلقة — يرمي الخطأ. */
-export async function fetchMonthVisits(supabase: SupabaseClient<Database>, year: number, month: number): Promise<Map<string, HalaqaVisits>> {
+export async function fetchMonthVisits(supabase: SupabaseClient<Database>, year: number, month: number, halaqaId?: string): Promise<Map<string, HalaqaVisits>> {
   const range = monthQueryRange(year, month)
-  const { data, error } = await supabase.from('supervision_visits')
+  let query = supabase.from('supervision_visits')
     .select('halaqa_id, score, executed_at, scheduled_at, visitor:profiles!supervision_visits_supervisor_id_fkey(full_name)')
     .gte('scheduled_at', range.from).lt('scheduled_at', range.to)
+  if (halaqaId) query = query.eq('halaqa_id', halaqaId)
+  const { data, error } = await query
   if (error) throw error
   return groupMonthVisits((data ?? []) as VisitRow[], `${year}-${String(month).padStart(2, '0')}`)
 }

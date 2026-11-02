@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * شريطُ حالة رصد الشهر وإجراءاتُه: شريطٌ كهرمانيّ بملاحظة الإعادة حين يعود الشهرُ مسوّدة، وشارةُ الحالة،
- * و«إرسال للاعتماد» للمعلم (معطَّلٌ قبل يوم الفتح أو بلا رصد، بتأكيدٍ يذكر من لم يُرصد)، و«اعتماد»
- * و«إعادة بملاحظة» للمعتمِد على المُرسَل، و«إعادة فتح» على المعتمَد. الإجراءاتُ تُمرَّر دوالَّ تُرجع
+ * و«إرسال للاعتماد» للمعلم (معطَّلٌ قبل يوم الفتح أو بلا رصد، بتأكيدٍ يذكر من لم يُرصد)، و«اعتماد» (بكلمةٍ
+ * اختيارية للمعلم تظهر في شريطٍ أخضر — 2026-11-02) و«إعادة بملاحظة» للمعتمِد على المُرسَل، و«إعادة فتح» على المعتمَد. الإجراءاتُ تُمرَّر دوالَّ تُرجع
  * نجاحها (أخطاؤها تُعرض في `useQuranMonth`)، ويُبلَّغ الأبُ بـ`changed` بعد كلّ نجاح.
  */
 import type { ReportStatus } from '~/utils/quran/screen'
@@ -11,6 +11,8 @@ import { REPORT_STATUS_COLORS, REPORT_STATUS_LABELS } from '~/utils/quran/screen
 const props = defineProps<{
   status: ReportStatus | null
   returnNote: string | null
+  /** كلمةُ المعتمِد مع الاعتماد (أو محفوظةٌ تُعرض مبدئياً في نافذته). */
+  approvalNote?: string | null
   /** `10-2026`. */
   period: string
   /** المعلمُ يرى الإرسال. */
@@ -23,7 +25,7 @@ const props = defineProps<{
   total: number
   loading?: boolean
   submit: () => Promise<boolean>
-  approve: () => Promise<boolean>
+  approve: (note?: string) => Promise<boolean>
   returnWithNote: (note: string) => Promise<boolean>
 }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -31,6 +33,7 @@ const toast = useToast()
 
 const busy = ref(false)
 const confirmSubmit = ref(false)
+const approveOpen = ref(false)
 const returnMode = ref<'return' | 'reopen' | null>(null)
 const returnOpen = computed({
   get: () => returnMode.value !== null,
@@ -56,8 +59,8 @@ async function run(action: () => Promise<boolean>, done: string): Promise<boolea
 async function onSubmit() {
   if (await run(props.submit, `أُرسل رصدُ ${props.period} للاعتماد`)) confirmSubmit.value = false
 }
-async function onApprove() {
-  await run(props.approve, `اعتُمد رصدُ ${props.period}`)
+async function onApprove(note: string) {
+  if (await run(() => props.approve(note), `اعتُمد رصدُ ${props.period}`)) approveOpen.value = false
 }
 async function onReturn(note: string) {
   const done = returnMode.value === 'reopen' ? 'أُعيد فتحُ الشهر للمعلم' : 'أُعيد الرصدُ إلى المعلم بملاحظتك'
@@ -76,6 +79,18 @@ async function onReturn(note: string) {
       class="size-5 shrink-0"
     />
     <span><strong>أُعيد الرصدُ بملاحظة:</strong> {{ returnNote }}</span>
+  </div>
+
+  <div
+    v-else-if="status === 'approved' && approvalNote"
+    class="approved"
+    role="status"
+  >
+    <UIcon
+      name="i-lucide-badge-check"
+      class="size-5 shrink-0"
+    />
+    <span><strong>اعتُمد الرصدُ بكلمة:</strong> {{ approvalNote }}</span>
   </div>
 
   <div class="bar">
@@ -115,9 +130,9 @@ async function onReturn(note: string) {
           icon="i-lucide-badge-check"
           color="success"
           size="lg"
-          :loading="busy"
+          :disabled="busy"
           :ui="{ base: 'rounded-[13px] justify-center font-semibold' }"
-          @click="onApprove"
+          @click="approveOpen = true"
         />
       </template>
       <UButton
@@ -142,6 +157,16 @@ async function onReturn(note: string) {
     :loading="busy"
     @confirm="onReturn"
   />
+  <QuranReturnModal
+    v-model:open="approveOpen"
+    approve
+    :initial="approvalNote ?? null"
+    :title="`اعتماد رصد ${period}`"
+    description="يُعتمد الرصدُ ويُقفل، ويصل المعلمَ إشعارٌ بكلمتك إن كتبتها."
+    confirm-label="اعتماد"
+    :loading="busy"
+    @confirm="onApprove"
+  />
   <UiConfirmModal
     v-model:open="confirmSubmit"
     :title="`إرسال رصد ${period} للاعتماد؟`"
@@ -156,6 +181,7 @@ async function onReturn(note: string) {
 
 <style scoped>
 .returned { display: flex; align-items: flex-start; gap: 10px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); border-radius: var(--r-control); padding: 12px 16px; font-size: 14.5px; line-height: 1.7; margin-bottom: 16px; }
+.approved { display: flex; align-items: flex-start; gap: 10px; background: var(--chip-active-bg); color: var(--chip-active-ink); border-radius: var(--r-control); padding: 12px 16px; font-size: 14.5px; line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
 .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); }
 .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-inline-start: auto; }
 .acts > * { min-height: 44px; }

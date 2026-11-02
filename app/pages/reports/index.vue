@@ -222,6 +222,7 @@ const pending = computed(() => !role.value || halaqatPending.value || loading.va
         <QuranMonthBar
           :status="status"
           :return-note="report?.return_note ?? null"
+          :approval-note="report?.approval_note ?? null"
           :period="period"
           :can-submit="isTeacher && !isReadOnly"
           :submit-block="submitBlock"

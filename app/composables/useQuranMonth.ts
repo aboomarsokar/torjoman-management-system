@@ -15,6 +15,16 @@ import { fetchMonthInputs, REPORT_COLUMNS } from '~/utils/quran/monthInputs'
 export { buildStudentRows, canApproveReport, summarizeOutcomes } from '~/utils/quran/month'
 export type { MonthRecord, QuranRecordRow, ReportHeader, StudentMonthRow, BuildRowsInput } from '~/utils/quran/month'
 
+/**
+ * حقولُ تحديث حالة الرصد: الإعادةُ بملاحظتها وتمحو كلمةَ الاعتماد، والاعتمادُ بكلمته الاختيارية ويمحو ملاحظةَ
+ * الإعادة القديمة (2026-11-02)، والإرسالُ الحالةُ وحدها.
+ */
+export function reportStatusPayload(status: 'submitted' | 'approved' | 'draft', note?: string) {
+  if (status === 'draft' && note !== undefined) return { status, return_note: note, approval_note: null }
+  if (status === 'approved') return { status, approval_note: note?.trim() || null, return_note: null }
+  return { status }
+}
+
 export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, month: Ref<number>) {
   const supabase = useSupabaseClient<Database>()
   const { handle } = useErrorHandler()
@@ -125,14 +135,17 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
     }
   }
 
-  /** تحديثُ الحالة وحدَها (والملاحظة عند الإعادة)؛ الأختامُ تضعها القاعدة. */
-  async function setStatus(status: 'submitted' | 'approved' | 'draft', returnNote?: string): Promise<boolean> {
+  /**
+   * تحديثُ الحالة (وملاحظةُ الإعادة أو الاعتماد معها)؛ الأختامُ تضعها القاعدة. الإعادةُ تمحو ملاحظةَ الاعتماد،
+   * والاعتمادُ يمحو ملاحظةَ الإعادة القديمة.
+   */
+  async function setStatus(status: 'submitted' | 'approved' | 'draft', note?: string): Promise<boolean> {
     const current = report.value
     if (!current) return false
     try {
       blockIfReadOnly()
       const { data, error } = await supabase.from('monthly_reports')
-        .update(returnNote === undefined ? { status } : { status, return_note: returnNote })
+        .update(reportStatusPayload(status, note))
         .eq('id', current.id)
         .select('id')
       if (error) throw error
@@ -148,7 +161,8 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
   }
 
   const submit = () => setStatus('submitted')
-  const approve = () => setStatus('approved')
+  /** الاعتمادُ بملاحظةٍ اختيارية يراها المعلم (2026-11-02). */
+  const approve = (note?: string) => setStatus('approved', note?.trim() || undefined)
   /** الإعادةُ إلى المسوّدة بملاحظةٍ إلزامية (فارغةٌ تُرفض قبل الطلب). */
   function returnWithNote(note: string): Promise<boolean> {
     const trimmed = note.trim()

@@ -12,7 +12,7 @@ import type { HistoryRow } from '~/utils/quran/monthHistory'
 import type { Position } from '~/utils/quran/position'
 import { shiftMonth } from '~/utils/reportWindow'
 
-export const REPORT_COLUMNS = 'id, halaqa_id, report_month, report_year, status, return_note, submitted_at, approved_at, target_pages_snapshot'
+export const REPORT_COLUMNS = 'id, halaqa_id, report_month, report_year, status, return_note, approval_note, submitted_at, approved_at, target_pages_snapshot'
 
 export type MonthStudent = { id: string, full_name: string, enrollment_date: string | null, quran_parts: number | null }
 

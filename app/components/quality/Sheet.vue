@@ -25,7 +25,7 @@ const reports = computed(() => props.numbers.reports_quran + props.numbers.repor
 const quality = computed(() => qualityWith(props.numbers, props.meetings))
 const final = computed(() => (quality.value !== null && props.numbers.achievement !== null ? Math.round((quality.value + props.numbers.achievement) * 100) / 100 : null))
 const day = (iso: string) => iso ? iso.split('-').reverse().join('-') : '—'
-const achDen = computed(() => props.numbers.achievement_done + props.numbers.achievement_short + props.numbers.achievement_unrecorded)
+const achDen = computed(() => props.numbers.achievement_done + props.numbers.achievement_near + props.numbers.achievement_short + props.numbers.achievement_unrecorded)
 </script>
 
 <template>
@@ -161,9 +161,12 @@ const achDen = computed(() => props.numbers.achievement_done + props.numbers.ach
       <div class="qs-ach">
         <div>
           <h4><span class="qs-no green">3</span> إنجاز الحلقة</h4>
-          <p>محورٌ مستقلّ · {{ ACHIEVEMENT_MAX }}% من تقييم المعلم</p>
+          <p>محورٌ مستقلّ · {{ ACHIEVEMENT_MAX }}% من تقييم المعلم · أعلى 12 طالباً: أنجز 1 · قريب ½</p>
           <p class="qs-hint">
             أنجز {{ numbers.achievement_done }} من {{ achDen }}
+            <template v-if="numbers.achievement_near">
+              · قريب {{ numbers.achievement_near }}
+            </template>
             <template v-if="numbers.achievement_short">
               · مقصّر {{ numbers.achievement_short }}
             </template>

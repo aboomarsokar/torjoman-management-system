@@ -62,6 +62,8 @@ export interface BuildRowsInput {
   prorate?: boolean
   absences: { student_id: string, day: string }[]
   target: number | null
+  /** تخفيضُ الاختبار لكلّ طالب (`examReliefs`). */
+  reliefs?: Record<string, number>
   juz: ProgramJuz[]
   ayahCountOf: (surah: number) => number
 }
@@ -102,9 +104,10 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
     const record = own ?? elsewhere
     const previous = input.previousEnds[s.id] ?? null
     const heldParts = Math.max(0, Math.min(PROGRAM_JUZ_COUNT, s.quran_parts ?? 0))
+    const relief = input.reliefs?.[s.id] ?? 0
     const plan = input.prorate === false
-      ? proratePlan({ required: input.target, daysHeld: null, daysAttended: null })
-      : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length })
+      ? proratePlan({ required: input.target, daysHeld: null, daysAttended: null, relief })
+      : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length, relief })
 
     return {
       studentId: s.id,
@@ -126,7 +129,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
 
 /** عدّادُ النتائج ونسبةُ المرصودين (غيرُ «لم يُرصد») مقرَّبةً؛ صفرٌ لقائمةٍ فارغة. */
 export function summarizeOutcomes(rows: StudentMonthRow[]): Record<Outcome, number> & { recordedPct: number } {
-  const summary = { done: 0, short: 0, unmeasured: 0, unrecorded: 0 }
+  const summary = { done: 0, near: 0, short: 0, unmeasured: 0, unrecorded: 0 }
   for (const r of rows) summary[r.outcome]++
   const recordedPct = rows.length ? Math.round(((rows.length - summary.unrecorded) / rows.length) * 100) : 0
   return { ...summary, recordedPct }

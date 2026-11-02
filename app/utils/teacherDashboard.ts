@@ -110,6 +110,7 @@ export function monthSummary(report: DashReport, rows: StudentMonthRow[]) {
     label: periodLabel(report.report_year, report.report_month),
     state: (report.status === 'draft' && report.return_note ? 'returned' : report.status) as Exclude<RecordingState, 'none'>,
     done: outcomes.done,
+    near: outcomes.near,
     short: outcomes.short,
     unmeasured: outcomes.unmeasured,
     unrecorded: outcomes.unrecorded

@@ -34,6 +34,7 @@ watch([open, () => props.row?.halaqa_id, () => props.year, () => props.month], a
 
 const GROUPS = [
   { key: 'short', label: 'مقصّرون', labelF: 'مقصّرات', tone: 'err' },
+  { key: 'near', label: 'قريبون من المطلوب', labelF: 'قريبات من المطلوب', tone: 'warn' },
   { key: 'unrecorded', label: 'لم يُرصدوا', labelF: 'لم يُرصدن', tone: 'warn' },
   { key: 'unmeasured', label: 'لا يُقاسون (غابوا الشهرَ كلّه)', labelF: 'لا يُقسن (غبن الشهرَ كلّه)', tone: 'neutral' },
   { key: 'done', label: 'أنجزوا', labelF: 'أنجزن', tone: 'ok' }
@@ -61,7 +62,13 @@ const status = computed(() => (props.row?.report_status ?? 'none') as keyof type
       >
         <dl class="am-meta">
           <div><dt>الشهر</dt><dd><bdi dir="ltr">{{ month }}/{{ year }}</bdi></dd></div>
-          <div><dt>الإنجاز القرآني</dt><dd>{{ pct === null ? '—' : `${pct}٪` }} · {{ fem ? 'أنجزت' : 'أنجز' }} {{ row.done }} من {{ row.done + row.short + row.unrecorded }}</dd></div>
+          <div>
+            <dt>الإنجاز القرآني</dt><dd>
+              {{ pct === null ? '—' : `${pct}٪` }} · {{ fem ? 'أنجزت' : 'أنجز' }} {{ row.done }}<template v-if="row.near">
+                · قريب {{ row.near }}
+              </template> من {{ row.done + row.near + row.short + row.unrecorded }}
+            </dd>
+          </div>
           <div>
             <dt>رصدُ الشهر</dt><dd>
               <UBadge

@@ -36,6 +36,7 @@ export interface QualityNumbers {
   meetings: number | null
   quality: number | null
   achievement_done: number
+  achievement_near: number
   achievement_short: number
   achievement_unrecorded: number
   achievement_unmeasured: number
@@ -66,6 +67,7 @@ export function parseNumbers(raw: unknown): QualityNumbers | null {
     meetings: num(r.meetings),
     quality: num(r.quality),
     achievement_done: Number(r.achievement_done ?? 0),
+    achievement_near: Number(r.achievement_near ?? 0),
     achievement_short: Number(r.achievement_short ?? 0),
     achievement_unrecorded: Number(r.achievement_unrecorded ?? 0),
     achievement_unmeasured: Number(r.achievement_unmeasured ?? 0),

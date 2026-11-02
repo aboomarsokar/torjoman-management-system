@@ -64,14 +64,32 @@ describe('outcomeOf', () => {
     expect(outcomeOf(10, { required: null, full: 35, basis: 'absent' })).toBe('unmeasured')
   })
 
-  it('أنجز عند بلوغ المطلوب أو تجاوزه، ومقصّر دونه', () => {
+  it('أنجز عند بلوغ المطلوب، وقريب من 75% منه، ومقصّر دونها', () => {
     expect(outcomeOf(28, full)).toBe('done')
     expect(outcomeOf(40, full)).toBe('done')
-    expect(outcomeOf(27, full)).toBe('short')
+    expect(outcomeOf(27, full)).toBe('near')
+    expect(outcomeOf(21, full)).toBe('near')
+    expect(outcomeOf(20, full)).toBe('short')
     expect(outcomeOf(0, full)).toBe('short')
   })
 
   it('التسميات', () => {
-    expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', short: 'مقصّر', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
+    expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', near: 'قريب', short: 'مقصّر', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
+  })
+})
+
+describe('proratePlan — تخفيضُ الاختبار بالأثلاث (2026-11-02)', () => {
+  it('3 أجزاء الثلث، 5 الثلثان، 10 كامل المطلوب — قبل التقسيط', () => {
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 20, relief: 1 })).toMatchObject({ required: 20, full: 30, relief: 1 })
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 20, relief: 2 })).toMatchObject({ required: 10, relief: 2 })
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 10, relief: 1 })).toMatchObject({ required: 10, basis: 'prorated' })
+  })
+  it('كامل المطلوب: صفرٌ لا يرفعه التقسيط، فيُعدّ منجزاً بأيّ رصد', () => {
+    const plan = proratePlan({ required: 30, daysHeld: 20, daysAttended: 12, relief: 3 })
+    expect(plan.required).toBe(0)
+    expect(outcomeOf(0, plan)).toBe('done')
+  })
+  it('من لم يحضر يبقى بلا مطلوب ولو اختُبر', () => {
+    expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 0, relief: 3 }).required).toBeNull()
   })
 })

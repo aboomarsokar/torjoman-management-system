@@ -3,7 +3,7 @@
  * وفعلُ بطاقة الطالب، وترشيحُ البطاقات، وشارةُ المطلوب، وتحقّقُ نافذة الرصد قبل الطلب، وصفوفُ التصدير.
  * الحكمُ الأخير للقاعدة؛ هذا طبقةُ تجربة. `app/utils/quran/*` يُستورد صراحةً.
  */
-import { MUSHAF_PAGES } from '~/constants/quran'
+import { MUSHAF_PAGES, reliefLabel } from '~/constants/quran'
 import { arabicFold } from '~/utils/arabicSearch'
 import { formatDay, isSubmittable, openingDay, shiftMonth } from '~/utils/reportWindow'
 import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
@@ -59,15 +59,16 @@ export const REPORT_STATUS_COLORS: Record<ReportStatus | 'none', 'neutral' | 'wa
   approved: 'success'
 }
 
-export const OUTCOME_COLORS: Record<Outcome, 'success' | 'warning' | 'neutral' | 'info'> = {
+export const OUTCOME_COLORS: Record<Outcome, 'success' | 'warning' | 'error' | 'neutral' | 'info'> = {
   done: 'success',
-  short: 'warning',
+  near: 'warning',
+  short: 'error',
   unmeasured: 'neutral',
   unrecorded: 'info'
 }
 
 /** ترتيبُ عدّادات الشريط. */
-export const OUTCOME_ORDER: Outcome[] = ['done', 'short', 'unmeasured', 'unrecorded']
+export const OUTCOME_ORDER: Outcome[] = ['done', 'near', 'short', 'unmeasured', 'unrecorded']
 
 /** حدُّ ملاحظة الإعادة وملاحظات السجلّ (قيدا القاعدة). */
 export const NOTE_MAX = 500
@@ -115,8 +116,9 @@ export function visibleRows(rows: StudentMonthRow[], outcome: Outcome | null, qu
 
 /** شارةُ المطلوب: «المطلوب 12 · أنجز»، و«لم يحضر · لا يُقاس» لمن لم يحضر، و«التحق بعد الأيام · لا يُقاس» لمن لم تنعقد أيامٌ بعد التحاقه، و«بلا مطلوب · …» بلا خطة. */
 export function planBadge(row: Pick<StudentMonthRow, 'plan' | 'outcome'>): string {
+  const relief = row.plan.relief ? ` (خُفّف ${reliefLabel(row.plan.relief)} للاختبار)` : ''
   const head = row.plan.required !== null
-    ? `المطلوب ${row.plan.required}`
+    ? `المطلوب ${row.plan.required}${relief}`
     : row.plan.basis === 'absent' ? 'لم يحضر' : row.plan.basis === 'unheld' ? 'التحق بعد الأيام' : 'بلا مطلوب'
   return `${head} · ${OUTCOME_LABELS[row.outcome]}`
 }

@@ -1,12 +1,16 @@
 /**
  * «إنجاز الحلقات» (طلب المستخدم 2026-10-22): أرقامُ `halaqat_achievement` إلى نسبٍ وترتيبٍ وروابطِ تواصل.
- * النسبةُ بمقام سجلّ تقييم المعلم نفسه: المنجزون ÷ (المنجزون + المقصّرون + من لم يُرصد) — «لا يُقاس» خارجها.
+ * النسبةُ بحساب سجلّ تقييم المعلم نفسه (قرار 2026-11-02): أعلى 12 طالباً بأوزان أنجز 1 · قريب ½ · مقصّر ولم يُرصد 0،
+ * مقسوماً على 12 دائماً — «لا يُقاس» خارجها. مرآتُه في القاعدة `quality_month_compute`.
  */
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { clampToProjectStart } from '~/utils/projectStart'
 
 /** حلقةٌ دون هذه النسبة تُعدّ متأخّرة في الملخّص. */
 export const ACHIEVEMENT_LOW_PCT = 50
+
+/** عددُ الطلاب الذين يُحسب بهم إنجازُ المعلم (الأعلى منهم)، ومقامُ نسبته دائماً. */
+export const ACHIEVEMENT_TOP_N = 12
 
 export interface AchievementRow {
   halaqa_id: string
@@ -17,18 +21,26 @@ export interface AchievementRow {
   report_status: string | null
   students: number
   done: number
+  near: number
   short: number
   unrecorded: number
   unmeasured: number
 }
 
-/** مقامُ النسبة: من يُحكم عليه بالإنجاز أو عدمه. */
-export const measuredOf = (r: Pick<AchievementRow, 'done' | 'short' | 'unrecorded'>) => r.done + r.short + r.unrecorded
+type Counts = Pick<AchievementRow, 'done' | 'near' | 'short' | 'unrecorded'>
 
-/** نسبةُ الإنجاز صحيحةً، أو null حين لا أحدَ يُقاس. */
-export function achievementPct(r: Pick<AchievementRow, 'done' | 'short' | 'unrecorded'>): number | null {
-  const m = measuredOf(r)
-  return m ? Math.round((100 * r.done) / m) : null
+/** من يُحكم عليه بالإنجاز أو عدمه (بلا «لا يُقاس»). */
+export const measuredOf = (r: Counts) => r.done + r.near + r.short + r.unrecorded
+
+/** مجموعُ أعلى 12 طالباً: المنجزون أوّلاً (1) ثم القريبون (½). */
+export function topScore(r: Pick<AchievementRow, 'done' | 'near'>): number {
+  const done = Math.min(r.done, ACHIEVEMENT_TOP_N)
+  return done + 0.5 * Math.min(r.near, ACHIEVEMENT_TOP_N - done)
+}
+
+/** نسبةُ إنجاز المعلم صحيحةً (أعلى 12 ÷ 12)، أو null حين لا أحدَ يُقاس. */
+export function achievementPct(r: Counts): number | null {
+  return measuredOf(r) ? Math.round((100 * topScore(r)) / ACHIEVEMENT_TOP_N) : null
 }
 
 /** الأضعفُ أولاً، ثم الأكثرُ مقصّرين، ثم الاسم؛ وما لا يُقاس في الآخر. */
@@ -44,12 +56,13 @@ export function sortWeakFirst<T extends AchievementRow>(rows: T[]): T[] {
 /** الملخّصُ الكلّيّ: المنجزون من المقاسين، وعددُ الحلقات المتأخّرة. */
 export function achievementTotals(rows: AchievementRow[]) {
   const done = rows.reduce((s, r) => s + r.done, 0)
+  const near = rows.reduce((s, r) => s + r.near, 0)
   const measured = rows.reduce((s, r) => s + measuredOf(r), 0)
   const low = rows.filter((r) => {
     const p = achievementPct(r)
     return p !== null && p < ACHIEVEMENT_LOW_PCT
   }).length
-  return { done, measured, pct: measured ? Math.round((100 * done) / measured) : null, low, halqat: rows.length }
+  return { done, near, measured, pct: measured ? Math.round((100 * (done + 0.5 * near)) / measured) : null, low, halqat: rows.length }
 }
 
 /**

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * بطاقةُ طالبٍ في كشف الإنجاز القرآني — هويّةٌ ثمّ وقائعُ ثمّ فعل: الاسمُ وما وصل إليه من الأجزاء
+ * بطاقةُ طالبٍ في كشف الإنجاز القرآني (مرقّمةٌ بـ`seq` — 2026-11-02) — هويّةٌ ثمّ وقائعُ ثمّ فعل: الاسمُ وما وصل إليه من الأجزاء
  * (أو «خَتم»)، ثم شاراتُ الشهر (الصفحاتُ وأجزاؤها، المطلوبُ والتصنيف، الحضور، حالةُ الرصد)، ثم زرٌّ
  * «رصد» / «تعديل» / «عرض» بحسب ما يملكه الناظر (`cardAction`)؛ وما رُصد في الحلقة السابقة تحمله شارةٌ محايدة بدل حالة تقرير هذه الحلقة ويُعرض للقراءة وحدَها. لا منطقَ هنا غيرُ العرض.
  */
@@ -17,6 +17,8 @@ const props = defineProps<{
   surahName: (n: number) => string
   /** رصدُه محفوظٌ على الجهاز ينتظر الرفع (شاشةُ المعلّم بلا إنترنت `/t/quran`). */
   queued?: boolean
+  /** رقمُ الطالب في القائمة المعروضة (1…). */
+  seq?: number
 }>()
 const emit = defineEmits<{ open: [] }>()
 
@@ -48,6 +50,10 @@ const button = computed(() => props.action ? ACTIONS[props.action] : null)
   <article class="sc">
     <div class="who">
       <h3 class="name">
+        <span
+          v-if="seq"
+          class="seq"
+        >{{ seq }}</span>
         {{ row.name }}
       </h3>
       <span
@@ -122,7 +128,8 @@ const button = computed(() => props.action ? ACTIONS[props.action] : null)
 <style scoped>
 .sc { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; }
 .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.name { margin: 0; font-size: 16.5px; font-weight: 600; color: var(--ink); }
+.name { margin: 0; font-size: 16.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.seq { min-width: 26px; height: 26px; padding: 0 6px; flex: none; border-radius: 999px; background: var(--navy); color: var(--on-primary); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .progress { font-size: 13.5px; color: var(--ink-2); }
 .progress.khatm { color: var(--green-ink); font-weight: 600; }
 .range { font-size: 13.5px; color: var(--ink-3); }

@@ -237,8 +237,9 @@ const noDecision = () => Promise.resolve(false)
           class="list"
         >
           <QuranStudentCard
-            v-for="r in shown"
+            v-for="(r, i) in shown"
             :key="r.studentId"
+            :seq="i + 1"
             :row="r"
             :status="status"
             :action="cardAction(!!r.record, canEdit, r.recordedElsewhere)"

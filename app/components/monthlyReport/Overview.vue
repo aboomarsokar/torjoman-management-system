@@ -50,7 +50,7 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
             <th>الاختبارات</th>
             <th>القراءة</th>
             <th>الزيارات</th>
-            <th>الرصد</th>
+            <th>حالة التقرير</th>
           </tr>
         </thead>
         <tbody>
@@ -114,6 +114,15 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
         </tfoot>
       </table>
     </div>
+    <dl class="mo-legend">
+      <div><dt>الحضور</dt><dd>نسبةُ الأيام التي حضرها الطلاب من أيام الحلقة في الشهر.</dd></div>
+      <div><dt>أنجز · قريب · مقصّر</dt><dd>بما حفظوه من مطلوبهم: أنجز 100% فأكثر، وقريب من 75%، ومقصّر دون 75%.</dd></div>
+      <div><dt>كثير الغياب</dt><dd>حضر دون 50% من أيامه بعد استثناء الغياب بعذر، أو دون 25% منها كلِّها — لا يُعتدّ بإنجازه.</dd></div>
+      <div><dt>إنجاز المعلم</dt><dd>أعلى 12 طالباً: المنجز 1 والقريب ½، والمجموعُ ÷ 12.</dd></div>
+      <div><dt>الاختبارات · القراءة</dt><dd>الناجحون من المتقدّمين هذا الشهر (اختبارات الأجزاء، واختبار القراءة في البرامج المصاحبة).</dd></div>
+      <div><dt>الزيارات</dt><dd>المنفّذةُ من زيارتين مطلوبتين في الشهر، ومعدّلُ علاماتها من 42، أيًّا كان الزائر.</dd></div>
+      <div><dt>حالة التقرير</dt><dd>تقريرُ الإنجاز القرآني: <b>مسودة</b> لم يُرسله المعلم بعد · <b>مُرسَل</b> بانتظار اعتماد المشرف · <b>معتمد</b> نهائيٌّ مقفل.</dd></div>
+    </dl>
   </section>
 </template>
 
@@ -122,8 +131,8 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
 .mo h2 { margin: 0; font-size: 17px; color: var(--ink); }
 .mo-hint { margin: 4px 0 12px; font-size: 13.5px; color: var(--ink-3); }
 .mo-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 980px; }
-th { text-align: start; font-weight: 600; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 900px; }
+th { text-align: start; font-weight: 600; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); line-height: 1.4; vertical-align: bottom; }
 td { padding: 10px; border-bottom: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
 tbody tr { cursor: pointer; }
 tbody tr:hover, tbody tr:focus-visible { background: var(--surface-2); outline: none; }
@@ -131,6 +140,11 @@ tfoot td { font-weight: 600; color: var(--ink); border-bottom: 0; }
 .num { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .name { color: var(--ink); font-weight: 600; }
 .sub { display: block; font-size: 12.5px; font-weight: 400; color: var(--ink-3); }
+.mo-legend { display: grid; gap: 6px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+.mo-legend div { display: flex; gap: 6px; flex-wrap: wrap; }
+.mo-legend dt { font-weight: 600; color: var(--ink-2); }
+.mo-legend dt::after { content: ':'; }
+.mo-legend dd { margin: 0; }
 .ok { color: var(--chip-active-ink); }
 .warn { color: var(--chip-warn-ink); }
 .bad { color: var(--chip-late-ink); }

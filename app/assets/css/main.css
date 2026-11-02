@@ -263,6 +263,9 @@
   --paper-soft: #EEF4FA;
   --paper-warn-bg: #FAEBCB;
   --paper-warn-ink: #6B5112;
+  /* درجاتُ الإنجاز على الورق (التقرير الشهريّ — 2026-11-02) */
+  --paper-ok-ink: #1F7A57;
+  --paper-bad-ink: #A63D33;
 }
 
 .dark {

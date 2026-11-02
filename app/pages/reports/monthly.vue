@@ -2,12 +2,13 @@
 /**
  * «التقرير الشهري» (طلب المستخدم 2026-11-02): إنجازُ المعلم وطلابه في شهرٍ واحد بنظرة — الحضورُ والغياب، والإنجازُ القرآنيّ
  * بدرجاته، واختباراتُ الشهر، واختبارُ القراءة، والزياراتُ وسجلُّ الجودة، وكلمةُ المشرف. للقراءة وحدها: المعلمُ حلقتَه،
- * والمشرفُ حلقاتِه، والإدارةُ ما تسمح به RLS. الصفوفُ من `useQuranMonth` نفسِه (لا حسابَ ثانٍ)، والإضافاتُ من `fetchMonthlyExtras`.
+ * والمشرفُ حلقاتِه، والإدارةُ ما تسمح به RLS. وقبل اختيار حلقةٍ جدولٌ عامٌّ لكلّ الحلقات (`MonthlyReportOverview`). الصفوفُ من `useQuranMonth` نفسِه (لا حسابَ ثانٍ)، والإضافاتُ من `fetchMonthlyExtras`.
  */
 import type { Database } from '~/types/database.types'
 import { summarizeOutcomes } from '~/utils/quran/month'
 import { defaultPeriod, periodFromQuery } from '~/utils/quran/screen'
 import { attendanceSummary, examSummary, fetchMonthlyExtras, type MonthlyExtras } from '~/utils/monthlyReport'
+import { fetchMonthlyOverview, type OverviewRow } from '~/utils/monthlyOverview'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'التقرير الشهري — ترجمان' })
@@ -66,6 +67,17 @@ watch([halaqaId, year, month, rows], async () => {
   }
 })
 
+// الجدولُ العامّ: لغير المعلم، متى لم تُختر حلقة
+const { data: overview, pending: overviewPending } = useLazyAsyncData<OverviewRow[]>(() => `monthly-overview-${year.value}-${month.value}`, async () => {
+  if (!role.value || isTeacher.value) return []
+  try {
+    return await fetchMonthlyOverview(supabase, year.value, month.value)
+  } catch (err) {
+    handle(err)
+    return []
+  }
+}, { server: false, default: () => [], watch: [role, year, month] })
+
 const outcomes = computed(() => summarizeOutcomes(rows.value))
 const attendance = computed(() => attendanceSummary(rows.value))
 const exams = computed(() => examSummary(extras.value?.exams ?? []))
@@ -97,11 +109,20 @@ const reading = computed(() => ({
         :halaqa-items="halaqaItems"
         :max="now"
       />
-      <UiEmptyState
-        v-if="!halaqaId"
-        icon="i-lucide-file-chart-column"
-        title="اختر حلقةً لعرض تقريرها"
-      />
+      <template v-if="!halaqaId">
+        <div
+          v-if="overviewPending && !overview.length"
+          class="mr-stack"
+          aria-busy="true"
+        >
+          <UiSkeletonCard />
+        </div>
+        <MonthlyReportOverview
+          v-else
+          :rows="overview"
+          @pick="halaqaId = $event"
+        />
+      </template>
       <div
         v-else-if="loading && !rows.length"
         class="mr-stack"

@@ -3472,6 +3472,7 @@ export type Database = {
           gender: string
           halaqa_id: string
           halaqa_name: string
+          near: number
           report_status: string
           short: number
           students: number

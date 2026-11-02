@@ -2,7 +2,7 @@
 /**
  * شريطُ حالة رصد الشهر وإجراءاتُه: شريطٌ كهرمانيّ بملاحظة الإعادة حين يعود الشهرُ مسوّدة، وشارةُ الحالة،
  * و«إرسال للاعتماد» للمعلم (معطَّلٌ قبل يوم الفتح أو بلا رصد، بتأكيدٍ يذكر من لم يُرصد)، و«اعتماد» (بكلمةٍ
- * اختيارية للمعلم تظهر في شريطٍ أخضر — 2026-11-02) و«إعادة بملاحظة» للمعتمِد على المُرسَل، و«إعادة فتح» على المعتمَد. الإجراءاتُ تُمرَّر دوالَّ تُرجع
+ * اختيارية للمعلم تظهر في شريطٍ أخضر، وقبل الاعتماد في شريطٍ أزرق «لم يُعتمد بعد» — 2026-11-02) و«إعادة بملاحظة» للمعتمِد على المُرسَل، و«إعادة فتح» على المعتمَد. الإجراءاتُ تُمرَّر دوالَّ تُرجع
  * نجاحها (أخطاؤها تُعرض في `useQuranMonth`)، ويُبلَّغ الأبُ بـ`changed` بعد كلّ نجاح.
  */
 import type { ReportStatus } from '~/utils/quran/screen'
@@ -91,6 +91,17 @@ async function onReturn(note: string) {
       class="size-5 shrink-0"
     />
     <span><strong>اعتُمد الرصدُ بكلمة:</strong> {{ approvalNote }}</span>
+  </div>
+  <div
+    v-else-if="status === 'submitted' && approvalNote"
+    class="pending-note"
+    role="status"
+  >
+    <UIcon
+      name="i-lucide-message-square-text"
+      class="size-5 shrink-0"
+    />
+    <span><strong>كلمة المشرف (لم يُعتمد بعد):</strong> {{ approvalNote }}</span>
   </div>
 
   <div class="bar">
@@ -182,6 +193,7 @@ async function onReturn(note: string) {
 <style scoped>
 .returned { display: flex; align-items: flex-start; gap: 10px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); border-radius: var(--r-control); padding: 12px 16px; font-size: 14.5px; line-height: 1.7; margin-bottom: 16px; }
 .approved { display: flex; align-items: flex-start; gap: 10px; background: var(--chip-active-bg); color: var(--chip-active-ink); border-radius: var(--r-control); padding: 12px 16px; font-size: 14.5px; line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
+.pending-note { display: flex; align-items: flex-start; gap: 10px; background: var(--chip-info-bg); color: var(--chip-info-ink); border-radius: var(--r-control); padding: 12px 16px; font-size: 14.5px; line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
 .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); }
 .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-inline-start: auto; }
 .acts > * { min-height: 44px; }

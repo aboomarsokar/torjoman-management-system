@@ -36,6 +36,7 @@ const GROUPS = [
   { key: 'short', label: 'مقصّرون', labelF: 'مقصّرات', tone: 'err' },
   { key: 'near', label: 'قريبون من المطلوب', labelF: 'قريبات من المطلوب', tone: 'warn' },
   { key: 'unrecorded', label: 'لم يُرصدوا', labelF: 'لم يُرصدن', tone: 'warn' },
+  { key: 'absentee', label: 'كثيرو الغياب (لا يُعتدّ بإنجازهم)', labelF: 'كثيرات الغياب (لا يُعتدّ بإنجازهن)', tone: 'neutral' },
   { key: 'unmeasured', label: 'لا يُقاسون (غابوا الشهرَ كلّه)', labelF: 'لا يُقسن (غبن الشهرَ كلّه)', tone: 'neutral' },
   { key: 'done', label: 'أنجزوا', labelF: 'أنجزن', tone: 'ok' }
 ] as const

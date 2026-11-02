@@ -63,12 +63,13 @@ export const OUTCOME_COLORS: Record<Outcome, 'success' | 'warning' | 'error' | '
   done: 'success',
   near: 'warning',
   short: 'error',
+  absentee: 'neutral',
   unmeasured: 'neutral',
   unrecorded: 'info'
 }
 
 /** ترتيبُ عدّادات الشريط. */
-export const OUTCOME_ORDER: Outcome[] = ['done', 'near', 'short', 'unmeasured', 'unrecorded']
+export const OUTCOME_ORDER: Outcome[] = ['done', 'near', 'short', 'absentee', 'unmeasured', 'unrecorded']
 
 /** حدُّ ملاحظة الإعادة وملاحظات السجلّ (قيدا القاعدة). */
 export const NOTE_MAX = 500
@@ -119,7 +120,11 @@ export function planBadge(row: Pick<StudentMonthRow, 'plan' | 'outcome'>): strin
   const relief = row.plan.relief ? ` (خُفّف ${reliefLabel(row.plan.relief)} للاختبار)` : ''
   const head = row.plan.required !== null
     ? `المطلوب ${row.plan.required}${relief}`
-    : row.plan.basis === 'absent' ? 'لم يحضر' : row.plan.basis === 'unheld' ? 'التحق بعد الأيام' : 'بلا مطلوب'
+    : row.plan.basis === 'absent'
+      ? 'لم يحضر'
+      : row.plan.basis === 'unheld'
+        ? 'التحق بعد الأيام'
+        : row.plan.basis === 'absentee' ? 'لا يُعتدّ بإنجازه' : 'بلا مطلوب'
   return `${head} · ${OUTCOME_LABELS[row.outcome]}`
 }
 

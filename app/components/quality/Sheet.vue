@@ -173,6 +173,9 @@ const achDen = computed(() => props.numbers.achievement_done + props.numbers.ach
             <template v-if="numbers.achievement_unrecorded">
               · لم يُرصد {{ numbers.achievement_unrecorded }}
             </template>
+            <template v-if="numbers.achievement_absentee">
+              · كثير الغياب {{ numbers.achievement_absentee }}
+            </template>
             <template v-if="numbers.achievement_unmeasured">
               · لا يُقاس {{ numbers.achievement_unmeasured }}
             </template>

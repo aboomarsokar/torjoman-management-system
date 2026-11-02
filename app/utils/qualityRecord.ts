@@ -40,6 +40,7 @@ export interface QualityNumbers {
   achievement_short: number
   achievement_unrecorded: number
   achievement_unmeasured: number
+  achievement_absentee: number
   achievement: number | null
   final: number | null
   incomplete: boolean
@@ -71,6 +72,7 @@ export function parseNumbers(raw: unknown): QualityNumbers | null {
     achievement_short: Number(r.achievement_short ?? 0),
     achievement_unrecorded: Number(r.achievement_unrecorded ?? 0),
     achievement_unmeasured: Number(r.achievement_unmeasured ?? 0),
+    achievement_absentee: Number(r.achievement_absentee ?? 0),
     achievement: num(r.achievement),
     final: num(r.final),
     incomplete: !!r.incomplete,

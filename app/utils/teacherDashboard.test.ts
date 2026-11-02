@@ -160,7 +160,7 @@ describe('لوحة المعلم — الحفظ والاختبارات', () => {
     })
     const rows = [row('a', 12, 'done'), row('b', 7, 'short'), row('c', null, 'unrecorded')]
     expect(monthSummary(report(2026, 10, 'draft', 'راجع'), rows)).toEqual({
-      label: '10-2026', state: 'returned', done: 1, near: 0, short: 1, unmeasured: 0, unrecorded: 1
+      label: '10-2026', state: 'returned', done: 1, near: 0, short: 1, absentee: 0, unmeasured: 0, unrecorded: 1
     })
     expect(monthSummary(report(2026, 9, 'approved'), [])).toMatchObject({ state: 'approved', done: 0 })
   })

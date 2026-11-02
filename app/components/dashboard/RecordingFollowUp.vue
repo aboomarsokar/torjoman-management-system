@@ -8,9 +8,11 @@
  * صفحتُه `/follow-up`: `page` يُخفي عنوانَه الداخليّ لأنّ رأسَ الصفحة يحمله.
  * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها. وفلترُ الشهر
  * (الجاري افتراضاً، وآخرُ ستة أشهر). «المعلّم/المعلّمة» بجنس الحلقة، والمخاطبةُ بجنس القارئ (والمشرفُ الميدانيّ حلقاتُه).
+ * وتحت أيام الحلقة سطرُ زيارات الشهر وعلاماتها أيًّا كان الزائر (`FollowUpVisitsLine` — 2026-11-02).
  */
 import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
+import { fetchMonthVisits, type HalaqaVisits } from '~/utils/monthVisits'
 import type { DayState, RecordingRow, ReportState } from '~/utils/recordingStatus'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { isBeforeProjectStart } from '~/utils/projectStart'
@@ -47,6 +49,17 @@ const { data, pending } = useLazyAsyncData<RecordingRow[]>(() => `halaqat-record
   }
   return rows ?? []
 }, { server: false, default: () => [], watch: [monthKey] })
+
+// زياراتُ الشهر المختار لكلّ حلقة (طلبٌ واحد)
+const { data: visits } = useLazyAsyncData<Map<string, HalaqaVisits>>(() => `follow-up-visits-${monthKey.value}`, async () => {
+  const [y, m] = monthKey.value.split('-').map(Number)
+  try {
+    return await fetchMonthVisits(supabase, y!, m!)
+  } catch (err) {
+    handle(err)
+    return new Map()
+  }
+}, { server: false, default: () => new Map(), watch: [monthKey] })
 
 const all = computed(() => sortByLag(data.value ?? []))
 const summary = computed(() => recordingSummary(data.value ?? []))
@@ -322,6 +335,8 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
                 </button>
               </li>
             </ol>
+
+            <FollowUpVisitsLine :visits="visits?.get(r.halaqa_id)" />
 
             <!-- حالُ اليوم المختار تحت حلقته — لا نافذة -->
             <div

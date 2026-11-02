@@ -38,6 +38,8 @@ export interface StudentMonthRow {
   /** أيامُ الحلقة في الشهر منذ التحاقه. */
   daysHeld: number
   daysAttended: number
+  /** أيامُ غيابه بعذر منها (للتقرير الشهريّ وقانون الغياب). */
+  daysExcused?: number
   plan: ProratedPlan
   outcome: Outcome
   /** الأجزاءُ المنجزة: الأكبرُ من الأجزاء المكتملة حتى آخر نهايةٍ **معتمَدة** وما كان يحفظه عند التحاقه (`quran_parts`)؛ لا يدخله الشهرُ الحاليّ ما لم يُعتمد. */
@@ -123,6 +125,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
       suggestedFromPrevious: previous !== null,
       daysHeld,
       daysAttended,
+      daysExcused: excused,
       plan,
       outcome: outcomeOf(record ? record.pagesMemorized : null, plan),
       // الأعلى من المعتمَد في النظام وما كان يحفظه عند التحاقه

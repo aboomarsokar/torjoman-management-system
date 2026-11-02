@@ -1775,6 +1775,7 @@ export type Database = {
       }
       monthly_reports: {
         Row: {
+          approval_note: string | null
           approved_at: string | null
           approved_by: string | null
           created_at: string
@@ -1789,6 +1790,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
@@ -1803,6 +1805,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string

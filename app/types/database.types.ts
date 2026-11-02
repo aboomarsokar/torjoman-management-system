@@ -3468,6 +3468,7 @@ export type Database = {
       halaqat_achievement: {
         Args: { p_month: number; p_year: number }
         Returns: {
+          absentee: number
           done: number
           gender: string
           halaqa_id: string

@@ -212,10 +212,10 @@ const row = (outcome: StudentMonthRow['outcome']) => ({ outcome }) as StudentMon
 describe('summarizeOutcomes', () => {
   it('يعدّ كلَّ نتيجة ويقرّب نسبة المرصودين', () => {
     const s = summarizeOutcomes([row('done'), row('near'), row('short'), row('unrecorded'), row('unmeasured'), row('unrecorded')])
-    expect(s).toEqual({ done: 1, near: 1, short: 1, unmeasured: 1, unrecorded: 2, recordedPct: 67 })
+    expect(s).toEqual({ done: 1, near: 1, short: 1, absentee: 0, unmeasured: 1, unrecorded: 2, recordedPct: 67 })
   })
   it('قائمةٌ فارغة ← أصفار ولا قسمةَ على صفر', () => {
-    expect(summarizeOutcomes([])).toEqual({ done: 0, near: 0, short: 0, unmeasured: 0, unrecorded: 0, recordedPct: 0 })
+    expect(summarizeOutcomes([])).toEqual({ done: 0, near: 0, short: 0, absentee: 0, unmeasured: 0, unrecorded: 0, recordedPct: 0 })
   })
   it('الكلُّ مرصود ← 100', () => {
     expect(summarizeOutcomes([row('done'), row('short')]).recordedPct).toBe(100)

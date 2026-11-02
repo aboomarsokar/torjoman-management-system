@@ -1,6 +1,6 @@
 /** المطلوبُ الشهريّ مُقسَّطاً بالحضور، وحكمُ الإنجاز. */
 import { describe, expect, it } from 'vitest'
-import { OUTCOME_LABELS, outcomeOf, proratePlan } from './plan'
+import { OUTCOME_LABELS, isAbsentee, outcomeOf, proratePlan } from './plan'
 
 describe('proratePlan', () => {
   it('بلا خطة: لا مطلوب', () => {
@@ -44,8 +44,8 @@ describe('proratePlan', () => {
       .toEqual({ required: 28, full: 35, basis: 'prorated' })
   })
 
-  it('لا يقلّ عن صفحةٍ لمن حضر ولو يوماً', () => {
-    expect(proratePlan({ required: 14, daysHeld: 26, daysAttended: 1 }).required).toBe(1)
+  it('لا يقلّ عن صفحةٍ لمن حضر (وغيابُه بعذرٍ فليس كثيرَ الغياب)', () => {
+    expect(proratePlan({ required: 1, daysHeld: 26, daysAttended: 7, excused: 19 }).required).toBe(1)
   })
 
   it('التقريبُ إلى الأقرب: 14 × 17/26 = 9.15 ← 9', () => {
@@ -74,7 +74,7 @@ describe('outcomeOf', () => {
   })
 
   it('التسميات', () => {
-    expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', near: 'قريب', short: 'مقصّر', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
+    expect(OUTCOME_LABELS).toEqual({ done: 'أنجز', near: 'قريب', short: 'مقصّر', absentee: 'كثير الغياب', unmeasured: 'لا يُقاس', unrecorded: 'لم يُرصد' })
   })
 })
 
@@ -91,5 +91,28 @@ describe('proratePlan — تخفيضُ الاختبار بالأثلاث (2026-1
   })
   it('من لم يحضر يبقى بلا مطلوب ولو اختُبر', () => {
     expect(proratePlan({ required: 30, daysHeld: 20, daysAttended: 0, relief: 3 }).required).toBeNull()
+  })
+})
+
+describe('قانونُ الغياب (2026-11-02)', () => {
+  it('أقلُّ من 50% من الأيام بعد طرح الغياب بعذر ← كثيرُ الغياب', () => {
+    expect(isAbsentee(20, 5, 0)).toBe(true)
+    expect(isAbsentee(20, 7, 10)).toBe(false)
+    expect(isAbsentee(20, 6, 6)).toBe(true)
+    expect(isAbsentee(20, 10, 0)).toBe(false)
+  })
+  it('أقلُّ من 25% من الأيام كلِّها ← كثيرُ الغياب ولو بعذر', () => {
+    expect(isAbsentee(20, 4, 16)).toBe(true)
+    expect(isAbsentee(20, 5, 15)).toBe(false)
+  })
+  it('من لم يحضر شيئاً ليس منهم (absent)، ولا أيامَ ← لا حكم', () => {
+    expect(isAbsentee(20, 0, 0)).toBe(false)
+    expect(isAbsentee(0, 0, 0)).toBe(false)
+  })
+  it('كثيرُ الغياب بلا مطلوب وحكمُه «كثير الغياب» ولو حفظ', () => {
+    const plan = proratePlan({ required: 30, daysHeld: 20, daysAttended: 1, excused: 0 })
+    expect(plan).toMatchObject({ required: null, basis: 'absentee' })
+    expect(outcomeOf(10, plan)).toBe('absentee')
+    expect(outcomeOf(null, plan)).toBe('unrecorded')
   })
 })

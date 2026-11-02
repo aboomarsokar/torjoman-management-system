@@ -28,7 +28,7 @@ export interface MonthInputs {
   previousEnds: Record<string, Position | null>
   approvedEnds: Record<string, Position | null>
   days: string[]
-  absences: { student_id: string, day: string }[]
+  absences: { student_id: string, day: string, kind?: string | null }[]
   /** المطلوبُ الشهريّ: لقطةُ الرأس إن وُجد، وإلا إعدادُ المشروع. */
   target: number | null
   /** أثلاثُ تخفيض الاختبار لكلّ طالبٍ اختُبر في الشهر (أكبرُها) — اختياريٌّ لنسخ الجهاز المحفوظة قبل 2026-11-02. */
@@ -57,7 +57,7 @@ export async function fetchMonthInputs(supabase: SupabaseClient<Database>, hid: 
     supabase.from('monthly_reports').select(REPORT_COLUMNS)
       .eq('halaqa_id', hid).eq('report_year', y).eq('report_month', m).maybeSingle(),
     supabase.from('attendance_days').select('day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to).order('day'),
-    supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
+    supabase.from('attendance_absences').select('student_id, day, kind').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
     supabase.from('app_settings').select('target_memorization_pages').limit(1).maybeSingle()
   ])
   const failure = students.error ?? reportRes.error ?? daysRes.error ?? absencesRes.error ?? settings.error

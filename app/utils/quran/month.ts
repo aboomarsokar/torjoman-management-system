@@ -60,7 +60,8 @@ export interface BuildRowsInput {
   days: string[]
   /** يُقسَّط المطلوبُ بالحضور (الافتراض)؛ false ← كاملاً للجميع مع بقاء أيام الحضور للعرض (`prorationApplies`). */
   prorate?: boolean
-  absences: { student_id: string, day: string }[]
+  /** `kind` (بعذر/بلا) لقانون الغياب؛ غيابُه (نسخُ جهازٍ قديمة) يعدّ الغيابَ كلَّه بلا عذر. */
+  absences: { student_id: string, day: string, kind?: string | null }[]
   target: number | null
   /** تخفيضُ الاختبار لكلّ طالب (`examReliefs`). */
   reliefs?: Record<string, number>
@@ -91,10 +92,12 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
     if (!elsewhereByStudent.has(r.student_id)) elsewhereByStudent.set(r.student_id, toMonthRecord(r))
   }
   const absentDays = new Map<string, Set<string>>()
+  const excusedDays = new Map<string, Set<string>>()
   for (const a of input.absences) {
     const set = absentDays.get(a.student_id) ?? new Set<string>()
     set.add(a.day)
     absentDays.set(a.student_id, set)
+    if (a.kind === 'excused') excusedDays.set(a.student_id, (excusedDays.get(a.student_id) ?? new Set<string>()).add(a.day))
   }
 
   return input.students.map((s) => {
@@ -105,9 +108,11 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
     const previous = input.previousEnds[s.id] ?? null
     const heldParts = Math.max(0, Math.min(PROGRAM_JUZ_COUNT, s.quran_parts ?? 0))
     const relief = input.reliefs?.[s.id] ?? 0
+    const exc = excusedDays.get(s.id)
+    const excused = exc ? input.days.filter(d => exc.has(d) && (!s.enrollment_date || d >= s.enrollment_date)).length : 0
     const plan = input.prorate === false
       ? proratePlan({ required: input.target, daysHeld: null, daysAttended: null, relief })
-      : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length, relief })
+      : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length, relief, excused })
 
     return {
       studentId: s.id,
@@ -129,7 +134,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
 
 /** عدّادُ النتائج ونسبةُ المرصودين (غيرُ «لم يُرصد») مقرَّبةً؛ صفرٌ لقائمةٍ فارغة. */
 export function summarizeOutcomes(rows: StudentMonthRow[]): Record<Outcome, number> & { recordedPct: number } {
-  const summary = { done: 0, near: 0, short: 0, unmeasured: 0, unrecorded: 0 }
+  const summary = { done: 0, near: 0, short: 0, absentee: 0, unmeasured: 0, unrecorded: 0 }
   for (const r of rows) summary[r.outcome]++
   const recordedPct = rows.length ? Math.round(((rows.length - summary.unrecorded) / rows.length) * 100) : 0
   return { ...summary, recordedPct }

@@ -112,6 +112,7 @@ export function monthSummary(report: DashReport, rows: StudentMonthRow[]) {
     done: outcomes.done,
     near: outcomes.near,
     short: outcomes.short,
+    absentee: outcomes.absentee,
     unmeasured: outcomes.unmeasured,
     unrecorded: outcomes.unrecorded
   }

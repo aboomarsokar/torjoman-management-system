@@ -23,6 +23,8 @@ export interface AchievementRow {
   done: number
   near: number
   short: number
+  /** كثيرو الغياب — خارج الحساب كـ«لا يُقاس» (قانون الغياب 2026-11-02). */
+  absentee: number
   unrecorded: number
   unmeasured: number
 }

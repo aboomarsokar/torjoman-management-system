@@ -3,7 +3,7 @@ import { achievementPct, achievementTotals, defaultAchievementMonth, sortWeakFir
 
 const row = (name: string, done: number, short: number, unrecorded: number, unmeasured = 0, near = 0): AchievementRow => ({
   halaqa_id: name, halaqa_name: name, teacher_name: null, teacher_phone: null, teacher_whatsapp: null,
-  report_status: null, students: done + near + short + unrecorded + unmeasured, done, near, short, unrecorded, unmeasured
+  report_status: null, students: done + near + short + unrecorded + unmeasured, done, near, short, absentee: 0, unrecorded, unmeasured
 })
 
 describe('topScore — أعلى 12: أنجز 1 · قريب ½', () => {

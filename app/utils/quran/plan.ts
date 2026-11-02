@@ -1,7 +1,25 @@
 /** المطلوبُ الشهريّ مُقسَّطاً بالحضور، وحكمُ الإنجاز على الصفحات المرصودة. */
 
-/** `unheld`: انعقدت أيامٌ في الشهر ولم ينعقد منها شيءٌ منذ التحاق الطالب فلا يُقاس. */
-export type PlanBasis = 'full' | 'prorated' | 'absent' | 'unheld'
+/**
+ * `unheld`: انعقدت أيامٌ في الشهر ولم ينعقد منها شيءٌ منذ التحاق الطالب فلا يُقاس.
+ * `absentee`: كثيرُ الغياب (قانون الغياب 2026-11-02) — لا يُعتدّ بإنجازه وهو خارج حساب المعلم.
+ */
+export type PlanBasis = 'full' | 'prorated' | 'absent' | 'unheld' | 'absentee'
+
+/**
+ * قانونُ الغياب (قرار المستخدم 2026-11-02): لا يُعتدّ بإنجاز من حضر أقلَّ من `ABSENTEE_MIN_PCT` من أيامه بعد طرح
+ * غيابه بعذر، أو أقلَّ من `ABSENTEE_FLOOR_PCT` من أيام الحلقة كلِّها ولو كان غيابُه بعذر (العذرُ يسجّله المعلم).
+ * مرآتُه في القاعدة `private.halaqa_student_achievement`.
+ */
+export const ABSENTEE_MIN_PCT = 50
+export const ABSENTEE_FLOOR_PCT = 25
+
+/** هل الطالبُ كثيرُ الغياب؟ (حضر يوماً على الأقلّ — من لم يحضر شيئاً `absent`.) */
+export function isAbsentee(daysHeld: number, daysAttended: number, excused: number): boolean {
+  if (daysHeld <= 0 || daysAttended <= 0) return false
+  return daysAttended * 100 < ABSENTEE_MIN_PCT * Math.max(0, daysHeld - excused)
+    || daysAttended * 100 < ABSENTEE_FLOOR_PCT * daysHeld
+}
 
 export interface ProratedPlan {
   /** المطلوبُ بعد التقسيط؛ null إن لم يُقَس (بلا خطة أو لم يحضر). */
@@ -26,12 +44,17 @@ export function proratePlan(input: {
   daysAttended: number | null
   /** أيامُ الحلقة في الشهر كلِّه (قبل قصّها بالالتحاق)؛ غيابُه يُبقي سلوكَ «بلا أيام» كاملاً. */
   monthDays?: number | null
+  /** أيامُ غيابه بعذر في أيام الحلقة (لقانون الغياب). */
+  excused?: number
   /** أثلاثُ تخفيض الاختبار (1–3) تُخصم من المطلوب الكامل قبل التقسيط: `round(المطلوب × أثلاث ÷ 3)`؛
    *  وما بلغ الصفرَ لا يُطالَب بشيء (يُعدّ منجزاً بأيّ رصد). */
   relief?: number
 }): ProratedPlan {
   const { required, daysHeld, daysAttended, monthDays } = input
   if (required === null) return prorateBase(input)
+  if (daysHeld !== null && daysAttended !== null && isAbsentee(daysHeld, daysAttended, input.excused ?? 0)) {
+    return { required: null, full: required, basis: 'absentee' }
+  }
   const relief = Math.min(Math.max(0, input.relief ?? 0), 3)
   if (!relief) return prorateBase(input)
   const base = required - Math.round((required * relief) / 3)
@@ -53,7 +76,7 @@ function prorateBase(input: { required: number | null, daysHeld: number | null, 
   return { required: Math.max(1, Math.round((required * daysAttended) / daysHeld)), full: required, basis: 'prorated' }
 }
 
-export type Outcome = 'done' | 'near' | 'short' | 'unmeasured' | 'unrecorded'
+export type Outcome = 'done' | 'near' | 'short' | 'absentee' | 'unmeasured' | 'unrecorded'
 
 /** «قريب»: أنجز هذه النسبةَ من المطلوب فأكثر دون تمامه (قرار 2026-11-02 — مرآتُه في القاعدة `pages*4 >= required*3`). */
 export const NEAR_MIN_PCT = 75
@@ -61,6 +84,7 @@ export const NEAR_MIN_PCT = 75
 /** حكمُ الشهر: لم يُرصد (null) · لا يُقاس (بلا مطلوب) · أنجز (≥ المطلوب) · قريب (≥ 75%) · مقصّر. */
 export function outcomeOf(pages: number | null, plan: ProratedPlan): Outcome {
   if (pages === null) return 'unrecorded'
+  if (plan.basis === 'absentee') return 'absentee'
   if (plan.required === null) return 'unmeasured'
   if (pages >= plan.required) return 'done'
   return pages * 100 >= plan.required * NEAR_MIN_PCT ? 'near' : 'short'
@@ -70,6 +94,7 @@ export const OUTCOME_LABELS: Record<Outcome, string> = {
   done: 'أنجز',
   near: 'قريب',
   short: 'مقصّر',
+  absentee: 'كثير الغياب',
   unmeasured: 'لا يُقاس',
   unrecorded: 'لم يُرصد'
 }

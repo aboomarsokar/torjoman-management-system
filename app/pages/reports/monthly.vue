@@ -13,7 +13,7 @@ import { fetchMonthlyOverview, type OverviewRow } from '~/utils/monthlyOverview'
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'التقرير الشهري — ترجمان' })
 
-type HalaqaRow = Pick<Database['public']['Tables']['halaqat']['Row'], 'id' | 'name'>
+type HalaqaRow = Pick<Database['public']['Tables']['halaqat']['Row'], 'id' | 'name'> & { teacher: { full_name: string } | null }
 
 const supabase = useSupabaseClient<Database>()
 const { role, profile } = useProfile()
@@ -31,7 +31,7 @@ const query = ref('')
 
 const { data: halaqat, pending: halaqatPending } = useLazyAsyncData<HalaqaRow[]>('monthly-report-halaqat', async () => {
   if (!role.value) return []
-  let q = supabase.from('halaqat').select('id, name').eq('status', 'active').order('name')
+  let q = supabase.from('halaqat').select('id, name, teacher:profiles!halaqat_teacher_id_fkey(full_name)').eq('status', 'active').order('name')
   if (role.value === 'teacher') q = q.eq('teacher_id', profile.value?.id ?? '')
   else if (role.value === 'field_supervisor') q = q.eq('supervisor_id', profile.value?.id ?? '')
   const { data, error } = await q
@@ -78,6 +78,10 @@ const { data: overview, pending: overviewPending } = useLazyAsyncData<OverviewRo
   }
 }, { server: false, default: () => [], watch: [role, year, month] })
 
+// تصديرُ PDF: ورقةُ الطباعة للجدول العامّ أو للحلقة المختارة
+const printing = ref(false)
+const canPrint = computed(() => halaqaId.value ? !loading.value && rows.value.length > 0 : overview.value.length > 0)
+
 const outcomes = computed(() => summarizeOutcomes(rows.value))
 const attendance = computed(() => attendanceSummary(rows.value))
 const exams = computed(() => examSummary(extras.value?.exams ?? []))
@@ -92,7 +96,42 @@ const reading = computed(() => ({
     <UiPageHeader
       title="التقرير الشهري"
       subtitle="إنجازُ الحلقة وطلابها في الشهر: الحضور، والإنجاز القرآني، والاختبارات، والبرامج المصاحبة، والإشراف."
-    />
+    >
+      <template #actions>
+        <UButton
+          label="تصدير PDF"
+          icon="i-lucide-file-down"
+          color="neutral"
+          variant="outline"
+          size="lg"
+          :disabled="!canPrint || printing"
+          :ui="{ base: 'rounded-[13px] min-h-11' }"
+          @click="printing = true"
+        />
+      </template>
+    </UiPageHeader>
+    <MonthlyReportPrintSheet
+      :active="printing"
+      :subject="halaqa?.name ?? 'كل الحلقات'"
+      :teacher="halaqa?.teacher?.full_name ?? null"
+      :year="year"
+      :month="month"
+      @done="printing = false"
+    >
+      <MonthlyReportPrintDetail
+        v-if="halaqaId"
+        :rows="rows"
+        :outcomes="outcomes"
+        :attendance-pct="attendance.pct"
+        :extras="extras"
+        :approval-note="report?.approval_note ?? null"
+        :frequent="attendance.frequent"
+      />
+      <MonthlyReportPrintOverview
+        v-else
+        :rows="overview"
+      />
+    </MonthlyReportPrintSheet>
     <UiEmptyState
       v-if="role && !halaqatPending && !halaqat.length"
       icon="i-lucide-book-open"

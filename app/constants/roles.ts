@@ -14,6 +14,8 @@ const LABELS: Record<Role, Record<Gender, string>> = {
   field_supervisor: { male: 'مشرف ميداني', female: 'مشرفة ميدانية' },
   examiner: { male: 'مختبِر', female: 'مختبِرة' },
   teacher: { male: 'معلم', female: 'معلمة' },
+  // الأخبارُ كتابةً ونشراً وخطةُ القسم قراءةً (2026-11-03)
+  content_manager: { male: 'مدير المحتوى', female: 'مديرة المحتوى' },
   student: { male: 'طالب', female: 'طالبة' }
 }
 
@@ -29,5 +31,6 @@ export const STAFF_ROLES: Role[] = [
   'women_admin',
   'field_supervisor',
   'examiner',
-  'teacher'
+  'teacher',
+  'content_manager'
 ]

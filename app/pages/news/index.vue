@@ -17,8 +17,9 @@ const { handle } = useErrorHandler()
 const { uploadImage } = useUpload()
 const toast = useToast()
 // role: ما دام فارغاً لا قفل ولا محتوى (كان القفل يومض للمدير عند التحميل الكامل)
-const { role, isAdmin, isReadOnly } = usePermissions()
-const canView = computed(() => isAdmin.value || isReadOnly.value)
+const { role, canManageNews, isReadOnly } = usePermissions()
+// مدير المحتوى يكتب وينشر كالمدير الإداري (2026-11-03)
+const canView = computed(() => canManageNews.value || isReadOnly.value)
 
 const uploading = ref(false)
 async function onPickImage(e: Event) {
@@ -160,7 +161,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
       subtitle="أخبار وإعلانات تظهر للزوّار على صفحة الهبوط — أنشئ وانشر وتابع."
     >
       <template
-        v-if="isAdmin"
+        v-if="canManageNews"
         #actions
       >
         <UButton
@@ -263,7 +264,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 @click="reading = n"
               />
               <UButton
-                v-if="isAdmin"
+                v-if="canManageNews"
                 :label="n.published ? 'إخفاء' : 'نشر'"
                 :color="n.published ? 'neutral' : 'primary'"
                 variant="ghost"
@@ -273,7 +274,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 @click="togglePublish(n)"
               />
               <UButton
-                v-if="isAdmin"
+                v-if="canManageNews"
                 color="neutral"
                 variant="ghost"
                 size="sm"
@@ -283,7 +284,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
                 @click="openEdit(n)"
               />
               <UButton
-                v-if="isAdmin"
+                v-if="canManageNews"
                 color="error"
                 variant="ghost"
                 size="sm"

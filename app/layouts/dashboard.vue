@@ -70,7 +70,7 @@ const mainNav: Item[] = [
   { key: 'me-journey', label: 'رحلتي', icon: 'i-lucide-route', to: '/me', tab: 'journey', roles: ['student'] },
   { key: 'me-data', label: 'بياناتي', icon: 'i-lucide-id-card', to: '/me', tab: 'data', roles: ['student'] },
   { key: 'programs', label: 'البرامج المصاحبة', icon: 'i-lucide-library', to: '/programs', roles: ['student'] },
-  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'examiner'] },
+  { key: 'dashboard', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/dashboard', roles: [...LEADERS, WOMEN, FIELD, 'examiner', 'content_manager'] },
   // لوحةُ المعلّم تعمل بلا إنترنت، والتطبيقُ يُقلع عليها (البند 14، 2026-10-27)
   { key: 'dashboard-teacher', label: 'لوحة التحكم', icon: 'i-lucide-layout-dashboard', to: '/t/home', roles: ['teacher'] },
   // ما أرسلته الإدارة، وبجانبه عددُ غير المقروء (طلب المستخدم 2026-10-25)
@@ -83,7 +83,7 @@ const mainNav: Item[] = [
   { key: 'library', label: 'المكتبة', icon: 'i-lucide-library-big', to: '/library', roles: [...LEADERS, WOMEN, 'field_supervisor', 'examiner', 'teacher', 'student'], isNew: true },
   // صورُ هويات الكادر (طلب المستخدم 2026-10-31) — يتابعها المديرُ الإداريّ والمديرةُ الإدارية لقسمها
   { key: 'id-cards', label: 'صور الهويات', icon: 'i-lucide-id-card', to: '/id-cards', roles: [ADMIN, WOMEN], isNew: true },
-  { key: 'plan', label: 'خطة القسم', icon: 'i-lucide-target', to: '/plan', roles: [...LEADERS, WOMEN], isNew: true },
+  { key: 'plan', label: 'خطة القسم', icon: 'i-lucide-target', to: '/plan', roles: [...LEADERS, WOMEN, 'content_manager'], isNew: true },
   { key: 'users', label: 'إدارة المستخدمين', labelF: 'عاملات القسم', icon: 'i-lucide-users', to: '/users', roles: [PS, ADMIN, TECH, WOMEN] }, // مستقلٌّ بلا مجموعة (طلب المستخدم 2026-10-22)
   { key: 'supervisors', label: 'المشرفون', labelF: 'المشرفات', icon: 'i-lucide-users-round', to: '/supervisors', roles: [...LEADERS, WOMEN], group: 'people' },
   { key: 'halqat', label: 'الحلقات', icon: 'i-lucide-book-open', to: '/halqat', roles: SCOPED_STAFF, group: 'people' },
@@ -139,11 +139,11 @@ const managerNav: Item[] = [
   { key: 'export', label: 'تصدير البيانات', icon: 'i-lucide-file-spreadsheet', to: '/export', roles: [ADMIN], group: 'project', isNew: true },
   { key: 'booklets', label: 'أرشيف الملازم', icon: 'i-lucide-book-copy', to: '/booklets', roles: [PS, ADMIN], group: 'project' },
   { key: 'finance', label: 'الملف المالي', icon: 'i-lucide-wallet', to: '/finance', roles: [PS, ADMIN], group: 'project' },
-  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN], group: 'project' }
+  { key: 'news', label: 'الأخبار', icon: 'i-lucide-newspaper', to: '/news', roles: [PS, ADMIN, 'content_manager'], group: 'project' }
 ]
 
 // الطالب بلا «ملف شخصي» وظيفيّ: بياناته وكلمة مروره وصورته في «صفحتي» (/me)
-const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'account' }
+const profileItem: Item = { key: 'profile', label: 'الملف الشخصي', icon: 'i-lucide-user', to: '/profile/me', roles: [...SCOPED_STAFF, 'teacher', 'examiner', 'content_manager'], group: 'account' }
 
 const allItems = [...mainNav, ...managerNav, profileItem]
 const labelOf = (i: Item) => (navRole.value === 'women_admin' && i.labelF) || i.label

@@ -272,6 +272,9 @@ const columns = [
 .idp-tools { display: flex; flex-direction: column; gap: 12px; }
 .idp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 .idp-search { flex: 1 1 240px; min-width: 0; }
+/* البحثُ وشرائحُ الحالة في صفٍّ واحد بارتفاعٍ واحد: 56px (زرُّ الشريحة 44 + حشوةُ الإطار وحدُّه) بلا هامش الشرائح السفليّ */
+.idp-row :deep(.tabs) { margin-bottom: 0; }
+.idp-search :deep(input) { block-size: 56px; min-block-size: 56px; }
 .idp-label { font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .idp-select { display: flex; align-items: center; gap: 12px; min-block-size: 44px; }
 .idp-picked { font-size: 13.5px; font-weight: 600; color: var(--blue-ink); background: var(--blue-soft); border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums; }

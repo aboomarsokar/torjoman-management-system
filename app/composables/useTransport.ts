@@ -11,11 +11,12 @@ export interface TripInput {
   id?: string
   trip_date: string
   description: string
+  purpose: string
   amount: number
   notes: string | null
 }
 
-const COLUMNS = 'id, profile_id, trip_date, description, amount, notes, paid, paid_at, created_at'
+const COLUMNS = 'id, profile_id, trip_date, description, purpose, amount, notes, paid, paid_at, created_at'
 
 export function useTransport() {
   const supabase = useSupabaseClient<Database>()
@@ -37,7 +38,7 @@ export function useTransport() {
   /** إضافةُ رحلة (بلا `id`) أو تعديلُ غير المسدَّدة (بـ`id`). */
   async function saveTrip(input: TripInput): Promise<void> {
     blockIfReadOnly()
-    const body = { trip_date: input.trip_date, description: input.description, amount: input.amount, notes: input.notes }
+    const body = { trip_date: input.trip_date, description: input.description, purpose: input.purpose, amount: input.amount, notes: input.notes }
     if (!input.id) {
       const { error } = await supabase.from('transport_trips').insert(body)
       if (error) throw error

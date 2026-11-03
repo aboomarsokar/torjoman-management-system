@@ -3,7 +3,7 @@ import { canEditTrip, formatAmount, groupByEmployee, isolateLtr, monthBounds, no
 import type { Trip } from './transport'
 
 const trip = (over: Partial<Trip> = {}): Trip => ({
-  id: 't1', profile_id: 'p1', trip_date: '2026-10-05', description: 'زيارة حلقة', amount: 20,
+  id: 't1', profile_id: 'p1', trip_date: '2026-10-05', description: 'زيارة حلقة', purpose: null, amount: 20,
   notes: null, paid: false, paid_at: null, created_at: '2026-10-05T08:00:00Z', ...over
 })
 
@@ -81,7 +81,7 @@ describe('unpaid / canEditTrip', () => {
 })
 
 describe('validateTrip', () => {
-  const ok = { trip_date: '2026-10-05', description: 'زيارة', amount: '20', notes: '' }
+  const ok = { trip_date: '2026-10-05', description: 'زيارة', purpose: 'اختبارات حلقة', amount: '20', notes: '' }
   it('سليمٌ ← لا أخطاء', () => {
     expect(validateTrip(ok, '2026-10-20')).toEqual([])
   })
@@ -90,6 +90,8 @@ describe('validateTrip', () => {
     expect(names({ ...ok, trip_date: '2026-10-21' })).toEqual(['trip_date'])
     expect(names({ ...ok, trip_date: '' })).toEqual(['trip_date'])
     expect(names({ ...ok, description: '   ' })).toEqual(['description'])
+    expect(names({ ...ok, purpose: '  ' })).toEqual(['purpose'])
+    expect(names({ ...ok, purpose: 'x'.repeat(201) })).toEqual(['purpose'])
     expect(names({ ...ok, amount: '0' })).toEqual(['amount'])
     expect(names({ ...ok, amount: '12.345' })).toEqual(['amount'])
     expect(names({ ...ok, amount: '10001' })).toEqual(['amount'])
@@ -98,7 +100,7 @@ describe('validateTrip', () => {
 })
 
 describe('normalizeAmount والمبلغ بلوحة المفاتيح العربية', () => {
-  const ok = { trip_date: '2026-10-05', description: 'زيارة', amount: '20', notes: '' }
+  const ok = { trip_date: '2026-10-05', description: 'زيارة', purpose: 'اختبارات حلقة', amount: '20', notes: '' }
   const check = (amount: string, today = '2026-10-20') => validateTrip({ ...ok, amount }, today).map(e => e.name)
   it('الأرقام الهندية والفارسية والفاصلتان والفراغ', () => {
     expect(normalizeAmount('٢٠')).toBe('20')

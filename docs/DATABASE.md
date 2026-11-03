@@ -1302,3 +1302,6 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **لجنةُ التحكيم (الهجرة `20261030171417_candidate_committee_roles`):** `candidate_committee_guard` يقبل الإداريين والمختبرين النشطين وحدهم: `admin_manager` و`project_supervisor` و`technical_manager` و`examiner`.
 - **شروطُ الالتحاق (الهجرة `20261030145737_candidates_conditions`):** أعمدةٌ جديدة `halaqa_area` (≤80) و`address_detail` (≤200) و`experience_years` (0–60) و`can_gather` و`daily_commitment` و`terms_accepted_at`. و`register_candidate` صارت تشترط الإقرارَ بالشروط وتُلزم السكنَ ومنطقةَ الحلقة والمسجدَ والعنوانَ والأجزاءَ والتجويدَ وسنواتِ الخبرة وسؤالَي الالتزام. **من لا تنطبق عليه الشروط يسجّل ولا يُرفض آلياً** — العلامةُ تُحسب في الواجهة (`eligibilityIssues` في `app/utils/candidates.ts`).
 - **العامّ:** الزائرُ (`anon`) بلا أيّ منحٍ على الجداول، وله الدالّتان `register_candidate(...)` (تمنع تكرار الهوية، وكبحُ 40 تسجيلاً في الدقيقة) و`candidate_status_lookup(national_id, phone)` (الحالةُ والموعدُ للمدعوّ، بالهوية والجوال معاً).
+
+
+> **2026-11-03 — غرضُ الرحلة** (هجرة `transport_purpose`): `transport_trips.purpose text` (قيد `transport_trips_purpose_len` ≤ 200)، إلزاميٌّ بمشغّل `transport_trips_purpose_required` (`private.transport_purpose_required`) على الإدراج وعلى تعديل `purpose` وحده — يقصّ الفراغ ويرفض الفارغ؛ والقديمُ null.

@@ -31,7 +31,7 @@ function stub(result: { data: unknown, error: unknown }, readOnly = false) {
   return f
 }
 
-const input = { id: 't1', trip_date: '2026-10-05', description: 'زيارة', amount: 20, notes: null }
+const input = { id: 't1', trip_date: '2026-10-05', description: 'زيارة', purpose: 'اختبار', amount: 20, notes: null }
 
 afterEach(() => vi.unstubAllGlobals())
 

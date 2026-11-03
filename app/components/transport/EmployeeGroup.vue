@@ -26,6 +26,7 @@ type Row = {
   serial: number
   date: string
   description: string
+  purpose: string
   amountText: string
   notes: string
   paid: boolean
@@ -40,6 +41,7 @@ const rows = computed<Row[]>(() => props.trips.map((t) => {
     serial: t.serial,
     date,
     description: t.description,
+    purpose: t.purpose ?? '',
     amountText: formatAmount(t.amount),
     notes: t.notes ?? '',
     paid: t.paid,
@@ -51,7 +53,8 @@ const rows = computed<Row[]>(() => props.trips.map((t) => {
 const columns = [
   { key: 'serial', label: '#' },
   { key: 'date', label: 'التاريخ' },
-  { key: 'description', label: 'البيان' },
+  { key: 'description', label: 'الرحلة' },
+  { key: 'purpose', label: 'الغرض' },
   { key: 'amount', label: 'المبلغ' },
   { key: 'notes', label: 'الملاحظات' },
   { key: 'paid', label: 'مسدَّدة', align: 'end' as const }
@@ -97,6 +100,9 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
       <template #description="{ row }">
         <span class="strong">{{ row.description }}</span>
       </template>
+      <template #purpose="{ row }">
+        <span>{{ row.purpose || '—' }}</span>
+      </template>
       <template #amount="{ row }">
         <bdi
           class="num strong"
@@ -130,6 +136,7 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
           :title="row.description"
           :subtitle="row.date"
           :fields="[
+            { label: 'الغرض', value: row.purpose || '—' },
             { label: 'المبلغ', value: isolateLtr(row.amountText) },
             { label: 'الملاحظات', value: row.notes }
           ]"

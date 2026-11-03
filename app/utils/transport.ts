@@ -1,5 +1,5 @@
 /** منطقُ كشف المواصلات النقيّ: حدودُ الشهر، والترقيم، والمجاميع، والتجميع بالموظف، والتحقّق. */
-import { TRANSPORT_AMOUNT_MAX, TRANSPORT_DESCRIPTION_MAX, TRANSPORT_NOTES_MAX } from '~/constants/transport'
+import { TRANSPORT_AMOUNT_MAX, TRANSPORT_DESCRIPTION_MAX, TRANSPORT_NOTES_MAX, TRANSPORT_PURPOSE_MAX } from '~/constants/transport'
 import { shiftMonth } from '~/utils/reportWindow'
 
 export interface Trip {
@@ -7,6 +7,8 @@ export interface Trip {
   profile_id: string
   trip_date: string
   description: string
+  /** الغرضُ من الرحلة؛ null للرحلات القديمة قبل 2026-11-03. */
+  purpose: string | null
   amount: number
   notes: string | null
   paid: boolean
@@ -92,15 +94,18 @@ export function normalizeAmount(s: string): string {
 
 /** تحقّقُ نموذج الرحلة (القاعدةُ هي الحَكَم؛ هذا لتجربةٍ أوضح). `today` بتوقيت غزة. */
 export function validateTrip(
-  input: { trip_date: string, description: string, amount: string, notes: string },
+  input: { trip_date: string, description: string, purpose: string, amount: string, notes: string },
   today: string
 ): { name: string, message: string }[] {
   const errors: { name: string, message: string }[] = []
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.trip_date)) errors.push({ name: 'trip_date', message: 'التاريخ مطلوب.' })
   else if (input.trip_date > today) errors.push({ name: 'trip_date', message: 'لا تُسجَّل رحلةٌ بتاريخٍ لم يأتِ بعد.' })
   const desc = input.description.trim()
-  if (!desc) errors.push({ name: 'description', message: 'البيان مطلوب.' })
-  else if (desc.length > TRANSPORT_DESCRIPTION_MAX) errors.push({ name: 'description', message: `البيان لا يتجاوز ${TRANSPORT_DESCRIPTION_MAX} حرفاً.` })
+  if (!desc) errors.push({ name: 'description', message: 'الرحلة مطلوبة (من أين إلى أين).' })
+  else if (desc.length > TRANSPORT_DESCRIPTION_MAX) errors.push({ name: 'description', message: `الرحلة لا تتجاوز ${TRANSPORT_DESCRIPTION_MAX} حرفاً.` })
+  const purpose = input.purpose.trim()
+  if (!purpose) errors.push({ name: 'purpose', message: 'الغرض من الرحلة مطلوب.' })
+  else if (purpose.length > TRANSPORT_PURPOSE_MAX) errors.push({ name: 'purpose', message: `الغرض لا يتجاوز ${TRANSPORT_PURPOSE_MAX} حرفاً.` })
   const raw = normalizeAmount(input.amount)
   const amount = Number(raw)
   if (!/^\d+(\.\d{1,2})?$/.test(raw) || !(amount > 0) || amount > TRANSPORT_AMOUNT_MAX) {

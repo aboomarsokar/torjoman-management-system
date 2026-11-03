@@ -7,7 +7,7 @@
  */
 import type { Database } from '~/types/database.types'
 import type { QualityHalaqa, QualityRow } from '~/utils/qualityRecord'
-import { FINAL_MAX, QUALITY_STATE_META, fmtScore, qualityState } from '~/utils/qualityRecord'
+import { FINAL_MAX, QUALITY_ALL, QUALITY_STATE_META, filterQualityRows, fmtScore, qualityState } from '~/utils/qualityRecord'
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { fetchQualityHalqat, fetchQualityRecords, SCREEN_KEYS } from '~/utils/teacherScreens'
 import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
@@ -68,6 +68,28 @@ const rows = computed(() => (halqat.value ?? []).map((h) => {
   const rec = recordOf(h.id)
   return { h, rec, state: qualityState(rec) }
 }))
+// بحثٌ وفلاترُ الحالة والمشرف والقسم (طلب المستخدم 2026-11-03) — العدّاداتُ للكلّ
+const query = ref('')
+const stateFilter = ref<string>(QUALITY_ALL)
+const supervisorFilter = ref<string>(QUALITY_ALL)
+const genderFilter = ref<string>(QUALITY_ALL)
+const shown = computed(() => filterQualityRows(rows.value, { query: query.value, state: stateFilter.value, supervisor: supervisorFilter.value, gender: genderFilter.value }))
+const stateItems = computed(() => [
+  { label: `كل الحالات (${rows.value.length})`, value: QUALITY_ALL },
+  ...(['none', 'open', 'locked', 'acknowledged'] as const).map(k => ({ label: `${QUALITY_STATE_META[k].label} (${rows.value.filter(r => r.state === k).length})`, value: k }))
+])
+const supervisorItems = computed(() => {
+  const by = new Map<string, { name: string, n: number }>()
+  for (const r of rows.value) {
+    if (!r.h.supervisor_id) continue
+    const s = by.get(r.h.supervisor_id) ?? { name: r.h.supervisor?.full_name ?? '—', n: 0 }
+    s.n++
+    by.set(r.h.supervisor_id, s)
+  }
+  return [{ label: 'كل المشرفين', value: QUALITY_ALL }, ...[...by].sort((a, b) => a[1].name.localeCompare(b[1].name, 'ar')).map(([id, s]) => ({ label: `${s.name} (${s.n})`, value: id }))]
+})
+const bothGenders = computed(() => new Set(rows.value.map(r => r.h.gender)).size > 1)
+const genderItems = [{ label: 'البنين والبنات', value: QUALITY_ALL }, { label: 'البنين', value: 'male' }, { label: 'البنات', value: 'female' }]
 const counts = computed(() => {
   const c = { none: 0, open: 0, locked: 0, acknowledged: 0 }
   for (const r of rows.value) c[r.state]++
@@ -118,6 +140,50 @@ async function onChanged() {
       />
 
       <div
+        v-if="!isTeacher && rows.length"
+        class="tools"
+      >
+        <div class="tools-search">
+          <UiSearchField
+            v-model="query"
+            placeholder="ابحث باسم المعلم أو الحلقة أو المشرف"
+            :shown="shown.length"
+            :total="rows.length"
+          />
+        </div>
+        <div class="tools-sel">
+          <UiSelect
+            v-model="stateFilter"
+            :items="stateItems"
+            size="xl"
+            class="w-full"
+            aria-label="حالة السجل"
+          />
+        </div>
+        <div class="tools-sel">
+          <UiSelect
+            v-model="supervisorFilter"
+            :items="supervisorItems"
+            size="xl"
+            class="w-full"
+            aria-label="المشرف"
+          />
+        </div>
+        <div
+          v-if="bothGenders"
+          class="tools-sel"
+        >
+          <UiSelect
+            v-model="genderFilter"
+            :items="genderItems"
+            size="xl"
+            class="w-full"
+            aria-label="القسم"
+          />
+        </div>
+      </div>
+
+      <div
         v-if="hPending || rPending"
         class="list"
       >
@@ -132,12 +198,17 @@ async function onChanged() {
         title="لا حلقات في نطاقك"
         description="سجلُّ الجودة لكلّ حلقةٍ نشطة لها مشرفٌ ميدانيّ."
       />
+      <UiEmptyState
+        v-else-if="!shown.length"
+        icon="i-lucide-search-x"
+        title="لا معلم يطابق البحث والفلاتر"
+      />
       <ul
         v-else
         class="list"
       >
         <li
-          v-for="r in rows"
+          v-for="(r, i) in shown"
           :key="r.h.id"
         >
           <button
@@ -145,6 +216,10 @@ async function onChanged() {
             class="row"
             @click="openRow(r)"
           >
+            <span
+              v-if="!isTeacher"
+              class="row-seq"
+            >{{ i + 1 }}</span>
             <span class="row-main">
               <span class="row-title">{{ r.h.teacher?.full_name ?? 'بلا معلّم' }}</span>
               <span class="row-sub">{{ r.h.name }}<template v-if="!isTeacher"> · المشرف {{ r.h.supervisor?.full_name ?? '—' }}</template></span>
@@ -190,6 +265,15 @@ async function onChanged() {
 .row:hover { background: var(--surface-2); }
 .row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--navy); color: var(--on-primary); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+/* صفُّ أدواتٍ واحد بارتفاع 48px: البحثُ يتمدّد والقوائمُ بعرضٍ ثابت */
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.tools-search { flex: 1 1 300px; min-inline-size: 0; }
+.tools-sel { flex: 0 0 210px; }
+.tools-sel :deep(button) { min-block-size: 48px; }
+@media (max-width: 640px) {
+  .tools-sel { flex: 1 1 100%; }
+}
 .row-title { font-size: 15.5px; font-weight: 600; }
 .row-sub { font-size: 13px; color: var(--ink-3); }
 .row-score { display: flex; align-items: baseline; gap: 3px; font-variant-numeric: tabular-nums; }

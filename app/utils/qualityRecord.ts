@@ -4,6 +4,7 @@
  * وتنسيقُ الدرجات. الحسابُ نفسُه في القاعدة وحدها؛ هنا العرضُ. مختبَرةٌ في qualityRecord.test.ts.
  */
 import type { Database } from '~/types/database.types'
+import { matchesSearch } from '~/utils/search'
 
 export type QualityRow = Database['public']['Tables']['teacher_quality_months']['Row']
 
@@ -12,6 +13,8 @@ export interface QualityHalaqa {
   id: string
   name: string
   supervisor_id: string | null
+  /** جنسُ الحلقة لفلتر القسم (2026-11-03). */
+  gender?: string | null
   teacher: { id: string, full_name: string } | null
   supervisor: { full_name: string } | null
 }
@@ -106,4 +109,17 @@ export const QUALITY_STATE_META: Record<QualityState, { label: string, color: 'n
   open: { label: 'مفتوحٌ للتعديل', color: 'warning' },
   locked: { label: 'بانتظار اطّلاع المعلم', color: 'info' },
   acknowledged: { label: 'اطّلع المعلم', color: 'success' }
+}
+
+/** «الكل» في فلاتر شاشة تقييم المعلمين. */
+export const QUALITY_ALL = 'all'
+
+/** سطورُ الشاشة بعد البحث (المعلم أو الحلقة أو المشرف) وفلاتر الحالة والمشرف والقسم (طلب المستخدم 2026-11-03). */
+export function filterQualityRows<T extends { h: QualityHalaqa, state: QualityState }>(
+  rows: T[], f: { query: string, state: string, supervisor: string, gender: string }
+): T[] {
+  return rows.filter(r => (f.state === QUALITY_ALL || r.state === f.state)
+    && (f.supervisor === QUALITY_ALL || r.h.supervisor_id === f.supervisor)
+    && (f.gender === QUALITY_ALL || r.h.gender === f.gender)
+    && matchesSearch(f.query, r.h.teacher?.full_name, r.h.name, r.h.supervisor?.full_name))
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtScore, parseNumbers, qualityState, qualityWith } from './qualityRecord'
+import { QUALITY_ALL, filterQualityRows, fmtScore, parseNumbers, qualityState, qualityWith } from './qualityRecord'
 
 // ما أرجعته القاعدة في اختبار الهجرة الملغى (زيارتان 32 و40، اجتماعات 6)
 const raw = {
@@ -42,5 +42,18 @@ describe('fmtScore و qualityState', () => {
     expect(qualityState({ locked_at: null, teacher_ack_at: null })).toBe('open')
     expect(qualityState({ locked_at: 'x', teacher_ack_at: null })).toBe('locked')
     expect(qualityState({ locked_at: 'x', teacher_ack_at: 'y' })).toBe('acknowledged')
+  })
+})
+
+describe('filterQualityRows — البحثُ وفلاترُ الحالة والمشرف والقسم', () => {
+  const r = (id: string, teacher: string, sup: string, gender: string, state: 'none' | 'open' | 'locked' | 'acknowledged') =>
+    ({ h: { id, name: `${teacher} — الرمال`, supervisor_id: sup, gender, teacher: { id, full_name: teacher }, supervisor: { full_name: sup } }, state })
+  const rows = [r('a', 'آية رضوان', 's1', 'female', 'none'), r('b', 'أحمد حمدان', 's2', 'male', 'locked'), r('c', 'أنور الزبدة', 's2', 'male', 'none')]
+  const all = { query: '', state: QUALITY_ALL, supervisor: QUALITY_ALL, gender: QUALITY_ALL }
+  it('كلٌّ على حدة ومجتمعة', () => {
+    expect(filterQualityRows(rows, { ...all, query: 'ايه' }).map(x => x.h.id)).toEqual(['a'])
+    expect(filterQualityRows(rows, { ...all, state: 'none', supervisor: 's2' }).map(x => x.h.id)).toEqual(['c'])
+    expect(filterQualityRows(rows, { ...all, gender: 'male' })).toHaveLength(2)
+    expect(filterQualityRows(rows, all)).toHaveLength(3)
   })
 })

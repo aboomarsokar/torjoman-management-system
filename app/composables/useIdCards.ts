@@ -7,6 +7,7 @@ import type { Database } from '~/types/database.types'
 import type { IdCardRow } from '~/composables/useIdCard'
 import { ID_CARD_BUCKET, SIGNED_URL_SECONDS } from '~/constants/library'
 import { idCardExt, idCardZipName } from '~/utils/library'
+import { roleLabel, type Role } from '~/constants/roles'
 
 export interface StaffIdRow {
   id: string
@@ -19,6 +20,26 @@ export interface StaffIdRow {
 
 /** أدوارٌ تصلها رسائلُ الإدارة (`send_staff_message`) — والمديرون يُذكَّرون مباشرةً. */
 const MESSAGE_ROLES = ['teacher', 'field_supervisor', 'examiner']
+
+/** قيمةُ «كل الأدوار» في فلتر الدور. */
+export const ALL_ROLES = 'all'
+
+/** مفتاحُ فلتر الدور: الدورُ والجنس معاً فيُفصل «معلم» عن «معلمة» (طلب المستخدم 2026-11-03). */
+export const roleKey = (r: Pick<StaffIdRow, 'role' | 'gender'>) => `${r.role}:${r.gender}`
+
+/** شرائحُ الدور الموجودة في القائمة بمسمّياتها وعددِ كلٍّ منها — الأكثرُ أولاً، ثم «كل الأدوار» في المقدّمة. */
+export function roleOptions(rows: StaffIdRow[]): { value: string, label: string, count: number }[] {
+  const counts = new Map<string, { label: string, count: number }>()
+  for (const r of rows) {
+    const k = roleKey(r)
+    const c = counts.get(k) ?? { label: roleLabel(r.role as Role, r.gender), count: 0 }
+    c.count++
+    counts.set(k, c)
+  }
+  const list = [...counts].map(([value, c]) => ({ value, ...c }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'ar'))
+  return [{ value: ALL_ROLES, label: 'كل الأدوار', count: rows.length }, ...list]
+}
 
 /** من لم يرفع وتصله رسالةُ التذكير. */
 export const remindableIds = (rows: StaffIdRow[]) => rows.filter(r => !r.card && MESSAGE_ROLES.includes(r.role)).map(r => r.id)

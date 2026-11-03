@@ -11,6 +11,7 @@ import { FINAL_MAX, QUALITY_STATE_META, fmtScore, qualityState } from '~/utils/q
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { fetchQualityHalqat, fetchQualityRecords, SCREEN_KEYS } from '~/utils/teacherScreens'
 import { clampToProjectStart, isBeforeProjectStart } from '~/utils/projectStart'
+import { matchesSearch } from '~/utils/search'
 
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'تقييم المعلمين — ترجمان' })
@@ -68,6 +69,9 @@ const rows = computed(() => (halqat.value ?? []).map((h) => {
   const rec = recordOf(h.id)
   return { h, rec, state: qualityState(rec) }
 }))
+// بحثٌ باسم المعلم أو الحلقة أو المشرف (طلب المستخدم 2026-11-03) — العدّاداتُ للكلّ
+const query = ref('')
+const shown = computed(() => rows.value.filter(r => matchesSearch(query.value, r.h.teacher?.full_name, r.h.name, r.h.supervisor?.full_name)))
 const counts = computed(() => {
   const c = { none: 0, open: 0, locked: 0, acknowledged: 0 }
   for (const r of rows.value) c[r.state]++
@@ -117,6 +121,14 @@ async function onChanged() {
         label="أرقام تقييم المعلمين"
       />
 
+      <UiSearchField
+        v-if="!isTeacher && rows.length"
+        v-model="query"
+        placeholder="ابحث باسم المعلم أو الحلقة أو المشرف"
+        :shown="shown.length"
+        :total="rows.length"
+      />
+
       <div
         v-if="hPending || rPending"
         class="list"
@@ -132,12 +144,17 @@ async function onChanged() {
         title="لا حلقات في نطاقك"
         description="سجلُّ الجودة لكلّ حلقةٍ نشطة لها مشرفٌ ميدانيّ."
       />
+      <UiEmptyState
+        v-else-if="!shown.length"
+        icon="i-lucide-search-x"
+        :title="`لا معلم يطابق «${query}»`"
+      />
       <ul
         v-else
         class="list"
       >
         <li
-          v-for="r in rows"
+          v-for="r in shown"
           :key="r.h.id"
         >
           <button

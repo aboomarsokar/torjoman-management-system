@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OVERVIEW_ALL, attendancePct, filterOverview, type OverviewRow } from './monthlyOverview'
+import { OVERVIEW_ALL, attendancePct, filterOverview, overviewSummary, sortOverview, type OverviewRow } from './monthlyOverview'
 
 describe('attendancePct', () => {
   it('1 − الغيابات ÷ (الأيام × الطلاب)', () => {
@@ -21,5 +21,19 @@ describe('filterOverview', () => {
     expect(filterOverview(rows, { ...all, status: 'none' }).map(x => x.halaqa_id)).toEqual(['c'])
     expect(filterOverview(rows, { ...all, gender: 'male', status: 'submitted' }).map(x => x.halaqa_id)).toEqual(['b'])
     expect(filterOverview(rows, all)).toHaveLength(3)
+  })
+})
+
+describe('sortOverview وoverviewSummary', () => {
+  const r = (name: string, att: number | null, teacher: number | null, status: string | null, students = 10) =>
+    ({ halaqa_id: name, halaqa_name: name, students, attendancePct: att, teacherPct: teacher, report_status: status, visits: undefined }) as unknown as OverviewRow
+  const rows = [r('ب', 90, 50, 'approved'), r('أ', null, 80, 'submitted', 5), r('ج', 70, null, null)]
+  it('يرتّب بالعمود، وما لا قيمةَ له في الآخر في الاتجاهين', () => {
+    expect(sortOverview(rows, 'attendance', 'desc').map(x => x.halaqa_id)).toEqual(['ب', 'ج', 'أ'])
+    expect(sortOverview(rows, 'attendance', 'asc').map(x => x.halaqa_id)).toEqual(['ج', 'ب', 'أ'])
+    expect(sortOverview(rows, 'name', 'asc').map(x => x.halaqa_id)).toEqual(['أ', 'ب', 'ج'])
+  })
+  it('الخلاصة: المتوسّطُ لما له قيمة، والمعلّقُ = مسودة + لم يبدأ', () => {
+    expect(overviewSummary(rows)).toEqual({ halqat: 3, students: 25, attendance: 80, teacher: 65, approved: 1, submitted: 1, pending: 1 })
   })
 })

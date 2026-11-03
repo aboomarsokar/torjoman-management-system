@@ -78,6 +78,7 @@ export type Database = {
           candidate_result_sms_rejected: string
           candidate_result_sms_reserve: string
           created_at: string
+          default_reward: number
           id: number
           pass_mark: number
           reading_pass_mark: number
@@ -93,6 +94,7 @@ export type Database = {
           candidate_result_sms_rejected?: string
           candidate_result_sms_reserve?: string
           created_at?: string
+          default_reward?: number
           id?: number
           pass_mark?: number
           reading_pass_mark?: number
@@ -108,6 +110,7 @@ export type Database = {
           candidate_result_sms_rejected?: string
           candidate_result_sms_reserve?: string
           created_at?: string
+          default_reward?: number
           id?: number
           pass_mark?: number
           reading_pass_mark?: number
@@ -1838,11 +1841,15 @@ export type Database = {
       }
       monthly_salaries: {
         Row: {
+          adjustment: number
+          adjustment_note: string | null
           amount: number
           approved: boolean
           approved_at: string | null
           approved_by: string | null
+          base_reward: number | null
           created_at: string
+          final_score: number | null
           id: string
           profile_id: string
           salary_month: number
@@ -1850,11 +1857,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          adjustment?: number
+          adjustment_note?: string | null
           amount?: number
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          base_reward?: number | null
           created_at?: string
+          final_score?: number | null
           id?: string
           profile_id: string
           salary_month: number
@@ -1862,11 +1873,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          adjustment?: number
+          adjustment_note?: string | null
           amount?: number
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          base_reward?: number | null
           created_at?: string
+          final_score?: number | null
           id?: string
           profile_id?: string
           salary_month?: number
@@ -1981,6 +1996,7 @@ export type Database = {
           account_holder: string | null
           account_number: string | null
           account_type: Database["public"]["Enums"]["account_type"] | null
+          base_reward: number | null
           created_at: string
           profile_id: string
           updated_at: string
@@ -1989,6 +2005,7 @@ export type Database = {
           account_holder?: string | null
           account_number?: string | null
           account_type?: Database["public"]["Enums"]["account_type"] | null
+          base_reward?: number | null
           created_at?: string
           profile_id: string
           updated_at?: string
@@ -1997,6 +2014,7 @@ export type Database = {
           account_holder?: string | null
           account_number?: string | null
           account_type?: Database["public"]["Enums"]["account_type"] | null
+          base_reward?: number | null
           created_at?: string
           profile_id?: string
           updated_at?: string
@@ -3228,6 +3246,7 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           profile_id: string
+          purpose: string | null
           trip_date: string
           updated_at: string
         }
@@ -3241,6 +3260,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           profile_id?: string
+          purpose?: string | null
           trip_date: string
           updated_at?: string
         }
@@ -3254,6 +3274,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           profile_id?: string
+          purpose?: string | null
           trip_date?: string
           updated_at?: string
         }
@@ -3391,6 +3412,7 @@ export type Database = {
         Returns: boolean
       }
       can_manage_halaqa: { Args: { hid: string }; Returns: boolean }
+      can_manage_news: { Args: never; Returns: boolean }
       can_manage_profile_photo: { Args: { p_folder: string }; Returns: boolean }
       can_review_statement_in_halaqa: {
         Args: { hid: string }
@@ -3773,6 +3795,7 @@ export type Database = {
         | "examiner"
         | "teacher"
         | "student"
+        | "content_manager"
       visit_status: "scheduled" | "done" | "late" | "missed"
     }
     CompositeTypes: {
@@ -3933,6 +3956,7 @@ export const Constants = {
         "examiner",
         "teacher",
         "student",
+        "content_manager",
       ],
       visit_status: ["scheduled", "done", "late", "missed"],
     },

@@ -35,10 +35,11 @@ const ROLE_COLOR: Record<Role, 'primary' | 'secondary' | 'info' | 'success' | 'w
   field_supervisor: 'info',
   examiner: 'warning',
   teacher: 'success',
+  content_manager: 'secondary',
   student: 'neutral'
 }
 // المدير الفني لا يرى حساباتِ الإدارة هنا: مشرفَ المشروع والمديرَين (ولا نفسَه ولا زملاءه) والمديرةَ الإدارية (طلب المستخدم 2026-10-22)
-const HIDDEN_FROM_TECHNICAL: readonly Role[] = ['project_supervisor', 'admin_manager', 'technical_manager', 'women_admin']
+const HIDDEN_FROM_TECHNICAL: readonly Role[] = ['project_supervisor', 'admin_manager', 'technical_manager', 'women_admin', 'content_manager']
 // والمديرةُ ما تحتها وحده: المشرفاتُ والمختبِراتُ والمعلّمات — والإناثُ بالجنس صراحةً، فملفّاتُ العاملين كلُّها ظاهرةٌ لها
 const UNDER_WOMEN_ADMIN: readonly Role[] = ['field_supervisor', 'examiner', 'teacher']
 const visibleRoles = computed(() => fem.value

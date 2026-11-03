@@ -17,7 +17,7 @@ const { role, fullName, profile, pending: profilePending } = useProfile()
 const { handle } = useErrorHandler()
 const toast = useToast()
 
-const { isAdmin, isReadOnly, isTeacher, isExaminer, isFieldSupervisor: isSupervisor, isTechnical, isWomenAdmin } = usePermissions()
+const { isAdmin, isReadOnly, isTeacher, isExaminer, isFieldSupervisor: isSupervisor, isTechnical, isWomenAdmin, isContentManager } = usePermissions()
 /** لوحةُ القسم: المدير الفنيّ (البنين) والمديرةُ الإدارية (البنات) — النطاقُ من RLS، والتسمياتُ بمؤنّثها لها. */
 const isSectionHead = computed(() => isTechnical.value || isWomenAdmin.value)
 const T = computed(() => isWomenAdmin.value
@@ -540,6 +540,10 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
             </div>
           </div>
         </ClientOnly>
+      </template>
+
+      <template v-else-if="isContentManager">
+        <DashboardContentHome />
       </template>
 
       <template v-else>

@@ -29,9 +29,10 @@ describe('مجموعات الأدوار', () => {
   it('المديران: الإداري والفنّي فقط', () => {
     expect(MANAGER_ROLES).toEqual(['admin_manager', 'technical_manager'])
   })
-  it('الطاقم = كلّ الأدوار عدا الطالب، ويشمل المديرة الإدارية', () => {
+  it('الطاقم = كلّ الأدوار عدا الطالب، ويشمل المديرة الإدارية ومدير المحتوى', () => {
     expect(STAFF_ROLES).toContain('women_admin')
+    expect(STAFF_ROLES).toContain('content_manager')
     expect(STAFF_ROLES).not.toContain('student')
-    expect(STAFF_ROLES).toHaveLength(7)
+    expect(STAFF_ROLES).toHaveLength(8)
   })
 })

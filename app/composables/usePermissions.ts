@@ -42,6 +42,10 @@ export function usePermissions() {
     isTeacher: is('teacher'),
     isStudent: is('student'),
     isFieldSupervisor: is('field_supervisor'),
-    isExaminer: is('examiner')
+    isExaminer: is('examiner'),
+    // مدير المحتوى: الأخبار وخطة القسم قراءةً (2026-11-03)
+    isContentManager: is('content_manager'),
+    // كتابةُ الأخبار ونشرُها — مرآةُ `can_manage_news`
+    canManageNews: isIn(['admin_manager', 'content_manager'])
   }
 }

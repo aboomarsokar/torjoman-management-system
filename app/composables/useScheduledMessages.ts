@@ -9,6 +9,9 @@ import { formatTime12 } from '~/utils/time'
 export type Recurrence = 'once' | 'daily' | 'weekly' | 'monthly'
 export type ScheduledRow = Database['public']['Tables']['scheduled_messages']['Row']
 
+/** «يومُ الشهر» 31 = آخرُ يومٍ فيه (تقصّه القاعدة إلى طول الشهر). */
+export const LAST_MONTH_DAY = 31
+
 /** الأحد 0 … السبت 6 (كـextract(dow) في القاعدة). */
 export const WEEKDAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] as const
 
@@ -45,7 +48,7 @@ export const blankSchedule = (section: ScheduleDraft['section'] = 'all'): Schedu
 export function describeSchedule(r: Pick<ScheduledRow, 'recurrence' | 'run_at' | 'weekday' | 'month_day' | 'time_of_day'>): string {
   if (r.recurrence === 'daily') return `كلَّ يوم عدا الجمعة · ${formatTime12(r.time_of_day)}`
   if (r.recurrence === 'weekly') return `كلَّ ${WEEKDAYS[r.weekday ?? 0]} · ${formatTime12(r.time_of_day)}`
-  if (r.recurrence === 'monthly') return `كلَّ شهر يوم ${r.month_day} · ${formatTime12(r.time_of_day)}`
+  if (r.recurrence === 'monthly') return `${r.month_day === LAST_MONTH_DAY ? 'آخرَ يومٍ من كلّ شهر' : `كلَّ شهر يوم ${r.month_day}`} · ${formatTime12(r.time_of_day)}`
   if (!r.run_at) return 'مرّةً واحدة'
   const d = new Date(r.run_at)
   const day = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Gaza', day: '2-digit', month: '2-digit', year: 'numeric' }).format(d).replace(/\//g, '-')

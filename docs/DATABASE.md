@@ -1305,3 +1305,4 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 
 > **2026-11-03 — مهلةُ التقارير** (هجرة `20261103100105_report_deadline_day1`): `private.report_deadline(y, m)` = أوّلُ يومٍ من الشهر التالي — مهلةُ «التقارير في وقتها» في `quality_month_compute` و`report_deadline` في `halaqat_recording_status`؛ و`private.quality_month_opens` = المهلة + 1. و`scheduled_messages.month_day` بين 1 و31 (31 = آخرُ الشهر، يقصّه `scheduled_next_run`).
+> **2026-11-03 — غرضُ الرحلة** (هجرة `transport_purpose`): `transport_trips.purpose text` (قيد `transport_trips_purpose_len` ≤ 200)، إلزاميٌّ بمشغّل `transport_trips_purpose_required` (`private.transport_purpose_required`) على الإدراج وعلى تعديل `purpose` وحده — يقصّ الفراغ ويرفض الفارغ؛ والقديمُ null.

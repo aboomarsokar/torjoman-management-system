@@ -36,13 +36,14 @@ const { data: trips, pending, refresh } = useLazyAsyncData<Trip[]>(
 const loadingMonth = computed(() => pending.value && loadedKey.value !== monthKey.value)
 
 /** صفُّ العرض: الرحلةُ مرقَّمةً بنصوصها المنسّقة وحقِّ تعديلها. */
-type Row = { id: string, serial: number, date: string, description: string, amountText: string, notes: string, paid: boolean, editable: boolean, trip: Trip }
+type Row = { id: string, serial: number, date: string, description: string, purpose: string, amountText: string, notes: string, paid: boolean, editable: boolean, trip: Trip }
 
 const rows = computed<Row[]>(() => numberTrips(trips.value ?? []).map(t => ({
   id: t.id,
   serial: t.serial,
   date: formatDay(t.trip_date),
   description: t.description,
+  purpose: t.purpose ?? '',
   amountText: formatAmount(t.amount),
   notes: t.notes ?? '',
   paid: t.paid,
@@ -58,7 +59,8 @@ const label = computed(() => periodLabel(props.year, props.month))
 const columns = [
   { key: 'serial', label: '#' },
   { key: 'date', label: 'التاريخ' },
-  { key: 'description', label: 'البيان' },
+  { key: 'description', label: 'الرحلة' },
+  { key: 'purpose', label: 'الغرض' },
   { key: 'amount', label: 'المبلغ' },
   { key: 'notes', label: 'الملاحظات' },
   { key: 'status', label: 'الحالة' },
@@ -175,6 +177,9 @@ async function confirmDelete() {
       <template #description="{ row }">
         <span class="strong">{{ row.description }}</span>
       </template>
+      <template #purpose="{ row }">
+        <span>{{ row.purpose || '—' }}</span>
+      </template>
       <template #amount="{ row }">
         <bdi
           class="num strong"
@@ -220,6 +225,7 @@ async function confirmDelete() {
           :title="row.description"
           :subtitle="row.date"
           :fields="[
+            { label: 'الغرض', value: row.purpose || '—' },
             { label: 'المبلغ', value: isolateLtr(row.amountText) },
             { label: 'الملاحظات', value: row.notes }
           ]"

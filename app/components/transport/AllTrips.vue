@@ -72,7 +72,8 @@ const employeesText = computed(() => {
 const skeletonColumns = [
   { key: 'serial', label: '#' },
   { key: 'date', label: 'التاريخ' },
-  { key: 'description', label: 'البيان' },
+  { key: 'description', label: 'الرحلة' },
+  { key: 'purpose', label: 'الغرض' },
   { key: 'amount', label: 'المبلغ' },
   { key: 'notes', label: 'الملاحظات' },
   { key: 'paid', label: 'مسدَّدة' }

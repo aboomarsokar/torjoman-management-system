@@ -5,7 +5,7 @@
  * التاريخُ الافتراضيّ للجديدة: اليوم إن كان في الشهر المعروض، وإلا آخرُ يومٍ منه. يُصدر `saved` بعد الحفظ.
  */
 import { PROJECT_START_DATE } from '~/constants/project'
-import { TRANSPORT_AMOUNT_MAX, TRANSPORT_DESCRIPTION_MAX, TRANSPORT_NOTES_MAX } from '~/constants/transport'
+import { TRANSPORT_AMOUNT_MAX, TRANSPORT_DESCRIPTION_MAX, TRANSPORT_NOTES_MAX, TRANSPORT_PURPOSE_MAX } from '~/constants/transport'
 import { gazaToday } from '~/utils/reportWindow'
 import { monthBounds, normalizeAmount, validateTrip, type Trip } from '~/utils/transport'
 
@@ -20,7 +20,7 @@ const toast = useToast()
 const saving = ref(false)
 const today = computed(() => gazaToday())
 const isEdit = computed(() => !!props.trip)
-const form = reactive({ trip_date: '', description: '', amount: '', notes: '' })
+const form = reactive({ trip_date: '', description: '', purpose: '', amount: '', notes: '' })
 
 /** اليومُ إن وقع في الشهر المعروض، وإلا آخرُ يومٍ منه (الشهرُ المعروض لا يتجاوز شهر اليوم). */
 function defaultDate(): string {
@@ -37,6 +37,7 @@ watch([open, () => props.trip], ([v]) => {
   const t = props.trip
   form.trip_date = t ? t.trip_date : defaultDate()
   form.description = t?.description ?? ''
+  form.purpose = t?.purpose ?? ''
   form.amount = t ? String(t.amount) : ''
   form.notes = t?.notes ?? ''
 })
@@ -50,6 +51,7 @@ async function save() {
       id: props.trip?.id,
       trip_date: form.trip_date,
       description: form.description.trim(),
+      purpose: form.purpose.trim(),
       amount: Number(normalizeAmount(form.amount)),
       notes: form.notes.trim() || null
     })
@@ -117,14 +119,28 @@ async function save() {
           </UFormField>
         </div>
         <UFormField
-          label="البيان"
+          label="الرحلة"
           name="description"
           required
           :hint="`${form.description.trim().length}/${TRANSPORT_DESCRIPTION_MAX}`"
         >
           <UInput
             v-model="form.description"
-            placeholder="مثال: زيارة حلقة"
+            placeholder="مثال: من السرايا إلى الشمالي"
+            size="lg"
+            class="w-full"
+            :ui="{ base: 'rounded-[13px] min-h-11' }"
+          />
+        </UFormField>
+        <UFormField
+          label="الغرض"
+          name="purpose"
+          required
+          :hint="`${form.purpose.trim().length}/${TRANSPORT_PURPOSE_MAX}`"
+        >
+          <UInput
+            v-model="form.purpose"
+            placeholder="مثال: اختبارات حلقة الشرفا"
             size="lg"
             class="w-full"
             :ui="{ base: 'rounded-[13px] min-h-11' }"

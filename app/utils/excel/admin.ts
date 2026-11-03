@@ -115,13 +115,13 @@ export function transportSheet(rows: TripRow[], staff: ProfileRow[], c: Ctx): Sh
     name: 'كشف المواصلات',
     columns: [
       { header: 'التاريخ', key: 'date', width: 11 }, { header: 'الاسم', key: 'name', width: 24 }, { header: 'الدور', key: 'role', width: 14 },
-      { header: 'البيان', key: 'desc', width: 30 }, { header: 'المبلغ', key: 'amount', width: 9 }, { header: 'سُدِّد', key: 'paid', width: 8 },
+      { header: 'الرحلة', key: 'desc', width: 30 }, { header: 'الغرض', key: 'purpose', width: 26 }, { header: 'المبلغ', key: 'amount', width: 9 }, { header: 'سُدِّد', key: 'paid', width: 8 },
       { header: 'تاريخ التسديد', key: 'paidAt', width: 12 }, { header: 'ملاحظات', key: 'notes', width: 22 }
     ],
     rows: [...rows].sort((a, b) => b.trip_date.localeCompare(a.trip_date)).map((t) => {
       const p = byId.get(t.profile_id)
       return {
-        date: dmy(t.trip_date), name: nameOf(c, t.profile_id), role: p ? roleLabel(p.role, p.gender) : '', desc: t.description,
+        date: dmy(t.trip_date), name: nameOf(c, t.profile_id), role: p ? roleLabel(p.role, p.gender) : '', desc: t.description, purpose: t.purpose ?? '',
         amount: Number(t.amount), paid: yesNo(t.paid), paidAt: dmy(t.paid_at), notes: t.notes
       }
     })

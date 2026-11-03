@@ -597,11 +597,12 @@ async function confirmReset() {
 
 <style scoped>
 .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; container: toolbar / inline-size; }
-.search { width: 300px; max-width: 100%; }
-.filter-sel { width: 220px; }
+/* البحثُ يأخذ المساحةَ المتبقّية فلا يُقصّ نصُّه الإرشاديّ، والقائمةُ بعرضٍ ثابت */
+.search { flex: 1 1 420px; min-width: 0; max-width: 640px; }
+.filter-sel { flex: 0 0 220px; }
 /* متى ضاق الشريطُ عن البحث والقائمة في سطر: كلٌّ منهما سطرٌ كامل (بعرض الشريط لا الشاشة) */
 @container toolbar (max-width: 539px) {
-  .search, .filter-sel { width: 100%; }
+  .search, .filter-sel { flex: 1 1 100%; max-width: none; }
 }
 .muted { color: var(--ink-2); white-space: nowrap; }
 .user-cell { display: flex; align-items: center; gap: 11px; }

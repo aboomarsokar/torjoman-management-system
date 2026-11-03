@@ -17,6 +17,10 @@ describe('rowAmounts', () => {
 })
 
 describe('rowError', () => {
+  it('الحقلُ الرقميّ يعيد رقماً — لا ينكسر التحقّق', () => {
+    expect(rowError(row({ base: 300, adjustment: 0 }))).toBeNull()
+    expect(rowError(row({ base: 300, adjustment: 15 }))).toBe('اكتب سبب التعديل لـأحمد.')
+  })
   it('التعديلُ بلا سبب، والمكافأةُ غيرُ الموجبة', () => {
     expect(rowError(row({ adjustment: '20' }))).toBe('اكتب سبب التعديل لـأحمد.')
     expect(rowError(row({ base: '0' }))).toBe('مكافأة أحمد غير صالحة.')

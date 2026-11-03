@@ -1306,3 +1306,6 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-11-03 — مهلةُ التقارير** (هجرة `20261103100105_report_deadline_day1`): `private.report_deadline(y, m)` = أوّلُ يومٍ من الشهر التالي — مهلةُ «التقارير في وقتها» في `quality_month_compute` و`report_deadline` في `halaqat_recording_status`؛ و`private.quality_month_opens` = المهلة + 1. و`scheduled_messages.month_day` بين 1 و31 (31 = آخرُ الشهر، يقصّه `scheduled_next_run`).
 > **2026-11-03 — غرضُ الرحلة** (هجرة `transport_purpose`): `transport_trips.purpose text` (قيد `transport_trips_purpose_len` ≤ 200)، إلزاميٌّ بمشغّل `transport_trips_purpose_required` (`private.transport_purpose_required`) على الإدراج وعلى تعديل `purpose` وحده — يقصّ الفراغ ويرفض الفارغ؛ والقديمُ null.
+
+
+> **2026-11-03 — كشفُ الرواتب بالتقييم** (هجرة `payroll_rewards`): `app_settings.default_reward` (600، موجبة)، و`profile_financials.base_reward` (مكافأةٌ خاصّة اختيارية)، و`monthly_salaries` += `base_reward`، `final_score` (0–100)، `adjustment` (افتراضيّاً 0)، `adjustment_note` (≤ 200) بقيد `monthly_salaries_adjustment_needs_note`: كلُّ تعديلٍ غيرِ صفريّ بسبب. الحسابُ في الواجهة (`utils/payroll.ts`) والكتابةُ للمدير الإداري بسياستي `salaries_all`/`fin_all` القائمتين.

@@ -50,7 +50,7 @@ export async function fetchVisitHalqat(supabase: Client): Promise<VisitHalqaOpti
 
 export async function fetchQualityHalqat(supabase: Client): Promise<QualityHalaqa[]> {
   const { data, error } = await supabase.from('halaqat')
-    .select('id, name, supervisor_id, teacher:teacher_id(id, full_name), supervisor:supervisor_id(full_name)')
+    .select('id, name, supervisor_id, gender, teacher:teacher_id(id, full_name), supervisor:supervisor_id(full_name)')
     .eq('status', 'active').not('supervisor_id', 'is', null).order('name')
     .returns<QualityHalaqa[]>()
   if (error) throw error

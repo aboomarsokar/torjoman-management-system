@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
  * متابعةُ صور الهويات (طلب المستخدم 2026-10-31) — للمدير الإداريّ (الكادرُ كلُّه) والمديرة الإدارية (عاملاتُ قسم البنات):
- * عدّادُ من رفع، وفلترٌ بالحالة والبحث، وفتحُ صورةٍ، وتنزيلُ صورةٍ أو المحدَّدين أو كلِّ المرفوع في ملفٍّ مضغوطٍ بأسمائهم،
+ * عدّادُ من رفع بشريط تقدّم، وفلترٌ بالحالة والدور (معلم/معلمة/… — 2026-11-03) والبحث، وفتحُ صورةٍ، وتنزيلُ صورةٍ أو المحدَّدين أو كلِّ المرفوع في ملفٍّ مضغوطٍ بأسمائهم،
  * وتذكيرُ من لم يرفع برسالة إدارة.
  */
 import type { StaffIdRow } from '~/composables/useIdCards'
 import type { SegmentTab } from '~/components/ui/SegmentTabs.vue'
-import { remindableIds } from '~/composables/useIdCards'
+import { ALL_ROLES, remindableIds, roleKey, roleOptions } from '~/composables/useIdCards'
 import { roleLabel, type Role } from '~/constants/roles'
 
 definePageMeta({ layout: 'dashboard' })
@@ -23,7 +23,10 @@ watch(canView, (v) => {
 type Filter = 'all' | 'done' | 'missing'
 const filter = ref<Filter>('all')
 const query = ref('')
+const roleFilter = ref<string>(ALL_ROLES)
+const roles = computed(() => roleOptions(rows.value))
 const done = computed(() => rows.value.filter(r => r.card).length)
+const pct = computed(() => rows.value.length ? Math.round((100 * done.value) / rows.value.length) : 0)
 const tabs = computed<SegmentTab<Filter>[]>(() => [
   { key: 'all', label: 'الكل', icon: 'i-lucide-list', count: rows.value.length || undefined },
   { key: 'done', label: 'رُفعت', icon: 'i-lucide-badge-check', count: done.value || undefined },
@@ -32,6 +35,7 @@ const tabs = computed<SegmentTab<Filter>[]>(() => [
 const shown = computed(() => {
   const q = query.value.trim()
   return rows.value.filter(r => (filter.value === 'all' || (filter.value === 'done') === !!r.card)
+    && (roleFilter.value === ALL_ROLES || roleKey(r) === roleFilter.value)
     && (!q || r.full_name.includes(q) || (r.employee_number ?? '').includes(q)))
 })
 const selected = ref<string[]>([])
@@ -63,46 +67,88 @@ const columns = [
       title="هذه الصفحة للمدير الإداري والمديرة الإدارية."
     />
     <template v-else-if="canView">
-      <div class="idp-bar">
-        <p class="idp-count">
-          رفع <b>{{ done }}</b> من <b>{{ rows.length }}</b>
-        </p>
-        <UButton
-          :label="selectedRows.length ? `نزّل المحدَّدين (${selectedRows.length})` : `نزّل الكلّ (${done})`"
-          icon="i-lucide-download"
-          color="primary"
-          :disabled="!done"
-          :loading="busy"
-          :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
-          @click="api.download(selectedRows.length ? selectedRows : rows)"
-        />
-        <UButton
-          v-if="toRemind.length"
-          :label="`ذكّر من لم يرفع (${toRemind.length})`"
-          icon="i-lucide-bell-ring"
-          color="neutral"
-          variant="outline"
-          :loading="busy"
-          :ui="{ base: 'rounded-[12px] min-h-11' }"
-          @click="api.remind(toRemind)"
-        />
-      </div>
-      <div class="idp-tools">
-        <UiSegmentTabs
-          v-model="filter"
-          :tabs="tabs"
-          label="حالة صورة الهوية"
-        />
-        <UiSearchField
-          v-model="query"
-          placeholder="ابحث بالاسم أو الرقم الوظيفي"
-          class="idp-search"
-        />
+      <section
+        class="idp-head"
+        aria-label="خلاصة الرفع"
+      >
+        <div class="idp-meter">
+          <p class="idp-count">
+            رفع <b>{{ done }}</b> من <b>{{ rows.length }}</b>
+            <span class="idp-pct">{{ pct }}%</span>
+          </p>
+          <div
+            class="idp-bar"
+            role="progressbar"
+            :aria-valuenow="pct"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-label="`رفع ${done} من ${rows.length}`"
+          >
+            <span :style="{ inlineSize: `${pct}%` }" />
+          </div>
+        </div>
+        <div class="idp-acts">
+          <UButton
+            :label="selectedRows.length ? `نزّل المحدَّدين (${selectedRows.length})` : `نزّل الكلّ (${done})`"
+            icon="i-lucide-download"
+            color="primary"
+            :disabled="!done"
+            :loading="busy"
+            :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
+            @click="api.download(selectedRows.length ? selectedRows : rows)"
+          />
+          <UButton
+            v-if="toRemind.length"
+            :label="`ذكّر من لم يرفع (${toRemind.length})`"
+            icon="i-lucide-bell-ring"
+            color="neutral"
+            variant="outline"
+            :loading="busy"
+            :ui="{ base: 'rounded-[12px] min-h-11' }"
+            @click="api.remind(toRemind)"
+          />
+        </div>
+      </section>
+
+      <section
+        class="idp-tools"
+        aria-label="تصفية"
+      >
+        <div class="idp-row">
+          <UiSegmentTabs
+            v-model="filter"
+            :tabs="tabs"
+            label="حالة صورة الهوية"
+          />
+          <UiSearchField
+            v-model="query"
+            placeholder="ابحث بالاسم أو الرقم الوظيفي"
+            class="idp-search"
+          />
+        </div>
+        <div class="idp-row">
+          <span class="idp-label">الدور</span>
+          <UiFilterChips
+            v-model="roleFilter"
+            :options="roles"
+            aria-label="تصفية بالدور"
+          />
+        </div>
+      </section>
+
+      <div
+        v-if="shown.some(r => r.card)"
+        class="idp-select"
+      >
         <UCheckbox
           :model-value="allShownSelected"
-          label="حدّد كلّ المرفوع"
+          :label="`حدّد كلّ المرفوع هنا (${shown.filter(r => r.card).length})`"
           @update:model-value="toggleAll"
         />
+        <span
+          v-if="selectedRows.length"
+          class="idp-picked"
+        >محدَّد {{ selectedRows.length }}</span>
       </div>
       <UiSkeletonCard
         v-if="loading && !rows.length"
@@ -112,6 +158,7 @@ const columns = [
         v-else-if="!shown.length"
         icon="i-lucide-id-card"
         title="لا أحد في هذا التصنيف"
+        :description="roleFilter !== ALL_ROLES || query ? 'جرّب دوراً آخر أو امسح البحث.' : undefined"
       />
       <UiDataTable
         v-else
@@ -214,14 +261,27 @@ const columns = [
 
 <style scoped>
 .idp { display: flex; flex-direction: column; gap: 16px; }
-.idp-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.idp-count { margin: 0; margin-inline-end: auto; color: var(--ink-2); font-size: 15px; }
-.idp-count b { color: var(--ink); font-size: 18px; font-variant-numeric: tabular-nums; }
-.idp-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.idp-head { display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); }
+.idp-meter { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.idp-count { margin: 0; display: flex; align-items: baseline; gap: 6px; color: var(--ink-2); font-size: 15px; }
+.idp-count b { color: var(--ink); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.idp-pct { margin-inline-start: auto; font-size: 14px; font-weight: 600; color: var(--green-ink); font-variant-numeric: tabular-nums; }
+.idp-bar { block-size: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.idp-bar span { display: block; block-size: 100%; border-radius: inherit; background: var(--green); transition: inline-size .5s cubic-bezier(.16, 1, .3, 1); }
+.idp-acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.idp-tools { display: flex; flex-direction: column; gap: 12px; }
+.idp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 .idp-search { flex: 1 1 240px; min-width: 0; }
+.idp-label { font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.idp-select { display: flex; align-items: center; gap: 12px; min-block-size: 44px; }
+.idp-picked { font-size: 13.5px; font-weight: 600; color: var(--blue-ink); background: var(--blue-soft); border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums; }
 .who { display: flex; flex-direction: column; line-height: 1.45; }
 .who b { color: var(--ink); font-weight: 600; }
 .who span { font-size: 13px; color: var(--ink-3); }
 .acts { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
-.acts-block { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+.acts-block { inline-size: 100%; justify-content: flex-start; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .idp-bar span { transition: none; }
+}
 </style>

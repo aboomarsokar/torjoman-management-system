@@ -22,7 +22,7 @@
 | الالتحاق بمعلّمي ترجمان (عامّة بلا حساب: تسجيلٌ واستعلامٌ عن الطلب) | `pages/join.vue` + `components/candidates/JoinIntro.vue` (الرؤية والمقدّمة والشروط), `JoinForm.vue`, `JoinCommitment.vue`, `YesNo.vue`, `JoinDone.vue`, `StatusLookup.vue` | ✅ | — |
 | مقابلات المرشّحين (فرز، دعوة بموعد ولجنة، دعوة SMS بصيغةٍ معتمدة وإرسالٌ جماعيّ، تقييم كل عضو، قرارٌ للمدير الإداريّ وحده ورسالةُ النتيجة SMS بثلاث صيغ — 2026-10-31، حساب معلّم) | `pages/candidates/index.vue` + `components/candidates/*` (منها `SmsModal.vue` و`ResultSmsModal.vue` و`Decision.vue`) | ✅ | — |
 | المكتبة — الملازمُ الخمسَ عشرة والمستنداتُ والمقرّرات لكلّ الأدوار (الرفعُ للمدير الإداريّ) | `pages/library.vue` + `components/library/*` | ✅ (2026-10-31) | — |
-| صور الهويات — متابعةُ الكادر وتنزيلُها مضغوطةً (المدير الإداريّ والمديرة الإدارية)، وخانتُها في حسابي | `pages/id-cards.vue` + `components/profile/IdCard.vue` | ✅ (2026-10-31) | — |
+| صور الهويات — متابعةُ الكادر وتنزيلُها مضغوطةً (المدير الإداريّ والمديرة الإدارية)، وخانتُها في حسابي — وفلترٌ بالدور والجنس وشريطُ تقدّم الرفع (2026-11-03) | `pages/id-cards.vue` + `components/profile/IdCard.vue` | ✅ (2026-10-31) | — |
 | استمارة تحكيم المرشّحين للطباعة (أفقية A4) | `pages/candidates/sheet.vue` | ✅ | — |
 | حماية المسارات (+ حاجز الكلمة المؤقّتة وإخراج غير النشط) | `middleware/auth.global.ts` | ✅ | §4.3 |
 | «غيّر كلمة مرورك أولاً» — الوحيدة المتاحة ما دام `must_change_password` قائماً | `pages/change-password.vue` | ✅ | §4.1 |

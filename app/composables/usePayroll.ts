@@ -12,13 +12,16 @@ export interface PayrollRow {
   name: string
   role: Role
   gender: 'male' | 'female' | null
-  /** المكافأةُ الأساسية نصّاً للحقل. */
-  base: string
+  /** المكافأةُ الأساسية للحقل — نصٌّ عند التحميل، ورقمٌ بعد الكتابة في حقلٍ رقميّ. */
+  base: string | number
   /** التقييمُ النهائيّ من سجلٍّ مقفل (للمعلم وحده)؛ null = بانتظار التقييم. */
   final: number | null
-  adjustment: string
+  adjustment: string | number
   note: string
 }
+
+/** قيمةُ الحقل نصّاً مشذَّباً (الحقلُ الرقميّ يعيد رقماً لا نصّاً). */
+const fieldText = (v: string | number | null | undefined) => String(v ?? '').trim()
 
 /** المحسوبُ والصافي لسطر (الأساسُ الفارغ = الافتراضيّة). */
 export function rowAmounts(r: PayrollRow, fallback: number) {
@@ -29,8 +32,8 @@ export function rowAmounts(r: PayrollRow, fallback: number) {
 
 /** خطأُ السطر قبل الحفظ، أو null: التعديلُ بلا سبب، أو مكافأةٌ غيرُ موجبة. */
 export function rowError(r: PayrollRow): string | null {
-  if (r.base.trim() && !(Number(r.base) > 0)) return `مكافأة ${r.name} غير صالحة.`
-  if ((Number(r.adjustment) || 0) !== 0 && !r.note.trim()) return `اكتب سبب التعديل لـ${r.name}.`
+  if (fieldText(r.base) && !(Number(r.base) > 0)) return `مكافأة ${r.name} غير صالحة.`
+  if ((Number(r.adjustment) || 0) !== 0 && !fieldText(r.note)) return `اكتب سبب التعديل لـ${r.name}.`
   return null
 }
 
@@ -79,7 +82,7 @@ export function usePayroll(salariedRoles: Role[]) {
     const payload = computed.filter(c => c.net !== null).map(c => ({
       profile_id: c.r.profile_id, salary_month: month, salary_year: year, amount: c.net!, approved: false,
       base_reward: c.base, final_score: c.r.role === 'teacher' ? c.r.final : null,
-      adjustment: Number(c.r.adjustment) || 0, adjustment_note: c.r.note.trim() || null
+      adjustment: Number(c.r.adjustment) || 0, adjustment_note: fieldText(c.r.note) || null
     }))
     if (payload.length) {
       const { error } = await supabase.from('monthly_salaries').upsert(payload, { onConflict: 'profile_id,salary_month,salary_year' })

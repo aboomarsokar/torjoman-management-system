@@ -8,6 +8,7 @@ import type { Database } from '~/types/database.types'
 import { achievementPct, type AchievementRow } from '~/utils/halaqatAchievement'
 import { fetchMonthVisits, type HalaqaVisits } from '~/utils/monthVisits'
 import { monthRange } from '~/utils/quran/monthHistory'
+import { matchesSearch } from '~/utils/search'
 
 export interface OverviewRow extends AchievementRow {
   attendancePct: number | null
@@ -69,4 +70,23 @@ export async function fetchMonthlyOverview(supabase: SupabaseClient<Database>, y
     reading: readingBy.get(r.halaqa_id) ?? { total: 0, passed: 0 },
     visits: visits.get(r.halaqa_id)
   }))
+}
+
+/** «الكل» في فلترَي الحالة والجنس. */
+export const OVERVIEW_ALL = 'all'
+
+export interface OverviewFilter {
+  /** اسمُ المعلم أو الحلقة (بحثٌ متسامح). */
+  query: string
+  /** حالةُ التقرير (`none` لم يبدأ) أو «الكل». */
+  status: string
+  /** `male` / `female` أو «الكل». */
+  gender: string
+}
+
+/** سطورُ الجدول العامّ بعد البحث والفلترين (طلب المستخدم 2026-11-03). */
+export function filterOverview(rows: OverviewRow[], f: OverviewFilter): OverviewRow[] {
+  return rows.filter(r => (f.status === OVERVIEW_ALL || (r.report_status ?? 'none') === f.status)
+    && (f.gender === OVERVIEW_ALL || r.gender === f.gender)
+    && matchesSearch(f.query, r.teacher_name, r.halaqa_name))
 }

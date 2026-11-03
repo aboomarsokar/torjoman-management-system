@@ -50,6 +50,7 @@ const windowText = computed(() =>
           :items="halaqaItems"
           placeholder="كلّ الحلقات"
           size="lg"
+          class="halaqa-sel"
         />
         <UButton
           v-if="halaqaId"
@@ -97,6 +98,9 @@ const windowText = computed(() =>
 .pf.wide { flex-basis: 100%; }
 .pf label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .row-pick { display: flex; gap: 8px; }
+/* بارتفاع أزرار الشهر وحقليه (48px) */
+.halaqa-sel { flex: 1; min-width: 0; }
+.halaqa-sel :deep(button) { min-block-size: 48px; }
 .tap { min-width: 48px; min-height: 48px; justify-content: center; }
 .halqa-auto { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 0 16px; border-radius: var(--r-control); background: var(--surface-2); border: 1px solid var(--line); font-size: 15.5px; font-weight: 600; color: var(--ink); }
 .window { flex-basis: 100%; margin: 0; font-size: 13.5px; color: var(--ink-2); }

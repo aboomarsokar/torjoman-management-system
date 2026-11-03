@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
  * الجدولُ العامّ للتقرير الشهريّ: سطرٌ لكلّ حلقة (الحضور · أنجز/قريب/مقصّر/كثير الغياب · إنجازُ المعلم · الاختبارات ·
- * القراءة · الزيارات · حالُ الرصد)، ومجموعٌ في آخره؛ والضغطُ على السطر يفتح تفصيلَ الحلقة (`pick`).
+ * القراءة · الزيارات · حالُ الرصد)، ومجموعٌ في آخره؛ والضغطُ على السطر يفتح تفصيلَ الحلقة (`pick`). وفوقه بحثٌ بالمعلم أو
+ * الحلقة وفلترا حالة التقرير والجنس (2026-11-03) — المجموعُ لما ظهر بعد التصفية.
  */
-import type { OverviewRow } from '~/utils/monthlyOverview'
+import { OVERVIEW_ALL, filterOverview, type OverviewRow } from '~/utils/monthlyOverview'
 import { VISITS_PER_MONTH } from '~/utils/monthVisits'
 import { REPORT_STATUS_COLORS, REPORT_STATUS_LABELS } from '~/utils/quran/screen'
 
@@ -13,7 +14,26 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ pick: [id: string] }>()
 
-const totals = computed(() => props.rows.reduce((t, r) => ({
+const query = ref('')
+const statusFilter = ref<string>(OVERVIEW_ALL)
+const gender = ref<string>(OVERVIEW_ALL)
+const shown = computed(() => filterOverview(props.rows, { query: query.value, status: statusFilter.value, gender: gender.value }))
+const statusItems = computed(() => [
+  { label: `كل الحالات (${props.rows.length})`, value: OVERVIEW_ALL },
+  ...(['none', 'draft', 'submitted', 'approved'] as const).map(k => ({
+    label: `${REPORT_STATUS_LABELS[k]} (${props.rows.filter(r => (r.report_status ?? 'none') === k).length})`,
+    value: k
+  }))
+])
+// فلترُ الجنس لمن يرى القسمين وحده
+const bothGenders = computed(() => new Set(props.rows.map(r => r.gender)).size > 1)
+const genderItems = computed(() => [
+  { label: 'البنين والبنات', value: OVERVIEW_ALL },
+  { label: `البنين (${props.rows.filter(r => r.gender === 'male').length})`, value: 'male' },
+  { label: `البنات (${props.rows.filter(r => r.gender === 'female').length})`, value: 'female' }
+])
+
+const totals = computed(() => shown.value.reduce((t, r) => ({
   students: t.students + r.students,
   done: t.done + r.done,
   near: t.near + r.near,
@@ -36,7 +56,39 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
     <p class="mo-hint">
       اضغط سطرَ الحلقة لتفصيلها.
     </p>
-    <div class="mo-wrap">
+    <div class="mo-tools">
+      <UiSearchField
+        v-model="query"
+        placeholder="ابحث باسم المعلم أو الحلقة"
+        :shown="shown.length"
+        :total="rows.length"
+        class="mo-search"
+      />
+      <UiSelect
+        v-model="statusFilter"
+        :items="statusItems"
+        size="lg"
+        class="mo-sel"
+        aria-label="حالة التقرير"
+      />
+      <UiSelect
+        v-if="bothGenders"
+        v-model="gender"
+        :items="genderItems"
+        size="lg"
+        class="mo-sel"
+        aria-label="القسم"
+      />
+    </div>
+    <UiEmptyState
+      v-if="!shown.length"
+      icon="i-lucide-search-x"
+      title="لا حلقة تطابق البحث والفلاتر"
+    />
+    <div
+      v-else
+      class="mo-wrap"
+    >
       <table>
         <thead>
           <tr>
@@ -55,7 +107,7 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
         </thead>
         <tbody>
           <tr
-            v-for="(r, i) in rows"
+            v-for="(r, i) in shown"
             :key="r.halaqa_id"
             tabindex="0"
             role="button"
@@ -100,7 +152,7 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
         <tfoot>
           <tr>
             <td />
-            <td>المجموع ({{ rows.length }})</td>
+            <td>المجموع ({{ shown.length }})</td>
             <td>{{ totals.students }}</td>
             <td />
             <td>{{ totals.done }} · {{ totals.near }} · {{ totals.short }}</td>
@@ -130,6 +182,11 @@ const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 20px; }
 .mo h2 { margin: 0; font-size: 17px; color: var(--ink); }
 .mo-hint { margin: 4px 0 12px; font-size: 13.5px; color: var(--ink-3); }
+.mo-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 14px; }
+.mo-search { flex: 1 1 320px; min-width: 0; }
+.mo-sel { flex: 0 0 210px; }
+/* ارتفاعٌ واحد مع البحث (48px) */
+.mo-sel :deep(button) { min-block-size: 48px; }
 .mo-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 900px; }
 th { text-align: start; font-weight: 600; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); line-height: 1.4; vertical-align: bottom; }

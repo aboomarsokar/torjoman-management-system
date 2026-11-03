@@ -5,6 +5,7 @@ describe('describeSchedule', () => {
   it('أسبوعيٌّ وشهريّ', () => {
     expect(describeSchedule({ recurrence: 'daily', time_of_day: '08:00:00', weekday: null, month_day: null, run_at: null })).toBe('كلَّ يوم عدا الجمعة · 8:00 ص')
     expect(describeSchedule({ recurrence: 'weekly', weekday: 6, time_of_day: '08:00:00', month_day: null, run_at: null })).toBe('كلَّ السبت · 8:00 ص')
+    expect(describeSchedule({ recurrence: 'monthly', month_day: 31, time_of_day: '09:00:00', weekday: null, run_at: null })).toBe('آخرَ يومٍ من كلّ شهر · 9:00 ص')
     expect(describeSchedule({ recurrence: 'monthly', month_day: 28, time_of_day: '21:30:00', weekday: null, run_at: null })).toBe('كلَّ شهر يوم 28 · 9:30 م')
   })
   it('مرّةً بتوقيت غزة', () => {

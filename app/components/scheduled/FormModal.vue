@@ -4,7 +4,7 @@
  * (داخل المنصّة و/أو SMS)، والتكرارُ (مرّةً بيومٍ ووقت، أو أسبوعياً بيومٍ من الأسبوع، أو شهرياً بيومٍ من الشهر).
  * المديرُ الفنيّ والمديرةُ الإدارية قسمُهما ثابت.
  */
-import { SCHEDULE_ROLES, WEEKDAYS, blankSchedule, type ScheduleDraft } from '~/composables/useScheduledMessages'
+import { LAST_MONTH_DAY, SCHEDULE_ROLES, WEEKDAYS, blankSchedule, type ScheduleDraft } from '~/composables/useScheduledMessages'
 import { gazaToday } from '~/utils/reportWindow'
 import { timeOptions } from '~/utils/dateTimeField'
 
@@ -20,7 +20,8 @@ watch(open, (o) => {
 const sectionItems = [{ label: 'القسمان', value: 'all' }, { label: 'البنين', value: 'male' }, { label: 'البنات', value: 'female' }]
 const recurrenceItems = [{ label: 'مرّة واحدة', value: 'once' }, { label: 'يومياً (عدا الجمعة)', value: 'daily' }, { label: 'أسبوعياً', value: 'weekly' }, { label: 'شهرياً', value: 'monthly' }]
 const weekdayItems = WEEKDAYS.map((label, value) => ({ label, value })).filter(d => d.value !== 5) // الجمعةُ عطلة
-const monthDayItems = Array.from({ length: 28 }, (_, i) => ({ label: String(i + 1), value: i + 1 }))
+// 31 = آخرُ يومٍ في الشهر (تقصّه القاعدة إلى طوله — 2026-11-03)
+const monthDayItems = [...Array.from({ length: 28 }, (_, i) => ({ label: String(i + 1), value: i + 1 })), { label: 'آخر يوم في الشهر', value: LAST_MONTH_DAY }]
 const times = timeOptions([form.run_time])
 const today = gazaToday()
 

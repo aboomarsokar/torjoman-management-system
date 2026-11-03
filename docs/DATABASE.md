@@ -1304,4 +1304,4 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - **العامّ:** الزائرُ (`anon`) بلا أيّ منحٍ على الجداول، وله الدالّتان `register_candidate(...)` (تمنع تكرار الهوية، وكبحُ 40 تسجيلاً في الدقيقة) و`candidate_status_lookup(national_id, phone)` (الحالةُ والموعدُ للمدعوّ، بالهوية والجوال معاً).
 
 
-> **2026-11-03 — مهلةُ التقارير** (هجرة `report_deadline_day1`): `private.report_deadline(y, m)` = أوّلُ يومٍ من الشهر التالي — مهلةُ «التقارير في وقتها» في `quality_month_compute` و`report_deadline` في `halaqat_recording_status`؛ و`private.quality_month_opens` = المهلة + 1. و`scheduled_messages.month_day` بين 1 و31 (31 = آخرُ الشهر، يقصّه `scheduled_next_run`).
+> **2026-11-03 — مهلةُ التقارير** (هجرة `20261103100105_report_deadline_day1`): `private.report_deadline(y, m)` = أوّلُ يومٍ من الشهر التالي — مهلةُ «التقارير في وقتها» في `quality_month_compute` و`report_deadline` في `halaqat_recording_status`؛ و`private.quality_month_opens` = المهلة + 1. و`scheduled_messages.month_day` بين 1 و31 (31 = آخرُ الشهر، يقصّه `scheduled_next_run`).

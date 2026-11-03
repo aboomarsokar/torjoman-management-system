@@ -15,6 +15,8 @@ export const ACHIEVEMENT_TOP_N = 12
 export interface AchievementRow {
   halaqa_id: string
   halaqa_name: string
+  /** جنسُ الحلقة (`male`/`female`). */
+  gender?: string | null
   teacher_name: string | null
   teacher_phone: string | null
   teacher_whatsapp: string | null

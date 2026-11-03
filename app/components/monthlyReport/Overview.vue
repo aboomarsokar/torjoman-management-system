@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * الجدولُ العامّ للتقرير الشهريّ: سطرٌ لكلّ حلقة (الحضور · أنجز/قريب/مقصّر/كثير الغياب · إنجازُ المعلم · الاختبارات ·
- * القراءة · الزيارات · حالُ الرصد)، ومجموعٌ في آخره؛ والضغطُ على السطر يفتح تفصيلَ الحلقة (`pick`).
+ * التقريرُ الشهريّ العامّ لكلّ الحلقات (طلب المستخدم 2026-11-02/03): خلاصةُ ما ظهر في شريط أرقام (الحلقات والطلاب ·
+ * متوسّطُ الحضور · متوسّطُ إنجاز المعلم · التقاريرُ المعتمدة والمرسلة والمعلّقة)، ثم صفُّ أدواتٍ واحد — بحثٌ باسم المعلم أو
+ * الحلقة وفلترا حالة التقرير والقسم — ثم الجدول (`MonthlyReportOverviewTable`، يرتّب ويفتح التفصيل)، ومعاني الأعمدة مطويّة.
  */
-import type { OverviewRow } from '~/utils/monthlyOverview'
-import { VISITS_PER_MONTH } from '~/utils/monthVisits'
-import { REPORT_STATUS_COLORS, REPORT_STATUS_LABELS } from '~/utils/quran/screen'
+import { OVERVIEW_ALL, filterOverview, overviewSummary, type OverviewRow } from '~/utils/monthlyOverview'
+import type { StatItem } from '~/components/ui/StatStrip.vue'
+import { REPORT_STATUS_LABELS } from '~/utils/quran/screen'
 
 interface Props {
   rows: OverviewRow[]
@@ -13,139 +14,155 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ pick: [id: string] }>()
 
-const totals = computed(() => props.rows.reduce((t, r) => ({
-  students: t.students + r.students,
-  done: t.done + r.done,
-  near: t.near + r.near,
-  short: t.short + r.short,
-  absentee: t.absentee + r.absentee,
-  exams: t.exams + r.exams.total,
-  examsPassed: t.examsPassed + r.exams.passed,
-  reading: t.reading + r.reading.total,
-  readingPassed: t.readingPassed + r.reading.passed,
-  visits: t.visits + (r.visits?.done.length ?? 0)
-}), { students: 0, done: 0, near: 0, short: 0, absentee: 0, exams: 0, examsPassed: 0, reading: 0, readingPassed: 0, visits: 0 }))
-const status = (r: OverviewRow) => (r.report_status ?? 'none') as keyof typeof REPORT_STATUS_LABELS
-const visitTone = (r: OverviewRow) => (r.visits?.done.length ?? 0) >= VISITS_PER_MONTH ? 'ok' : r.visits?.done.length ? 'warn' : 'bad'
-const pctTone = (p: number | null) => p === null ? '' : p >= 75 ? 'ok' : p >= 50 ? 'warn' : 'bad'
+const query = ref('')
+const statusFilter = ref<string>(OVERVIEW_ALL)
+const gender = ref<string>(OVERVIEW_ALL)
+const shown = computed(() => filterOverview(props.rows, { query: query.value, status: statusFilter.value, gender: gender.value }))
+const filtered = computed(() => !!query.value.trim() || statusFilter.value !== OVERVIEW_ALL || gender.value !== OVERVIEW_ALL)
+function clearFilters() {
+  query.value = ''
+  statusFilter.value = OVERVIEW_ALL
+  gender.value = OVERVIEW_ALL
+}
+
+const statusItems = computed(() => [
+  { label: `كل الحالات (${props.rows.length})`, value: OVERVIEW_ALL },
+  ...(['none', 'draft', 'submitted', 'approved'] as const).map(k => ({
+    label: `${REPORT_STATUS_LABELS[k]} (${props.rows.filter(r => (r.report_status ?? 'none') === k).length})`,
+    value: k
+  }))
+])
+// فلترُ القسم لمن يرى القسمين وحده
+const bothGenders = computed(() => new Set(props.rows.map(r => r.gender)).size > 1)
+const genderItems = computed(() => [
+  { label: 'البنين والبنات', value: OVERVIEW_ALL },
+  { label: `البنين (${props.rows.filter(r => r.gender === 'male').length})`, value: 'male' },
+  { label: `البنات (${props.rows.filter(r => r.gender === 'female').length})`, value: 'female' }
+])
+
+const stats = computed<StatItem[]>(() => {
+  const s = overviewSummary(shown.value)
+  return [
+    { key: 'halqat', icon: 'i-lucide-book-open', value: s.halqat, label: 'الحلقات', sub: `${s.students} طالباً` },
+    { key: 'att', icon: 'i-lucide-calendar-check', tone: 'blue', value: s.attendance === null ? '—' : `${s.attendance}%`, label: 'متوسّط الحضور' },
+    { key: 'teacher', icon: 'i-lucide-gauge', tone: s.teacher !== null && s.teacher < 50 ? 'err' : 'green', value: s.teacher === null ? '—' : `${s.teacher}%`, label: 'متوسّط إنجاز المعلم' },
+    { key: 'reports', icon: 'i-lucide-badge-check', tone: 'neutral', value: s.approved, label: 'تقارير معتمدة', sub: `مُرسَل ${s.submitted} · معلّق ${s.pending}` }
+  ]
+})
 </script>
 
 <template>
-  <section class="mo card">
-    <h2>كلّ الحلقات</h2>
-    <p class="mo-hint">
-      اضغط سطرَ الحلقة لتفصيلها.
-    </p>
-    <div class="mo-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>الحلقة</th>
-            <th>الطلاب</th>
-            <th>الحضور</th>
-            <th>أنجز · قريب · مقصّر</th>
-            <th>كثير الغياب</th>
-            <th>إنجاز المعلم</th>
-            <th>الاختبارات</th>
-            <th>القراءة</th>
-            <th>الزيارات</th>
-            <th>حالة التقرير</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(r, i) in rows"
-            :key="r.halaqa_id"
-            tabindex="0"
-            role="button"
-            :aria-label="`تفصيل ${r.halaqa_name}`"
-            @click="emit('pick', r.halaqa_id)"
-            @keydown.enter="emit('pick', r.halaqa_id)"
-          >
-            <td class="num">
-              {{ i + 1 }}
-            </td>
-            <td class="name">
-              {{ r.halaqa_name }}<span class="sub">{{ r.teacher_name ?? '—' }}</span>
-            </td>
-            <td>{{ r.students }}</td>
-            <td :class="pctTone(r.attendancePct)">
-              {{ r.attendancePct === null ? '—' : `${r.attendancePct}%` }}
-            </td>
-            <td>
-              <span class="ok">{{ r.done }}</span> · <span class="warn">{{ r.near }}</span> · <span class="bad">{{ r.short }}</span>
-            </td>
-            <td>{{ r.absentee || '—' }}</td>
-            <td :class="pctTone(r.teacherPct)">
-              <b>{{ r.teacherPct === null ? '—' : `${r.teacherPct}%` }}</b>
-            </td>
-            <td>{{ r.exams.total ? `${r.exams.passed} من ${r.exams.total}` : '—' }}</td>
-            <td>{{ r.reading.total ? `${r.reading.passed} من ${r.reading.total}` : '—' }}</td>
-            <td :class="visitTone(r)">
-              {{ r.visits?.done.length ?? 0 }} من {{ VISITS_PER_MONTH }}<span
-                v-if="r.visits?.avg"
-                class="sub"
-              >معدّل {{ r.visits.avg }}</span>
-            </td>
-            <td>
-              <UBadge
-                :label="REPORT_STATUS_LABELS[status(r)]"
-                :color="REPORT_STATUS_COLORS[status(r)]"
-                variant="soft"
-              />
-            </td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td />
-            <td>المجموع ({{ rows.length }})</td>
-            <td>{{ totals.students }}</td>
-            <td />
-            <td>{{ totals.done }} · {{ totals.near }} · {{ totals.short }}</td>
-            <td>{{ totals.absentee }}</td>
-            <td />
-            <td>{{ totals.examsPassed }} من {{ totals.exams }}</td>
-            <td>{{ totals.readingPassed }} من {{ totals.reading }}</td>
-            <td>{{ totals.visits }}</td>
-            <td />
-          </tr>
-        </tfoot>
-      </table>
+  <section
+    class="mo"
+    aria-labelledby="mo-title"
+  >
+    <UiStatStrip
+      :items="stats"
+      label="خلاصة الحلقات الظاهرة"
+    />
+
+    <div class="mo-card">
+      <header class="mo-head">
+        <h2 id="mo-title">
+          كلّ الحلقات
+        </h2>
+        <p>اضغط سطرَ الحلقة لتفصيلها، وعنوانَ العمود لترتيبه.</p>
+      </header>
+
+      <div class="mo-tools">
+        <div class="mo-search">
+          <UiSearchField
+            v-model="query"
+            placeholder="ابحث باسم المعلم أو الحلقة"
+            :shown="shown.length"
+            :total="rows.length"
+          />
+        </div>
+        <div class="mo-sel">
+          <UiSelect
+            v-model="statusFilter"
+            :items="statusItems"
+            size="xl"
+            class="w-full"
+            aria-label="حالة التقرير"
+          />
+        </div>
+        <div
+          v-if="bothGenders"
+          class="mo-sel"
+        >
+          <UiSelect
+            v-model="gender"
+            :items="genderItems"
+            size="xl"
+            class="w-full"
+            aria-label="القسم"
+          />
+        </div>
+      </div>
+
+      <div
+        v-if="!shown.length"
+        class="mo-empty"
+      >
+        <UiEmptyState
+          icon="i-lucide-search-x"
+          title="لا حلقة تطابق البحث والفلاتر"
+        />
+        <UButton
+          v-if="filtered"
+          label="امسح البحث والفلاتر"
+          icon="i-lucide-rotate-ccw"
+          color="neutral"
+          variant="soft"
+          :ui="{ base: 'rounded-[12px] min-h-11' }"
+          @click="clearFilters"
+        />
+      </div>
+      <MonthlyReportOverviewTable
+        v-else
+        :rows="shown"
+        @pick="emit('pick', $event)"
+      />
+
+      <details class="mo-legend">
+        <summary>معاني الأعمدة</summary>
+        <dl>
+          <div><dt>الحضور</dt><dd>نسبةُ الأيام التي حضرها الطلاب من أيام الحلقة في الشهر.</dd></div>
+          <div><dt>أنجز · قريب · مقصّر</dt><dd>بما حفظوه من مطلوبهم: أنجز 100% فأكثر، وقريب من 75%، ومقصّر دون 75%.</dd></div>
+          <div><dt>كثير الغياب</dt><dd>حضر دون 50% من أيامه بعد استثناء الغياب بعذر، أو دون 25% منها كلِّها — لا يُعتدّ بإنجازه.</dd></div>
+          <div><dt>إنجاز المعلم</dt><dd>أعلى 12 طالباً: المنجز 1 والقريب ½، والمجموعُ ÷ 12 — أخضر من 75%، وأصفر من 50%، وأحمر دونها.</dd></div>
+          <div><dt>الاختبارات · القراءة</dt><dd>الناجحون من المتقدّمين هذا الشهر (اختبارات الأجزاء، واختبار القراءة في البرامج المصاحبة).</dd></div>
+          <div><dt>الزيارات</dt><dd>المنفّذةُ من زيارتين مطلوبتين في الشهر، ومعدّلُ علاماتها من 42، أيًّا كان الزائر.</dd></div>
+          <div><dt>حالة التقرير</dt><dd>تقريرُ الإنجاز القرآني: <b>مسودة</b> لم يُرسله المعلم بعد · <b>مُرسَل</b> بانتظار اعتماد المشرف · <b>معتمد</b> نهائيٌّ مقفل.</dd></div>
+        </dl>
+      </details>
     </div>
-    <dl class="mo-legend">
-      <div><dt>الحضور</dt><dd>نسبةُ الأيام التي حضرها الطلاب من أيام الحلقة في الشهر.</dd></div>
-      <div><dt>أنجز · قريب · مقصّر</dt><dd>بما حفظوه من مطلوبهم: أنجز 100% فأكثر، وقريب من 75%، ومقصّر دون 75%.</dd></div>
-      <div><dt>كثير الغياب</dt><dd>حضر دون 50% من أيامه بعد استثناء الغياب بعذر، أو دون 25% منها كلِّها — لا يُعتدّ بإنجازه.</dd></div>
-      <div><dt>إنجاز المعلم</dt><dd>أعلى 12 طالباً: المنجز 1 والقريب ½، والمجموعُ ÷ 12.</dd></div>
-      <div><dt>الاختبارات · القراءة</dt><dd>الناجحون من المتقدّمين هذا الشهر (اختبارات الأجزاء، واختبار القراءة في البرامج المصاحبة).</dd></div>
-      <div><dt>الزيارات</dt><dd>المنفّذةُ من زيارتين مطلوبتين في الشهر، ومعدّلُ علاماتها من 42، أيًّا كان الزائر.</dd></div>
-      <div><dt>حالة التقرير</dt><dd>تقريرُ الإنجاز القرآني: <b>مسودة</b> لم يُرسله المعلم بعد · <b>مُرسَل</b> بانتظار اعتماد المشرف · <b>معتمد</b> نهائيٌّ مقفل.</dd></div>
-    </dl>
   </section>
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 20px; }
-.mo h2 { margin: 0; font-size: 17px; color: var(--ink); }
-.mo-hint { margin: 4px 0 12px; font-size: 13.5px; color: var(--ink-3); }
-.mo-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 900px; }
-th { text-align: start; font-weight: 600; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); line-height: 1.4; vertical-align: bottom; }
-td { padding: 10px; border-bottom: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
-tbody tr { cursor: pointer; }
-tbody tr:hover, tbody tr:focus-visible { background: var(--surface-2); outline: none; }
-tfoot td { font-weight: 600; color: var(--ink); border-bottom: 0; }
-.num { color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.name { color: var(--ink); font-weight: 600; }
-.sub { display: block; font-size: 12.5px; font-weight: 400; color: var(--ink-3); }
-.mo-legend { display: grid; gap: 6px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
-.mo-legend div { display: flex; gap: 6px; flex-wrap: wrap; }
+.mo { display: flex; flex-direction: column; }
+.mo-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); padding: 20px; }
+.mo-head { margin-bottom: 16px; }
+.mo-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--ink); }
+.mo-head p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-3); }
+/* صفُّ أدواتٍ واحد بارتفاعٍ واحد (48px): البحثُ يتمدّد والقائمتان بعرضٍ ثابت */
+.mo-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 16px; }
+.mo-search { flex: 1 1 320px; min-inline-size: 0; }
+.mo-sel { flex: 0 0 220px; }
+.mo-sel :deep(button) { min-block-size: 48px; }
+.mo-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }
+.mo-legend { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+.mo-legend summary { display: inline-flex; align-items: center; min-block-size: 44px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.mo-legend summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+.mo-legend dl { display: grid; gap: 6px; margin: 4px 0 0; }
+.mo-legend dl div { display: flex; gap: 6px; flex-wrap: wrap; }
 .mo-legend dt { font-weight: 600; color: var(--ink-2); }
 .mo-legend dt::after { content: ':'; }
 .mo-legend dd { margin: 0; }
-.ok { color: var(--chip-active-ink); }
-.warn { color: var(--chip-warn-ink); }
-.bad { color: var(--chip-late-ink); }
+
+@media (max-width: 640px) {
+  .mo-sel { flex: 1 1 100%; }
+}
 </style>

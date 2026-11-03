@@ -8,6 +8,7 @@ import type { Database } from '~/types/database.types'
 import { achievementPct, type AchievementRow } from '~/utils/halaqatAchievement'
 import { fetchMonthVisits, type HalaqaVisits } from '~/utils/monthVisits'
 import { monthRange } from '~/utils/quran/monthHistory'
+import { matchesSearch } from '~/utils/search'
 
 export interface OverviewRow extends AchievementRow {
   attendancePct: number | null
@@ -69,4 +70,65 @@ export async function fetchMonthlyOverview(supabase: SupabaseClient<Database>, y
     reading: readingBy.get(r.halaqa_id) ?? { total: 0, passed: 0 },
     visits: visits.get(r.halaqa_id)
   }))
+}
+
+/** «الكل» في فلترَي الحالة والجنس. */
+export const OVERVIEW_ALL = 'all'
+
+export interface OverviewFilter {
+  /** اسمُ المعلم أو الحلقة (بحثٌ متسامح). */
+  query: string
+  /** حالةُ التقرير (`none` لم يبدأ) أو «الكل». */
+  status: string
+  /** `male` / `female` أو «الكل». */
+  gender: string
+}
+
+/** سطورُ الجدول العامّ بعد البحث والفلترين (طلب المستخدم 2026-11-03). */
+export function filterOverview(rows: OverviewRow[], f: OverviewFilter): OverviewRow[] {
+  return rows.filter(r => (f.status === OVERVIEW_ALL || (r.report_status ?? 'none') === f.status)
+    && (f.gender === OVERVIEW_ALL || r.gender === f.gender)
+    && matchesSearch(f.query, r.teacher_name, r.halaqa_name))
+}
+
+/** أعمدةُ الترتيب في الجدول العامّ. */
+export type OverviewSortKey = 'name' | 'students' | 'attendance' | 'teacher' | 'visits'
+
+/** يرتّب السطور بعمودٍ واتجاه؛ ما لا قيمةَ له (null) في الآخر دائماً، والتعادلُ بالاسم. */
+export function sortOverview(rows: OverviewRow[], key: OverviewSortKey, dir: 'asc' | 'desc'): OverviewRow[] {
+  const value = (r: OverviewRow): number | string | null => {
+    switch (key) {
+      case 'students': return r.students
+      case 'attendance': return r.attendancePct
+      case 'teacher': return r.teacherPct
+      case 'visits': return r.visits?.done.length ?? 0
+      default: return r.halaqa_name
+    }
+  }
+  const sign = dir === 'asc' ? 1 : -1
+  return [...rows].sort((a, b) => {
+    const va = value(a)
+    const vb = value(b)
+    if (va === null || vb === null) return va === vb ? a.halaqa_name.localeCompare(b.halaqa_name, 'ar') : va === null ? 1 : -1
+    const c = typeof va === 'string' ? va.localeCompare(String(vb), 'ar') : va - (vb as number)
+    return c * sign || a.halaqa_name.localeCompare(b.halaqa_name, 'ar')
+  })
+}
+
+/** خلاصةُ ما ظهر: الحلقات والطلاب، ومتوسّطا الحضور وإنجاز المعلم (لما له قيمة)، وحالاتُ التقارير. */
+export function overviewSummary(rows: OverviewRow[]) {
+  const avg = (xs: (number | null)[]) => {
+    const v = xs.filter((x): x is number => x !== null)
+    return v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length) : null
+  }
+  const status = (k: string) => rows.filter(r => (r.report_status ?? 'none') === k).length
+  return {
+    halqat: rows.length,
+    students: rows.reduce((s, r) => s + r.students, 0),
+    attendance: avg(rows.map(r => r.attendancePct)),
+    teacher: avg(rows.map(r => r.teacherPct)),
+    approved: status('approved'),
+    submitted: status('submitted'),
+    pending: status('draft') + status('none')
+  }
 }

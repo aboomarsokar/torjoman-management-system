@@ -1583,6 +1583,7 @@ export type Database = {
       }
       incentive_statements: {
         Row: {
+          carried_amount: number
           created_at: string
           created_by: string | null
           halaqa_id: string
@@ -1600,6 +1601,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          carried_amount?: number
           created_at?: string
           created_by?: string | null
           halaqa_id: string
@@ -1617,6 +1619,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          carried_amount?: number
           created_at?: string
           created_by?: string | null
           halaqa_id?: string

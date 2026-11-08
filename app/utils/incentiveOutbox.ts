@@ -14,6 +14,8 @@ export interface IncentiveItem { description: string, category: string, amount: 
 
 export interface IncentiveSnapshot {
   allocated: number
+  /** رصيدٌ مرحَّل من كشف الشهر السابق (تحسبه القاعدة) — غائبٌ في نسخ الأجهزة القديمة فيُعدّ صفراً. */
+  carried?: number
   statement: { id: string, status: StatementStatus, returnNote: string | null } | null
   items: IncentiveItem[]
 }
@@ -54,7 +56,7 @@ type UploadResult = { data: unknown, error: { code?: string | null, message?: st
 export async function fetchIncentiveStatement(supabase: Client, halaqaId: string, year: number, month: number): Promise<IncentiveSnapshot & { itemIds: string[] }> {
   const [alloc, st] = await Promise.all([
     supabase.from('halaqa_incentives').select('allocated_amount').eq('halaqa_id', halaqaId).eq('incentive_month', month).eq('incentive_year', year).maybeSingle(),
-    supabase.from('incentive_statements').select('id, status, return_note').eq('halaqa_id', halaqaId).eq('statement_month', month).eq('statement_year', year).maybeSingle()
+    supabase.from('incentive_statements').select('id, status, return_note, carried_amount').eq('halaqa_id', halaqaId).eq('statement_month', month).eq('statement_year', year).maybeSingle()
   ])
   if (alloc.error || st.error) throw alloc.error ?? st.error
   let rows: { id: string, description: string | null, category: string | null, amount: number, item_date: string | null }[] = []
@@ -65,6 +67,7 @@ export async function fetchIncentiveStatement(supabase: Client, halaqaId: string
   }
   return {
     allocated: alloc.data?.allocated_amount ?? 0,
+    carried: st.data?.carried_amount ?? 0,
     statement: st.data ? { id: st.data.id, status: st.data.status, returnNote: st.data.return_note } : null,
     items: rows.map(r => ({ description: r.description ?? '', category: r.category ?? '', amount: r.amount, item_date: r.item_date ?? '' })),
     itemIds: rows.map(r => r.id)

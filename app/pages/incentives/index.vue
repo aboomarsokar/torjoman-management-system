@@ -38,7 +38,7 @@ const year = ref(now.getFullYear())
 
 const halaqaId = computed(() => myHalqa.value?.id ?? null)
 const {
-  loading, loaded, noCopy, saving, submitting, showErrors, statement, allocated, rows, bounds,
+  loading, loaded, noCopy, saving, submitting, showErrors, statement, allocated, carried, rows, bounds,
   canEdit: statementEditable, spent, remaining, errors, onDevice, rejected, retryRejected, discardRejected,
   addRow, removeRow, save, submit
 } = useIncentiveStatement(halaqaId, month, year)
@@ -129,6 +129,12 @@ const fmt = (n: number) => n.toLocaleString('ar')
           <!-- ملخّص مالي: شريطٌ واحد بثلاثة أقسام (كانت ثلاثَ بطاقاتٍ متساوية وشارةً معلّقة بجانبها) -->
           <dl class="summary">
             <div class="sm-seg">
+              <dd
+                v-if="carried > 0"
+                class="sm-sub"
+              >
+                + {{ fmt(carried) }} ₪ رصيدٌ مرحَّل من الشهر السابق
+              </dd>
               <dt>المبلغ المخصّص</dt>
               <dd>{{ fmt(allocated) }} <small>₪</small></dd>
             </div>
@@ -153,7 +159,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
               name="i-lucide-triangle-alert"
               class="size-4"
             />
-            تجاوز المصروف المبلغ المخصّص بمقدار {{ fmt(Math.abs(remaining)) }}.
+            تجاوز المصروف المبلغ المتاح بمقدار {{ fmt(Math.abs(remaining)) }}.
           </div>
 
           <div
@@ -277,6 +283,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
 .sm-seg dt { font-size: 13px; color: var(--ink-3); }
 .sm-seg dd { margin: 0; font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .sm-seg dd small { font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.sm-seg dd.sm-sub { font-size: 12.5px; font-weight: 500; color: var(--blue-ink); line-height: 1.4; }
 .sm-seg.pos dd { color: var(--green-ink); }
 .sm-seg.neg dd { color: var(--err); }
 .locked { display: flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }

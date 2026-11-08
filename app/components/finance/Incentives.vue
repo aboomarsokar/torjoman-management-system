@@ -25,7 +25,7 @@ const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
 type AllocRow = { halaqa_id: string, name: string, teacher: string, amount: string }
-type StmtRow = { id: string, halaqa: string, received: number, spent: number, status: string, returnNote: string | null }
+type StmtRow = { id: string, halaqa: string, received: number, carried: number, spent: number, status: string, returnNote: string | null }
 const rows = ref<AllocRow[]>([])
 const statements = ref<StmtRow[]>([])
 const approved = ref(false)
@@ -43,15 +43,15 @@ async function load() {
     const [{ data: halqat }, { data: alloc }, { data: stmts }] = await Promise.all([
       supabase.from('halaqat').select('id, name, teacher:teacher_id(full_name)').order('name').returns<{ id: string, name: string, teacher: { full_name: string } | null }[]>(),
       supabase.from('halaqa_incentives').select('halaqa_id, allocated_amount, approved').eq('incentive_month', month.value).eq('incentive_year', year.value),
-      supabase.from('incentive_statements').select('id, halaqa_id, received_amount, status, return_note, items:incentive_statement_items(amount), halaqa:halaqa_id(name)').eq('statement_month', month.value).eq('statement_year', year.value)
-        .returns<{ id: string, halaqa_id: string, received_amount: number, status: string, return_note: string | null, items: { amount: number }[], halaqa: { name: string } | null }[]>()
+      supabase.from('incentive_statements').select('id, halaqa_id, received_amount, carried_amount, status, return_note, items:incentive_statement_items(amount), halaqa:halaqa_id(name)').eq('statement_month', month.value).eq('statement_year', year.value)
+        .returns<{ id: string, halaqa_id: string, received_amount: number, carried_amount: number, status: string, return_note: string | null, items: { amount: number }[], halaqa: { name: string } | null }[]>()
     ])
     const map: Record<string, number> = {}
     for (const a of alloc ?? []) map[a.halaqa_id] = a.allocated_amount
     approved.value = (alloc ?? []).some(a => a.approved)
     rows.value = (halqat ?? []).map(h => ({ halaqa_id: h.id, name: h.name, teacher: h.teacher?.full_name ?? '—', amount: map[h.id] != null ? String(map[h.id]) : '' }))
     statements.value = (stmts ?? []).map(s => ({
-      id: s.id, halaqa: s.halaqa?.name ?? '—', received: s.received_amount,
+      id: s.id, halaqa: s.halaqa?.name ?? '—', received: s.received_amount, carried: s.carried_amount,
       spent: (s.items ?? []).reduce((t, i) => t + i.amount, 0), status: s.status, returnNote: s.return_note
     }))
     loaded.value = true
@@ -336,7 +336,7 @@ const statementBadge = (s: StmtRow) => (s.status === 'draft' && s.returnNote)
                   #
                 </th><th class="ta-start">
                   الحلقة
-                </th><th>المستلَم</th><th>المصروف</th><th>المتبقّي</th><th>الحالة</th><th />
+                </th><th>المستلَم</th><th>المرحَّل</th><th>المصروف</th><th>المتبقّي</th><th>الحالة</th><th />
               </tr>
             </thead>
             <tbody>
@@ -358,16 +358,24 @@ const statementBadge = (s: StmtRow) => (s.status === 'draft' && s.returnNote)
                 </td>
                 <td
                   class="num"
+                  :class="{ out: s.carried > s.received }"
+                  :title="s.carried > s.received ? 'الرصيدُ المرحَّل أكبر من مخصّص شهر — الحلقة لا تصرف ما تستلم' : undefined"
+                  data-label="المرحَّل"
+                >
+                  {{ s.carried ? fmt(s.carried) : '—' }}
+                </td>
+                <td
+                  class="num"
                   data-label="المصروف"
                 >
                   {{ fmt(s.spent) }}
                 </td>
                 <td
                   class="num"
-                  :class="(s.received - s.spent) < 0 ? 'out' : ''"
+                  :class="(s.received + s.carried - s.spent) < 0 ? 'out' : ''"
                   data-label="المتبقّي"
                 >
-                  {{ fmt(s.received - s.spent) }}
+                  {{ fmt(s.received + s.carried - s.spent) }}
                 </td>
                 <td data-label="الحالة">
                   <UBadge

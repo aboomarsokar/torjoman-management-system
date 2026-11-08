@@ -60,7 +60,7 @@ export function alertsSheet(rows: AlertRow[], c: Ctx): SheetSpec {
   }
 }
 
-/** الحوافزُ لكلّ حلقةٍ وشهر: المخصَّص والمستلَم والمصروف (مجموعُ البنود) والمتبقّي وحالةُ الكشف. */
+/** الحوافزُ لكلّ حلقةٍ وشهر: المخصَّص والمستلَم والمرحَّل من الشهر السابق والمصروف (مجموعُ البنود) والمتبقّي وحالةُ الكشف. */
 export function incentivesSheet(allocs: IncentiveRow[], statements: StatementRow[], items: StatementItemRow[], c: Ctx): SheetSpec {
   const key = (h: string, y: number, m: number) => `${h}|${y}|${m}`
   const spent = new Map<string, number>()
@@ -74,17 +74,19 @@ export function incentivesSheet(allocs: IncentiveRow[], statements: StatementRow
     const s = stmt.get(k)
     const used = s ? spent.get(s.id) ?? 0 : 0
     const received = s?.received_amount != null ? Number(s.received_amount) : null
+    const carried = s ? Number(s.carried_amount ?? 0) : null
     return {
       period: periodLabel(v.y, v.m), sortKey: v.y * 100 + v.m, halaqa: halaqaOf(c, v.h), teacher: teacherOf(c, v.h),
-      allocated: alloc.get(k) ? Number(alloc.get(k)!.allocated_amount) : null, received, spent: used,
-      left: received != null ? received - used : null, status: s ? STATEMENT_STATUS_LABELS[s.status] ?? s.status : 'لم يُكتب'
+      allocated: alloc.get(k) ? Number(alloc.get(k)!.allocated_amount) : null, received, carried, spent: used,
+      left: received != null ? received + (carried ?? 0) - used : null, status: s ? STATEMENT_STATUS_LABELS[s.status] ?? s.status : 'لم يُكتب'
     }
   }).sort((a, b) => b.sortKey - a.sortKey || a.halaqa.localeCompare(b.halaqa, 'ar')).map(({ sortKey: _s, ...r }) => r)
   return {
     name: 'حوافز الحلقات',
     columns: [
       { header: 'الشهر', key: 'period', width: 9 }, { header: 'الحلقة', key: 'halaqa', width: 22 }, { header: 'المعلّم', key: 'teacher', width: 24 },
-      { header: 'المخصَّص', key: 'allocated', width: 10 }, { header: 'المستلَم', key: 'received', width: 10 }, { header: 'المصروف', key: 'spent', width: 10 },
+      { header: 'المخصَّص', key: 'allocated', width: 10 }, { header: 'المستلَم', key: 'received', width: 10 }, { header: 'المرحَّل', key: 'carried', width: 10 },
+      { header: 'المصروف', key: 'spent', width: 10 },
       { header: 'المتبقّي', key: 'left', width: 10 }, { header: 'حالة الكشف', key: 'status', width: 11 }
     ],
     rows

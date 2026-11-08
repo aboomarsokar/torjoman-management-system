@@ -493,6 +493,7 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `statement_month` | int | الشهر |
 | `statement_year` | int | السنة |
 | `received_amount` | numeric | المستلَم = المبلغ المخصّص (من §15، للقراءة) |
+| `carried_amount` | numeric NOT NULL default 0 | **رصيدٌ مرحَّل** من كشف الشهر السابق للحلقة (≥ 0 — `incentive_statements_carried_nonneg`) — تحسبه القاعدة ولا يكتبه العميل (انظر أدناه) |
 | `submitted_at` | date | تاريخ التسليم (للتدقيق) |
 | `status` | enum | `draft` / `submitted` / `reviewed` (قيد الإعداد/مُسلّم/مُطّلع عليه) |
 | `reviewed_by` | uuid FK → profiles | من أقرّ «تمّ الاطّلاع» (من نطاق الاعتماد) |
@@ -516,7 +517,9 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **التوثيق (هجرة `20261019124522`، ROADMAP #13):** القيدان `NOT VALID` — يُفرضان على كلّ إدراجٍ وتعديلٍ جديد ولا يُعاد فحص القديم (بيانات التجريب فيها بندٌ بمبلغ 0). والواجهة تتحقّق أولاً برسائل عربية (`useIncentiveStatement`)، والمراجِع يرى البنود في نافذة (`FinanceStatementReviewModal`) قبل «تمّ الاطّلاع».
 
-> **المصروف** = مجموع البنود (محسوب)، و**المتبقّي = المستلَم − المصروف** (محسوب، تحذير عند التجاوز). تفرّد: كشف واحد لكل حلقة لكل (شهر/سنة). يُقفل بعد التسليم. مصدر حقيقة واحد مع جدول المدير (§4.20د).
+> **ترحيلُ الرصيد (هجرة `20261108103147_incentive_carryover`، طلب المستخدم 2026-11-08):** `carried_amount` = `private.statement_carry_from(halaqa, y, m)` = رصيدُ كشف الشهر السابق للحلقة إن كان `reviewed` = `greatest(received + carried − مجموع البنود, 0)` وإلا 0 (التجاوزُ لا يُرحَّل، والرصيدُ يتراكم لأنّ المرحَّل داخلٌ فيه، ويتبع الحلقة لا المعلم). المشغّل `incentive_statements_carry` (`before insert or update` ← `private.set_statement_carry`) يكتبه من الحساب ويتجاهل ما يرسله العميل، ويثبّته ما دام الكشفُ `reviewed`؛ و`incentive_statements_propagate_carry` (`after insert/delete/update of status, received_amount, carried_amount`) و`incentive_statement_items_propagate_carry` (بنودُ كشفٍ `reviewed`) يحدّثان كشفَ الشهر التالي غيرَ المُطّلَع عليه عبر `private.refresh_next_statement_carry` (تبدأ بـ`assert_session_writable`). الدوالّ `security definer`، `search_path=''`، بلا منحٍ للعميل. مُختبَرةٌ في معاملةٍ ملغاة: الاطّلاعُ يرحّل 64 · محاولةُ المعلّم كتابةَ 999 تبقى 64 · بندٌ بـ10 في السابق ← 54 · إعادةُ السابق للمعلّم ← 0.
+
+> **المصروف** = مجموع البنود (محسوب)، و**المتبقّي = المستلَم + المرحَّل − المصروف** (محسوب، تحذير عند التجاوز). تفرّد: كشف واحد لكل حلقة لكل (شهر/سنة). يُقفل بعد التسليم. مصدر حقيقة واحد مع جدول المدير (§4.20د).
 
 **RLS** (`statements_*` و`sitems_*`):
 - **القراءة:** `can_view_halaqa(halaqa_id)`.

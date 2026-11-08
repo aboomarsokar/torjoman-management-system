@@ -17,12 +17,12 @@ describe('الإشراف', () => {
 })
 
 describe('المالية', () => {
-  const statements = [{ id: 'st', halaqa_id: 'h1', statement_year: 2026, statement_month: 10, received_amount: 150, status: 'submitted' }] as never[]
+  const statements = [{ id: 'st', halaqa_id: 'h1', statement_year: 2026, statement_month: 10, received_amount: 150, carried_amount: 20, status: 'submitted' }] as never[]
   const items = [{ statement_id: 'st', amount: 40, category: 'جوائز', description: 'هدايا', item_date: '2026-10-05' }, { statement_id: 'st', amount: 10, category: 'ضيافة', description: 'ماء', item_date: '2026-10-06' }] as never[]
   it('الحوافزُ: المخصَّص والمستلَم والمصروف والمتبقّي', () => {
     const rows = incentivesSheet([{ halaqa_id: 'h1', incentive_year: 2026, incentive_month: 10, allocated_amount: 150 }, { halaqa_id: 'h1', incentive_year: 2026, incentive_month: 11, allocated_amount: 150 }] as never[], statements, items, c).rows
     expect(rows[0]).toMatchObject({ period: '11-2026', allocated: 150, received: null, status: 'لم يُكتب' })
-    expect(rows[1]).toMatchObject({ period: '10-2026', halaqa: 'الصبرة', teacher: 'محمود', allocated: 150, received: 150, spent: 50, left: 100, status: 'مُرسَل' })
+    expect(rows[1]).toMatchObject({ period: '10-2026', halaqa: 'الصبرة', teacher: 'محمود', allocated: 150, received: 150, carried: 20, spent: 50, left: 120, status: 'مُرسَل' })
   })
   it('البنودُ والمواصلاتُ والحسابات', () => {
     expect(statementItemsSheet(statements, items, c).rows[0]).toMatchObject({ period: '10-2026', category: 'جوائز', amount: 40 })

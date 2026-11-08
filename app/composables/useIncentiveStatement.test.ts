@@ -2,7 +2,7 @@
  * توثيقُ بنود كشف الحوافز: تاريخٌ داخل شهر الكشف لا يتجاوز اليوم، وبيانٌ واضح، ومبلغٌ موجب.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { isBlankItem, statementDateBounds, validateStatementItem } from './useIncentiveStatement'
+import { isBlankItem, statementDateBounds, statementRemaining, validateStatementItem } from './useIncentiveStatement'
 
 // تعريفُ الصناديق يحتاج Nuxt — والمختبَرُ هنا التوثيقُ النقيّ؛ ورفعُ المسوّدة في utils/incentiveOutbox.test.ts
 vi.mock('~/utils/offlineQueues', () => ({ INCENTIVE_QUEUE: 'incentives' }))
@@ -52,5 +52,17 @@ describe('isBlankItem', () => {
   })
   it('سطرٌ فيه مبلغٌ بلا بيان ليس فارغاً — يُطالَب ببيانه', () => {
     expect(isBlankItem(item({ description: '', amount: 20 }))).toBe(false)
+  })
+})
+
+describe('statementRemaining', () => {
+  it('الرصيدُ المرحَّل يُضاف إلى المتاح', () => {
+    expect(statementRemaining(150, 64, 100)).toBe(114)
+  })
+  it('بلا رصيدٍ مرحَّل: المخصّص − المصروف', () => {
+    expect(statementRemaining(150, 0, 150)).toBe(0)
+  })
+  it('التجاوزُ سالب', () => {
+    expect(statementRemaining(150, 20, 200)).toBe(-30)
   })
 })

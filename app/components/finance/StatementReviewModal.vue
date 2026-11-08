@@ -6,7 +6,7 @@
  */
 import type { Database } from '~/types/database.types'
 
-export interface ReviewedStatement { id: string, halaqa: string, received: number, status: string, returnNote: string | null }
+export interface ReviewedStatement { id: string, halaqa: string, received: number, carried: number, status: string, returnNote: string | null }
 
 interface Props {
   open: boolean
@@ -52,6 +52,7 @@ const items = ref<Item[]>([])
 const loading = ref(false)
 const marking = ref(false)
 const spent = computed(() => items.value.reduce((s, i) => s + i.amount, 0))
+const remaining = computed(() => (props.statement ? props.statement.received + props.statement.carried : 0) - spent.value)
 const fmt = (n: number) => n.toLocaleString('ar')
 
 watch(() => [props.open, props.statement?.id] as const, async ([open, id]) => {
@@ -105,8 +106,9 @@ async function markReviewed() {
         class="totals"
       >
         <span>المستلَم <b>{{ fmt(statement.received) }}</b></span>
+        <span v-if="statement.carried">مرحَّل من الشهر السابق <b>{{ fmt(statement.carried) }}</b></span>
         <span>المصروف <b>{{ fmt(spent) }}</b></span>
-        <span :class="{ out: statement.received - spent < 0 }">المتبقّي <b>{{ fmt(statement.received - spent) }}</b></span>
+        <span :class="{ out: remaining < 0 }">المتبقّي <b>{{ fmt(remaining) }}</b></span>
       </div>
 
       <UiEmptyState

@@ -28,6 +28,11 @@ export function statementDateBounds(year: number, month: number, today: string):
   return { min: iso(year, month, 1), max: today < last ? today : last }
 }
 
+/** المتبقّي = المتاح (المخصّص + المرحَّل من الشهر السابق) − المصروف؛ سالبٌ عند التجاوز. */
+export function statementRemaining(allocated: number, carried: number, spent: number): number {
+  return allocated + carried - spent
+}
+
 const amountOf = (v: number | string) => (v === '' || v === null ? 0 : Number(v))
 
 /** سطرٌ لم يُكتب فيه بيانٌ ولا مبلغ — يُهمَل عند الحفظ بلا خطأ. */
@@ -65,13 +70,15 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
   /** `returnNote`: ملاحظةُ المراجِع إن أعاد الكشف (تبقى بعد إعادة الإرسال سجلّاً). */
   const statement = ref<{ id: string, status: StatementStatus, returnNote: string | null } | null>(null)
   const allocated = ref(0)
+  /** رصيدٌ مرحَّل من الشهر السابق (طلب المستخدم 2026-11-08) — يُضاف إلى المتاح ولا يُدمج في المخصّص. */
+  const carried = ref(0)
   const rows = ref<StatementItemDraft[]>([])
   let savedIds: string[] = []
 
   const bounds = computed(() => statementDateBounds(year.value, month.value, gazaToday()))
   const canEdit = computed(() => !statement.value || statement.value.status === 'draft')
   const spent = computed(() => rows.value.reduce((s, r) => s + (amountOf(r.amount) || 0), 0))
-  const remaining = computed(() => allocated.value - spent.value)
+  const remaining = computed(() => statementRemaining(allocated.value, carried.value, spent.value))
   const errors = computed(() => rows.value.map(r => (isBlankItem(r) ? {} : validateStatementItem(r, bounds.value))))
   const hasErrors = computed(() => errors.value.some(e => Object.keys(e).length > 0))
 
@@ -105,6 +112,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
         return
       }
       allocated.value = data.allocated
+      carried.value = data.carried ?? 0
       statement.value = data.statement
       savedIds = data.itemIds ?? []
       // ما حُفظ على الجهاز ولم يُرفع بعدُ يغلب ما في القاعدة
@@ -123,6 +131,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
     const data = await fetchIncentiveStatement(supabase, halaqaId.value, year.value, month.value).catch(() => null)
     if (!data) return
     statement.value = data.statement
+    carried.value = data.carried ?? 0
     savedIds = data.itemIds
     // النسخةُ تُجدَّد من القاعدة فيزول سطرُ «معروضٌ من جهازك» (بقي بعد الرفع — تجربةُ الجوال 2026-10-28)
     const { itemIds: _ids, ...copy } = data
@@ -184,7 +193,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
       savedIds = insertedIds
       rows.value = rows.value.filter(r => !isBlankItem(r))
       showErrors.value = false
-      await offline.writeCopy({ allocated: allocated.value, statement: statement.value, items: draftItems() })
+      await offline.writeCopy({ allocated: allocated.value, carried: carried.value, statement: statement.value, items: draftItems() })
       toast.add({ title: 'حُفظ الكشف.', color: 'success', icon: 'i-lucide-save' })
       return true
     } catch (err) {
@@ -242,7 +251,7 @@ export function useIncentiveStatement(halaqaId: Ref<string | null>, month: Ref<n
   }
 
   return {
-    loading, loaded, noCopy, saving, submitting, showErrors, statement, allocated, rows, bounds, canEdit, spent, remaining, errors, hasErrors,
+    loading, loaded, noCopy, saving, submitting, showErrors, statement, allocated, carried, rows, bounds, canEdit, spent, remaining, errors, hasErrors,
     onDevice: computed(() => !!offline.pendingEntry.value), rejected: offline.rejected, retryRejected: offline.retry, discardRejected: offline.discard,
     addRow, removeRow, save, submit
   }

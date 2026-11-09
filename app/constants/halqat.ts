@@ -7,3 +7,6 @@ export const SHOW_HALAQA_CLASSIFICATION = false
 
 /** مدّةُ الحلقة اليومية بالدقائق — تُعرض «من … إلى …» بإضافتها إلى وقت البدء (`daily_time`). قرار المستخدم 2026-10-21. */
 export const HALAQA_DURATION_MINUTES = 120
+
+/** الحلقةُ التجريبية (حسابات التجريب): خارج «متابعة الرصد» وعدّاداتها — قرار المستخدم 2026-11-09. */
+export const TEST_HALAQA_NAME = 'حلقة تجريبية'

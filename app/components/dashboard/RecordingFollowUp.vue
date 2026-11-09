@@ -9,6 +9,8 @@
  * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها. وفلترُ الشهر
  * (الجاري افتراضاً، وآخرُ ستة أشهر). «المعلّم/المعلّمة» بجنس الحلقة، والمخاطبةُ بجنس القارئ (والمشرفُ الميدانيّ حلقاتُه).
  * وتحت أيام الحلقة سطرُ زيارات الشهر وعلاماتها أيًّا كان الزائر (`FollowUpVisitsLine` — 2026-11-02).
+ * وفلاترُ الجنس والمشرف والبحث (`FollowUpFilters` + `useFollowUpFilters` — 2026-11-09) تحكم القائمةَ والملخّصَ معاً،
+ * والحلقةُ التجريبية خارج المتابعة. حالُ اليوم المفتوح من `useFollowUpDayDetail`.
  */
 import type { Database } from '~/types/database.types'
 import { whatsappLink } from '~/utils/halaqatAchievement'
@@ -61,8 +63,9 @@ const { data: visits } = useLazyAsyncData<Map<string, HalaqaVisits>>(() => `foll
   }
 }, { server: false, default: () => new Map(), watch: [monthKey] })
 
-const all = computed(() => sortByLag(data.value ?? []))
-const summary = computed(() => recordingSummary(data.value ?? []))
+const { filters, update, base, filtered, supItems, showGender, showSupervisor, active } = useFollowUpFilters(computed(() => data.value ?? []))
+const all = computed(() => sortByLag(filtered.value))
+const summary = computed(() => recordingSummary(filtered.value))
 const view = ref<'all' | 'lag'>('all')
 const shown = computed(() => view.value === 'all' ? all.value : all.value.filter(isLagging))
 
@@ -112,49 +115,7 @@ const teacherWord = (r: { gender: string }) => r.gender === 'female' ? 'المع
 const halqatWord = (n: number) => n === 1 ? 'حلقةٍ واحدة' : n === 2 ? 'حلقتين' : n <= 10 ? 'حلقات' : 'حلقة'
 
 // ── اليومُ المفتوح تحت حلقته (واحدٌ في الصفحة) ──
-type Absentee = { name: string, kind: string }
-type DayDetail = { roster: number, absentees: Absentee[] }
-const open = ref<{ hid: string, day: string, state: DayState, female: boolean } | null>(null)
-const detail = ref<DayDetail | null>(null)
-const detailLoading = ref(false)
-const cache = new Map<string, DayDetail>()
-
-async function toggleDay(hid: string, day: string, state: DayState, female: boolean) {
-  if (open.value?.hid === hid && open.value.day === day) {
-    open.value = null
-    return
-  }
-  open.value = { hid, day, state, female }
-  detail.value = null
-  if (state !== 'held') return
-  const key = `${hid}|${day}`
-  if (cache.has(key)) {
-    detail.value = cache.get(key)!
-    return
-  }
-  detailLoading.value = true
-  // الحاضرون = النشطون الملتحقون حتى ذلك اليوم − الغائبين؛ والغيابُ بنوعه واسمِ صاحبه (RLS بنطاق الحلقة)
-  const [{ data: abs, error: e1 }, { data: studs, error: e2 }] = await Promise.all([
-    supabase.from('attendance_absences').select('kind, student:student_id(full_name)').eq('halaqa_id', hid).eq('day', day)
-      .returns<{ kind: string, student: { full_name: string } | null }[]>(),
-    supabase.from('students').select('id, enrollment_date').eq('halaqa_id', hid).eq('status', 'active')
-  ])
-  detailLoading.value = false
-  if (e1 || e2) {
-    handle(e1 ?? e2)
-    return
-  }
-  const d: DayDetail = {
-    roster: (studs ?? []).filter(s => !s.enrollment_date || s.enrollment_date <= day).length,
-    absentees: (abs ?? []).map(a => ({ name: a.student?.full_name ?? '—', kind: a.kind }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
-  }
-  cache.set(key, d)
-  if (open.value?.hid === hid && open.value.day === day) detail.value = d
-}
-const excused = computed(() => detail.value?.absentees.filter(a => a.kind === 'excused').length ?? 0)
-const unexcused = computed(() => detail.value?.absentees.filter(a => a.kind !== 'excused').length ?? 0)
-const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail.value?.absentees.length ?? 0)))
+const { open, detail, detailLoading, toggleDay, excused, unexcused, present } = useFollowUpDayDetail()
 </script>
 
 <template>
@@ -177,16 +138,31 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
           :options="filterOptions"
         />
       </div>
+      <FollowUpFilters
+        v-if="base.length"
+        :filters="filters"
+        :sup-items="supItems"
+        :show-gender="showGender"
+        :show-supervisor="showSupervisor"
+        :shown="filtered.length"
+        :total="base.length"
+        @update="update"
+      />
     </div>
 
     <UiSkeletonLines
-      v-if="pending && !all.length"
+      v-if="pending && !base.length"
       :fields="3"
     />
     <UiEmptyState
-      v-else-if="!all.length"
+      v-else-if="!base.length"
       icon="i-lucide-calendar-check"
       title="لا حلقاتٍ نشطة في نطاقك"
+    />
+    <UiEmptyState
+      v-else-if="!all.length && active"
+      icon="i-lucide-filter-x"
+      title="لا حلقةَ تطابق الفلاتر"
     />
     <template v-else>
       <p class="rf-sum">
@@ -438,6 +414,7 @@ const present = computed(() => Math.max(0, (detail.value?.roster ?? 0) - (detail
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 .rf { padding: 20px 22px; margin-bottom: 18px; }
 .rf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.rf-head > .fuf { flex-basis: 100%; }
 .rf-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
 .rf-sum { margin: 0 0 8px; font-size: 14px; color: var(--ink-2); line-height: 1.9; }
 .rf-sum b { color: var(--ink); font-variant-numeric: tabular-nums; }

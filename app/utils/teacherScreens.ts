@@ -33,7 +33,7 @@ export async function fetchExamCycles(supabase: Client): Promise<ExamCycle[]> {
 export async function fetchVisits(supabase: Client): Promise<VisitRow[]> {
   const { data, error } = await supabase
     .from('supervision_visits')
-    .select('*, halaqa:halaqa_id(name, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
+    .select('*, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name)), supervisor:supervisor_id(full_name, role, gender)')
     .order('scheduled_at', { ascending: false })
     .returns<VisitRow[]>()
   if (error) throw error
@@ -42,7 +42,7 @@ export async function fetchVisits(supabase: Client): Promise<VisitRow[]> {
 
 export async function fetchVisitHalqat(supabase: Client): Promise<VisitHalqaOption[]> {
   const { data, error } = await supabase.from('halaqat')
-    .select('id, name, daily_time, supervisor_id, status, teacher:teacher_id(full_name)').order('name')
+    .select('id, name, gender, daily_time, supervisor_id, status, teacher:teacher_id(full_name)').order('name')
     .returns<VisitHalqaOption[]>()
   if (error) throw error
   return data ?? []

@@ -4,6 +4,7 @@
  * + جدول الكشوف الواردة من المعلمين (مستلَم/مصروف/متبقّي/حالة) مع «تمّ الاطّلاع».
  * reviewOnly: يُخفي التخصيص (للمدير الإداري وحده) ويُبقي مراجعة الكشوف — تستعمله
  * صفحة الحوافز للمعتمِدين (الفني والمديرة الإدارية) ولمشرف المشروع (عرضاً).
+ * والكشوفُ الواردة تُفلتر بالقسم والبحث (`UiHalaqaFilters` بلا المشرف — 2026-11-09)؛ والتخصيصُ كاملٌ دائماً.
  */
 import type { Database } from '~/types/database.types'
 
@@ -25,7 +26,7 @@ const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
 type AllocRow = { halaqa_id: string, name: string, teacher: string, amount: string }
-type StmtRow = { id: string, halaqa: string, received: number, carried: number, spent: number, status: string, returnNote: string | null }
+type StmtRow = { id: string, halaqa_id: string, halaqa: string, halaqa_name: string, gender: string | null, teacher_name: string | null, received: number, carried: number, spent: number, status: string, returnNote: string | null }
 const rows = ref<AllocRow[]>([])
 const statements = ref<StmtRow[]>([])
 const approved = ref(false)
@@ -43,15 +44,16 @@ async function load() {
     const [{ data: halqat }, { data: alloc }, { data: stmts }] = await Promise.all([
       supabase.from('halaqat').select('id, name, teacher:teacher_id(full_name)').order('name').returns<{ id: string, name: string, teacher: { full_name: string } | null }[]>(),
       supabase.from('halaqa_incentives').select('halaqa_id, allocated_amount, approved').eq('incentive_month', month.value).eq('incentive_year', year.value),
-      supabase.from('incentive_statements').select('id, halaqa_id, received_amount, carried_amount, status, return_note, items:incentive_statement_items(amount), halaqa:halaqa_id(name)').eq('statement_month', month.value).eq('statement_year', year.value)
-        .returns<{ id: string, halaqa_id: string, received_amount: number, carried_amount: number, status: string, return_note: string | null, items: { amount: number }[], halaqa: { name: string } | null }[]>()
+      supabase.from('incentive_statements').select('id, halaqa_id, received_amount, carried_amount, status, return_note, items:incentive_statement_items(amount), halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))').eq('statement_month', month.value).eq('statement_year', year.value)
+        .returns<{ id: string, halaqa_id: string, received_amount: number, carried_amount: number, status: string, return_note: string | null, items: { amount: number }[], halaqa: { name: string, gender: string | null, teacher: { full_name: string } | null } | null }[]>()
     ])
     const map: Record<string, number> = {}
     for (const a of alloc ?? []) map[a.halaqa_id] = a.allocated_amount
     approved.value = (alloc ?? []).some(a => a.approved)
     rows.value = (halqat ?? []).map(h => ({ halaqa_id: h.id, name: h.name, teacher: h.teacher?.full_name ?? '—', amount: map[h.id] != null ? String(map[h.id]) : '' }))
     statements.value = (stmts ?? []).map(s => ({
-      id: s.id, halaqa: s.halaqa?.name ?? '—', received: s.received_amount, carried: s.carried_amount,
+      id: s.id, halaqa_id: s.halaqa_id, halaqa: s.halaqa?.name ?? '—', halaqa_name: s.halaqa?.name ?? '—',
+      gender: s.halaqa?.gender ?? null, teacher_name: s.halaqa?.teacher?.full_name ?? null, received: s.received_amount, carried: s.carried_amount,
       spent: (s.items ?? []).reduce((t, i) => t + i.amount, 0), status: s.status, returnNote: s.return_note
     }))
     loaded.value = true
@@ -143,6 +145,9 @@ async function postAsTransaction() {
     working.value = false
   }
 }
+
+// فلاترُ الكشوف الواردة: القسمُ والبحث (المشرفُ لا شأنَ له بالحوافز)
+const { filters, update, reset, base: stmtBase, filtered: shownStatements, genderItems, showGender } = useHalaqaFilters(statements, { supervisor: false })
 
 // الشهر الجاري يُحمَّل عند الفتح (كان يُطلب ضغط «تحميل» أولاً على شاشةٍ فارغة)
 onMounted(load)
@@ -321,87 +326,117 @@ const statementBadge = (s: StmtRow) => (s.status === 'draft' && s.returnNote)
           الكشوف الواردة
         </h3>
         <UiEmptyState
-          v-if="!statements.length"
+          v-if="!stmtBase.length"
           icon="i-lucide-inbox"
           title="لا كشوف لهذا الشهر"
         />
-        <div
-          v-else
-          class="table-wrap stack-wrap"
-        >
-          <table>
-            <thead>
-              <tr>
-                <th class="ta-start">
-                  #
-                </th><th class="ta-start">
-                  الحلقة
-                </th><th>المستلَم</th><th>المرحَّل</th><th>المصروف</th><th>المتبقّي</th><th>الحالة</th><th />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(s, i) in statements"
-                :key="s.id"
-              >
-                <td class="ta-start muted stack-hide">
-                  {{ i + 1 }}
-                </td>
-                <td class="ta-start strong">
-                  {{ s.halaqa }}
-                </td>
-                <td
-                  class="num"
-                  data-label="المستلَم"
+        <template v-else>
+          <UiHalaqaFilters
+            class="stmt-filters"
+            :filters="filters"
+            :gender-items="genderItems"
+            :sup-items="[]"
+            :show-gender="showGender"
+            :show-supervisor="false"
+            :shown="shownStatements.length"
+            :total="stmtBase.length"
+            @update="update"
+          />
+          <div
+            v-if="!shownStatements.length"
+            class="stmt-empty"
+          >
+            <UiEmptyState
+              icon="i-lucide-filter-x"
+              title="لا كشفَ يطابق البحث والفلاتر"
+            />
+            <UButton
+              label="امسح البحث والفلاتر"
+              icon="i-lucide-rotate-ccw"
+              color="neutral"
+              variant="soft"
+              :ui="{ base: 'rounded-[12px] min-h-11' }"
+              @click="reset"
+            />
+          </div>
+          <div
+            v-else
+            class="table-wrap stack-wrap"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th class="ta-start">
+                    #
+                  </th><th class="ta-start">
+                    الحلقة
+                  </th><th>المستلَم</th><th>المرحَّل</th><th>المصروف</th><th>المتبقّي</th><th>الحالة</th><th />
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(s, i) in shownStatements"
+                  :key="s.id"
                 >
-                  {{ fmt(s.received) }}
-                </td>
-                <td
-                  class="num"
-                  :class="{ out: s.carried > s.received }"
-                  :title="s.carried > s.received ? 'الرصيدُ المرحَّل أكبر من مخصّص شهر — الحلقة لا تصرف ما تستلم' : undefined"
-                  data-label="المرحَّل"
-                >
-                  {{ s.carried ? fmt(s.carried) : '—' }}
-                </td>
-                <td
-                  class="num"
-                  data-label="المصروف"
-                >
-                  {{ fmt(s.spent) }}
-                </td>
-                <td
-                  class="num"
-                  :class="(s.received + s.carried - s.spent) < 0 ? 'out' : ''"
-                  data-label="المتبقّي"
-                >
-                  {{ fmt(s.received + s.carried - s.spent) }}
-                </td>
-                <td data-label="الحالة">
-                  <UBadge
-                    :label="statementBadge(s)?.label"
-                    :color="statementBadge(s)?.color"
-                    variant="soft"
-                    size="sm"
-                    class="stack-keep"
-                  />
-                </td>
-                <td>
-                  <UButton
-                    :label="canReview && s.status === 'submitted' ? 'راجع البنود' : 'البنود'"
-                    :color="canReview && s.status === 'submitted' ? 'primary' : 'neutral'"
-                    variant="outline"
-                    size="sm"
-                    icon="i-lucide-list"
-                    class="stack-keep"
-                    :ui="{ base: 'rounded-[9px]' }"
-                    @click="openStatement(s)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  <td class="ta-start muted stack-hide">
+                    {{ i + 1 }}
+                  </td>
+                  <td class="ta-start strong">
+                    {{ s.halaqa }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="المستلَم"
+                  >
+                    {{ fmt(s.received) }}
+                  </td>
+                  <td
+                    class="num"
+                    :class="{ out: s.carried > s.received }"
+                    :title="s.carried > s.received ? 'الرصيدُ المرحَّل أكبر من مخصّص شهر — الحلقة لا تصرف ما تستلم' : undefined"
+                    data-label="المرحَّل"
+                  >
+                    {{ s.carried ? fmt(s.carried) : '—' }}
+                  </td>
+                  <td
+                    class="num"
+                    data-label="المصروف"
+                  >
+                    {{ fmt(s.spent) }}
+                  </td>
+                  <td
+                    class="num"
+                    :class="(s.received + s.carried - s.spent) < 0 ? 'out' : ''"
+                    data-label="المتبقّي"
+                  >
+                    {{ fmt(s.received + s.carried - s.spent) }}
+                  </td>
+                  <td data-label="الحالة">
+                    <UBadge
+                      :label="statementBadge(s)?.label"
+                      :color="statementBadge(s)?.color"
+                      variant="soft"
+                      size="sm"
+                      class="stack-keep"
+                    />
+                  </td>
+                  <td>
+                    <UButton
+                      :label="canReview && s.status === 'submitted' ? 'راجع البنود' : 'البنود'"
+                      :color="canReview && s.status === 'submitted' ? 'primary' : 'neutral'"
+                      variant="outline"
+                      size="sm"
+                      icon="i-lucide-list"
+                      class="stack-keep"
+                      :ui="{ base: 'rounded-[9px]' }"
+                      @click="openStatement(s)"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </template>
     </ClientOnly>
 
@@ -435,5 +470,7 @@ td { padding: 9px 12px; vertical-align: middle; text-align: center; border-top: 
 .cell { width: 130px; height: 38px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink); font-size: 14px; text-align: center; outline: none; }
 .cell:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
 .cell:disabled { opacity: .6; cursor: not-allowed; }
+.stmt-filters { margin-bottom: 12px; }
+.stmt-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }
 .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 </style>

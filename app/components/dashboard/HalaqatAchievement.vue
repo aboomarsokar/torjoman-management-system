@@ -3,9 +3,10 @@
  * «الإنجاز القرآني للحلقات» (حفظُ خطة الشهر — لا البرامج المصاحبة؛ سُمّي هكذا بعد لبسٍ 2026-10-22) في لوحة المدير الفنيّ (طلب المستخدم 2026-10-22): للوهلة الأولى نسبةُ المنجزين كلِّهم وعددُ الحلقات
  * المتأخّرة، ثم سطرٌ لكلّ حلقةٍ بشريطٍ ونسبة «أنجز X من Y» والأضعفُ أولاً؛ والضغطُ يفتح التفصيلَ والتواصلَ مع المعلم.
  * الشهرُ الافتراضيُّ السابقُ لشهر اليوم، ويُختار من آخر ستة أشهر (بالأرقام) — لا قبل بداية المشروع.
+ * وفلاترُ الجنس والمشرف والبحث (`UiHalaqaFilters` — 2026-11-09) تحكم السطورَ والخلاصةَ معاً، والحلقةُ التجريبية خارجها.
  */
 import type { AchievementRow } from '~/utils/halaqatAchievement'
-import { ACHIEVEMENT_LOW_PCT, achievementPct, defaultAchievementMonth, measuredOf } from '~/utils/halaqatAchievement'
+import { ACHIEVEMENT_LOW_PCT, achievementPct, achievementTotals, defaultAchievementMonth, measuredOf } from '~/utils/halaqatAchievement'
 import { shiftMonth } from '~/utils/reportWindow'
 import { isBeforeProjectStart } from '~/utils/projectStart'
 
@@ -28,7 +29,9 @@ const monthKey = computed({
   }
 })
 
-const { rows, totals, pending } = useHalaqatAchievement(year, month)
+const { rows: allRows, pending } = useHalaqatAchievement(year, month)
+const { filters, update, reset, base, filtered: rows, supItems, genderItems, showGender, showSupervisor } = useHalaqaFilters(allRows)
+const totals = computed(() => achievementTotals(rows.value))
 
 const open = ref(false)
 const picked = ref<AchievementRow | null>(null)
@@ -53,15 +56,45 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
       />
     </div>
 
+    <UiHalaqaFilters
+      v-if="base.length"
+      class="ha-filters"
+      :filters="filters"
+      :gender-items="genderItems"
+      :sup-items="supItems"
+      :show-gender="showGender"
+      :show-supervisor="showSupervisor"
+      :shown="rows.length"
+      :total="base.length"
+      @update="update"
+    />
+
     <UiSkeletonLines
-      v-if="pending && !rows.length"
+      v-if="pending && !base.length"
       :fields="3"
     />
     <UiEmptyState
-      v-else-if="!rows.length"
+      v-else-if="!base.length"
       icon="i-lucide-book-open"
       title="لا حلقاتٍ نشطة في نطاقك"
     />
+    <div
+      v-else-if="!rows.length"
+      class="ha-empty"
+    >
+      <UiEmptyState
+        icon="i-lucide-filter-x"
+        title="لا حلقةَ تطابق البحث والفلاتر"
+      />
+      <UButton
+        label="امسح البحث والفلاتر"
+        icon="i-lucide-rotate-ccw"
+        color="neutral"
+        variant="soft"
+        :ui="{ base: 'rounded-[12px] min-h-11' }"
+        @click="reset"
+      />
+    </div>
     <template v-else>
       <div class="ha-sum">
         <div class="ha-big">
@@ -123,6 +156,8 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
 .ha-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .ha-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
 .ha-month { width: 130px; }
+.ha-filters { margin-bottom: 12px; }
+.ha-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }
 .ha-sum { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
 .ha-big, .ha-low { padding: 14px 16px; border-radius: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 4px; }
 .ha-big b { font-size: 30px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }

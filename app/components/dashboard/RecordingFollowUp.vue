@@ -9,7 +9,7 @@
  * الحلقاتُ سطورٌ مطويّة (طلب المستخدم 2026-10-22): أمامَ كلٍّ «رُصد X من Y»، والضغطُ يفتح تفاصيلَها. وفلترُ الشهر
  * (الجاري افتراضاً، وآخرُ ستة أشهر). «المعلّم/المعلّمة» بجنس الحلقة، والمخاطبةُ بجنس القارئ (والمشرفُ الميدانيّ حلقاتُه).
  * وتحت أيام الحلقة سطرُ زيارات الشهر وعلاماتها أيًّا كان الزائر (`FollowUpVisitsLine` — 2026-11-02).
- * وفلاترُ الجنس والمشرف والبحث (`FollowUpFilters` + `useFollowUpFilters` — 2026-11-09) تحكم القائمةَ والملخّصَ معاً،
+ * وفلاترُ الجنس والمشرف والبحث (`UiHalaqaFilters` + `useHalaqaFilters` — 2026-11-09) تحكم القائمةَ والملخّصَ معاً،
  * والحلقةُ التجريبية خارج المتابعة. حالُ اليوم المفتوح من `useFollowUpDayDetail`.
  */
 import type { Database } from '~/types/database.types'
@@ -63,7 +63,7 @@ const { data: visits } = useLazyAsyncData<Map<string, HalaqaVisits>>(() => `foll
   }
 }, { server: false, default: () => new Map(), watch: [monthKey] })
 
-const { filters, update, base, filtered, supItems, showGender, showSupervisor, active } = useFollowUpFilters(computed(() => data.value ?? []))
+const { filters, update, base, filtered, supItems, genderItems, showGender, showSupervisor, active } = useHalaqaFilters(computed(() => data.value ?? []))
 const all = computed(() => sortByLag(filtered.value))
 const summary = computed(() => recordingSummary(filtered.value))
 const view = ref<'all' | 'lag'>('all')
@@ -138,9 +138,11 @@ const { open, detail, detailLoading, toggleDay, excused, unexcused, present } = 
           :options="filterOptions"
         />
       </div>
-      <FollowUpFilters
+      <UiHalaqaFilters
         v-if="base.length"
+        class="rf-hf"
         :filters="filters"
+        :gender-items="genderItems"
         :sup-items="supItems"
         :show-gender="showGender"
         :show-supervisor="showSupervisor"
@@ -414,7 +416,7 @@ const { open, detail, detailLoading, toggleDay, excused, unexcused, present } = 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 .rf { padding: 20px 22px; margin-bottom: 18px; }
 .rf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
-.rf-head > .fuf { flex-basis: 100%; }
+.rf-head > .rf-hf { flex-basis: 100%; }
 .rf-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
 .rf-sum { margin: 0 0 8px; font-size: 14px; color: var(--ink-2); line-height: 1.9; }
 .rf-sum b { color: var(--ink); font-variant-numeric: tabular-nums; }

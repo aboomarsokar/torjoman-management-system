@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  applyFollowUpFilters, filtersFromQuery, hasBothGenders, NO_SUPERVISOR, queryFromFilters, supervisorOptions,
+  applyHalaqaFilters, filtersFromQuery, genderOptions, hasBothGenders, NO_SUPERVISOR, queryFromFilters, supervisorOptions,
   withoutTestHalaqa, type FilterableRow, type SupervisorRef
-} from './followUpFilters'
+} from './halaqaFilters'
 
 const rows: FilterableRow[] = [
   { halaqa_id: 'a', halaqa_name: 'آية رضوان — النفق', gender: 'female', teacher_name: 'آية أحمد' },
@@ -17,25 +17,25 @@ const sups = new Map<string, SupervisorRef>([
 const base = { gender: 'all' as const, supervisor: 'all', query: '' }
 const ids = (r: FilterableRow[]) => r.map(x => x.halaqa_id)
 
-describe('فلاتر متابعة الرصد', () => {
+describe('فلاتر قوائم الحلقات', () => {
   it('الحلقةُ التجريبية خارج المتابعة', () => {
     expect(ids(withoutTestHalaqa(rows))).toEqual(['a', 'b', 'c'])
   })
 
   it('الجنس', () => {
-    expect(ids(applyFollowUpFilters(rows, { ...base, gender: 'female' }, sups))).toEqual(['a'])
-    expect(ids(applyFollowUpFilters(rows, { ...base, gender: 'male' }, sups))).toEqual(['b', 'c', 't'])
+    expect(ids(applyHalaqaFilters(rows, { ...base, gender: 'female' }, sups))).toEqual(['a'])
+    expect(ids(applyHalaqaFilters(rows, { ...base, gender: 'male' }, sups))).toEqual(['b', 'c', 't'])
   })
 
   it('المشرفُ و«بلا مشرف»', () => {
-    expect(ids(applyFollowUpFilters(rows, { ...base, supervisor: 's2' }, sups))).toEqual(['b'])
-    expect(ids(applyFollowUpFilters(rows, { ...base, supervisor: NO_SUPERVISOR }, sups))).toEqual(['c', 't'])
+    expect(ids(applyHalaqaFilters(rows, { ...base, supervisor: 's2' }, sups))).toEqual(['b'])
+    expect(ids(applyHalaqaFilters(rows, { ...base, supervisor: NO_SUPERVISOR }, sups))).toEqual(['c', 't'])
   })
 
   it('البحثُ متسامحٌ بالهمزة والتاء في الحلقة والمعلم، ويجتمع مع غيره', () => {
-    expect(ids(applyFollowUpFilters(rows, { ...base, query: 'ايه' }, sups))).toEqual(['a'])
-    expect(ids(applyFollowUpFilters(rows, { ...base, query: 'جميل' }, sups))).toEqual(['c'])
-    expect(ids(applyFollowUpFilters(rows, { gender: 'male', supervisor: NO_SUPERVISOR, query: 'تل' }, sups))).toEqual(['c'])
+    expect(ids(applyHalaqaFilters(rows, { ...base, query: 'ايه' }, sups))).toEqual(['a'])
+    expect(ids(applyHalaqaFilters(rows, { ...base, query: 'جميل' }, sups))).toEqual(['c'])
+    expect(ids(applyHalaqaFilters(rows, { gender: 'male', supervisor: NO_SUPERVISOR, query: 'تل' }, sups))).toEqual(['c'])
   })
 
   it('خياراتُ المشرف بعدد حلقاته مرتّبةً، و«بلا مشرف» آخراً', () => {
@@ -44,6 +44,10 @@ describe('فلاتر متابعة الرصد', () => {
       { value: 's1', label: 'مها (1)' },
       { value: NO_SUPERVISOR, label: 'بلا مشرف (1)' }
     ])
+  })
+
+  it('خياراتُ الجنس بعدد كلّ قسم', () => {
+    expect(genderOptions(rows).map(o => o.label)).toEqual(['البنين والبنات', 'البنين (3)', 'البنات (1)'])
   })
 
   it('فلترُ الجنس متى اجتمع القسمان', () => {

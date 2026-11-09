@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { supervisorMap } from './useFollowUpFilters'
+import { supervisorMap } from './useHalaqaFilters'
 
-describe('مشرفو الحلقات لفلتر متابعة الرصد', () => {
+describe('مشرفو الحلقات لفلاتر القوائم', () => {
   it('الحلقةُ بمشرفها، والتي بلا مشرفٍ غائبة', () => {
     const m = supervisorMap([
       { id: 'h1', supervisor: { id: 's1', full_name: 'مها' } },

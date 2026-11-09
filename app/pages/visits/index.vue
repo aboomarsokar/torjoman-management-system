@@ -7,6 +7,7 @@
  * الحذفُ لصاحب الزيارة وللمدير الإداري (تنظيف خطأ).
  * المشرفُ الميداني بلا اتصال (2026-10-29): تُعرض نسخةُ الزيارات من جهازه، وما حفظه من تقييمٍ ينتظر الرفع يظهر في صفّه
  * مقفلاً بشارة «بانتظار الرفع» (الحالةُ والفلاترُ والعدّاداتُ بحالة القاعدة)؛ والجدولةُ والتأجيلُ والحذفُ تحتاج اتصالاً.
+ * وفوق الفلاتر شريطُ البحث والقسم الموحّد (`UiHalaqaFilters` بلا المشرف المسنَد — فالمشرفُ هنا الزائر — 2026-11-09).
  */
 import type { Database } from '~/types/database.types'
 import type { VisitRow } from '~/types/visits'
@@ -86,10 +87,13 @@ const halqaItems = computed(() => {
 watch(halqaItems, (items) => {
   if (!items.some(i => i.value === halqaF.value)) halqaF.value = 'all'
 })
-const scoped = computed(() => (visits.value ?? []).filter(v =>
+const scopedAll = computed(() => (visits.value ?? []).filter(v =>
   (period.value === 'all' || periodOf(v) === period.value)
   && (supervisorF.value === 'all' || v.supervisor_id === supervisorF.value)
-  && (halqaF.value === 'all' || v.halaqa_id === halqaF.value)))
+  && (halqaF.value === 'all' || v.halaqa_id === halqaF.value))
+  .map(v => ({ ...v, halaqa_name: v.halaqa?.name ?? '—', gender: v.halaqa?.gender ?? null, teacher_name: v.halaqa?.teacher?.full_name ?? null })))
+// البحثُ والقسم فوق الشهر والمشرف والحلقة؛ وعليها تُحسب الحالةُ والعدّادات
+const { filters: hf, update: hfUpdate, base: hfBase, filtered: scoped, genderItems, showGender } = useHalaqaFilters(scopedAll, { supervisor: false })
 
 const statusF = ref<VisitDisplayStatus | 'all'>('all')
 // الحالةُ قائمةٌ منسدلة في صفّ الفلاتر بعدد كلّ حالةٍ في الشهر والمشرف المختارَين (طلب المستخدم 2026-10-20)
@@ -107,6 +111,7 @@ const filtered = computed(() => scoped.value.filter(v => statusF.value === 'all'
 // المطلوبُ للإنجاز: حلقاتُ النطاق النشطةُ ذاتُ المشرف (المشرفُ والحلقةُ المختاران) × 2 × أشهرُ العرض
 const requiredHalqat = computed(() => (halqat.value ?? []).filter(h =>
   h.status === 'active' && !!h.supervisor_id
+  && (hf.value.gender === 'all' || h.gender === hf.value.gender)
   && (supervisorF.value === 'all' || h.supervisor_id === supervisorF.value)
   && (halqaF.value === 'all' || h.id === halqaF.value)).length)
 const monthsShown = computed(() => period.value === 'all' ? new Set(scoped.value.map(periodOf)).size : 1)
@@ -207,6 +212,18 @@ async function confirmDelete() {
       />
     </ClientOnly>
 
+    <UiHalaqaFilters
+      v-if="!isTeacher"
+      class="hf-row"
+      :filters="hf"
+      :gender-items="genderItems"
+      :sup-items="[]"
+      :show-gender="showGender"
+      :show-supervisor="false"
+      :shown="scoped.length"
+      :total="hfBase.length"
+      @update="hfUpdate"
+    />
     <div class="filters">
       <UiSelect
         v-model="period"
@@ -446,6 +463,7 @@ async function confirmDelete() {
 </template>
 
 <style scoped>
+.hf-row { margin-bottom: 12px; }
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; container: vfilters / inline-size; }
 .sel { width: 170px; }
 .sel.wide { width: 220px; }

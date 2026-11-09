@@ -1,7 +1,7 @@
 /**
- * فلاترُ «متابعة الرصد» (طلب المستخدم 2026-11-09): الجنسُ والمشرفُ المسنَد والبحثُ بالاسم، تجتمع مع «الكل/المقصّرة».
- * قيمُها في الرابط (`?g=` · `?sup=` · `?q=`) فتبقى بعد الرجوع ويُرسَل الرابطُ مفلتراً. «بلا مشرف» قيمةٌ مستقلة
- * لأن الحلقةَ بلا مشرفٍ لا تُرسل رصدها الشهريّ.
+ * فلاترُ قوائم الحلقات الموحّدة (طلب المستخدم 2026-11-09): الجنسُ والمشرفُ المسنَد والبحثُ بالاسم — في «متابعة الرصد»
+ * و«الإنجاز القرآني للحلقات» و«الرصد الشهري» و«الكشوف الواردة» و«الزيارات». قيمُها في الرابط (`?g=` · `?sup=` · `?q=`)
+ * فتبقى بعد الرجوع ويُرسَل الرابطُ مفلتراً. «بلا مشرف» قيمةٌ مستقلة لأن الحلقةَ بلا مشرفٍ لا تُرسل رصدها الشهريّ.
  */
 import { TEST_HALAQA_NAME } from '~/constants/halqat'
 import { searchKey } from '~/utils/arabicSearch'
@@ -12,7 +12,7 @@ export const NO_SUPERVISOR = 'none'
 /** «كلّ المشرفين» — لا يُكتب في الرابط. */
 export const ALL_SUPERVISORS = 'all'
 
-export interface FollowUpFilters {
+export interface HalaqaFilters {
   gender: GenderFilter
   /** `all` · `none` · معرّفُ المشرف. */
   supervisor: string
@@ -23,8 +23,8 @@ export interface FollowUpFilters {
 export interface FilterableRow {
   halaqa_id: string
   halaqa_name: string
-  gender: string
-  teacher_name: string | null
+  gender?: string | null
+  teacher_name?: string | null
 }
 
 export interface SupervisorRef { id: string, name: string }
@@ -32,7 +32,7 @@ export interface SupervisorRef { id: string, name: string }
 const firstString = (v: unknown): string => (typeof v === 'string' ? v : Array.isArray(v) && typeof v[0] === 'string' ? v[0] : '')
 
 /** معاملاتُ الرابط ← الفلاتر؛ المجهولُ يرجع إلى «الكل». */
-export function filtersFromQuery(q: Record<string, unknown>): FollowUpFilters {
+export function filtersFromQuery(q: Record<string, unknown>): HalaqaFilters {
   const g = firstString(q.g)
   return {
     gender: g === 'male' || g === 'female' ? g : 'all',
@@ -42,7 +42,7 @@ export function filtersFromQuery(q: Record<string, unknown>): FollowUpFilters {
 }
 
 /** الفلاتر ← معاملاتُ الرابط؛ الافتراضيُّ يُحذف (undefined). */
-export function queryFromFilters(f: FollowUpFilters): Record<string, string | undefined> {
+export function queryFromFilters(f: HalaqaFilters): Record<string, string | undefined> {
   const q = f.query.trim()
   return {
     g: f.gender === 'all' ? undefined : f.gender,
@@ -55,7 +55,7 @@ export function queryFromFilters(f: FollowUpFilters): Record<string, string | un
 export const withoutTestHalaqa = <T extends FilterableRow>(rows: T[]): T[] => rows.filter(r => r.halaqa_name !== TEST_HALAQA_NAME)
 
 /** تطبيقُ الفلاتر الثلاثة؛ `sups` مشرفُ كلّ حلقة (الغائبُ = بلا مشرف). */
-export function applyFollowUpFilters<T extends FilterableRow>(rows: T[], f: FollowUpFilters, sups: Map<string, SupervisorRef>): T[] {
+export function applyHalaqaFilters<T extends FilterableRow>(rows: T[], f: HalaqaFilters, sups: Map<string, SupervisorRef>): T[] {
   const needle = searchKey(f.query)
   return rows.filter((r) => {
     if (f.gender !== 'all' && r.gender !== f.gender) return false
@@ -86,6 +86,16 @@ export function supervisorOptions(rows: FilterableRow[], sups: Map<string, Super
     .map(([id, c]) => ({ value: id, label: `${c.name} (${c.n})` }))
   if (none) items.push({ value: NO_SUPERVISOR, label: `بلا مشرف (${none})` })
   return items
+}
+
+/** خياراتُ الجنس بعدد حلقات كلّ قسم. */
+export function genderOptions(rows: FilterableRow[]): { value: GenderFilter, label: string }[] {
+  const female = rows.filter(r => r.gender === 'female').length
+  return [
+    { value: 'all', label: 'البنين والبنات' },
+    { value: 'male', label: `البنين (${rows.length - female})` },
+    { value: 'female', label: `البنات (${female})` }
+  ]
 }
 
 /** يظهر فلترُ الجنس متى اجتمع القسمان في النطاق. */

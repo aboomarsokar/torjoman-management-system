@@ -3,6 +3,7 @@
  * التقريرُ الشهريّ العامّ لكلّ الحلقات (طلب المستخدم 2026-11-02/03): خلاصةُ ما ظهر في شريط أرقام (الحلقات والطلاب ·
  * متوسّطُ الحضور · متوسّطُ إنجاز المعلم · التقاريرُ المعتمدة والمرسلة والمعلّقة)، ثم صفُّ أدواتٍ واحد — بحثٌ باسم المعلم أو
  * الحلقة وفلترا حالة التقرير والقسم — ثم الجدول (`MonthlyReportOverviewTable`، يرتّب ويفتح التفصيل)، ومعاني الأعمدة مطويّة.
+ * البحثُ والقسمُ والمشرفُ المسنَد من الشريط الموحّد (`UiHalaqaFilters` — 2026-11-09، في الرابط)، وحالةُ التقرير فلترُ الصفحة.
  */
 import { OVERVIEW_ALL, filterOverview, overviewSummary, type OverviewRow } from '~/utils/monthlyOverview'
 import type { StatItem } from '~/components/ui/StatStrip.vue'
@@ -14,30 +15,21 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ pick: [id: string] }>()
 
-const query = ref('')
 const statusFilter = ref<string>(OVERVIEW_ALL)
-const gender = ref<string>(OVERVIEW_ALL)
-const shown = computed(() => filterOverview(props.rows, { query: query.value, status: statusFilter.value, gender: gender.value }))
-const filtered = computed(() => !!query.value.trim() || statusFilter.value !== OVERVIEW_ALL || gender.value !== OVERVIEW_ALL)
+const { filters, update, reset, base, filtered: halaqaShown, supItems, genderItems, showGender, showSupervisor, active } = useHalaqaFilters(toRef(props, 'rows'))
+const shown = computed(() => filterOverview(halaqaShown.value, { query: '', status: statusFilter.value, gender: OVERVIEW_ALL }))
+const filtered = computed(() => active.value || statusFilter.value !== OVERVIEW_ALL)
 function clearFilters() {
-  query.value = ''
+  reset()
   statusFilter.value = OVERVIEW_ALL
-  gender.value = OVERVIEW_ALL
 }
 
 const statusItems = computed(() => [
-  { label: `كل الحالات (${props.rows.length})`, value: OVERVIEW_ALL },
+  { label: `كل الحالات (${halaqaShown.value.length})`, value: OVERVIEW_ALL },
   ...(['none', 'draft', 'submitted', 'approved'] as const).map(k => ({
-    label: `${REPORT_STATUS_LABELS[k]} (${props.rows.filter(r => (r.report_status ?? 'none') === k).length})`,
+    label: `${REPORT_STATUS_LABELS[k]} (${halaqaShown.value.filter(r => (r.report_status ?? 'none') === k).length})`,
     value: k
   }))
-])
-// فلترُ القسم لمن يرى القسمين وحده
-const bothGenders = computed(() => new Set(props.rows.map(r => r.gender)).size > 1)
-const genderItems = computed(() => [
-  { label: 'البنين والبنات', value: OVERVIEW_ALL },
-  { label: `البنين (${props.rows.filter(r => r.gender === 'male').length})`, value: 'male' },
-  { label: `البنات (${props.rows.filter(r => r.gender === 'female').length})`, value: 'female' }
 ])
 
 const stats = computed<StatItem[]>(() => {
@@ -69,15 +61,18 @@ const stats = computed<StatItem[]>(() => {
         <p>اضغط سطرَ الحلقة لتفصيلها، وعنوانَ العمود لترتيبه.</p>
       </header>
 
-      <div class="mo-tools">
-        <div class="mo-search">
-          <UiSearchField
-            v-model="query"
-            placeholder="ابحث باسم المعلم أو الحلقة"
-            :shown="shown.length"
-            :total="rows.length"
-          />
-        </div>
+      <UiHalaqaFilters
+        class="mo-tools"
+        :filters="filters"
+        :gender-items="genderItems"
+        :sup-items="supItems"
+        :show-gender="showGender"
+        :show-supervisor="showSupervisor"
+        :shown="shown.length"
+        :total="base.length"
+        placeholder="ابحث باسم المعلم أو الحلقة"
+        @update="update"
+      >
         <div class="mo-sel">
           <UiSelect
             v-model="statusFilter"
@@ -87,19 +82,7 @@ const stats = computed<StatItem[]>(() => {
             aria-label="حالة التقرير"
           />
         </div>
-        <div
-          v-if="bothGenders"
-          class="mo-sel"
-        >
-          <UiSelect
-            v-model="gender"
-            :items="genderItems"
-            size="xl"
-            class="w-full"
-            aria-label="القسم"
-          />
-        </div>
-      </div>
+      </UiHalaqaFilters>
 
       <div
         v-if="!shown.length"
@@ -147,9 +130,8 @@ const stats = computed<StatItem[]>(() => {
 .mo-head { margin-bottom: 16px; }
 .mo-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--ink); }
 .mo-head p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-3); }
-/* صفُّ أدواتٍ واحد بارتفاعٍ واحد (48px): البحثُ يتمدّد والقائمتان بعرضٍ ثابت */
-.mo-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 16px; }
-.mo-search { flex: 1 1 320px; min-inline-size: 0; }
+/* الشريطُ الموحّد يرصف البحثَ والقوائم؛ وحالةُ التقرير بمقاسها نفسه */
+.mo-tools { margin-bottom: 16px; }
 .mo-sel { flex: 0 0 220px; }
 .mo-sel :deep(button) { min-block-size: 48px; }
 .mo-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }

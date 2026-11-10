@@ -3,7 +3,7 @@
  * مقرّراتُ البرامج المصاحبة للعاملين — كلُّ مقرّرٍ بكتبه وصفحاته وتنزيلِ ملفّه. وللمديرَين (`manage`): رفعُ الملفّ
  * أو استبدالُه، وإضافةُ مقرّرٍ في آخر الخطّة (ReadingAddUnitModal) وكتابٍ جديد (ReadingAddBookModal).
  */
-import { unitScope } from '~/utils/reading'
+import { unitMonthLabel, unitScope } from '~/utils/reading'
 
 interface Props {
   /** المديرُ الإداريّ والمديرُ الفنيّ: الرفعُ والإضافة. */
@@ -94,7 +94,10 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
         >{{ u.sort_order }}</span>
         <div class="body">
           <div class="title">
-            {{ u.title }}
+            {{ u.title }}<span
+              v-if="u.opensOn"
+              class="month"
+            > · {{ unitMonthLabel(u.opensOn) }}</span>
           </div>
           <div class="scope">
             {{ unitScope(u) }}
@@ -195,6 +198,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
 </template>
 
 <style scoped>
+.month { font-weight: 500; color: var(--ink-3); }
 .ul { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 8px 20px 20px; }
 .none { margin: 16px 0 0; color: var(--ink-3); }
 ol { list-style: none; margin: 0; padding: 0; }

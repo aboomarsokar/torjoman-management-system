@@ -4,10 +4,11 @@
  * · غلافُه زرُّ التنزيل نفسُه (طلب المستخدم)، بجانبه اسمُه وكتبُه وصفحاتُه ومسارُ المقرّرات (المجتاز/الحالي/القادم).
  * · الفعلُ الرئيسيّ للطالب «التقدّم للاختبار» (أو «أكمل الاختبار» لمحاولةٍ مفتوحة، أو تاريخُ الإعادة بعد الرسوب).
  * · التقدّمُ الزمنيّ (مقرّرٌ لكلّ شهر) شارةٌ في الرأس. البياناتُ من `useReadingPlan`.
+ * · المقرّرُ يُفتح في شهره (2026-11-10): من أتمّ ما فُتح يرى «يُفتح … في شهره» بدل زرّ الاختبار.
  * التخطيطُ بحجم البطاقة لا الشاشة (container query): الغلافُ بجانب التفاصيل، والأفعالُ تحتها في الضيّق.
  */
 import { formatDay } from '~/utils/reportWindow'
-import { unitScope } from '~/utils/reading'
+import { unitMonthLabel, unitScope } from '~/utils/reading'
 import { isolateLtr } from '~/utils/transport'
 
 interface Props {
@@ -140,6 +141,16 @@ const PACE = {
             :ui="{ base: 'min-h-11 rounded-xl font-semibold justify-center' }"
           />
           <p
+            v-else-if="journey.dueOpensOn"
+            class="rc-wait"
+          >
+            <UIcon
+              name="i-lucide-calendar-clock"
+              class="size-4"
+            />
+            أتممتَ مقرّر هذا الشهر — يُفتح اختبارُ {{ journey.due.title }} في {{ unitMonthLabel(journey.dueOpensOn) }}
+          </p>
+          <p
             v-else-if="journey.retryOn"
             class="rc-wait"
           >
@@ -150,6 +161,12 @@ const PACE = {
             تستطيع إعادة الاختبار ابتداءً من {{ isolateLtr(formatDay(journey.retryOn)) }}
           </p>
         </template>
+        <p
+          v-else-if="journey.dueOpensOn"
+          class="rc-wait"
+        >
+          أتمّ مقرّرات ما فُتح — يُفتح {{ journey.due.title }} في {{ unitMonthLabel(journey.dueOpensOn) }}
+        </p>
         <p
           v-else-if="journey.retryOn"
           class="rc-wait"

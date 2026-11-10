@@ -6,7 +6,7 @@
  * من ليس طالباً يُعاد إلى لوحته.
  */
 import { formatClock } from '~/composables/useReadingTest'
-import { unitScope } from '~/utils/reading'
+import { unitMonthLabel, unitScope } from '~/utils/reading'
 import { formatDay } from '~/utils/reportWindow'
 import { isolateLtr } from '~/utils/transport'
 
@@ -84,7 +84,13 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
           <li>النجاح من <strong>{{ settings.reading_pass_mark }}٪</strong> — وإن لم تنجح تعيد بعد {{ settings.reading_retry_days }} أيام</li>
         </ul>
         <p
-          v-if="journey.retryOn && !journey.open"
+          v-if="journey.dueOpensOn && !journey.open"
+          class="wait"
+        >
+          أتممتَ مقرّر هذا الشهر — يُفتح اختبارُ {{ journey.due?.title }} في {{ unitMonthLabel(journey.dueOpensOn) }}
+        </p>
+        <p
+          v-else-if="journey.retryOn && !journey.open"
           class="wait"
         >
           تستطيع إعادة الاختبار ابتداءً من {{ isolateLtr(formatDay(journey.retryOn)) }}

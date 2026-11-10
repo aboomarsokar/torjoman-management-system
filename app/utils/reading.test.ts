@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { behindStudents, monthsSince, readingJourney, readingProgressRows, unitScope, type ReadingAttempt, type ReadingUnit } from './reading'
+import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitMonthLabel, unitOpensOn, unitScope, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
 
 const unit = (id: number, parts = [{ book: 'صفقات رابحة', author: null, page_from: 1, page_to: 88 }]): ReadingUnit =>
   ({ id, sort_order: id, title: `المقرّر ${id}`, parts })
@@ -100,5 +100,49 @@ describe('إنجاز الطلاب للعاملين', () => {
       ['حمزة', 'new', 1, 0, null],
       ['زيد', 'done', null, 3, null]
     ])
+  })
+})
+
+describe('فتحُ المقرّرات بالشهر وخارطةُ الطريق', () => {
+  const sched = [
+    { ...unit(1), opensOn: '2026-10-01' },
+    { ...unit(2), opensOn: '2026-11-01' },
+    { ...unit(3), opensOn: '2026-12-01' }
+  ]
+  const nov = Date.parse('2026-11-10T09:00:00Z')
+  const o = { retryDays: 7, now: nov, enrollmentDate: '2026-07-01' }
+
+  it('أتمّ ما فُتح: المستحقُّ ينتظر شهرَه ولا يُختبر', () => {
+    const j = readingJourney(sched, [attempt(1, 90, 20), attempt(2, 85, 1)], o)
+    expect(j).toMatchObject({ canStart: false, dueOpensOn: '2026-12-01', pace: 'onTrack', expected: 2 })
+    expect(j.due?.id).toBe(3)
+  })
+
+  it('المتأخّرُ يلحق بما فُتح قبله', () => {
+    const j = readingJourney(sched, [], o)
+    expect(j).toMatchObject({ canStart: true, dueOpensOn: null, pace: 'behind', expected: 2 })
+  })
+
+  it('مقرّرُ الشهر آخرُ ما فُتح، والأسبوعُ من يوم الشهر', () => {
+    expect(monthUnit(sched, '2026-11-10')?.id).toBe(2)
+    expect(monthUnit(sched, '2026-09-20')?.id).toBe(1)
+    expect([weekOfMonth('2026-11-01'), weekOfMonth('2026-11-08'), weekOfMonth('2026-11-21'), weekOfMonth('2026-11-30')]).toEqual([1, 2, 3, 4])
+  })
+
+  it('الأسابيعُ مرتّبةً بالبنود، والمدّةُ مقروءة', () => {
+    const item = (week: number, sort_order: number, kind: ReadingItem['kind'] = 'pages'): ReadingItem =>
+      ({ week, sort_order, kind, book: 'صفقات رابحة', page_from: 1, page_to: 2, title: null, speaker: null, durationSeconds: null, url: null })
+    expect(roadmapWeeks({ items: [item(2, 1), item(1, 2), item(1, 1, 'lecture')] }).map(w => [w.week, w.items.map(i => i.sort_order)]))
+      .toEqual([[1, [1, 2]], [2, [1]]])
+    expect([formatDuration(5044), formatDuration(1723), formatDuration(null)]).toEqual(['1:24:04', '28:43', ''])
+  })
+})
+
+describe('شهرُ المقرّر', () => {
+  it('من موعد فتحه', () => {
+    expect(unitMonthLabel('2026-11-01')).toBe('نوفمبر 2026')
+    expect(unitMonthLabel('2027-08-01')).toBe('أغسطس 2027')
+    expect(unitMonthLabel(null)).toBe('')
+    expect([unitOpensOn(1), unitOpensOn(3), unitOpensOn(12)]).toEqual(['2026-10-01', '2026-12-01', '2027-09-01'])
   })
 })

@@ -5,6 +5,7 @@
  * · العاملون: تبويبان (طلب المستخدم 2026-10-22) — «إنجاز الطلاب» لحلقاتهم اطّلاعاً (المشرفُ حلقاتُه، والمعلمُ حلقتُه)،
  *   و«المقرّرات» بكتبها وملفّاتها؛ والتبويبُ في الرابط (`?tab=units`) كي يبقى عند التحديث والرجوع.
  * · المديرُ الإداريّ وحده: ومعها رفعُ الملفّات وإضافةُ المقرّرات والكتب (والفنيُّ يطّلع — قرار 2026-10-22).
+ * · خارطةُ الشهر الأسبوعية (2026-11-10): للطالب تحت بطاقته، وللعاملين تبويبٌ أوّل يتصفّحون فيه أيَّ شهر (`?tab=roadmap`).
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'البرامج المصاحبة — ترجمان' })
@@ -16,14 +17,15 @@ const canManage = computed(() => role.value === 'admin_manager')
 const me = useMyReadingStudent()
 
 const route = useRoute()
-type Tab = 'progress' | 'units'
+type Tab = 'progress' | 'roadmap' | 'units'
 const tabs = [
   { value: 'progress' as const, label: 'إنجاز الطلاب' },
+  { value: 'roadmap' as const, label: 'خارطة الشهر' },
   { value: 'units' as const, label: 'المقرّرات' }
 ]
 const tab = computed<Tab>({
-  get: () => route.query.tab === 'units' ? 'units' : 'progress',
-  set: v => navigateTo({ query: { ...route.query, tab: v === 'units' ? 'units' : undefined } }, { replace: true })
+  get: () => route.query.tab === 'units' || route.query.tab === 'roadmap' ? route.query.tab : 'progress',
+  set: v => navigateTo({ query: { ...route.query, tab: v === 'progress' ? undefined : v } }, { replace: true })
 })
 </script>
 
@@ -31,7 +33,7 @@ const tab = computed<Tab>({
   <div class="pg">
     <UiPageHeader
       title="البرامج المصاحبة"
-      :subtitle="isStudent ? 'مقرّرُك الشهري: نزّله واقرأه، ثم تقدّم لاختباره.' : 'المقرّراتُ الشهرية بكتبها وصفحاتها وملفّاتها.'"
+      :subtitle="isStudent ? 'مقرّرُك الشهري: نزّله واقرأه أسبوعاً أسبوعاً، ثم تقدّم لاختباره في آخر الشهر.' : 'المقرّراتُ الشهرية بكتبها وصفحاتها وخارطتها الأسبوعية وملفّاتها.'"
     />
     <OfflineSavedNote :keys="['reading-units', 'reading-progress-*']" />
     <ClientOnly>
@@ -43,6 +45,7 @@ const tab = computed<Tab>({
             self
             heading="مقرّرك الحالي"
           />
+          <ReadingMonthRoadmap />
           <StudentReadingStations
             :student-id="me.id"
             :enrollment-date="me.enrollment_date"
@@ -61,6 +64,11 @@ const tab = computed<Tab>({
           class="tabs"
         />
         <ReadingProgressList v-if="tab === 'progress'" />
+        <ReadingMonthRoadmap
+          v-else-if="tab === 'roadmap'"
+          browse
+          class="roadmap-tab"
+        />
         <ReadingUnitsList
           v-else
           :manage="canManage"
@@ -73,4 +81,5 @@ const tab = computed<Tab>({
 <style scoped>
 .pg { max-width: 860px; }
 .tabs { margin-bottom: 16px; }
+.roadmap-tab { margin-top: 0; }
 </style>

@@ -3,7 +3,7 @@
  * محطّاتُ مقرّرات القراءة في تبويب الرحلة (للطالب ولملفّه عند العاملين): لكلّ مقرّرٍ كتبُه وصفحاتُه وحالُه
  * (اجتاز بأعلى نسبة / المستحقّ / لم يُبلغ) وعددُ محاولاته، وتنزيلُ ملفّ المجتاز والمستحقّ. البياناتُ من `useReadingPlan`.
  */
-import { unitScope } from '~/utils/reading'
+import { unitMonthLabel, unitScope } from '~/utils/reading'
 
 interface Props {
   studentId: string
@@ -50,7 +50,10 @@ const { busy, download } = useReadingAdmin()
         /></span>
         <div class="st-body">
           <div class="st-title">
-            {{ s.unit.title }}
+            {{ s.unit.title }}<span
+              v-if="s.unit.opensOn"
+              class="st-month"
+            > · {{ unitMonthLabel(s.unit.opensOn) }}</span>
           </div>
           <div class="st-scope">
             {{ unitScope(s.unit) }}
@@ -99,6 +102,10 @@ const { busy, download } = useReadingAdmin()
           class="tag ok"
         >اجتاز · {{ s.best }}٪</span>
         <span
+          v-else-if="s.status === 'due' && journey.dueOpensOn"
+          class="tag soon"
+        >يُفتح في {{ unitMonthLabel(journey.dueOpensOn) }}</span>
+        <span
           v-else-if="s.status === 'due'"
           class="tag next"
         >المستحقّ<template v-if="s.last !== null"> · آخر علامة {{ s.last }}٪</template></span>
@@ -124,6 +131,7 @@ ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: col
 .st.due .dot { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
 .st-body { flex: 1; min-width: 0; }
 .st-title { font-weight: 700; color: var(--ink); font-size: 15px; }
+.st-month { font-weight: 500; color: var(--ink-3); }
 .st-scope { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-top: 2px; }
 .tag { flex: none; display: inline-flex; align-items: center; min-height: 26px; padding: 2px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
 .tag.ok { background: var(--green-soft); color: var(--green-ink); }

@@ -5,6 +5,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { isOnlineNow } from '~/utils/reachability'
+import { unitOpensOn } from '~/utils/reading'
 
 export const READING_BUCKET = 'reading-books'
 /** حدُّ الملفّ — مطابقٌ لحدّ المستودع (50 م.ب). */
@@ -137,7 +138,7 @@ export function useReadingAdmin() {
   async function addUnit(nextOrder: number, parts: PartDraft[]): Promise<boolean> {
     const ok = await withBusy(async () => {
       const { data: unit, error } = await supabase.from('reading_units')
-        .insert({ sort_order: nextOrder, title: unitTitle(nextOrder) }).select('id').single()
+        .insert({ sort_order: nextOrder, title: unitTitle(nextOrder), opens_on: unitOpensOn(nextOrder) }).select('id').single()
       if (error || !unit) throw error
       const rows = parts.map((p, i) => ({ unit_id: unit.id, book_id: p.bookId!, page_from: Number(p.from), page_to: Number(p.to), sort_order: i + 1 }))
       const { error: partsErr } = await supabase.from('reading_unit_parts').insert(rows)

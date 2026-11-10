@@ -23,4 +23,12 @@ describe('صفوف مقرّرات القراءة', () => {
   it('كتابٌ غائب (حُذف) يُعرض شرطة', () => {
     expect(toReadingUnits([{ id: 1, sort_order: 1, title: 'أ', parts: [{ page_from: 1, page_to: 2, sort_order: 1, book: null }] }])[0]!.parts[0]!.book).toBe('—')
   })
+  it('موعدُ الفتح وبنودُ الخارطة، والنوعُ المجهولُ صفحات', () => {
+    const [u] = toReadingUnits([{ id: 3, sort_order: 3, title: 'ج', opens_on: '2026-12-01', parts: [], items: [
+      { week: 3, sort_order: 1, kind: 'lecture', page_from: null, page_to: null, title: 'القلب المنيب', speaker: 'د. أحمد السيد', duration_seconds: 1723, url: null, book: null },
+      { week: 1, sort_order: 1, kind: 'x', page_from: 165, page_to: 186, title: null, speaker: null, duration_seconds: null, url: null, book: { title: 'صفقات رابحة' } }
+    ] }])
+    expect(u!.opensOn).toBe('2026-12-01')
+    expect(u!.items!.map(i => [i.kind, i.book ?? i.title, i.durationSeconds])).toEqual([['lecture', 'القلب المنيب', 1723], ['pages', 'صفقات رابحة', null]])
+  })
 })

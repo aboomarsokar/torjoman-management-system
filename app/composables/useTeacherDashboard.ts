@@ -106,7 +106,8 @@ export function useTeacherDashboard() {
       supabase.from('admin_alerts').select('id', { count: 'exact', head: true }).eq('status', 'new'),
       supabase.from('halaqa_incentives').select('allocated_amount').eq('halaqa_id', hid).eq('incentive_month', month).eq('incentive_year', year).maybeSingle(),
       supabase.from('incentive_statements').select('status, return_note').eq('halaqa_id', hid).eq('statement_month', month).eq('statement_year', year).maybeSingle(),
-      supabase.from('reading_units').select('id', { count: 'exact', head: true }),
+      // ما فُتح من المقرّرات وحده (مقرّرٌ لكلّ شهر — 2026-11-10)
+      supabase.from('reading_units').select('id', { count: 'exact', head: true }).lte('opens_on', gazaToday()),
       supabase.from('reading_attempts').select('student_id, unit_id, student:student_id!inner(halaqa_id)').eq('student.halaqa_id', hid).eq('passed', true),
       // بلاغُ «لم تنعقد» لليوم: صامتٌ عند الفشل (لا يُسقط اللوحة) — فلا يدخل `failure`
       supabase.from('attendance_off_days').select('status').eq('halaqa_id', hid).eq('day', today).maybeSingle(),

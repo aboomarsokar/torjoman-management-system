@@ -2413,6 +2413,66 @@ export type Database = {
           },
         ]
       }
+      reading_unit_items: {
+        Row: {
+          book_id: number | null
+          duration_seconds: number | null
+          id: number
+          kind: string
+          page_from: number | null
+          page_to: number | null
+          sort_order: number
+          speaker: string | null
+          title: string | null
+          unit_id: number
+          url: string | null
+          week: number
+        }
+        Insert: {
+          book_id?: number | null
+          duration_seconds?: number | null
+          id?: never
+          kind: string
+          page_from?: number | null
+          page_to?: number | null
+          sort_order?: number
+          speaker?: string | null
+          title?: string | null
+          unit_id: number
+          url?: string | null
+          week: number
+        }
+        Update: {
+          book_id?: number | null
+          duration_seconds?: number | null
+          id?: never
+          kind?: string
+          page_from?: number | null
+          page_to?: number | null
+          sort_order?: number
+          speaker?: string | null
+          title?: string | null
+          unit_id?: number
+          url?: string | null
+          week?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_unit_items_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "reading_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_unit_items_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "reading_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reading_unit_parts: {
         Row: {
           book_id: number
@@ -2460,6 +2520,7 @@ export type Database = {
           cover_path: string | null
           created_at: string
           id: number
+          opens_on: string
           pdf_path: string | null
           sort_order: number
           title: string
@@ -2468,6 +2529,7 @@ export type Database = {
           cover_path?: string | null
           created_at?: string
           id?: never
+          opens_on: string
           pdf_path?: string | null
           sort_order: number
           title: string
@@ -2476,6 +2538,7 @@ export type Database = {
           cover_path?: string | null
           created_at?: string
           id?: never
+          opens_on?: string
           pdf_path?: string | null
           sort_order?: number
           title?: string

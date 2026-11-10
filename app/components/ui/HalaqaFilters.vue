@@ -16,11 +16,14 @@ interface Props {
   shown: number
   total: number
   placeholder?: string
+  /** اسمُ فلتر المسؤول — «المشرف» افتراضاً، و«المختبِر» في طابور الرصد. */
+  supLabel?: string
+  supAllLabel?: string
 }
-const props = withDefaults(defineProps<Props>(), { placeholder: 'ابحث باسم الحلقة أو المعلّم' })
+const props = withDefaults(defineProps<Props>(), { placeholder: 'ابحث باسم الحلقة أو المعلّم', supLabel: 'المشرف', supAllLabel: 'كلّ المشرفين' })
 const emit = defineEmits<{ update: [Partial<HalaqaFilters>] }>()
 
-const supervisorItems = computed(() => [{ value: ALL_SUPERVISORS, label: 'كلّ المشرفين' }, ...props.supItems])
+const supervisorItems = computed(() => [{ value: ALL_SUPERVISORS, label: props.supAllLabel }, ...props.supItems])
 
 const gender = computed({ get: () => props.filters.gender, set: v => emit('update', { gender: v }) })
 const supervisor = computed({ get: () => props.filters.supervisor, set: v => emit('update', { supervisor: v }) })
@@ -58,7 +61,7 @@ const query = computed({ get: () => props.filters.query, set: v => emit('update'
         :items="supervisorItems"
         size="xl"
         class="w-full"
-        aria-label="المشرف"
+        :aria-label="supLabel"
       />
     </div>
     <slot />

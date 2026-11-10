@@ -28,7 +28,12 @@ export type ExamQueueRaw = {
   id: string
   student: { id: string, full_name: string } | null
   exam_cycle: ExamCycleRow | null
-  exam_list: { halaqa: { name: string } | null, teacher: { full_name: string } | null } | null
+  /** موعدُ الترشيح — لمدّة الانتظار (2026-11-10)؛ اختياريٌّ لنسخةٍ على الجهاز قبله. */
+  created_at?: string | null
+  exam_list: {
+    halaqa: { id?: string, name: string, gender?: string | null, examiner?: { id: string, full_name: string } | null } | null
+    teacher: { full_name: string } | null
+  } | null
   exam_results: { id: string }[] | null
 }
 
@@ -42,7 +47,7 @@ const QUEUE_LIMIT = 500
 export async function fetchExamQueue(supabase: Client): Promise<ExamQueueRaw[]> {
   const { data, error } = await supabase
     .from('exam_list_items')
-    .select('id, student:student_id(id, full_name), exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), exam_list:exam_list_id(halaqa:halaqa_id(name), teacher:teacher_id(full_name)), exam_results(id)')
+    .select('id, student:student_id(id, full_name), exam_cycle:exam_cycle_id(id, stage_number, cycle_number, parts_from, parts_to, surahs_label, sort_order), created_at, exam_list:exam_list_id(halaqa:halaqa_id(id, name, gender, examiner:profiles!halaqat_examiner_id_fkey(id, full_name)), teacher:teacher_id(full_name)), exam_results(id)')
     .not('exam_cycle_id', 'is', null)
     .is('exam_results', null)
     .order('created_at', { ascending: false })

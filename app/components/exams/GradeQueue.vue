@@ -2,7 +2,9 @@
 /**
  * طابورُ الرصد (المختبِر لحلقاته، والمديران احتياطاً — كما يسمح RLS): البنودُ بلا نتيجة بدورتها ونطاقها
  * وحدودها من التقسيمة؛ ولا يُعرض بندٌ بلا دورة.
- * يفتح نافذةَ الرصد (ExamsGradeModal)، وللمديرَين سحبُ الترشيح المعلّق. على الجوال بطاقات.
+ * يفتح نافذةَ الرصد (ExamsGradeModal)، وللمديرَين سحبُ الترشيح المعلّق.
+ * مجمّعٌ بالحلقة (طلب المستخدم 2026-11-10 — `ExamsQueueGroup`): الأطولُ انتظاراً أولاً، والدورةُ مرّةً في رأس الحلقة،
+ * وفلاترُ القسم والمختبِر المسنَد والبحث والدورة في الشريط الموحّد (`useExamQueueFilters`، في الرابط).
  * المختبِرُ بلا اتصال (2026-10-29): يُعرض الطابورُ من نسخة جهازه، وما رصده ينتظر الرفع في قسمٍ فوقه (لا يُرصد مرّتين)،
  * وما رفضته القاعدةُ في قسمٍ يليه. وسحبُ الترشيح يحتاج اتصالاً.
  */
@@ -14,6 +16,9 @@ import { queueOnline as online } from '~/composables/useOfflineQueue'
 import { useExamOffline } from '~/composables/useExamOffline'
 import { offlineOwnerUid } from '~/utils/offlineSnapshot'
 import { isOnlineNow } from '~/utils/reachability'
+import { gazaToday } from '~/utils/reportWindow'
+import { gazaDayOf } from '~/utils/visitStatus'
+import { waitDaysBetween, waitLabel, waitTone, type QueueItem } from '~/utils/exams/queueGroups'
 
 const emit = defineEmits<{ graded: [] }>()
 
@@ -26,9 +31,6 @@ const { wrap } = useOfflineCopy()
 // درجةُ النجاح مشتركةٌ مع النافذة (المفتاحُ نفسُه): بها يُحكم على ما رُصد على الجهاز
 const { passMark } = useExamPassMark()
 const { pending: onDevice, rejected, rowsFor, retry, discard, lastUploaded } = useExamOffline(passMark)
-
-/** صفُّ الطابور المعروض. */
-type QueueRow = { id: string, student: { id: string, full_name: string } | null, name: string, halaqa: string, teacher: string, title: string, detail: string, span: string }
 
 // خطأُ الخادم والاتصالُ قائم يُرمى داخل `wrap` فلا تُكتب نسخةٌ فارغة، ويُعرض خارجه؛ وتعثّرٌ بلا اتصال يردّ فارغاً فيرجع `wrap` إلى النسخة.
 // والمديران (بلا `uid`: لا نسخةَ لهما) يُرمى لهما الخطأُ دائماً ويُعرض كما كان قبل العمل بلا اتصال
@@ -51,32 +53,37 @@ const shown = rowsFor(raw)
 // رُفع سطرٌ: يُجلب الطابورُ ومتصفّحُ النتائج من جديد (والبندُ مُسقطٌ حتى تصل النسخة فلا رمشة)
 watch(lastUploaded, () => onGraded())
 
-const rows = computed<QueueRow[]>(() => shown.value.map((i) => {
+const today = gazaToday()
+const items = computed<QueueItem[]>(() => shown.value.map((i) => {
   const cycle = i.exam_cycle ? toExamCycle(i.exam_cycle) : null
   const t = examTargetText(cycle)
+  const h = i.exam_list?.halaqa
   return {
     id: i.id,
     student: i.student,
     name: i.student?.full_name ?? '—',
-    halaqa: i.exam_list?.halaqa?.name ?? '—',
+    halaqaId: h?.id ?? h?.name ?? '—',
+    halaqa: h?.name ?? '—',
+    gender: h?.gender ?? null,
     teacher: i.exam_list?.teacher?.full_name ?? '—',
+    examinerId: h?.examiner?.id ?? null,
+    examiner: h?.examiner?.full_name ?? null,
+    cycleId: cycle ? String(cycle.id) : null,
     title: t.title,
     detail: t.detail,
-    span: cycle ? cycleSpanLabel(cycle, quran.juz.value, quran.surahName) : ''
+    span: cycle ? cycleSpanLabel(cycle, quran.juz.value, quran.surahName) : '',
+    waitDays: i.created_at ? waitDaysBetween(gazaDayOf(i.created_at), today) : null
   }
 }))
-
-const columns = [
-  { key: 'name', label: 'الطالب' },
-  { key: 'halaqa', label: 'الحلقة' },
-  { key: 'teacher', label: 'المعلّم' },
-  { key: 'cycle', label: 'الدورة' },
-  { key: 'actions', label: 'إجراء', align: 'end' as const }
-]
+const { filters, update, reset, base, shown: visible, groups, summary, genderItems, showGender, examinerItems, showExaminer, cycleItems, showCycle, active } = useExamQueueFilters(items)
+const cycle = computed({ get: () => filters.value.cycle, set: (v: string) => update({ cycle: v }) })
+const cycleSelect = computed(() => [{ value: 'all', label: 'كلّ الدورات' }, ...cycleItems.value])
+/** «في حلقةٍ واحدة» · «في حلقتين» · «في 5 حلقات» · «في 12 حلقة». */
+const halqatText = (n: number) => n === 1 ? 'في حلقةٍ واحدة' : n === 2 ? 'في حلقتين' : n <= 10 ? `في ${n} حلقات` : `في ${n} حلقة`
 
 const gradeOpen = ref(false)
-const gradeTarget = ref<QueueRow | null>(null)
-function openGrade(r: QueueRow) {
+const gradeTarget = ref<QueueItem | null>(null)
+function openGrade(r: QueueItem) {
   gradeTarget.value = r
   gradeOpen.value = true
 }
@@ -92,7 +99,7 @@ async function onDiscard(key: string) {
 }
 
 const withdrawTarget = ref<WithdrawTarget | null>(null)
-function askWithdraw(r: QueueRow) {
+function askWithdraw(r: QueueItem) {
   withdrawTarget.value = { itemId: r.id, studentName: r.name, cycleTitle: r.title }
 }
 </script>
@@ -114,101 +121,90 @@ function askWithdraw(r: QueueRow) {
       @discard="onDiscard"
     />
     <h3 class="sec-title">
-      الاختبارات الواردة <span class="count">{{ rows.length }}</span>
+      الاختبارات الواردة <span class="count">{{ base.length }}</span>
     </h3>
-    <UiSkeletonTable
+    <UiSkeletonLines
       v-if="pending && !raw.length"
-      :columns="columns"
+      :fields="3"
     />
     <UiEmptyState
-      v-else-if="!rows.length"
+      v-else-if="!base.length"
       icon="i-lucide-clipboard-check"
       title="لا اختبارات واردة"
       description="ستظهر هنا ترشيحات المعلّمين فور إرسالها."
     />
-    <UiDataTable
-      v-else
-      :columns="columns"
-      :rows="rows"
-      row-key="id"
-    >
-      <template #name="{ row }">
-        <span class="strong">{{ row.name }}</span>
-      </template>
-      <template #halaqa="{ row }">
-        <span class="muted">{{ row.halaqa }}</span>
-      </template>
-      <template #teacher="{ row }">
-        <span class="muted">{{ row.teacher }}</span>
-      </template>
-      <template #cycle="{ row }">
-        <div class="cyc">
-          <span class="strong">{{ row.title }}</span>
-          <span class="muted sm">{{ row.detail }}</span>
-          <span
-            v-if="row.span"
-            class="muted sm"
-          >{{ row.span }}</span>
-        </div>
-      </template>
-      <template #actions="{ row }">
-        <div class="actions">
-          <UButton
-            label="رصد النتيجة"
-            color="primary"
-            size="sm"
-            icon="i-lucide-clipboard-pen"
-            :ui="{ base: 'rounded-[10px]' }"
-            @click="openGrade(row)"
-          />
-          <UButton
-            v-if="isManager"
-            color="neutral"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-undo-2"
-            aria-label="سحب الترشيح"
-            :disabled="!online"
-            :title="online ? undefined : 'يحتاج اتصالاً'"
-            :ui="{ base: 'rounded-[10px]' }"
-            @click="askWithdraw(row)"
-          />
-        </div>
-      </template>
-      <template #card="{ row }">
-        <UiCardRow
-          :title="row.name"
-          :subtitle="row.title"
-          :fields="[
-            { label: 'الحلقة', value: row.halaqa },
-            { label: 'المعلّم', value: row.teacher },
-            { label: 'النطاق', value: row.detail },
-            { label: 'حدودُها', value: row.span }
-          ]"
+    <template v-else>
+      <UiHalaqaFilters
+        class="gq-filters"
+        :filters="filters"
+        :gender-items="genderItems"
+        :sup-items="examinerItems"
+        :show-gender="showGender"
+        :show-supervisor="showExaminer"
+        sup-label="المختبِر"
+        sup-all-label="كلّ المختبِرين"
+        placeholder="ابحث باسم الطالب أو الحلقة أو المعلّم"
+        :shown="visible.length"
+        :total="base.length"
+        @update="update"
+      >
+        <div
+          v-if="showCycle"
+          class="gq-sel"
         >
-          <template #actions>
-            <UButton
-              label="رصد النتيجة"
-              color="primary"
-              icon="i-lucide-clipboard-pen"
-              :ui="{ base: 'rounded-[10px]' }"
-              @click="openGrade(row)"
-            />
-            <UButton
-              v-if="isManager"
-              label="سحب الترشيح"
-              color="neutral"
-              variant="outline"
-              icon="i-lucide-undo-2"
-              :disabled="!online"
-              :title="online ? undefined : 'يحتاج اتصالاً'"
-              :ui="{ base: 'rounded-[10px]' }"
-              @click="askWithdraw(row)"
-            />
-          </template>
-        </UiCardRow>
-      </template>
-    </UiDataTable>
+          <UiSelect
+            v-model="cycle"
+            :items="cycleSelect"
+            size="xl"
+            class="w-full"
+            aria-label="الدورة"
+          />
+        </div>
+      </UiHalaqaFilters>
+
+      <p
+        v-if="groups.length"
+        class="gq-sum"
+      >
+        <b>{{ summary.students }}</b> {{ summary.students === 1 ? 'ينتظر' : 'ينتظرون' }} الرصد {{ halqatText(summary.halqat) }}<template v-if="summary.oldest !== null">
+          <span class="dot">·</span>
+          أطولُ انتظار <b :class="`w-${waitTone(summary.oldest)}`">{{ waitLabel(summary.oldest) }}</b>
+        </template>
+      </p>
+
+      <div
+        v-if="!groups.length"
+        class="gq-empty"
+      >
+        <UiEmptyState
+          icon="i-lucide-filter-x"
+          title="لا اختبارَ يطابق البحث والفلاتر"
+        />
+        <UButton
+          v-if="active"
+          label="امسح البحث والفلاتر"
+          icon="i-lucide-rotate-ccw"
+          color="neutral"
+          variant="soft"
+          :ui="{ base: 'rounded-[12px] min-h-11' }"
+          @click="reset"
+        />
+      </div>
+      <div
+        v-else
+        class="gq-groups"
+      >
+        <ExamsQueueGroup
+          v-for="g in groups"
+          :key="g.halaqaId"
+          :group="g"
+          :can-withdraw="isManager"
+          :online="online"
+          @grade="openGrade"
+          @withdraw="askWithdraw"
+        />
+      </div>
+    </template>
 
     <ExamsGradeModal
       v-model:open="gradeOpen"
@@ -226,9 +222,17 @@ function askWithdraw(r: QueueRow) {
 .above { margin-bottom: 16px; }
 .sec-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
 .count { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; }
-.strong { font-weight: 600; color: var(--ink); }
-.muted { color: var(--ink-2); }
-.sm { font-size: 13px; }
-.cyc { display: flex; flex-direction: column; gap: 2px; }
-.actions { display: flex; justify-content: flex-end; gap: 8px; }
+.gq-filters { margin-bottom: 12px; }
+.gq-sel { flex: 0 0 220px; }
+.gq-sel :deep(button) { min-block-size: 48px; }
+.gq-sum { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); }
+.gq-sum b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gq-sum b.w-warn { color: var(--chip-warn-ink); }
+.gq-sum b.w-late { color: var(--err); }
+.gq-sum .dot { margin-inline: 6px; color: var(--ink-3); }
+.gq-groups { display: flex; flex-direction: column; gap: 14px; }
+.gq-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }
+@media (max-width: 640px) {
+  .gq-sel { flex: 1 1 100%; }
+}
 </style>

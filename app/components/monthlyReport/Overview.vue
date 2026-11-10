@@ -73,7 +73,7 @@ const stats = computed<StatItem[]>(() => {
         placeholder="ابحث باسم المعلم أو الحلقة"
         @update="update"
       >
-        <div class="mo-sel">
+        <div class="hf-extra">
           <UiSelect
             v-model="statusFilter"
             :items="statusItems"
@@ -132,8 +132,7 @@ const stats = computed<StatItem[]>(() => {
 .mo-head p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-3); }
 /* الشريطُ الموحّد يرصف البحثَ والقوائم؛ وحالةُ التقرير بمقاسها نفسه */
 .mo-tools { margin-bottom: 16px; }
-.mo-sel { flex: 0 0 220px; }
-.mo-sel :deep(button) { min-block-size: 48px; }
+.hf-extra :deep(button) { min-block-size: 48px; }
 .mo-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }
 .mo-legend { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
 .mo-legend summary { display: inline-flex; align-items: center; min-block-size: 44px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
@@ -143,8 +142,4 @@ const stats = computed<StatItem[]>(() => {
 .mo-legend dt { font-weight: 600; color: var(--ink-2); }
 .mo-legend dt::after { content: ':'; }
 .mo-legend dd { margin: 0; }
-
-@media (max-width: 640px) {
-  .mo-sel { flex: 1 1 100%; }
-}
 </style>

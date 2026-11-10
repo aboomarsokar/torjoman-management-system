@@ -79,7 +79,7 @@ const { filters, update, reset, base, shown: visible, groups, summary, genderIte
 const cycle = computed({ get: () => filters.value.cycle, set: (v: string) => update({ cycle: v }) })
 const cycleSelect = computed(() => [{ value: 'all', label: 'كلّ الدورات' }, ...cycleItems.value])
 /** «في حلقةٍ واحدة» · «في حلقتين» · «في 5 حلقات» · «في 12 حلقة». */
-const halqatText = (n: number) => n === 1 ? 'في حلقةٍ واحدة' : n === 2 ? 'في حلقتين' : n <= 10 ? `في ${n} حلقات` : `في ${n} حلقة`
+const halqatText = (n: number) => n === 1 ? ' في حلقةٍ واحدة' : n === 2 ? ' في حلقتين' : n <= 10 ? ` في ${n} حلقات` : ` في ${n} حلقة`
 
 const gradeOpen = ref(false)
 const gradeTarget = ref<QueueItem | null>(null)
@@ -120,9 +120,22 @@ function askWithdraw(r: QueueItem) {
       @retry="retry"
       @discard="onDiscard"
     />
-    <h3 class="sec-title">
-      الاختبارات الواردة <span class="count">{{ base.length }}</span>
-    </h3>
+    <div class="gq-head">
+      <h3 class="sec-title">
+        الاختبارات الواردة <span class="count">{{ base.length }}</span>
+      </h3>
+      <p
+        v-if="groups.length"
+        class="gq-sum"
+      >
+        <template v-if="active">
+          يظهر <b>{{ summary.students }}</b>
+        </template>{{ halqatText(summary.halqat) }}<template v-if="summary.oldest !== null">
+          <span class="dot">·</span>
+          أطولُ انتظار <b :class="`w-${waitTone(summary.oldest)}`">{{ waitLabel(summary.oldest) }}</b>
+        </template>
+      </p>
+    </div>
     <UiSkeletonLines
       v-if="pending && !raw.length"
       :fields="3"
@@ -150,7 +163,7 @@ function askWithdraw(r: QueueItem) {
       >
         <div
           v-if="showCycle"
-          class="gq-sel"
+          class="hf-extra"
         >
           <UiSelect
             v-model="cycle"
@@ -161,16 +174,6 @@ function askWithdraw(r: QueueItem) {
           />
         </div>
       </UiHalaqaFilters>
-
-      <p
-        v-if="groups.length"
-        class="gq-sum"
-      >
-        <b>{{ summary.students }}</b> {{ summary.students === 1 ? 'ينتظر' : 'ينتظرون' }} الرصد {{ halqatText(summary.halqat) }}<template v-if="summary.oldest !== null">
-          <span class="dot">·</span>
-          أطولُ انتظار <b :class="`w-${waitTone(summary.oldest)}`">{{ waitLabel(summary.oldest) }}</b>
-        </template>
-      </p>
 
       <div
         v-if="!groups.length"
@@ -222,17 +225,15 @@ function askWithdraw(r: QueueItem) {
 .above { margin-bottom: 16px; }
 .sec-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
 .count { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; }
-.gq-filters { margin-bottom: 12px; }
-.gq-sel { flex: 0 0 220px; }
-.gq-sel :deep(button) { min-block-size: 48px; }
-.gq-sum { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); }
+.gq-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 14px; }
+.gq-head .sec-title { margin: 0; }
+.gq-filters { margin-bottom: 16px; }
+.hf-extra :deep(button) { min-block-size: 48px; }
+.gq-sum { margin: 0; font-size: 14px; color: var(--ink-2); }
 .gq-sum b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .gq-sum b.w-warn { color: var(--chip-warn-ink); }
 .gq-sum b.w-late { color: var(--err); }
 .gq-sum .dot { margin-inline: 6px; color: var(--ink-3); }
 .gq-groups { display: flex; flex-direction: column; gap: 14px; }
 .gq-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 8px 16px; }
-@media (max-width: 640px) {
-  .gq-sel { flex: 1 1 100%; }
-}
 </style>

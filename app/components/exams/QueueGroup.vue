@@ -81,20 +81,21 @@ const headId = computed(() => `qg-${props.group.halaqaId}`)
           v-if="it.waitDays !== null"
           class="qg-wait"
           :class="`w-${waitTone(it.waitDays)}`"
-        >{{ waitLabel(it.waitDays) }}</span>
+        ><i aria-hidden="true" />{{ waitLabel(it.waitDays) }}</span>
         <span class="qg-acts">
           <UButton
             label="رصد النتيجة"
             color="primary"
+            variant="soft"
             icon="i-lucide-clipboard-pen"
-            class="qg-btn"
+            class="qg-btn qg-grade"
             :ui="{ base: 'rounded-[10px]' }"
             @click="$emit('grade', it)"
           />
           <UButton
             v-if="canWithdraw"
             color="neutral"
-            variant="outline"
+            variant="ghost"
             icon="i-lucide-undo-2"
             class="qg-btn qg-btn-icon"
             :aria-label="`سحب ترشيح ${it.name}`"
@@ -125,25 +126,35 @@ const headId = computed(() => `qg-${props.group.halaqaId}`)
 .wait.w-late { background: var(--err-soft); color: var(--err); }
 
 .qg-list { list-style: none; margin: 0; padding: 0; }
-.qg-row { display: flex; align-items: center; gap: 12px; padding: 10px 18px; min-height: 60px; }
+.qg-row { display: flex; align-items: center; gap: 12px; padding: 8px 18px; min-height: 56px; transition: background-color .15s ease-out; }
 .qg-row + .qg-row { border-top: 1px solid var(--line); }
+.qg-row:hover { background: var(--surface-2); }
+.qg-row:hover .qg-grade, .qg-grade:focus-visible { background: var(--primary); color: var(--surface); }
 .qg-seq { flex: none; width: 24px; text-align: center; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .qg-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .qg-who b { font-size: 15px; font-weight: 600; color: var(--ink); }
 .qg-who small { font-size: 12.5px; color: var(--ink-2); }
-.qg-wait { flex: none; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.qg-wait.w-warn { color: var(--chip-warn-ink); font-weight: 600; }
-.qg-wait.w-late { color: var(--err); font-weight: 600; }
+.qg-wait { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qg-wait i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); }
+.qg-wait.w-warn i { background: var(--chip-warn-ink); }
+.qg-wait.w-late i { background: var(--err); }
 .qg-acts { flex: none; display: flex; gap: 8px; }
-.qg-btn { min-height: 40px; }
-.qg-btn-icon { min-width: 40px; }
+.qg-btn { min-height: 40px; transition: background-color .15s ease-out, color .15s ease-out; }
+.qg-btn-icon { min-width: 40px; color: var(--ink-3); }
 
+@media (prefers-reduced-motion: reduce) {
+  .qg-row, .qg-btn { transition: none; }
+}
 @media (max-width: 600px) {
   .qg-head { padding: 14px; }
-  .qg-row { flex-wrap: wrap; padding: 12px 14px; row-gap: 8px; }
-  .qg-who { flex-basis: calc(100% - 120px); }
-  .qg-acts { flex-basis: 100%; }
-  .qg-acts .qg-btn:first-child { flex: 1; }
+  /* سطران: الاسمُ وانتظارُه تحته وزرُّ السحب في طرفه، ثم زرُّ الرصد بعرض السطر */
+  .qg-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-areas: "seq who wd" "seq wait wd" ". grade grade"; column-gap: 10px; row-gap: 2px; padding: 12px 14px; }
+  .qg-seq { grid-area: seq; align-self: start; padding-top: 2px; }
+  .qg-who { grid-area: who; }
+  .qg-wait { grid-area: wait; }
+  .qg-acts { display: contents; }
+  .qg-grade { grid-area: grade; margin-top: 8px; }
+  .qg-btn-icon { grid-area: wd; align-self: center; }
   .qg-btn { min-height: 44px; }
   .qg-btn-icon { min-width: 44px; }
 }

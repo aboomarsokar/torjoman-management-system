@@ -30,7 +30,10 @@ const tab = computed<Tab>({
 </script>
 
 <template>
-  <div class="pg">
+  <div
+    class="pg"
+    :class="{ narrow: isStudent }"
+  >
     <UiPageHeader
       title="البرامج المصاحبة"
       :subtitle="isStudent ? 'مقرّرُك الشهري: نزّله واقرأه أسبوعاً أسبوعاً، ثم تقدّم لاختباره في آخر الشهر.' : 'المقرّراتُ الشهرية بكتبها وصفحاتها وخارطتها الأسبوعية وملفّاتها.'"
@@ -79,7 +82,8 @@ const tab = computed<Tab>({
 </template>
 
 <style scoped>
-.pg { max-width: 860px; }
+/* العاملون بعرض الشاشة كاملاً (طلب المستخدم 2026-11-11)، والطالبُ بعرض القراءة */
+.pg.narrow { max-width: 860px; }
 .tabs { margin-bottom: 16px; }
 .roadmap-tab { margin-top: 0; }
 </style>

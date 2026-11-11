@@ -3,6 +3,7 @@
  * خارطةُ طريق الشهر (طلب المستخدم 2026-11-10): مقرّرُ الشهر أسبوعاً أسبوعاً — صفحاتٌ من كتاب أو محاضرةٌ مرئية —
  * للطالب والمعلم والإدارة. متابعةٌ لا اختبار: الاختبارُ شهريٌّ في آخر المقرّر. الافتراضيُّ مقرّرُ الشهر الجاري
  * (`monthUnit`) والأسبوعُ الجاري مميَّز؛ و`browse` يضيف قائمةً لتصفّح خارطة أيّ شهرٍ آخر (للعاملين).
+ * وفي العرض الواسع (≥900px) تصير الأسابيعُ أعمدةً متجاورة.
  */
 import { formatDuration, monthUnit, roadmapWeeks, unitMonthLabel, unitScope, weekOfMonth, type ReadingItem } from '~/utils/reading'
 import { gazaToday } from '~/utils/reportWindow'
@@ -144,7 +145,7 @@ h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: f
 .ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
 .mr-sub { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
 .mr-sub b { color: var(--ink); font-weight: 600; }
-.mr-pick { width: 260px; max-width: 100%; }
+.mr-pick { width: 280px; max-width: 100%; }
 
 .mr-weeks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .mr-week { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 16px; padding: 12px 10px; border-top: 1px solid var(--line); border-radius: 12px; }
@@ -166,6 +167,20 @@ h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: f
 .mr-soon { flex: none; font-size: 12.5px; color: var(--ink-3); }
 .mr-note { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-3); }
 
+/* بعرض الصفحة: الأسابيعُ أعمدةٌ متجاورة كخطٍّ زمنيّ للشهر (2026-11-11) */
+@container (min-width: 900px) {
+  .mr-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 12px; }
+  .mr-week { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; }
+  .mr-week:first-child { border-top: 1px solid var(--line); }
+  .mr-week.now { border-color: var(--blue); }
+  .mr-week.now + .mr-week { border-top-color: var(--line); }
+  .mr-wk { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .mr-week.now .mr-wk { border-bottom-color: color-mix(in srgb, var(--blue) 30%, transparent); }
+  .mr-items { gap: 12px; }
+  .mr-item { align-items: flex-start; flex-wrap: wrap; }
+  .mr-ic { margin-top: 3px; }
+  .mr-watch, .mr-soon { margin-inline-start: 24px; }
+}
 @media (max-width: 640px) { .mr { padding: 18px; } }
 @container (max-width: 520px) {
   .mr-week { grid-template-columns: minmax(0, 1fr); }

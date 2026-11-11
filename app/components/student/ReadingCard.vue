@@ -8,7 +8,7 @@
  * التخطيطُ بحجم البطاقة لا الشاشة (container query): الغلافُ بجانب التفاصيل، والأفعالُ تحتها في الضيّق.
  */
 import { formatDay } from '~/utils/reportWindow'
-import { unitMonthLabel, unitScope } from '~/utils/reading'
+import { unitBooks, unitMonthLabel, unitVideos } from '~/utils/reading'
 import { isolateLtr } from '~/utils/transport'
 
 interface Props {
@@ -105,8 +105,9 @@ const PACE = {
           {{ journey.due.title }}
         </p>
         <p class="rc-scope">
-          {{ unitScope(journey.due) }}
+          {{ unitBooks(journey.due) }}
         </p>
+        <ReadingUnitVideos :items="unitVideos(journey.due)" />
         <ol
           class="steps"
           :aria-label="`اجتاز ${journey.passedCount} من ${journey.total} مقرّرات`"

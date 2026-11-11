@@ -4,7 +4,7 @@
  * أو استبدالُه، وإضافةُ مقرّرٍ في آخر الخطّة (ReadingAddUnitModal) وكتابٍ جديد (ReadingAddBookModal).
  * شبكةُ بطاقاتٍ بعرض الصفحة بأغلفتها، ومقرّرُ الشهر الجاري مميَّز (2026-11-11).
  */
-import { monthUnit, unitMonthLabel, unitScope } from '~/utils/reading'
+import { monthUnit, unitBooks, unitMonthLabel, unitVideos } from '~/utils/reading'
 import { gazaToday } from '~/utils/reportWindow'
 
 interface Props {
@@ -126,8 +126,9 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
               {{ unitMonthLabel(u.opensOn) }}
             </div>
             <div class="scope">
-              {{ unitScope(u) }}
+              {{ unitBooks(u) }}
             </div>
+            <ReadingUnitVideos :items="unitVideos(u)" />
             <div
               v-if="!u.pdfPath"
               class="missing"

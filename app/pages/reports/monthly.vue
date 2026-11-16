@@ -6,6 +6,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { summarizeOutcomes } from '~/utils/quran/month'
+import { teacherAchievementOf } from '~/utils/tracks'
 import { defaultPeriod, periodFromQuery } from '~/utils/quran/screen'
 import { attendanceSummary, examSummary, fetchMonthlyExtras, type MonthlyExtras } from '~/utils/monthlyReport'
 import { fetchMonthlyOverview, type OverviewRow } from '~/utils/monthlyOverview'
@@ -83,6 +84,8 @@ const printing = ref(false)
 const canPrint = computed(() => halaqaId.value ? !loading.value && rows.value.length > 0 : overview.value.length > 0)
 
 const outcomes = computed(() => summarizeOutcomes(rows.value))
+const { standing } = useTrackStanding(halaqaId, year, month)
+const teacher = computed(() => teacherAchievementOf(rows.value, year.value, month.value, standing.value?.achievement.quota))
 const attendance = computed(() => attendanceSummary(rows.value))
 const exams = computed(() => examSummary(extras.value?.exams ?? []))
 const reading = computed(() => ({
@@ -122,6 +125,7 @@ const reading = computed(() => ({
         v-if="halaqaId"
         :rows="rows"
         :outcomes="outcomes"
+        :teacher="teacher"
         :attendance-pct="attendance.pct"
         :extras="extras"
         :approval-note="report?.approval_note ?? null"
@@ -178,6 +182,7 @@ const reading = computed(() => ({
       >
         <MonthlyReportSummary
           :outcomes="outcomes"
+          :teacher="teacher"
           :attendance-pct="attendance.pct"
           :exams="exams"
           :reading="reading"

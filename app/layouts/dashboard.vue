@@ -98,6 +98,8 @@ const mainNav: Item[] = [
   { key: 'visits', label: 'الزيارات الإشرافية', icon: 'i-lucide-clipboard-check', to: '/visits', roles: [...SCOPED_STAFF, 'teacher'], group: 'supervision' },
   // سجلُّ تقييم الجودة الشهريّ (قرار 2026-10-21): المشرفُ يرصد، والإدارةُ تطّلع، والمعلمُ يرى سجلّه ويُقرّ
   { key: 'quality', label: 'تقييم المعلمين', labelF: 'تقييم المعلمات', icon: 'i-lucide-badge-check', to: '/quality', roles: SCOPED_STAFF, group: 'supervision' },
+  // مساراتُ المعلمين ونصابُها وطلباتُ التغيير (نظامُ المسارين — قرار المستخدم 2026-11-16)
+  { key: 'tracks', label: 'مسارات المعلمين', labelF: 'مسارات المعلمات', icon: 'i-lucide-route', to: '/tracks', roles: [PS, ADMIN, TECH], group: 'supervision', isNew: true },
   { key: 'quality-mine', label: 'تقييمي الشهري', icon: 'i-lucide-badge-check', to: '/quality', roles: ['teacher'], group: 'supervision' },
   { key: 'exams', label: 'الاختبارات', icon: 'i-lucide-square-check-big', to: '/exams', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },
   { key: 'examplan', label: 'خطة الاختبارات', icon: 'i-lucide-list-ordered', to: '/exam-plan', roles: [...SCOPED_STAFF, 'teacher', 'examiner'], group: 'exams' },

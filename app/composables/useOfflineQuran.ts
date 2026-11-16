@@ -5,6 +5,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { prorationApplies } from '~/constants/quran'
+import { tracksApply } from '~/utils/tracks'
 import { buildStudentRows } from '~/utils/quran/month'
 import type { Period, RecordInput } from '~/utils/quran/screen'
 import { canEditMonth, defaultPeriod, teacherOpeningNote } from '~/utils/quran/screen'
@@ -104,6 +105,7 @@ export function useOfflineQuran() {
       ...inputs,
       records: overlayRecords(inputs.records, entriesHere.value),
       prorate: prorationApplies(inputs.year, inputs.month),
+      tracks: tracksApply(inputs.year, inputs.month),
       juz: reference.juz.value,
       ayahCountOf: reference.ayahCountOf
     })

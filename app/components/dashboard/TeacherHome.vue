@@ -171,6 +171,12 @@ const attentionOpen = ref(false)
           />
         </section>
       </div>
+
+      <DashboardTeacherTrack
+        :halaqa-id="d.halaqa.id"
+        :female="d.halaqa.gender === 'female'"
+        :online="online"
+      />
     </template>
   </div>
 </template>

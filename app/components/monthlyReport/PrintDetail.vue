@@ -6,7 +6,6 @@
 import type { StudentMonthRow } from '~/utils/quran/month'
 import type { Outcome } from '~/utils/quran/plan'
 import type { MonthlyExtras } from '~/utils/monthlyReport'
-import { ACHIEVEMENT_TOP_N, achievementPct } from '~/utils/halaqatAchievement'
 import { VISITS_PER_MONTH } from '~/utils/monthVisits'
 import { VISIT_MAX } from '~/utils/visitForm'
 import { planBadge } from '~/utils/quran/screen'
@@ -18,10 +17,11 @@ interface Props {
   extras: MonthlyExtras | null
   approvalNote: string | null
   frequent: { id: string, name: string, unexcused: number, held: number }[]
+  /** إنجازُ المعلم ونصُّ أساسه (`teacherAchievementOf`). */
+  teacher: { pct: number | null, sub: string }
 }
 const props = defineProps<Props>()
 
-const teacherPct = computed(() => achievementPct(props.outcomes))
 const examBy = computed(() => new Map((props.extras?.exams ?? []).map(e => [e.studentId, e])))
 const readingBy = computed(() => new Map((props.extras?.reading ?? []).map(r => [r.studentId, r])))
 const examsPassed = computed(() => (props.extras?.exams ?? []).filter(e => e.passed).length)
@@ -35,7 +35,7 @@ const day = (d: string) => d.slice(8, 10) + '/' + d.slice(5, 7)
     <div><dt>الحضور</dt><dd>{{ attendancePct === null ? '—' : `${attendancePct}%` }}</dd></div>
     <div><dt>أنجز · قريب · مقصّر</dt><dd>{{ outcomes.done }} · {{ outcomes.near }} · {{ outcomes.short }}</dd></div>
     <div><dt>كثير الغياب</dt><dd>{{ outcomes.absentee }}</dd></div>
-    <div><dt>إنجاز المعلم (أعلى {{ ACHIEVEMENT_TOP_N }})</dt><dd>{{ teacherPct === null ? '—' : `${teacherPct}%` }}</dd></div>
+    <div><dt>إنجاز المعلم ({{ teacher.sub }})</dt><dd>{{ teacher.pct === null ? '—' : `${teacher.pct}%` }}</dd></div>
     <div><dt>الاختبارات</dt><dd>{{ examsPassed }} من {{ extras?.exams.length ?? 0 }}</dd></div>
     <div><dt>القراءة</dt><dd>{{ readingPassed }} من {{ extras?.reading.length ?? 0 }}</dd></div>
   </dl>

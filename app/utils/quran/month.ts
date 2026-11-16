@@ -8,7 +8,8 @@ import { countAttendance } from '~/utils/quran/attendanceCount'
 import type { Position, ProgramJuz } from '~/utils/quran/position'
 import { completedJuz, isKhatm, nextPosition, startForNewStudent } from '~/utils/quran/position'
 import type { Outcome, ProratedPlan } from '~/utils/quran/plan'
-import { outcomeOf, proratePlan } from '~/utils/quran/plan'
+import { outcomeOf, prorateByExcused, proratePlan } from '~/utils/quran/plan'
+import { isCounted } from '~/utils/tracks'
 
 export type QuranRecordRow = Database['public']['Tables']['quran_records']['Row']
 export type ReportHeader = Pick<
@@ -62,6 +63,8 @@ export interface BuildRowsInput {
   days: string[]
   /** يُقسَّط المطلوبُ بالحضور (الافتراض)؛ false ← كاملاً للجميع مع بقاء أيام الحضور للعرض (`prorationApplies`). */
   prorate?: boolean
+  /** نظامُ المسارين (`tracksApply`): غيرُ المحتسب «كثير الغياب» ولو لم يُرصد، والتقسيطُ بالعذر وحده. */
+  tracks?: boolean
   /** `kind` (بعذر/بلا) لقانون الغياب؛ غيابُه (نسخُ جهازٍ قديمة) يعدّ الغيابَ كلَّه بلا عذر. */
   absences: { student_id: string, day: string, kind?: string | null }[]
   target: number | null
@@ -112,9 +115,19 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
     const relief = input.reliefs?.[s.id] ?? 0
     const exc = excusedDays.get(s.id)
     const excused = exc ? input.days.filter(d => exc.has(d) && (!s.enrollment_date || d >= s.enrollment_date)).length : 0
-    const plan = input.prorate === false
-      ? proratePlan({ required: input.target, daysHeld: null, daysAttended: null, relief })
-      : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length, relief, excused })
+    const plan = input.tracks
+      ? prorateByExcused({
+          required: input.target,
+          monthDays: input.days.length,
+          excused,
+          // ما قبل التحاقه غيرُ حضور: المقامُ أيامُ الحلقة كلُّها
+          counted: isCounted(daysAttended, input.days.length, excused) ?? true,
+          relief
+        })
+      : input.prorate === false
+        ? proratePlan({ required: input.target, daysHeld: null, daysAttended: null, relief })
+        : proratePlan({ required: input.target, daysHeld, daysAttended, monthDays: input.days.length, relief, excused })
+    const pages = record ? record.pagesMemorized : null
 
     return {
       studentId: s.id,
@@ -127,7 +140,7 @@ export function buildStudentRows(input: BuildRowsInput): StudentMonthRow[] {
       daysAttended,
       daysExcused: excused,
       plan,
-      outcome: outcomeOf(record ? record.pagesMemorized : null, plan),
+      outcome: input.tracks && plan.basis === 'absentee' ? 'absentee' : outcomeOf(pages, plan),
       // الأعلى من المعتمَد في النظام وما كان يحفظه عند التحاقه
       juzDone: Math.max(completedJuz(input.approvedEnds[s.id] ?? null, input.juz), heldParts),
       khatm: isKhatm(input.approvedEnds[s.id] ?? null) || heldParts >= PROGRAM_JUZ_COUNT

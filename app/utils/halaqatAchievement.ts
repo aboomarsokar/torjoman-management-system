@@ -1,7 +1,8 @@
 /**
  * «إنجاز الحلقات» (طلب المستخدم 2026-10-22): أرقامُ `halaqat_achievement` إلى نسبٍ وترتيبٍ وروابطِ تواصل.
  * النسبةُ بحساب سجلّ تقييم المعلم نفسه (قرار 2026-11-02): أعلى 12 طالباً بأوزان أنجز 1 · قريب ½ · مقصّر ولم يُرصد 0،
- * مقسوماً على 12 دائماً — «لا يُقاس» خارجها. مرآتُه في القاعدة `quality_month_compute`.
+ * مقسوماً على 12 دائماً — «لا يُقاس» خارجها. ومن 11/2026 (نظامُ المسارين) نسبةٌ مفتوحة لأفضل «ن» تحسبها القاعدة
+ * (`achievement_pct`) فتُؤخذ منها كما هي. المصدرُ `private.halaqa_achievement_score`.
  */
 import { gazaToday, shiftMonth } from '~/utils/reportWindow'
 import { clampToProjectStart } from '~/utils/projectStart'
@@ -29,9 +30,15 @@ export interface AchievementRow {
   absentee: number
   unrecorded: number
   unmeasured: number
+  /** النسبةُ من القاعدة (`halaqat_achievement`) — تغلب الحسابَ المحلّيّ متى وُجد المفتاح. */
+  achievement_pct?: number | null
+  /** نصابُ مسار الحلقة (12 أو 8؛ وقبل 11/2026 دائماً 12). */
+  quota?: number | null
+  /** «ن»: عددُ من حُسبت بهم النسبة. */
+  top_n?: number | null
 }
 
-type Counts = Pick<AchievementRow, 'done' | 'near' | 'short' | 'unrecorded'>
+type Counts = Pick<AchievementRow, 'done' | 'near' | 'short' | 'unrecorded'> & Partial<Pick<AchievementRow, 'achievement_pct'>>
 
 /** من يُحكم عليه بالإنجاز أو عدمه (بلا «لا يُقاس»). */
 export const measuredOf = (r: Counts) => r.done + r.near + r.short + r.unrecorded
@@ -42,8 +49,9 @@ export function topScore(r: Pick<AchievementRow, 'done' | 'near'>): number {
   return done + 0.5 * Math.min(r.near, ACHIEVEMENT_TOP_N - done)
 }
 
-/** نسبةُ إنجاز المعلم صحيحةً (أعلى 12 ÷ 12)، أو null حين لا أحدَ يُقاس. */
+/** نسبةُ إنجاز المعلم صحيحةً: من القاعدة إن جاءت، وإلا (أعلى 12 ÷ 12)؛ null حين لا أحدَ يُقاس. */
 export function achievementPct(r: Counts): number | null {
+  if (r.achievement_pct !== undefined) return r.achievement_pct
   return measuredOf(r) ? Math.round((100 * topScore(r)) / ACHIEVEMENT_TOP_N) : null
 }
 

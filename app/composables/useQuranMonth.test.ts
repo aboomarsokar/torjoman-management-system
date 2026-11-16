@@ -250,3 +250,27 @@ describe('reportStatusPayload', () => {
     expect(reportStatusPayload('submitted')).toEqual({ status: 'submitted' })
   })
 })
+
+describe('buildStudentRows — نظامُ المسارين (2026-11-16)', () => {
+  const absent = (n: number, kind: string = 'unexcused') =>
+    dayList(n).map(day => ({ student_id: 's1', day, kind }))
+  it('من حضر النصفَ تماماً غيرُ محتسب ← كثيرُ الغياب ولو لم يُرصد', () => {
+    const [row] = build({ tracks: true, absences: absent(10) })
+    expect(row!.outcome).toBe('absentee')
+    expect(row!.plan.required).toBeNull()
+  })
+  it('المحتسبُ بغيابٍ بلا عذر يُطالَب بالمطلوب كاملاً', () => {
+    const [row] = build({ tracks: true, absences: absent(5), records: [record({ pages_memorized: 30 })] })
+    expect(row!.plan.required).toBe(35)
+    expect(row!.outcome).toBe('near')
+  })
+  it('العذرُ يقسّط المطلوب ويُطرح من المقام', () => {
+    const [row] = build({ tracks: true, absences: absent(12, 'excused') })
+    expect(row!.plan.required).toBe(14)
+    expect(row!.outcome).toBe('unrecorded')
+  })
+  it('الملتحقُ في آخر الشهر: ما قبل التحاقه غيرُ حضور', () => {
+    const [row] = build({ tracks: true, students: [student({ enrollment_date: '2026-10-15' })] })
+    expect(row!.outcome).toBe('absentee')
+  })
+})

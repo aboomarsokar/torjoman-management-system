@@ -1321,3 +1321,27 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-11-03 — كشفُ الرواتب بالتقييم** (هجرة `20261103112520_payroll_rewards`): `app_settings.default_reward` (600، موجبة)، و`profile_financials.base_reward` (مكافأةٌ خاصّة اختيارية)، و`monthly_salaries` += `base_reward`، `final_score` (0–100)، `adjustment` (افتراضيّاً 0)، `adjustment_note` (≤ 200) بقيد `monthly_salaries_adjustment_needs_note`: كلُّ تعديلٍ غيرِ صفريّ بسبب. الحسابُ في الواجهة (`utils/payroll.ts`) والكتابةُ للمدير الإداري بسياستي `salaries_all`/`fin_all` القائمتين.
 > **2026-11-03 — دورُ مدير المحتوى** (هجرتا `20261103112522_content_manager_role` و`20261103112603_content_manager_policies`): `user_role` += `content_manager`؛ و`public.can_manage_news()` (المدير الإداري أو مدير المحتوى، SECURITY DEFINER) تحكم `news_write` و`news_select_staff` (مع مشرف المشروع قراءةً)؛ و`can_view_full_dept_plan()` تشمله قراءةً، و`private.dept_owner_guard` يقبله مسؤولاً عن نشاط. لا تشمله `can_edit_dept_plan` ولا `visible_halaqa_ids`.
+
+## 30. نظامُ المسارين لمكافأة المعلم: `student_halaqa_periods` و`halaqa_tracks` و`halaqa_track_requests` (2026-11-16)
+
+> الهجرة `20261116130148_teacher_tracks`. يسري من 11/2026، وما قبله على حسابه القديم.
+
+- **`student_halaqa_periods`** (`student_id`, `halaqa_id`, `joined_on`, `left_on`): عضويةُ الطالب في الحلقة، ولكلّ طالبٍ عضويةٌ مفتوحةٌ واحدة على الأكثر (فهرسٌ فريدٌ جزئيّ). المشغّل `students_track_halaqa_period` (`private.track_student_halaqa_period`) يغلق العضويةَ بتاريخ أمس عند النقل أو الإخراج أو تغيير الحالة، ويفتح جديدةً من اليوم (والإنشاءُ من `enrollment_date`). عُبّئ بأثرٍ رجعيّ: 581 عضوية، منها 28 مغلقة.
+- **`halaqa_tracks`** (`halaqa_id`, `track` 1/2, `effective_year/month` ≥ 11/2026, `reason`, `request_id`, `assigned_by`): لكلّ حلقةٍ تعيينٌ واحدٌ في الشهر على الأكثر. مسارُ الشهر هو آخرُ تعيينٍ سرى حتى ذلك الشهر (`private.halaqa_track`)، والافتراضُ المسارُ الأول.
+- **`halaqa_track_requests`**: طلبُ المعلم بحالته `pending`/`approved`/`rejected`/`cancelled`، ولكلّ حلقةٍ طلبٌ معلّقٌ واحد. يُسجَّل فيه مَن حسم ومتى وملاحظتُه، وشهرُ السريان. القراءةُ للجداول الثلاثة بنطاق `visible_halaqa_ids`، ولا كتابةَ مباشرة.
+- **الحساب** (دوالُّ `private`):
+  - `track_quota`: 12 للمسار الأول و8 للثاني. `track_amount`: 600 و400. `next_term_start`: أوّلُ الفصل التالي.
+  - `halaqa_month_attendance` تعيد لكلّ عضو: أيامَ عضويته المنعقدة وحضورَه وعذرَه، وهل `counted`. المحتسبُ من كان حضورُه × 2 أكبرَ من أيام الحلقة المنعقدة ناقصاً عذرَه. وإن لم تُفتح أيام: يُحتسب من كانت عضويتُه أكثرَ من نصف أيام الشهر.
+  - `halaqa_month_reward` تعيد jsonb: المسار والنصاب والكامل وأيامَ الدوام و`no_attendance` والمحتسبين والناقصين و`consecutive` والمعدّلَ والخصمَ والأصل. نقصُ الشهر السابق يُقرأ من لقطته المقفلة إن وُجدت، وإلا يُعاد حسابه.
+  - `halaqa_student_achievement` (فرعُ 11/2026): غيرُ المحتسب `absentee`، والمطلوبُ يُقسَّط بالعذر وحده.
+  - `halaqa_achievement_score`: النسبةُ المفتوحة لأفضل «ن» من 50.
+- **سجلُّ الجودة:** `quality_month_compute` يضيف إلى `numbers` الحقولَ `achievement_n` و`achievement_quota` و`reward`.
+- **إنجاز الحلقات:** `public.halaqat_achievement` تعيد أيضاً `achievement_pct` و`quota` و`top_n`.
+- **الدوالُّ العامة:**
+  - `halaqa_track_standing(h, y, m)`: موقفُ الحلقة وقائمةُ طلابها بحضورهم.
+  - `request_halaqa_track` (معلمُ الحلقة) و`cancel_halaqa_track_request` (صاحبُ الطلب).
+  - `decide_halaqa_track_request` (المدير الإداري؛ الرفضُ بسبب). يسري المعتمَد من أوّل الفصل التالي، أو من الشهر التالي إن طُلب الثاني والحلقةُ ناقصةٌ في الشهر السابق.
+  - `set_halaqa_track` (المدير الإداري؛ سببٌ ≥ 3 أحرف، ولا لشهرٍ مضى ولا لشهرٍ بعده سجلٌّ مقفل).
+  - `save_quality_month` يرسل `below_quota` عند النقص.
+- **الإشعارات:** أنواعٌ جديدة `track_requested` و`track_decided` و`below_quota`.
+

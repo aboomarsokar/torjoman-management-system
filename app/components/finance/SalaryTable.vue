@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
  * جدولُ كشف الرواتب: لكلّ عاملٍ مكافأتُه (حقلٌ فارغُه الافتراضيّة)، وتقييمُه (للمعلم من سجلٍّ مقفل، وغيرُه «ثابتة»)،
- * والمحسوب، والتعديلُ اليدويّ وسببُه (يظهر حقلُ السبب متى كان تعديل)، والصافي، والإجماليّ. العرضُ وحده — الحسابُ في الأب.
+ * ومن 11/2026 أصلُ المعلم بمساره ومحتسبيه وخصمه (لا يُعدَّل) — والمحسوب، والتعديلُ اليدويّ وسببُه (يظهر حقلُ السبب متى كان تعديل)، والصافي، والإجماليّ. العرضُ وحده — الحسابُ في الأب.
  */
 import type { PayrollRow } from '~/composables/usePayroll'
 import { roleLabel } from '~/constants/roles'
+import { TRACKS } from '~/constants/tracks'
 
 interface Props {
   amounts: { base: number, suggested: number | null, net: number | null }[]
@@ -48,7 +49,29 @@ const fmt = (n: number) => n.toLocaleString('ar')
             <span class="role">{{ roleLabel(r.role, r.gender) }}</span>
           </td>
           <td data-label="المكافأة (₪)">
+            <span
+              v-if="r.trackBased"
+              class="track"
+            >
+              <template v-if="r.reward">
+                <b class="num">{{ fmt(r.reward.base) }}</b>
+                <small>{{ TRACKS[r.reward.track].label }} · {{ r.reward.counted }} من {{ r.reward.quota }}<template v-if="r.reward.deduction"> · خصم {{ fmt(r.reward.deduction) }}<template v-if="r.reward.consecutive"> (متتالٍ)</template></template></small>
+                <small
+                  v-if="r.reward.no_attendance"
+                  class="wait"
+                >لم تُفتح أيامُ دوام — احتُسب بالعضوية</small>
+                <small
+                  v-else
+                  class="muted"
+                >أيام الدوام {{ r.reward.held_days }}</small>
+              </template>
+              <span
+                v-else
+                class="wait"
+              >بانتظار السجلّ</span>
+            </span>
             <input
+              v-else
               v-model="r.base"
               :disabled="!canEdit"
               type="number"
@@ -146,4 +169,7 @@ td { padding: 9px 12px; vertical-align: middle; text-align: center; border-top: 
 .adj { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
 .cell-sm { width: 90px; }
 .cell-note { width: 200px; text-align: start; }
+.track { display: inline-flex; flex-direction: column; gap: 2px; align-items: center; }
+.track small { font-size: 12px; color: var(--ink-3); }
+.track small.wait { color: var(--chip-warn-ink); }
 </style>

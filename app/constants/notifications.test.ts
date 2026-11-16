@@ -7,14 +7,14 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { NOTIFICATION_ICONS, NOTIFICATION_KINDS, notificationIcon } from './notifications'
 
-/** قيدُ الأنواع داخل جملةٍ واحدة: `check (kind in (…))`. */
-const KIND_IN = /check\s*\(\s*kind in \(([\s\S]*?)\)\s*\)/
+/** قيدُ الأنواع داخل جملةٍ واحدة: `check (kind in (…))` أو `check (kind = any (array[…]…))`. */
+const KIND_IN = /check\s*\(\s*kind\s*(?:in \(([\s\S]*?)\)|=\s*any\s*\(\s*array\[([\s\S]*?)\])/
 
 /** تعريفُ جدول الإشعارات: من `create table public.notifications (` إلى أوّل `);` في بداية سطر. */
 const CREATE_NOTIFICATIONS = /create table public\.notifications\s*\(([\s\S]*?)\n\)\s*;/g
 
-/** إعادةُ القيد: `notifications_kind_check` متبوعاً بـ`check (kind in (…))`. */
-const KIND_CHECK_REDEFINED = /notifications_kind_check\s+(check\s*\(\s*kind in \([\s\S]*?\)\s*\))/g
+/** إعادةُ القيد: `notifications_kind_check` متبوعاً بقيد الأنواع بأيٍّ من صيغتيه. */
+const KIND_CHECK_REDEFINED = /notifications_kind_check\s+(check\s*\(\s*kind\s*(?:in \([\s\S]*?\)\s*\)|=\s*any\s*\(\s*array\[[\s\S]*?\]))/g
 
 export interface MigrationText { name: string, text: string }
 
@@ -28,11 +28,11 @@ export function extractNotificationKinds(migrations: MigrationText[]): string[] 
   for (const m of [...migrations].sort((x, y) => x.name.localeCompare(y.name))) {
     for (const t of m.text.matchAll(CREATE_NOTIFICATIONS)) {
       const hit = t[1]!.match(KIND_IN)
-      if (hit?.[1]) block = hit[1]
+      if (hit?.[1] ?? hit?.[2]) block = hit[1] ?? hit[2]
     }
     for (const c of m.text.matchAll(KIND_CHECK_REDEFINED)) {
       const hit = c[1]!.match(KIND_IN)
-      if (hit?.[1]) block = hit[1]
+      if (hit?.[1] ?? hit?.[2]) block = hit[1] ?? hit[2]
     }
   }
   if (!block) throw new Error('قيد kind الخاصّ بجدول الإشعارات غير موجود في أيّ هجرة')
@@ -63,6 +63,14 @@ describe('extractNotificationKinds', () => {
       { name: '002_decoy.sql', text: 'alter table public.x add constraint x_kind_check check (kind in (\'z\', \'y\'));' }
     ])
     expect(out).toEqual(['a_one', 'c_three'])
+  })
+
+  it('يقبل صيغةَ `kind = any (array[…])`', () => {
+    const out = extractNotificationKinds([
+      { name: '001_n.sql', text: create('\'a_one\'') },
+      { name: '002_any.sql', text: 'alter table public.notifications add constraint notifications_kind_check check (kind = any (array[\n  \'a_one\', \'d_four\'\n]::text[]));' }
+    ])
+    expect(out).toEqual(['a_one', 'd_four'])
   })
 
   it('يرفع خطأً إن لم يوجد قيدُ الإشعارات', () => {

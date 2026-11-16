@@ -1363,6 +1363,131 @@ export type Database = {
           },
         ]
       }
+      halaqa_track_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          effective_month: number | null
+          effective_year: number | null
+          halaqa_id: string
+          id: string
+          note: string | null
+          requested_by: string
+          requested_track: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          effective_month?: number | null
+          effective_year?: number | null
+          halaqa_id: string
+          id?: string
+          note?: string | null
+          requested_by: string
+          requested_track: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          effective_month?: number | null
+          effective_year?: number | null
+          halaqa_id?: string
+          id?: string
+          note?: string | null
+          requested_by?: string
+          requested_track?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halaqa_track_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halaqa_track_requests_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halaqa_track_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      halaqa_tracks: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          effective_month: number
+          effective_year: number
+          halaqa_id: string
+          id: string
+          reason: string | null
+          request_id: string | null
+          track: number
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          effective_month: number
+          effective_year: number
+          halaqa_id: string
+          id?: string
+          reason?: string | null
+          request_id?: string | null
+          track: number
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          effective_month?: number
+          effective_year?: number
+          halaqa_id?: string
+          id?: string
+          reason?: string | null
+          request_id?: string | null
+          track?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halaqa_tracks_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halaqa_tracks_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halaqa_tracks_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "halaqa_track_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       halaqat: {
         Row: {
           assigned_by: string | null
@@ -2001,6 +2126,7 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"] | null
           base_reward: number | null
           created_at: string
+          holder_national_id: string | null
           profile_id: string
           updated_at: string
         }
@@ -2010,6 +2136,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"] | null
           base_reward?: number | null
           created_at?: string
+          holder_national_id?: string | null
           profile_id: string
           updated_at?: string
         }
@@ -2019,6 +2146,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"] | null
           base_reward?: number | null
           created_at?: string
+          holder_national_id?: string | null
           profile_id?: string
           updated_at?: string
         }
@@ -2877,6 +3005,48 @@ export type Database = {
           },
         ]
       }
+      student_halaqa_periods: {
+        Row: {
+          created_at: string
+          halaqa_id: string
+          id: string
+          joined_on: string
+          left_on: string | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          halaqa_id: string
+          id?: string
+          joined_on: string
+          left_on?: string | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          halaqa_id?: string
+          id?: string
+          joined_on?: string
+          left_on?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_halaqa_periods_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_halaqa_periods_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_requests: {
         Row: {
           birth_date: string | null
@@ -3496,6 +3666,10 @@ export type Database = {
         Args: { p_reason?: string; p_request: string }
         Returns: undefined
       }
+      cancel_halaqa_track_request: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
       candidate_status_lookup: {
         Args: { p_national_id: string; p_phone: string }
         Returns: {
@@ -3534,6 +3708,10 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      decide_halaqa_track_request: {
+        Args: { p_approve: boolean; p_note: string; p_request: string }
+        Returns: undefined
+      }
       delete_chat_message: { Args: { p_message: string }; Returns: undefined }
       deliver_booklet_request: {
         Args: { p_delivered_on: string; p_request: string }
@@ -3542,6 +3720,16 @@ export type Database = {
       end_impersonation_sessions: {
         Args: { p_session_ids: string[] }
         Returns: number
+      }
+      get_payout_account: {
+        Args: { p_profile: string }
+        Returns: {
+          account_holder: string
+          account_number: string
+          account_type: Database["public"]["Enums"]["account_type"]
+          holder_national_id: string
+          updated_at: string
+        }[]
       }
       halaqa_achievement_students: {
         Args: { p_halaqa: string; p_month: number; p_year: number }
@@ -3553,15 +3741,21 @@ export type Database = {
           student_id: string
         }[]
       }
+      halaqa_track_standing: {
+        Args: { p_halaqa: string; p_month: number; p_year: number }
+        Returns: Json
+      }
       halaqat_achievement: {
         Args: { p_month: number; p_year: number }
         Returns: {
           absentee: number
+          achievement_pct: number
           done: number
           gender: string
           halaqa_id: string
           halaqa_name: string
           near: number
+          quota: number
           report_status: string
           short: number
           students: number
@@ -3569,6 +3763,7 @@ export type Database = {
           teacher_name: string
           teacher_phone: string
           teacher_whatsapp: string
+          top_n: number
           unmeasured: number
           unrecorded: number
         }[]
@@ -3699,6 +3894,10 @@ export type Database = {
         }
         Returns: Json
       }
+      request_halaqa_track: {
+        Args: { p_halaqa: string; p_note: string; p_track: number }
+        Returns: string
+      }
       reschedule_visit: {
         Args: { p_new_time: string; p_reason: string; p_visit: string }
         Returns: undefined
@@ -3772,8 +3971,28 @@ export type Database = {
         }
         Returns: number
       }
+      set_halaqa_track: {
+        Args: {
+          p_halaqa: string
+          p_month: number
+          p_reason: string
+          p_track: number
+          p_year: number
+        }
+        Returns: undefined
+      }
       set_my_halaqa_time: {
         Args: { p_halaqa: string; p_time: string }
+        Returns: undefined
+      }
+      set_payout_account: {
+        Args: {
+          p_holder: string
+          p_holder_id: string
+          p_number: string
+          p_profile: string
+          p_type: Database["public"]["Enums"]["account_type"]
+        }
         Returns: undefined
       }
       set_quality_admin_notes: {
@@ -4028,3 +4247,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -5,7 +5,7 @@
  * الإداريّ؛ والتعديلُ يُعتمد فوراً ويصل المديرَ الإداريّ إشعارٌ به. المكافأةُ الأساسية لا تظهر هنا.
  */
 import { ACCOUNT_TYPE_LABELS } from '~/constants/dataExport'
-import { isWallet, PAYOUT_ACCOUNT_TYPES, type PayoutAccountInput } from '~/utils/payoutAccount'
+import { isWallet, PAYOUT_ACCOUNT_TYPES, type PayoutAccountInput, type PayoutAccountType } from '~/utils/payoutAccount'
 
 interface Props {
   profileId: string
@@ -30,7 +30,8 @@ const shownId = computed(() => {
 })
 
 const open = ref(false)
-const form = reactive<PayoutAccountInput>({ type: null, number: '', holder: '', holderId: '' })
+// النافذةُ تبدأ بنوعٍ مختار دائماً (جوال باي لمن لا حساب له)
+const form = reactive<PayoutAccountInput & { type: PayoutAccountType }>({ type: 'jawwalpay', number: '', holder: '', holderId: '' })
 function openEdit() {
   const a = account.value
   form.type = a?.account_type ?? 'jawwalpay'

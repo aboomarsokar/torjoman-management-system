@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isWallet, normalizePayoutInput, payoutAccountError, type PayoutAccountInput } from './payoutAccount'
+import { holderIdFromWorker, isSameHolderName, isWallet, normalizePayoutInput, payoutAccountError, type PayoutAccountInput } from './payoutAccount'
 
 const ok: PayoutAccountInput = { type: 'jawwalpay', number: '0591234567', holder: 'محمود أحمد', holderId: '123456789' }
 
@@ -43,5 +43,24 @@ describe('payoutAccountError', () => {
 describe('isWallet', () => {
   it('جوال باي وبال باي وحدهما', () => {
     expect(['jawwalpay', 'palpay', 'bank_palestine', null].map(t => isWallet(t as never))).toEqual([true, true, false, false])
+  })
+})
+
+describe('isSameHolderName / holderIdFromWorker', () => {
+  const worker = { name: 'هبة منير أحمد أبو عواد', nationalId: '123456789' }
+  it('الاسمُ نفسُه بلا فرقٍ في الهمزات والمسافات', () => {
+    expect(isSameHolderName('هبة منيراحمدابوعواد', worker.name)).toBe(true)
+    expect(isSameHolderName('ايمان عبد الكريم', 'إيمان عبد الكريم')).toBe(true)
+  })
+  it('المختصَرُ واللاتينيُّ والفارغُ ليست هو', () => {
+    expect(isSameHolderName('هبة أبو عواد', worker.name)).toBe(false)
+    expect(isSameHolderName('Heba Abu Awad', worker.name)).toBe(false)
+    expect(isSameHolderName('  ', '')).toBe(false)
+  })
+  it('تُملأ هويةُ العامل للاسم نفسه وحده، وبهويةٍ صالحة', () => {
+    expect(holderIdFromWorker('هبة منير أحمد أبو عواد', worker)).toBe('123456789')
+    expect(holderIdFromWorker('فرح البنا', worker)).toBeNull()
+    expect(holderIdFromWorker(worker.name, { ...worker, nationalId: null })).toBeNull()
+    expect(holderIdFromWorker(worker.name, { ...worker, nationalId: '1234' })).toBeNull()
   })
 })

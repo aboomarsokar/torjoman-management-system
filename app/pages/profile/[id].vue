@@ -308,6 +308,8 @@ const pwOpen = ref(false)
         <ProfilePayoutAccount
           v-if="data.p.role !== 'student' && (isSelf || isAdmin || isReadOnly)"
           :profile-id="data.p.id"
+          :worker-name="data.p.full_name"
+          :worker-national-id="data.p.national_id"
           :can-edit="isSelf || isAdmin"
           :mask-id="isReadOnly && !isSelf"
         />

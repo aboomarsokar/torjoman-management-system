@@ -5,10 +5,13 @@
  * الإداريّ؛ والتعديلُ يُعتمد فوراً ويصل المديرَ الإداريّ إشعارٌ به. المكافأةُ الأساسية لا تظهر هنا.
  */
 import { ACCOUNT_TYPE_LABELS } from '~/constants/dataExport'
-import { isWallet, PAYOUT_ACCOUNT_TYPES, type PayoutAccountInput, type PayoutAccountType } from '~/utils/payoutAccount'
+import { holderIdFromWorker, isWallet, PAYOUT_ACCOUNT_TYPES, type PayoutAccountInput, type PayoutAccountType } from '~/utils/payoutAccount'
 
 interface Props {
   profileId: string
+  /** اسمُ العامل ورقمُ هويته: إن كان الحسابُ باسمه مُلئت هويتُه لصاحب الحساب تلقائياً. */
+  workerName: string
+  workerNationalId: string | null
   /** صاحبُ الملفّ أو المديرُ الإداريّ (والقاعدةُ هي الحَكَم). */
   canEdit: boolean
   /** يُقنَّع رقمُ الهوية لمن يقرأ ولا يملك (مشرف المشروع). */
@@ -38,8 +41,22 @@ function openEdit() {
   form.number = a?.account_number ?? ''
   form.holder = a?.account_holder ?? ''
   form.holderId = a?.holder_national_id ?? ''
+  autoFilledId.value = null
   open.value = true
 }
+// الاسمُ اسمُ العامل ← هويتُه (طلب المستخدم 2026-11-16)؛ وما مُلئ تلقائياً يُمسح إن تغيّر الاسم، وما كتبه بيده يبقى
+const autoFilledId = ref<string | null>(null)
+watch(() => form.holder, (holder) => {
+  const workerId = holderIdFromWorker(holder, { name: props.workerName, nationalId: props.workerNationalId })
+  if (workerId && (!form.holderId || form.holderId === autoFilledId.value)) {
+    form.holderId = workerId
+    autoFilledId.value = workerId
+  } else if (!workerId && autoFilledId.value && form.holderId === autoFilledId.value) {
+    form.holderId = ''
+    autoFilledId.value = null
+  }
+})
+const idHint = computed(() => autoFilledId.value && form.holderId === autoFilledId.value ? 'هويةُ العامل نفسُه — مُلئت تلقائياً' : '9 أرقام')
 async function submit() {
   if (await save(form)) open.value = false
 }
@@ -152,7 +169,7 @@ const numberLabel = computed(() => isWallet(form.type) ? 'رقم المحفظة 
           </UFormField>
           <UFormField
             label="رقم هوية صاحب الحساب"
-            hint="9 أرقام"
+            :hint="idHint"
           >
             <UInput
               v-model="form.holderId"

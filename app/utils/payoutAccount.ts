@@ -3,7 +3,8 @@
  * `set_payout_account` في القاعدة (وهي الحَكَم): المحفظةُ (جوال باي وبال باي) رقمُها رقمُ جوّال، والبنكُ أحرفٌ وأرقام،
  * واسمُ صاحب الحساب كاملاً، ورقمُ هويته تسعة أرقام.
  */
-import { IDENTITY_LENGTH, normalizeDigits } from '~/constants/identity'
+import { IDENTITY_LENGTH, isValidIdentity, normalizeDigits } from '~/constants/identity'
+import { arabicFold } from '~/utils/arabicSearch'
 
 export const PAYOUT_ACCOUNT_TYPES = ['jawwalpay', 'palpay', 'bank_palestine'] as const
 export type PayoutAccountType = typeof PAYOUT_ACCOUNT_TYPES[number]
@@ -34,6 +35,21 @@ export function normalizePayoutInput(v: PayoutAccountInput): PayoutAccountInput 
     holder: v.holder.trim().replace(/\s+/g, ' '),
     holderId: normalizeDigits(v.holderId).replace(/[\s-]/g, '')
   }
+}
+
+/**
+ * الحسابُ باسم العامل نفسه؟ (طلب المستخدم 2026-11-16) — بلا فرقٍ في الهمزات والتاء المربوطة والياء والمسافات،
+ * فـ«ايمان» = «إيمان» و«هبة منيراحمد» = «هبة منير أحمد». الاسمُ المختصَر أو باللاتينية ليس هو.
+ */
+export function isSameHolderName(holder: string, workerName: string): boolean {
+  const key = (s: string) => arabicFold(s).replace(/\s/g, '')
+  return !!key(holder) && key(holder) === key(workerName)
+}
+
+/** هويةُ العامل تُملأ لصاحب الحساب إن كان الاسمُ اسمَه وهويتُه صالحة، وإلا null. */
+export function holderIdFromWorker(holder: string, worker: { name: string, nationalId: string | null }): string | null {
+  if (!worker.nationalId || !isValidIdentity(worker.nationalId)) return null
+  return isSameHolderName(holder, worker.name) ? normalizeDigits(worker.nationalId.trim()) : null
 }
 
 /** أوّلُ خطأٍ بالعربية في المُدخَل بعد تطبيعه، أو null. */

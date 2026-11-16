@@ -27,7 +27,7 @@
 | حماية المسارات (+ حاجز الكلمة المؤقّتة وإخراج غير النشط) | `middleware/auth.global.ts` | ✅ | §4.3 |
 | «غيّر كلمة مرورك أولاً» — الوحيدة المتاحة ما دام `must_change_password` قائماً | `pages/change-password.vue` | ✅ | §4.1 |
 | بيانات الدخول بعد الإنشاء/إعادة التعيين (المعرّف + الكلمة المؤقّتة مرّةً واحدة) | `components/account/CredentialsModal.vue` | ✅ | §4.12 |
-| الملف الشخصي للعاملين (+ صورة + تغيير كلمة) — الطالب يُحوَّل إلى `/me` | `pages/profile/[id].vue` | ✅ | §4.4, §4.5 |
+| الملف الشخصي للعاملين (+ صورة + تغيير كلمة + صورة الهوية + حساب استلام المكافأة) — الطالب يُحوَّل إلى `/me` | `pages/profile/[id].vue` | ✅ | §4.4, §4.5 |
 | الصورة الشخصية الرمزية (صورة أو الحرف الأول؛ لا صور للإناث) | `components/profile/Avatar.vue` (`ProfileAvatar`) + `PhotoField.vue` | ✅ | §4.5 |
 | نافذة وشريط تغيير كلمة المرور الافتراضية (مشتركان) | `components/profile/PasswordModal.vue` + `PasswordBanner.vue` | ✅ | §4.5 |
 | الحالات الفارغة (مكوّن) | `components/ui/EmptyState.vue` | ✅ | §4.15 |

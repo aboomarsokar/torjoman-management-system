@@ -89,13 +89,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 | `account_number` | text | رقم الحساب/المحفظة (يقبل رقم جوال) |
 | `account_holder` | text | اسم صاحب الحساب |
 | `account_type` | enum | `jawwalpay` / `palpay` / `bank_palestine` |
+| `holder_national_id` | text | رقمُ هوية صاحب الحساب (9 أرقام، قيد) — قد يكون غيرَ العامل (2026-11-16) |
 
 **RLS** (`profiles_*` — هجرة `v2_hardening`):
 - **القراءة:** كل حسابٍ نشط غير طالب يقرأ كل الصفوف (الأسماء يحتاجها الجميع)؛ الطالب يقرأ صفّه وحده؛ الحساب غير النشط صفّه وحده.
 - **الإدراج:** `admin_manager` فقط (والخدمة عبر `/api/users` و`/api/students`).
 - **التعديل:** `admin_manager` أو صاحب الصفّ. والأعمدة الامتيازية يحرسها `guard_profile_privileged` (§17): الدور والحالة والرقم الوظيفي والجنس للمدير الإداري وحده، والمستخدم يعدّل بقيّة بياناته.
 - **الحذف:** `admin_manager` فقط.
-- البيانات المالية للعاملين (`profile_financials`): قراءة `admin_manager` و`project_supervisor`، وكتابة `admin_manager` فقط.
+- البيانات المالية للعاملين (`profile_financials`): قراءة `admin_manager` و`project_supervisor`، وكتابة `admin_manager` فقط. وحسابُ الاستلام وحده (بلا `base_reward`) يقرؤه صاحبُه بـ`get_payout_account(p_profile)` ويعدّله بـ`set_payout_account(p_profile, p_type, p_number, p_holder, p_holder_id)` (definer، وتبدأ بـ`assert_session_writable`) — صاحبُه أو المديرُ الإداريّ (2026-11-16).
 
 ---
 
@@ -1321,3 +1322,5 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-11-03 — كشفُ الرواتب بالتقييم** (هجرة `20261103112520_payroll_rewards`): `app_settings.default_reward` (600، موجبة)، و`profile_financials.base_reward` (مكافأةٌ خاصّة اختيارية)، و`monthly_salaries` += `base_reward`، `final_score` (0–100)، `adjustment` (افتراضيّاً 0)، `adjustment_note` (≤ 200) بقيد `monthly_salaries_adjustment_needs_note`: كلُّ تعديلٍ غيرِ صفريّ بسبب. الحسابُ في الواجهة (`utils/payroll.ts`) والكتابةُ للمدير الإداري بسياستي `salaries_all`/`fin_all` القائمتين.
 > **2026-11-03 — دورُ مدير المحتوى** (هجرتا `20261103112522_content_manager_role` و`20261103112603_content_manager_policies`): `user_role` += `content_manager`؛ و`public.can_manage_news()` (المدير الإداري أو مدير المحتوى، SECURITY DEFINER) تحكم `news_write` و`news_select_staff` (مع مشرف المشروع قراءةً)؛ و`can_view_full_dept_plan()` تشمله قراءةً، و`private.dept_owner_guard` يقبله مسؤولاً عن نشاط. لا تشمله `can_edit_dept_plan` ولا `visible_halaqa_ids`.
+
+> **2026-11-16 — حسابُ الاستلام بيد صاحبه** (هجرة `20261116131939_payout_account_self_edit`): `profile_financials.holder_national_id` (9 أرقام)؛ و`get_payout_account` (صاحبُه والمديرُ الإداريّ ومشرفُ المشروع، بلا المكافأة) و`set_payout_account` (صاحبُه والمديرُ الإداريّ؛ المحفظةُ `^05[0-9]{8}$` والبنكُ `^[A-Z0-9]{4,34}$` والاسمُ 3–80 والهويةُ 9 أرقام؛ والحفظُ بلا تغييرٍ لا يُسجَّل) — يُعتمد فوراً ويُشعر كلَّ مديرٍ إداريٍّ نشط بنوع `payout_account_changed` (القديمُ والجديد)، ويكتب سطراً في `private.payout_account_changes` (لا يُقرأ من الواجهة ولا يُحذف). وقيدُ `notifications_kind_check` و`private.notify` أُعيدا بالقائمة الحيّة (ومنها أنواعُ المسارات `track_requested`/`track_decided`/`below_quota`).

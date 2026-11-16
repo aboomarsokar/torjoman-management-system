@@ -22,7 +22,7 @@ definePageMeta({ layout: 'dashboard' })
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
 const { profile: myProfile } = useProfile()
-const { isAdmin, isStudent } = usePermissions()
+const { isAdmin, isStudent, isReadOnly } = usePermissions()
 const { handle } = useErrorHandler()
 const { prime, urlFor } = useProfilePhotoUrls()
 const { refresh: refreshMyPhoto } = useMyPhoto()
@@ -302,6 +302,14 @@ const pwOpen = ref(false)
         <ProfileIdCard
           v-if="isSelf && data.p.role !== 'student'"
           :profile-id="data.p.id"
+        />
+
+        <!-- حسابُ استلام المكافأة — لصاحبه وللمدير الإداريّ، ومشرفُ المشروع يقرأ (طلب المستخدم 2026-11-16) -->
+        <ProfilePayoutAccount
+          v-if="data.p.role !== 'student' && (isSelf || isAdmin || isReadOnly)"
+          :profile-id="data.p.id"
+          :can-edit="isSelf || isAdmin"
+          :mask-id="isReadOnly && !isSelf"
         />
 
         <!-- النطاق -->

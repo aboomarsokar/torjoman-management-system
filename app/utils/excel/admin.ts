@@ -136,13 +136,14 @@ export function financialsSheet(rows: FinancialRow[], staff: ProfileRow[]): Shee
     name: 'الحسابات المالية',
     columns: [
       { header: 'الرقم الوظيفي', key: 'emp', width: 12 }, { header: 'الاسم', key: 'name', width: 26 }, { header: 'الدور', key: 'role', width: 14 },
-      { header: 'نوع الحساب', key: 'type', width: 12 }, { header: 'صاحب الحساب', key: 'holder', width: 24 }, { header: 'رقم الحساب', key: 'number', width: 18 }
+      { header: 'نوع الحساب', key: 'type', width: 12 }, { header: 'صاحب الحساب', key: 'holder', width: 24 },
+      { header: 'هوية صاحب الحساب', key: 'holderId', width: 16 }, { header: 'رقم الحساب', key: 'number', width: 18 }
     ],
     rows: rows.map((f) => {
       const p = byId.get(f.profile_id)
       return {
         emp: p?.employee_number, name: p?.full_name ?? '', role: p ? roleLabel(p.role, p.gender) : '',
-        type: f.account_type ? ACCOUNT_TYPE_LABELS[f.account_type] ?? f.account_type : '', holder: f.account_holder, number: f.account_number
+        type: f.account_type ? ACCOUNT_TYPE_LABELS[f.account_type] ?? f.account_type : '', holder: f.account_holder, holderId: f.holder_national_id, number: f.account_number
       }
     }).sort((a, b) => a.name.localeCompare(b.name, 'ar'))
   }

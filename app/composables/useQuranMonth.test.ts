@@ -254,8 +254,8 @@ describe('reportStatusPayload', () => {
 describe('buildStudentRows — نظامُ المسارين (2026-11-16)', () => {
   const absent = (n: number, kind: string = 'unexcused') =>
     dayList(n).map(day => ({ student_id: 's1', day, kind }))
-  it('من حضر النصفَ تماماً غيرُ محتسب ← كثيرُ الغياب ولو لم يُرصد', () => {
-    const [row] = build({ tracks: true, absences: absent(10) })
+  it('من حضر دون النصف غيرُ محتسب ← كثيرُ الغياب ولو لم يُرصد', () => {
+    const [row] = build({ tracks: true, absences: absent(11) })
     expect(row!.outcome).toBe('absentee')
     expect(row!.plan.required).toBeNull()
   })
@@ -263,6 +263,9 @@ describe('buildStudentRows — نظامُ المسارين (2026-11-16)', () => 
     const [row] = build({ tracks: true, absences: absent(5), records: [record({ pages_memorized: 30 })] })
     expect(row!.plan.required).toBe(35)
     expect(row!.outcome).toBe('near')
+  })
+  it('من حضر النصفَ تماماً محتسَب', () => {
+    expect(build({ tracks: true, absences: absent(10) })[0]!.outcome).toBe('unrecorded')
   })
   it('العذرُ يقسّط المطلوب ويُطرح من المقام', () => {
     const [row] = build({ tracks: true, absences: absent(12, 'excused') })

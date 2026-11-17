@@ -1438,6 +1438,7 @@ export type Database = {
           effective_year: number
           halaqa_id: string
           id: string
+          is_auto: boolean
           reason: string | null
           request_id: string | null
           track: number
@@ -1449,6 +1450,7 @@ export type Database = {
           effective_year: number
           halaqa_id: string
           id?: string
+          is_auto?: boolean
           reason?: string | null
           request_id?: string | null
           track: number
@@ -1460,6 +1462,7 @@ export type Database = {
           effective_year?: number
           halaqa_id?: string
           id?: string
+          is_auto?: boolean
           reason?: string | null
           request_id?: string | null
           track?: number
@@ -2126,6 +2129,7 @@ export type Database = {
           account_type: Database["public"]["Enums"]["account_type"] | null
           base_reward: number | null
           created_at: string
+          holder_national_id: string | null
           profile_id: string
           updated_at: string
         }
@@ -2135,6 +2139,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"] | null
           base_reward?: number | null
           created_at?: string
+          holder_national_id?: string | null
           profile_id: string
           updated_at?: string
         }
@@ -2144,6 +2149,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["account_type"] | null
           base_reward?: number | null
           created_at?: string
+          holder_national_id?: string | null
           profile_id?: string
           updated_at?: string
         }
@@ -3718,6 +3724,16 @@ export type Database = {
         Args: { p_session_ids: string[] }
         Returns: number
       }
+      get_payout_account: {
+        Args: { p_profile: string }
+        Returns: {
+          account_holder: string
+          account_number: string
+          account_type: Database["public"]["Enums"]["account_type"]
+          holder_national_id: string
+          updated_at: string
+        }[]
+      }
       halaqa_achievement_students: {
         Args: { p_halaqa: string; p_month: number; p_year: number }
         Returns: {
@@ -3970,6 +3986,16 @@ export type Database = {
       }
       set_my_halaqa_time: {
         Args: { p_halaqa: string; p_time: string }
+        Returns: undefined
+      }
+      set_payout_account: {
+        Args: {
+          p_holder: string
+          p_holder_id: string
+          p_number: string
+          p_profile: string
+          p_type: Database["public"]["Enums"]["account_type"]
+        }
         Returns: undefined
       }
       set_quality_admin_notes: {

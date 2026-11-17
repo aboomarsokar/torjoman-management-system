@@ -1,6 +1,6 @@
 /**
  * حسابُ نظام المسارين في الواجهة — مرآةٌ لدوالّ القاعدة للعرض والمعاينة، والحكمُ للقاعدة دائماً.
- * المحتسب: حضر أكثرَ من نصف أيام دوام حلقته بعد طرح غيابه بعذر. الأصل: كاملُ المسار ناقصاً
+ * المحتسب: حضر نصفَ أيام دوام حلقته فأكثر بعد طرح غيابه بعذر. الأصل: كاملُ المسار ناقصاً
  * (30 أو 50 إن نقص الشهرُ السابق) × الناقصين، ولا ينزل عن صفر. الإنجاز: نسبةٌ مفتوحة لأفضل «ن».
  */
 import { TRACKS, TRACKS_START, TRACK_RATE_CONSECUTIVE, TRACK_RATE_FIRST, type TrackNo } from '~/constants/tracks'
@@ -20,10 +20,13 @@ export function nextTermStart(year: number, month: number): { year: number, mont
   return { year, month: 2 }
 }
 
-/** هل يُحتسب الطالب؟ null حين لم تُفتح أيامٌ (يحكم بها القاعدة بأيام العضوية). */
+/**
+ * هل يُحتسب الطالب؟ حضر نصفَ (أيام الدوام − عذره) فأكثر — النصفُ تماماً يكفي (قرار 2026-11-17)، ويلزم أن يبقى
+ * يومٌ بعد طرح العذر. null حين لم تُفتح أيامٌ (تحكم بها القاعدة بأيام العضوية).
+ */
 export function isCounted(attended: number, held: number, excused: number): boolean | null {
   if (held <= 0) return null
-  return attended * 2 > held - excused
+  return held - excused > 0 && attended * 2 >= held - excused
 }
 
 export interface RewardCalc {

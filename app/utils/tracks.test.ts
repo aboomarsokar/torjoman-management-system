@@ -19,9 +19,10 @@ describe('nextTermStart', () => {
 })
 
 describe('isCounted', () => {
-  it('أكثرُ من النصف بعد طرح العذر — النصفُ تماماً لا يُحتسب', () => {
-    expect(isCounted(10, 20, 0)).toBe(false)
-    expect(isCounted(11, 20, 0)).toBe(true)
+  it('النصفُ فأكثر بعد طرح العذر — النصفُ تماماً يُحتسب', () => {
+    expect(isCounted(9, 20, 0)).toBe(false)
+    expect(isCounted(10, 20, 0)).toBe(true)
+    expect(isCounted(0, 5, 5)).toBe(false)
     expect(isCounted(9, 20, 4)).toBe(true)
     expect(isCounted(0, 0, 0)).toBeNull()
   })

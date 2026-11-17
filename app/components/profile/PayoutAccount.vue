@@ -5,7 +5,7 @@
  * الإداريّ؛ والتعديلُ يُعتمد فوراً ويصل المديرَ الإداريّ إشعارٌ به. المكافأةُ الأساسية لا تظهر هنا.
  */
 import { ACCOUNT_TYPE_LABELS } from '~/constants/dataExport'
-import { holderIdFromWorker, isWallet, PAYOUT_ACCOUNT_TYPES, type PayoutAccountInput, type PayoutAccountType } from '~/utils/payoutAccount'
+import { holderIdFromWorker, PAYOUT_REQUIRED_TYPE, type PayoutAccountInput, type PayoutAccountType } from '~/utils/payoutAccount'
 
 interface Props {
   profileId: string
@@ -25,7 +25,6 @@ const { account, saving, load, save } = usePayoutAccount(id)
 onMounted(load)
 
 const hasAccount = computed(() => !!account.value?.account_number)
-const typeItems = PAYOUT_ACCOUNT_TYPES.map(t => ({ label: ACCOUNT_TYPE_LABELS[t]!, value: t }))
 const shownId = computed(() => {
   const v = account.value?.holder_national_id
   if (!v) return null
@@ -33,12 +32,12 @@ const shownId = computed(() => {
 })
 
 const open = ref(false)
-// النافذةُ تبدأ بنوعٍ مختار دائماً (جوال باي لمن لا حساب له)
-const form = reactive<PayoutAccountInput & { type: PayoutAccountType }>({ type: 'jawwalpay', number: '', holder: '', holderId: '' })
+const form = reactive<PayoutAccountInput & { type: PayoutAccountType }>({ type: PAYOUT_REQUIRED_TYPE, number: '', holder: '', holderId: '' })
 function openEdit() {
   const a = account.value
-  form.type = a?.account_type ?? 'jawwalpay'
-  form.number = a?.account_number ?? ''
+  // جوال باي وحده (قرار 2026-11-17): من كان على غيره يحفظ رقمَ جوال باي في مكانه
+  form.type = PAYOUT_REQUIRED_TYPE
+  form.number = a?.account_type === PAYOUT_REQUIRED_TYPE ? (a.account_number ?? '') : ''
   form.holder = a?.account_holder ?? ''
   form.holderId = a?.holder_national_id ?? ''
   autoFilledId.value = null
@@ -60,7 +59,6 @@ const idHint = computed(() => autoFilledId.value && form.holderId === autoFilled
 async function submit() {
   if (await save(form)) open.value = false
 }
-const numberLabel = computed(() => isWallet(form.type) ? 'رقم المحفظة (رقم الجوّال)' : 'رقم الحساب البنكيّ')
 </script>
 
 <template>
@@ -134,24 +132,22 @@ const numberLabel = computed(() => isWallet(form.type) ? 'رقم المحفظة 
           class="pa-form"
           @submit.prevent="submit"
         >
-          <UFormField label="نوع الحساب">
-            <USelect
-              v-model="form.type"
-              :items="typeItems"
-              size="lg"
-              class="w-full"
-              :ui="{ base: 'rounded-[13px]' }"
+          <p class="pa-note">
+            <UIcon
+              name="i-lucide-info"
+              class="size-4 shrink-0"
             />
-          </UFormField>
-          <UFormField :label="numberLabel">
+            يلزم حسابُ <strong>جوال باي</strong> — لا تُقبل حساباتٌ أخرى.
+          </p>
+          <UFormField label="رقم محفظة جوال باي (رقم الجوّال)">
             <UInput
               v-model="form.number"
               dir="ltr"
               size="lg"
               class="w-full"
-              :inputmode="isWallet(form.type) ? 'tel' : 'text'"
+              inputmode="tel"
               autocomplete="off"
-              :placeholder="isWallet(form.type) ? '05XXXXXXXX' : ''"
+              placeholder="05XXXXXXXX"
               :ui="{ base: 'rounded-[13px]' }"
             />
           </UFormField>
@@ -225,6 +221,7 @@ const numberLabel = computed(() => isWallet(form.type) ? 'رقم المحفظة 
 .pa-missing { color: var(--chip-warn-ink); font-weight: 500; }
 .pa-acts { display: flex; gap: 8px; }
 .pa-form { display: flex; flex-direction: column; gap: 14px; }
+.pa-note { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); font-size: 14px; }
 .pa-foot { display: flex; justify-content: flex-end; gap: 10px; }
 @media (max-width: 640px) {
   .pa { padding: 18px; }

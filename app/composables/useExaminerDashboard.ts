@@ -6,6 +6,7 @@ import type { Database } from '~/types/database.types'
 import type { ExaminerHalaqa, ExaminerItem } from '~/utils/examinerDashboard'
 import { halaqaBreakdown, monthGrading, examinerQueue } from '~/utils/examinerDashboard'
 import { gazaToday } from '~/utils/reportWindow'
+import { monthBounds } from '~/utils/transport'
 
 /** حدُّ البنود المقروءة — طابورُ الرصد نفسُه يقف عند 500. */
 const ITEMS_LIMIT = 1000
@@ -28,6 +29,8 @@ export function useExaminerDashboard() {
     if (!me) return null
     const today = gazaToday()
     const ym = today.slice(0, 7)
+    // حدٌّ حصريّ بأوّل الشهر التالي — «-31» يرفضه Postgres في الأشهر الأقصر فتسقط اللوحةُ كلُّها (2026-11-15)
+    const { from, to } = monthBounds(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)))
     const [halqat, items, trips] = await Promise.all([
       supabase.from('halaqat').select('id, name, teacher:teacher_id(full_name)')
         .eq('examiner_id', me).eq('status', 'active').order('name').returns<RawHalaqa[]>(),
@@ -36,7 +39,7 @@ export function useExaminerDashboard() {
         .not('exam_cycle_id', 'is', null)
         .order('created_at', { ascending: false }).limit(ITEMS_LIMIT).returns<RawItem[]>(),
       supabase.from('transport_trips').select('amount, paid')
-        .eq('profile_id', me).gte('trip_date', `${ym}-01`).lte('trip_date', `${ym}-31`)
+        .eq('profile_id', me).gte('trip_date', from).lt('trip_date', to)
     ])
     const failure = halqat.error ?? items.error ?? trips.error
     if (failure) throw failure

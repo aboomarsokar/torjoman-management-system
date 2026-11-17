@@ -64,6 +64,29 @@ export function proratePlan(input: {
   return { ...plan, required: reduced, full: required, relief }
 }
 
+/**
+ * نظامُ المسارين (من 11/2026 — مرآةُ فرع v2 في `private.halaqa_student_achievement`): غيرُ المحتسب `absentee`
+ * خارجَ الحساب، والمطلوبُ بعد تخفيض الاختبار يُقسَّط بالغياب بعذر وحده على أيام دوام الحلقة كلِّها:
+ * `max(1, round(المطلوب × (أيام الشهر − العذر) ÷ أيام الشهر))`، وما بلغ صفراً يبقى صفراً.
+ */
+export function prorateByExcused(input: {
+  required: number | null
+  monthDays: number
+  excused: number
+  counted: boolean
+  relief?: number
+}): ProratedPlan {
+  const { required, monthDays, excused } = input
+  if (!input.counted) return { required: null, full: required, basis: 'absentee' }
+  if (required === null) return { required: null, full: null, basis: 'full' }
+  const relief = Math.min(Math.max(0, input.relief ?? 0), 3)
+  const base = required - Math.round((required * relief) / 3)
+  const extra = relief ? { relief } : {}
+  if (monthDays <= 0 || base === 0 || excused <= 0) return { required: base, full: required, basis: 'full', ...extra }
+  const due = Math.max(1, Math.round((base * Math.max(0, monthDays - excused)) / monthDays))
+  return { required: due, full: required, basis: 'prorated', ...extra }
+}
+
 function prorateBase(input: { required: number | null, daysHeld: number | null, daysAttended: number | null, monthDays?: number | null }): ProratedPlan {
   const { required, daysHeld, daysAttended, monthDays } = input
 

@@ -16,6 +16,7 @@ import {
   type DashRecord, type DashReport, type MonthSummary
 } from '~/utils/teacherDashboard'
 import { prorationApplies } from '~/constants/quran'
+import { tracksApply } from '~/utils/tracks'
 import { buildStudentRows, type QuranRecordRow } from '~/utils/quran/month'
 import { queueOnline } from '~/composables/useOfflineQueue'
 import type { AttendanceMirror } from '~/composables/useOfflineMirror'
@@ -67,6 +68,7 @@ export function useTeacherDashboard() {
       approvedEnds: {},
       days: isCurrent ? current.days : (days.data ?? []).map(d => d.day),
       prorate: prorationApplies(y, m),
+      tracks: tracksApply(y, m),
       absences: isCurrent ? current.absences : absences.data ?? [],
       target: report.target_pages_snapshot ?? settings.data?.target_memorization_pages ?? null,
       juz: quran.juz.value,

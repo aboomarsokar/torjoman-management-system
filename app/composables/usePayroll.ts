@@ -2,10 +2,13 @@
  * كشفُ رواتب الشهر (طلب المستخدم 2026-11-03): أصحابُ الرواتب النشطون بمكافأتهم الأساسية (`profile_financials.base_reward`
  * أو الافتراضيّة من الإعدادات)، وتقييمُ المعلم النهائيّ من سجلّ جودةٍ **مقفل** (`teacher_quality_months.final`)، وما حُفظ للشهر.
  * الحسابُ في `utils/payroll.ts`؛ والحفظُ لقطةٌ في `monthly_salaries` ومكافأةٌ خاصّة في `profile_financials`. للمدير الإداري (RLS).
+ * ومن 11/2026 (نظامُ المسارين) أصلُ مكافأة المعلم من لقطة سجلّه المقفل (`numbers.reward.base`: المسار ناقصاً خصمَ النقص)
+ * لا من الحقل، وتُلغى المكافأةُ الخاصّة للمعلم؛ ويبقى التعديلُ اليدويّ بسببه.
  */
 import type { Database } from '~/types/database.types'
 import type { Role } from '~/constants/roles'
 import { DEFAULT_REWARD, netSalary, suggestedSalary } from '~/utils/payroll'
+import { tracksApply, type TrackReward } from '~/utils/tracks'
 
 export interface PayrollRow {
   profile_id: string
@@ -18,6 +21,10 @@ export interface PayrollRow {
   final: number | null
   adjustment: string | number
   note: string
+  /** أصلُ المعلم بالمسار (من 11/2026): الحقلُ لا يُعدَّل والأصلُ من `reward`. */
+  trackBased?: boolean
+  /** لقطةُ المسار من سجلّ الجودة المقفل؛ null = لم يُقفل بعد. */
+  reward?: TrackReward | null
 }
 
 /** قيمةُ الحقل نصّاً مشذَّباً (الحقلُ الرقميّ يعيد رقماً لا نصّاً). */
@@ -25,6 +32,11 @@ const fieldText = (v: string | number | null | undefined) => String(v ?? '').tri
 
 /** المحسوبُ والصافي لسطر (الأساسُ الفارغ = الافتراضيّة). */
 export function rowAmounts(r: PayrollRow, fallback: number) {
+  if (r.trackBased) {
+    const base = r.reward?.base ?? 0
+    const suggested = r.reward ? suggestedSalary(r.role, base, r.final) : null
+    return { base, suggested, net: netSalary(suggested, Number(r.adjustment) || 0) }
+  }
   const base = Number(r.base) > 0 ? Number(r.base) : fallback
   const suggested = suggestedSalary(r.role, base, r.final)
   return { base, suggested, net: netSalary(suggested, Number(r.adjustment) || 0) }
@@ -32,9 +44,15 @@ export function rowAmounts(r: PayrollRow, fallback: number) {
 
 /** خطأُ السطر قبل الحفظ، أو null: التعديلُ بلا سبب، أو مكافأةٌ غيرُ موجبة. */
 export function rowError(r: PayrollRow): string | null {
-  if (fieldText(r.base) && !(Number(r.base) > 0)) return `مكافأة ${r.name} غير صالحة.`
+  if (!r.trackBased && fieldText(r.base) && !(Number(r.base) > 0)) return `مكافأة ${r.name} غير صالحة.`
   if ((Number(r.adjustment) || 0) !== 0 && !fieldText(r.note)) return `اكتب سبب التعديل لـ${r.name}.`
   return null
+}
+
+/** لقطةُ المسار من `numbers.reward` في سجلّ الجودة، أو null. */
+export function rewardOf(numbers: unknown): TrackReward | null {
+  const r = (numbers as { reward?: TrackReward | null } | null)?.reward
+  return r && typeof r.base === 'number' ? r : null
 }
 
 export function usePayroll(salariedRoles: Role[]) {
@@ -48,7 +66,7 @@ export function usePayroll(salariedRoles: Role[]) {
       supabase.from('profiles').select('id, full_name, role, gender').in('role', salariedRoles).eq('status', 'active').order('full_name'),
       supabase.from('monthly_salaries').select('profile_id, amount, approved, base_reward, adjustment, adjustment_note').eq('salary_month', month).eq('salary_year', year),
       supabase.from('profile_financials').select('profile_id, base_reward'),
-      supabase.from('teacher_quality_months').select('teacher_id, final, locked_at').eq('month', month).eq('year', year).not('locked_at', 'is', null),
+      supabase.from('teacher_quality_months').select('teacher_id, final, locked_at, numbers').eq('month', month).eq('year', year).not('locked_at', 'is', null),
       supabase.from('app_settings').select('default_reward').limit(1).maybeSingle()
     ])
     const failure = workers.error ?? sal.error ?? fin.error ?? quality.error ?? settings.error
@@ -57,10 +75,14 @@ export function usePayroll(salariedRoles: Role[]) {
     const saved = new Map((sal.data ?? []).map(s => [s.profile_id, s]))
     const bases = new Map((fin.data ?? []).map(f => [f.profile_id, f.base_reward]))
     const finals = new Map((quality.data ?? []).map(q => [q.teacher_id, q.final === null ? null : Number(q.final)]))
+    const rewards = new Map((quality.data ?? []).map(q => [q.teacher_id, rewardOf(q.numbers)]))
+    const byTrack = tracksApply(year, month)
     approved.value = (sal.data ?? []).some(s => s.approved)
     rows.value = (workers.data ?? []).map((w) => {
       const s = saved.get(w.id)
-      const base = s?.base_reward ?? bases.get(w.id) ?? null
+      const trackBased = byTrack && w.role === 'teacher'
+      const reward = trackBased ? rewards.get(w.id) ?? null : null
+      const base = trackBased ? reward?.base ?? null : s?.base_reward ?? bases.get(w.id) ?? null
       return {
         profile_id: w.id,
         name: w.full_name,
@@ -69,7 +91,9 @@ export function usePayroll(salariedRoles: Role[]) {
         base: base === null ? '' : String(base),
         final: finals.get(w.id) ?? null,
         adjustment: s?.adjustment ? String(s.adjustment) : '',
-        note: s?.adjustment_note ?? ''
+        note: s?.adjustment_note ?? '',
+        trackBased,
+        reward
       }
     })
   }
@@ -94,7 +118,9 @@ export function usePayroll(salariedRoles: Role[]) {
       if (error) throw error
     }
     // المكافأةُ الخاصّة تبقى للأشهر القادمة؛ والفارغةُ تعود إلى الافتراضيّة
-    const fin = rows.value.map(r => ({ profile_id: r.profile_id, base_reward: Number(r.base) > 0 ? Number(r.base) : null }))
+    // أصلُ المعلم بالمسار لا يُكتب مكافأةً خاصّة
+    const fin = rows.value.filter(r => !r.trackBased).map(r => ({ profile_id: r.profile_id, base_reward: Number(r.base) > 0 ? Number(r.base) : null }))
+    if (!fin.length) return
     const { error } = await supabase.from('profile_financials').upsert(fin, { onConflict: 'profile_id' })
     if (error) throw error
   }

@@ -1326,3 +1326,30 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 > **2026-11-16 — حسابُ الاستلام بيد صاحبه** (هجرة `20261116134050_payout_account_self_edit`): `profile_financials.holder_national_id` (9 أرقام)؛ و`get_payout_account` (صاحبُه والمديرُ الإداريّ ومشرفُ المشروع، بلا المكافأة) و`set_payout_account` (صاحبُه والمديرُ الإداريّ؛ المحفظةُ `^05[0-9]{8}$` والبنكُ `^[A-Z0-9]{4,34}$` والاسمُ 3–80 والهويةُ 9 أرقام؛ والحفظُ بلا تغييرٍ لا يُسجَّل) — يُعتمد فوراً ويُشعر كلَّ مديرٍ إداريٍّ نشط بنوع `payout_account_changed` (القديمُ والجديد)، ويكتب سطراً في `private.payout_account_changes` (لا يُقرأ من الواجهة ولا يُحذف). وقيدُ `notifications_kind_check` و`private.notify` أُعيدا بالقائمة الحيّة (ومنها أنواعُ المسارات `track_requested`/`track_decided`/`below_quota`).
 
 > **2026-11-17 — جوال باي وحده** (هجرة `20261117091129_payout_account_jawwalpay_only`): `set_payout_account` يرفض غيرَ `jawwalpay` («يلزم حسابُ جوال باي.»)، ونوعُ `account_type` باقٍ بقيمه الثلاث لِما سُجّل من قبل.
+## 30. نظامُ المسارين لمكافأة المعلم: `student_halaqa_periods` و`halaqa_tracks` و`halaqa_track_requests` (2026-11-16)
+
+> الهجرة `20261116130148_teacher_tracks`. يسري من 11/2026، وما قبله على حسابه القديم.
+
+- **`student_halaqa_periods`** (`student_id`, `halaqa_id`, `joined_on`, `left_on`): عضويةُ الطالب في الحلقة، ولكلّ طالبٍ عضويةٌ مفتوحةٌ واحدة على الأكثر (فهرسٌ فريدٌ جزئيّ). المشغّل `students_track_halaqa_period` (`private.track_student_halaqa_period`) يغلق العضويةَ بتاريخ أمس عند النقل أو الإخراج أو تغيير الحالة، ويفتح جديدةً من اليوم (والإنشاءُ من `enrollment_date`). عُبّئ بأثرٍ رجعيّ: 581 عضوية، منها 28 مغلقة.
+- **`halaqa_tracks`** (`halaqa_id`, `track` 1/2, `effective_year/month` ≥ 11/2026, `reason`, `request_id`, `assigned_by`): لكلّ حلقةٍ تعيينٌ واحدٌ في الشهر على الأكثر. مسارُ الشهر هو آخرُ تعيينٍ سرى حتى ذلك الشهر (`private.halaqa_track`)، والافتراضُ المسارُ الأول.
+- **`halaqa_track_requests`**: طلبُ المعلم بحالته `pending`/`approved`/`rejected`/`cancelled`، ولكلّ حلقةٍ طلبٌ معلّقٌ واحد. يُسجَّل فيه مَن حسم ومتى وملاحظتُه، وشهرُ السريان. القراءةُ للجداول الثلاثة بنطاق `visible_halaqa_ids`، ولا كتابةَ مباشرة.
+- **الحساب** (دوالُّ `private`):
+  - `track_quota`: 12 للمسار الأول و8 للثاني. `track_amount`: 600 و400. `next_term_start`: أوّلُ الفصل التالي.
+  - `halaqa_month_attendance` تعيد لكلّ عضو: أيامَ عضويته المنعقدة وحضورَه وعذرَه، وهل `counted`. المحتسبُ من كان حضورُه × 2 لا يقلّ عن أيام الحلقة المنعقدة ناقصاً عذرَه (النصفُ تماماً يكفي، ويلزم أن يبقى يومٌ بعد طرح العذر — هجرة `tracks_half_counts` 2026-11-17). وإن لم تُفتح أيام: يُحتسب من كانت عضويتُه نصفَ أيام الشهر فأكثر.
+  - `halaqa_month_reward` تعيد jsonb: المسار والنصاب والكامل وأيامَ الدوام و`no_attendance` والمحتسبين والناقصين و`consecutive` والمعدّلَ والخصمَ والأصل. نقصُ الشهر السابق يُقرأ من لقطته المقفلة إن وُجدت، وإلا يُعاد حسابه.
+  - `halaqa_student_achievement` (فرعُ 11/2026): غيرُ المحتسب `absentee`، والمطلوبُ يُقسَّط بالعذر وحده.
+  - `halaqa_achievement_score`: النسبةُ المفتوحة لأفضل «ن» من 50.
+- **سجلُّ الجودة:** `quality_month_compute` يضيف إلى `numbers` الحقولَ `achievement_n` و`achievement_quota` و`reward`.
+- **إنجاز الحلقات:** `public.halaqat_achievement` تعيد أيضاً `achievement_pct` و`quota` و`top_n`.
+- **الدوالُّ العامة:**
+  - `halaqa_track_standing(h, y, m)`: موقفُ الحلقة وقائمةُ طلابها بحضورهم.
+  - `request_halaqa_track` (معلمُ الحلقة) و`cancel_halaqa_track_request` (صاحبُ الطلب).
+  - `decide_halaqa_track_request` (المدير الإداري؛ الرفضُ بسبب). يسري المعتمَد من أوّل الفصل التالي، أو من الشهر التالي إن طُلب الثاني والحلقةُ ناقصةٌ في الشهر السابق.
+  - `set_halaqa_track` (المدير الإداري؛ سببٌ ≥ 3 أحرف، ولا لشهرٍ مضى ولا لشهرٍ بعده سجلٌّ مقفل).
+  - `save_quality_month` يرسل `below_quota` عند النقص.
+- **الإشعارات:** أنواعٌ جديدة `track_requested` و`track_decided` و`below_quota`.
+- **التحويلُ التلقائيّ (هجرة `20261117121253_tracks_rules_v2`):** `halaqa_tracks.is_auto boolean` (افتراضيّاً false).
+  - `save_quality_month`: إن نقصت الحلقة شهرين متتاليين على المسار الأول، أدرج لها المسارَ الثاني للشهر التالي بـ`is_auto = true` (ما لم يوجد تعيينٌ لذلك الشهر)، ونبّه المعلمَ والمديرَ الإداريّ والفنيَّ (البنين) بنوع `track_decided`.
+  - وإن نقصت شهرين على المسار الثاني نبّه المديرَ الإداريّ بنوع `below_quota`.
+  - يُحذف التحويلُ التلقائيّ للشهر التالي ثم يُعاد حسابه مع كلّ حفظ.
+  - `decide_halaqa_track_request` و`set_halaqa_track` تضعان `is_auto = false` عند الكتابة فوق صفّ.

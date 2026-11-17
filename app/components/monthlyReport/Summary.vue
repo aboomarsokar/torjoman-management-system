@@ -1,19 +1,19 @@
 <script setup lang="ts">
 /**
- * بطاقاتُ خلاصة التقرير الشهريّ: الحضور، والإنجازُ القرآنيّ بدرجاته، وإنجازُ المعلم (أعلى 12)، والاختبارات، واختبارُ القراءة.
+ * بطاقاتُ خلاصة التقرير الشهريّ: الحضور، والإنجازُ القرآنيّ بدرجاته، وإنجازُ المعلم (`teacher` من `teacherAchievementOf`:
+ * أعلى 12 قبل 11/2026، ثم النسبةُ المفتوحة على نصاب المسار)، والاختبارات، واختبارُ القراءة.
  */
 import type { Outcome } from '~/utils/quran/plan'
-import { ACHIEVEMENT_TOP_N, achievementPct } from '~/utils/halaqatAchievement'
 
 interface Props {
   outcomes: Record<Outcome, number>
   attendancePct: number | null
   exams: { total: number, passed: number }
   reading: { total: number, passed: number }
+  /** إنجازُ المعلم ونصُّ أساسه. */
+  teacher: { pct: number | null, sub: string }
 }
-const props = defineProps<Props>()
-
-const teacherPct = computed(() => achievementPct(props.outcomes))
+defineProps<Props>()
 </script>
 
 <template>
@@ -36,10 +36,10 @@ const teacherPct = computed(() => achievementPct(props.outcomes))
     />
     <UiStatCard
       icon="i-lucide-gauge"
-      :value="teacherPct === null ? '—' : `${teacherPct}%`"
+      :value="teacher.pct === null ? '—' : `${teacher.pct}%`"
       label="إنجاز المعلم"
       tone="neutral"
-      :sub="`أعلى ${ACHIEVEMENT_TOP_N} طالباً`"
+      :sub="teacher.sub"
     />
     <UiStatCard
       icon="i-lucide-clipboard-list"

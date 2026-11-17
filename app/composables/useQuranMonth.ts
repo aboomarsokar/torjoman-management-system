@@ -6,6 +6,7 @@
 import type { Ref } from 'vue'
 import type { Database } from '~/types/database.types'
 import { prorationApplies } from '~/constants/quran'
+import { tracksApply } from '~/utils/tracks'
 import type { Position } from '~/utils/quran/position'
 import { buildStudentRows } from '~/utils/quran/month'
 import type { ReportHeader, StudentMonthRow } from '~/utils/quran/month'
@@ -65,6 +66,7 @@ export function useQuranMonth(halaqaId: Ref<string | null>, year: Ref<number>, m
       rows.value = buildStudentRows({
         ...inputs,
         prorate: prorationApplies(y, m),
+        tracks: tracksApply(y, m),
         juz: reference.juz.value,
         ayahCountOf: reference.ayahCountOf
       })

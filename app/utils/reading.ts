@@ -101,9 +101,34 @@ export interface JourneyOptions {
   enrollmentDate: string | null
 }
 
-/** «صفقات رابحة 1–88 + اليوم النبوي 1–124». */
-export function unitScope(unit: Pick<ReadingUnit, 'parts'>): string {
+/** كتبُ المقرّر وصفحاتُها وحدها: «صفقات رابحة 1–88 + اليوم النبوي 1–124». */
+export function unitBooks(unit: Pick<ReadingUnit, 'parts'>): string {
   return unit.parts.map(p => `${p.book} ${p.page_from}–${p.page_to}`).join(' + ')
+}
+
+/** مرئيّاتُ المقرّر (محاضراتٌ ومقاطع) بترتيب الخارطة — لبطاقات المقرّر (2026-11-11). */
+export function unitVideos(unit: Pick<ReadingUnit, 'items'>): ReadingItem[] {
+  return (unit.items ?? []).filter(i => i.kind !== 'pages')
+    .sort((a, b) => a.week - b.week || a.sort_order - b.sort_order)
+}
+
+/** عددٌ معدودٌ بالعربية: مفردٌ، ومثنّى، وجمعٌ للثلاثة إلى العشرة، ومفردٌ لما فوقها. */
+const counted = (n: number, one: string, two: string, many: string) =>
+  n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${many}` : `${n} ${one}`
+
+/** «محاضرتان» · «ثلاثُ محاضرات» · «محاضرة ومقطع» — فارغٌ بلا مرئيّات. */
+export function videosPhrase(items: Pick<ReadingItem, 'kind'>[]): string {
+  const lectures = items.filter(i => i.kind === 'lecture').length
+  const clips = items.filter(i => i.kind === 'clip').length
+  return [
+    lectures ? counted(lectures, 'محاضرة', 'محاضرتان', 'محاضرات') : '',
+    clips ? counted(clips, 'مقطع', 'مقطعان', 'مقاطع') : ''
+  ].filter(Boolean).join(' و')
+}
+
+/** نطاقُ المقرّر مختصراً: كتبُه ثم عددُ مرئيّاته — «صفقات رابحة 165–196 + محاضرتان». */
+export function unitScope(unit: Pick<ReadingUnit, 'parts' | 'items'>): string {
+  return [unitBooks(unit), videosPhrase(unitVideos(unit))].filter(Boolean).join(' + ')
 }
 
 /** الأشهرُ الكاملة منذ الالتحاق (صفرٌ قبل شهرٍ أو بلا تاريخ). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitMonthLabel, unitOpensOn, unitScope, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
+import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, unitVideos, videosPhrase, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
 
 const unit = (id: number, parts = [{ book: 'صفقات رابحة', author: null, page_from: 1, page_to: 88 }]): ReadingUnit =>
   ({ id, sort_order: id, title: `المقرّر ${id}`, parts })
@@ -26,6 +26,26 @@ describe('مسار القراءة', () => {
       { book: 'صفقات رابحة', author: null, page_from: 165, page_to: 196 },
       { book: 'اليوم النبوي', author: null, page_from: 1, page_to: 124 }
     ]))).toBe('صفقات رابحة 165–196 + اليوم النبوي 1–124')
+  })
+
+  it('المرئيّاتُ مرتّبةً بالأسبوع، ويُضاف عددُها للنطاق المختصر لا لسطر الكتب', () => {
+    const v = (week: number, kind: ReadingItem['kind'], title: string): ReadingItem =>
+      ({ week, sort_order: 1, kind, book: null, page_from: null, page_to: null, title, speaker: null, durationSeconds: null, url: null })
+    const pages: ReadingItem = { ...v(1, 'pages', ''), book: 'صفقات رابحة', page_from: 165, page_to: 180 }
+    const u = { ...unit(3, [{ book: 'صفقات رابحة', author: null, page_from: 165, page_to: 196 }]), items: [v(4, 'lecture', 'ب'), pages, v(3, 'lecture', 'أ')] }
+    expect(unitVideos(u).map(i => i.title)).toEqual(['أ', 'ب'])
+    expect(unitBooks(u)).toBe('صفقات رابحة 165–196')
+    expect(unitScope(u)).toBe('صفقات رابحة 165–196 + محاضرتان')
+    expect(unitScope(unit(1))).toBe('صفقات رابحة 1–88')
+  })
+
+  it('عددُ المرئيّات بالعربية', () => {
+    const k = (kind: ReadingItem['kind']) => ({ kind })
+    expect(videosPhrase([])).toBe('')
+    expect(videosPhrase([k('lecture')])).toBe('محاضرة')
+    expect(videosPhrase([k('lecture'), k('lecture'), k('lecture')])).toBe('3 محاضرات')
+    expect(videosPhrase([k('lecture'), k('clip')])).toBe('محاضرة ومقطع')
+    expect(videosPhrase([k('pages')])).toBe('')
   })
 
   it('بلا محاولات: الأولُ مستحقّ والباقي مقفل، ويبدأ', () => {

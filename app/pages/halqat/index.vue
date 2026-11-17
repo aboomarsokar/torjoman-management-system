@@ -156,6 +156,9 @@ const genderItems = [{ label: 'بنين', value: 'male' }, { label: 'بنات', 
 
 // الطاقم من جنس الحلقة وحدَه، ولا قائمة قبل اختياره (والمختبِر يُقترح حين يكون واحداً)
 const { teacherItems, supervisorItems, examinerItems } = useHalaqaStaffOptions(form, halqat, editingId)
+// المديرةُ الإدارية تُسند المشرفةَ وحدها لحلقات البنات (طلب المستخدم 2026-11-17)
+const canAssignSupervisor = computed(() => isWomenAdmin.value && !isReadOnly.value)
+const assignSup = useAssignSupervisor(refresh)
 // القائمة الفارغة تقول سببها (كانت لا تُفتح بلا كلمة فيظنّ المدير النموذج معطّلاً)
 const teacherPlaceholder = computed(() => {
   if (!form.gender) return 'اختر الجنس أولاً'
@@ -430,6 +433,16 @@ async function confirmDelete() {
                 aria-label="تفاصيل"
               />
               <UButton
+                v-if="canAssignSupervisor && row.gender === 'female'"
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-user-cog"
+                :ui="{ base: 'rounded-[10px]' }"
+                aria-label="إسناد المشرفة"
+                @click="assignSup.start({ id: row.id, name: row.name, supervisor_id: row.supervisor_id })"
+              />
+              <UButton
                 v-if="canEditHalaqa"
                 color="neutral"
                 variant="outline"
@@ -486,6 +499,20 @@ async function confirmDelete() {
               :students="studentsOf(row)"
               card
             />
+            <div
+              v-if="canAssignSupervisor && row.gender === 'female'"
+              class="hcard-actions"
+            >
+              <UButton
+                label="إسناد المشرفة"
+                color="neutral"
+                variant="outline"
+                size="md"
+                icon="i-lucide-user-cog"
+                :ui="{ base: 'rounded-[11px]' }"
+                @click="assignSup.start({ id: row.id, name: row.name, supervisor_id: row.supervisor_id })"
+              />
+            </div>
             <div
               v-if="canEditHalaqa"
               class="hcard-actions"
@@ -682,6 +709,15 @@ async function confirmDelete() {
     >
       هل أنت متأكّد من حذف حلقة «<strong>{{ deleteTarget?.name }}</strong>»؟ لا يمكن التراجع.
     </UiConfirmModal>
+    <HalqatAssignSupervisorModal
+      v-if="assignSup.target.value"
+      v-model:open="assignSup.open.value"
+      v-model:selected="assignSup.selected.value"
+      :halaqa="assignSup.target.value.name"
+      :items="assignSup.items.value"
+      :busy="assignSup.busy.value"
+      @save="assignSup.save"
+    />
   </div>
 </template>
 

@@ -52,7 +52,7 @@ export function reconcileStaff(
   }
 }
 
-async function fetchStaff(role: 'teacher' | 'field_supervisor' | 'examiner'): Promise<StaffRow[]> {
+export async function fetchStaff(role: 'teacher' | 'field_supervisor' | 'examiner'): Promise<StaffRow[]> {
   const supabase = useSupabaseClient<Database>()
   const { data } = await supabase.from('profiles').select('id, full_name, gender')
     .eq('role', role).eq('status', 'active').order('full_name')

@@ -1321,3 +1321,14 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 
 > **2026-11-03 — كشفُ الرواتب بالتقييم** (هجرة `20261103112520_payroll_rewards`): `app_settings.default_reward` (600، موجبة)، و`profile_financials.base_reward` (مكافأةٌ خاصّة اختيارية)، و`monthly_salaries` += `base_reward`، `final_score` (0–100)، `adjustment` (افتراضيّاً 0)، `adjustment_note` (≤ 200) بقيد `monthly_salaries_adjustment_needs_note`: كلُّ تعديلٍ غيرِ صفريّ بسبب. الحسابُ في الواجهة (`utils/payroll.ts`) والكتابةُ للمدير الإداري بسياستي `salaries_all`/`fin_all` القائمتين.
 > **2026-11-03 — دورُ مدير المحتوى** (هجرتا `20261103112522_content_manager_role` و`20261103112603_content_manager_policies`): `user_role` += `content_manager`؛ و`public.can_manage_news()` (المدير الإداري أو مدير المحتوى، SECURITY DEFINER) تحكم `news_write` و`news_select_staff` (مع مشرف المشروع قراءةً)؛ و`can_view_full_dept_plan()` تشمله قراءةً، و`private.dept_owner_guard` يقبله مسؤولاً عن نشاط. لا تشمله `can_edit_dept_plan` ولا `visible_halaqa_ids`.
+
+## إسنادُ المشرفة بيد المديرة الإدارية (2026-11-17)
+
+> الهجرة `20261117171944_women_admin_supervisor`.
+
+- `public.assign_halaqa_supervisor(p_halaqa uuid, p_supervisor uuid)` — SECURITY DEFINER، تبدأ بـ`assert_session_writable`.
+  - للمدير الإداري، وللمديرة الإدارية في حلقات البنات (`gender = 'female'`) وحدها.
+  - تكتب `supervisor_id` و`assigned_by` فقط؛ و`p_supervisor = null` يزيل المشرفة.
+  - المختارةُ مشرفةٌ ميدانيةٌ نشطة، ومطابقةُ الجنس يحرسها `guard_halaqa_staff`.
+  - سياسةُ `halaqat_update` بلا تغيير: لا تعديلَ مباشرَ للمديرة الإدارية على الحلقات.
+

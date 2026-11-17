@@ -56,6 +56,9 @@ _(التالي بعد الجزء ٤: الدخول بالنيابة — بحسب 
 
 > سجلّ زمني لكل تغيير: ماذا تغيّر ولماذا. الأحدث أولاً.
 
+### 2026-11-17
+- **feat(halqat):** المديرةُ الإدارية تُسند المشرفةَ لحلقات البنات (هجرة `20261117171944_women_admin_supervisor`): دالّةُ `assign_halaqa_supervisor(halaqa, supervisor)` تكتب `supervisor_id` وحده (و`assigned_by`)، للمديرة الإدارية في حلقات البنات وللمدير الإداري؛ والدورُ والجنسُ يحرسهما `guard_halaqa_staff`. في `/halqat` زرُّ «إسناد المشرفة» على حلقات البنات (`HalqatAssignSupervisorModal` + `useAssignSupervisor`).
+
 <!-- مثال:
 ### 2026-01-15
 - **feat:** إضافة composable `useAuth` لدخول العاملين بالبريد

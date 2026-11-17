@@ -1353,3 +1353,13 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
   - وإن نقصت شهرين على المسار الثاني نبّه المديرَ الإداريّ بنوع `below_quota`.
   - يُحذف التحويلُ التلقائيّ للشهر التالي ثم يُعاد حسابه مع كلّ حفظ.
   - `decide_halaqa_track_request` و`set_halaqa_track` تضعان `is_auto = false` عند الكتابة فوق صفّ.
+## إسنادُ المشرفة بيد المديرة الإدارية (2026-11-17)
+
+> الهجرة `20261117171944_women_admin_supervisor`.
+
+- `public.assign_halaqa_supervisor(p_halaqa uuid, p_supervisor uuid)` — SECURITY DEFINER، تبدأ بـ`assert_session_writable`.
+  - للمدير الإداري، وللمديرة الإدارية في حلقات البنات (`gender = 'female'`) وحدها.
+  - تكتب `supervisor_id` و`assigned_by` فقط؛ و`p_supervisor = null` يزيل المشرفة.
+  - المختارةُ مشرفةٌ ميدانيةٌ نشطة، ومطابقةُ الجنس يحرسها `guard_halaqa_staff`.
+  - سياسةُ `halaqat_update` بلا تغيير: لا تعديلَ مباشرَ للمديرة الإدارية على الحلقات.
+

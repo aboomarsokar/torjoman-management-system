@@ -1438,6 +1438,7 @@ export type Database = {
           effective_year: number
           halaqa_id: string
           id: string
+          is_auto: boolean
           reason: string | null
           request_id: string | null
           track: number
@@ -1449,6 +1450,7 @@ export type Database = {
           effective_year: number
           halaqa_id: string
           id?: string
+          is_auto?: boolean
           reason?: string | null
           request_id?: string | null
           track: number
@@ -1460,6 +1462,7 @@ export type Database = {
           effective_year?: number
           halaqa_id?: string
           id?: string
+          is_auto?: boolean
           reason?: string | null
           request_id?: string | null
           track?: number
@@ -3639,6 +3642,10 @@ export type Database = {
         Args: { p_request: string }
         Returns: undefined
       }
+      assign_halaqa_supervisor: {
+        Args: { p_halaqa: string; p_supervisor: string }
+        Returns: undefined
+      }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -4247,4 +4254,3 @@ export const Constants = {
     },
   },
 } as const
-

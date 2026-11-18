@@ -2,22 +2,37 @@
 /**
  * محاضراتُ المقرّر ومقاطعُه سطراً سطراً (طلب المستخدم 2026-11-11) — في بطاقة المقرّر للعاملين وبطاقة الطالب:
  * الاسمُ وصاحبُه ومدّتُه، والسطرُ رابطٌ يفتح يوتيوب في نافذةٍ جديدة؛ وما لم يُضف رابطُه بعدُ نصٌّ بلا رابط.
+ * و`highlight` يضع فوقها شريطاً لافتاً «في هذا المقرّر محاضرتان مرئيتان» كي لا تفوت الطالبَ (2026-11-18).
  */
-import { formatDuration, type ReadingItem } from '~/utils/reading'
+import { formatDuration, videosPhrase, type ReadingItem } from '~/utils/reading'
 
 interface Props {
   /** المرئيّاتُ مرتّبة (`unitVideos`). */
   items: ReadingItem[]
+  /** شريطٌ لافت فوق القائمة (بطاقة الطالب). */
+  highlight?: boolean
 }
-defineProps<Props>()
+const props = defineProps<Props>()
+const phrase = computed(() => videosPhrase(props.items))
 
 const meta = (i: ReadingItem) => [i.speaker, formatDuration(i.durationSeconds)].filter(Boolean).join(' · ')
 </script>
 
 <template>
+  <p
+    v-if="highlight && items.length"
+    class="uv-banner"
+  >
+    <UIcon
+      name="i-lucide-circle-play"
+      class="size-5 uv-banner-ic"
+    />
+    <span>في هذا المقرّر <b>{{ phrase }}</b> مع القراءة — شاهدها من هنا</span>
+  </p>
   <ul
     v-if="items.length"
     class="uv"
+    :class="{ boxed: highlight }"
     aria-label="محاضرات المقرّر"
   >
     <li
@@ -50,6 +65,10 @@ const meta = (i: ReadingItem) => [i.speaker, formatDuration(i.durationSeconds)].
 </template>
 
 <style scoped>
+.uv-banner { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; padding: 9px 12px; border-radius: 12px 12px 0 0; background: var(--green-soft); color: var(--green-ink); font-size: 14px; font-weight: 500; line-height: 1.5; }
+.uv-banner b { font-weight: 700; }
+.uv-banner-ic { flex: none; }
+.uv.boxed { margin-top: 4px; padding: 4px 12px 6px; border: 1px solid color-mix(in srgb, var(--green) 35%, var(--line)); border-top: none; border-radius: 0 0 12px 12px; }
 .uv { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .uv-row { display: flex; align-items: flex-start; gap: 8px; min-height: 32px; padding: 4px 6px; margin-inline: -6px; border-radius: 8px; color: var(--ink-2); text-decoration: none; }
 .uv-row.link { color: var(--blue-ink); }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, unitVideos, videosPhrase, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
+import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
 
 const unit = (id: number, parts = [{ book: 'صفقات رابحة', author: null, page_from: 1, page_to: 88 }]): ReadingUnit =>
   ({ id, sort_order: id, title: `المقرّر ${id}`, parts })
@@ -164,5 +164,14 @@ describe('شهرُ المقرّر', () => {
     expect(unitMonthLabel('2027-08-01')).toBe('أغسطس 2027')
     expect(unitMonthLabel(null)).toBe('')
     expect([unitOpensOn(1), unitOpensOn(3), unitOpensOn(12)]).toEqual(['2026-10-01', '2026-12-01', '2027-09-01'])
+  })
+})
+
+describe('weekHasVideo', () => {
+  it('صحيحٌ إن كان في الأسبوع محاضرةٌ أو مقطع', () => {
+    expect(weekHasVideo([{ kind: 'pages' }])).toBe(false)
+    expect(weekHasVideo([{ kind: 'pages' }, { kind: 'lecture' }])).toBe(true)
+    expect(weekHasVideo([{ kind: 'clip' }])).toBe(true)
+    expect(weekHasVideo([])).toBe(false)
   })
 })

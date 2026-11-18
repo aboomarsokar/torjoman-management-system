@@ -112,6 +112,11 @@ export function unitVideos(unit: Pick<ReadingUnit, 'items'>): ReadingItem[] {
     .sort((a, b) => a.week - b.week || a.sort_order - b.sort_order)
 }
 
+/** أسبوعٌ فيه محاضرةٌ أو مقطع — يُميَّز في الخارطة كي لا يفوت الطالبَ (طلب المستخدم 2026-11-18). */
+export function weekHasVideo(items: Pick<ReadingItem, 'kind'>[]): boolean {
+  return items.some(i => i.kind !== 'pages')
+}
+
 /** عددٌ معدودٌ بالعربية: مفردٌ، ومثنّى، وجمعٌ للثلاثة إلى العشرة، ومفردٌ لما فوقها. */
 const counted = (n: number, one: string, two: string, many: string) =>
   n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${many}` : `${n} ${one}`

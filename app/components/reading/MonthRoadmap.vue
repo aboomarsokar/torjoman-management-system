@@ -119,6 +119,13 @@ const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? '
               />
               <span class="mr-txt">{{ pagesText(it) }}</span>
             </template>
+            <template v-else-if="it.kind === 'meeting'">
+              <UIcon
+                name="i-lucide-users"
+                class="size-4 mr-ic meet"
+              />
+              <span class="mr-txt"><span>{{ it.title ?? 'لقاء علمي' }}</span></span>
+            </template>
             <template v-else>
               <UIcon
                 name="i-lucide-circle-play"
@@ -183,6 +190,7 @@ h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: f
 .mr-item { display: flex; align-items: center; gap: 8px; min-height: 28px; }
 .mr-ic { flex: none; color: var(--ink-3); }
 .mr-ic.vid { color: var(--blue-ink); }
+.mr-ic.meet { color: var(--navy); }
 .mr-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14.5px; color: var(--ink); line-height: 1.5; }
 .mr-txt small { font-size: 12.5px; color: var(--ink-2); }
 .num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }

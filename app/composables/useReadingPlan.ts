@@ -14,13 +14,14 @@ type UnitRow = {
   sort_order: number
   title: string
   opens_on?: string | null
+  has_test?: boolean
   pdf_path?: string | null
   cover_path?: string | null
   parts: { page_from: number, page_to: number, sort_order: number, book: { title: string, author: string | null } | null }[]
   items?: ItemRow[]
 }
 
-const ITEM_KINDS: ReadingItem['kind'][] = ['pages', 'lecture', 'clip']
+const ITEM_KINDS: ReadingItem['kind'][] = ['pages', 'lecture', 'clip', 'meeting']
 
 /** صفوفُ المقرّرات بتضمين أجزائها وكتبها ← مقرّراتٌ مرتّبة. نقيّ. */
 export function toReadingUnits(rows: UnitRow[]): ReadingUnit[] {
@@ -32,6 +33,7 @@ export function toReadingUnits(rows: UnitRow[]): ReadingUnit[] {
       pdfPath: r.pdf_path ?? null,
       coverPath: r.cover_path ?? null,
       opensOn: r.opens_on ?? null,
+      hasTest: r.has_test ?? true,
       items: (r.items ?? []).map(i => ({
         week: i.week,
         sort_order: i.sort_order,
@@ -57,7 +59,7 @@ const DEFAULT_READING_SETTINGS = { reading_pass_mark: 80, reading_test_questions
 /** المقرّراتُ بأجزائها وكتبها (تناديها الصفحةُ وتجهيزُ نُسخ المعلّم اليوميّ — `useWarmTeacherMirrors`). */
 export async function fetchReadingUnits(supabase: SupabaseClient<Database>): Promise<ReadingUnit[]> {
   const { data, error } = await supabase.from('reading_units')
-    .select('id, sort_order, title, opens_on, pdf_path, cover_path, parts:reading_unit_parts(page_from, page_to, sort_order, book:reading_books(title, author)), items:reading_unit_items(week, sort_order, kind, page_from, page_to, title, speaker, duration_seconds, url, book:reading_books(title))')
+    .select('id, sort_order, title, opens_on, has_test, pdf_path, cover_path, parts:reading_unit_parts(page_from, page_to, sort_order, book:reading_books(title, author)), items:reading_unit_items(week, sort_order, kind, page_from, page_to, title, speaker, duration_seconds, url, book:reading_books(title))')
     .returns<UnitRow[]>()
   if (error) throw error
   return toReadingUnits(data ?? [])

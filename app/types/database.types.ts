@@ -2650,6 +2650,7 @@ export type Database = {
         Row: {
           cover_path: string | null
           created_at: string
+          has_test: boolean
           id: number
           opens_on: string
           pdf_path: string | null
@@ -2659,6 +2660,7 @@ export type Database = {
         Insert: {
           cover_path?: string | null
           created_at?: string
+          has_test?: boolean
           id?: never
           opens_on: string
           pdf_path?: string | null
@@ -2668,6 +2670,7 @@ export type Database = {
         Update: {
           cover_path?: string | null
           created_at?: string
+          has_test?: boolean
           id?: never
           opens_on?: string
           pdf_path?: string | null

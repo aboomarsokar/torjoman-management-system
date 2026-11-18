@@ -3,9 +3,10 @@
  * خارطةُ طريق الشهر (طلب المستخدم 2026-11-10): مقرّرُ الشهر أسبوعاً أسبوعاً — صفحاتٌ من كتاب أو محاضرةٌ مرئية —
  * للطالب والمعلم والإدارة. متابعةٌ لا اختبار: الاختبارُ شهريٌّ في آخر المقرّر. الافتراضيُّ مقرّرُ الشهر الجاري
  * (`monthUnit`) والأسبوعُ الجاري مميَّز؛ و`browse` يضيف قائمةً لتصفّح خارطة أيّ شهرٍ آخر (للعاملين).
- * وفي العرض الواسع (≥900px) تصير الأسابيعُ أعمدةً متجاورة.
+ * وفي العرض الواسع (≥900px) تصير الأسابيعُ أعمدةً متجاورة. وأسبوعُ المحاضرة مميَّزٌ بلونٍ وشارة، وفي الرأس
+ * شريطُ «في هذا الشهر محاضرتان» (2026-11-18) كي لا تفوت الطالبَ بين أسابيع القراءة.
  */
-import { formatDuration, monthUnit, roadmapWeeks, unitMonthLabel, unitScope, weekOfMonth, type ReadingItem } from '~/utils/reading'
+import { formatDuration, monthUnit, roadmapWeeks, unitMonthLabel, unitScope, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingItem } from '~/utils/reading'
 import { gazaToday } from '~/utils/reportWindow'
 
 interface Props {
@@ -38,6 +39,7 @@ const WEEK_NAMES = ['الأوّل', 'الثاني', 'الثالث', 'الراب�
 /** «صفقات رابحة · ص 89–105». */
 const pagesText = (i: ReadingItem) => `${i.book ?? '—'} · ص ${i.page_from}–${i.page_to}`
 const videoWord = (i: ReadingItem) => i.kind === 'clip' ? 'مقطع' : 'محاضرة'
+const videos = computed(() => unit.value ? videosPhrase(unitVideos(unit.value)) : '')
 const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? 'now' : w < thisWeek ? 'past' : ''
 </script>
 
@@ -61,6 +63,16 @@ const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? '
             · {{ unitMonthLabel(unit.opensOn) }}
           </template> · {{ unitScope(unit) }}
         </p>
+        <p
+          v-if="videos"
+          class="mr-vids"
+        >
+          <UIcon
+            name="i-lucide-circle-play"
+            class="size-4"
+          />
+          في {{ isCurrentMonth ? 'هذا الشهر' : 'هذا المقرّر' }} {{ videos }} — في أسابيعها المميّزة أدناه
+        </p>
       </div>
       <UiSelect
         v-if="props.browse && monthItems.length > 1"
@@ -78,14 +90,21 @@ const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? '
         v-for="w in weeks"
         :key="w.week"
         class="mr-week"
-        :class="weekState(w.week)"
+        :class="[weekState(w.week), { vid: weekHasVideo(w.items) }]"
       >
         <div class="mr-wk">
           <span class="mr-wk-n">الأسبوع {{ WEEK_NAMES[w.week - 1] }}</span>
           <span
             v-if="weekState(w.week) === 'now'"
             class="mr-now"
-          >هذا الأسبوع</span>
+          >{{ weekHasVideo(w.items) ? 'هذا الأسبوع: محاضرة' : 'هذا الأسبوع' }}</span>
+          <span
+            v-else-if="weekHasVideo(w.items)"
+            class="mr-vid-tag"
+          ><UIcon
+            name="i-lucide-circle-play"
+            class="size-3.5"
+          />أسبوعُ محاضرة</span>
         </div>
         <ul class="mr-items">
           <li
@@ -150,11 +169,15 @@ h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: f
 .mr-weeks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .mr-week { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 6px 16px; padding: 12px 10px; border-top: 1px solid var(--line); border-radius: 12px; }
 .mr-week:first-child { border-top: none; }
+.mr-week.vid { background: var(--green-soft); border-top-color: transparent; }
+.mr-week.vid + .mr-week { border-top-color: transparent; }
 .mr-week.now { background: var(--blue-soft); border-top-color: transparent; }
 .mr-week.now + .mr-week { border-top-color: transparent; }
 .mr-week.past .mr-wk-n, .mr-week.past .mr-txt { color: var(--ink-3); }
 .mr-wk { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .mr-wk-n { font-size: 14px; font-weight: 600; color: var(--ink); }
+.mr-vids { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 5px 12px; border-radius: 999px; background: var(--green-soft); color: var(--green-ink); font-size: 13.5px; font-weight: 600; }
+.mr-vid-tag { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--surface); color: var(--green-ink); border: 1px solid color-mix(in srgb, var(--green) 45%, transparent); font-size: 12px; font-weight: 600; }
 .mr-now { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: var(--blue); color: var(--surface); font-size: 12px; font-weight: 600; }
 .mr-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .mr-item { display: flex; align-items: center; gap: 8px; min-height: 28px; }
@@ -172,6 +195,7 @@ h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: f
   .mr-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 12px; }
   .mr-week { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; }
   .mr-week:first-child { border-top: 1px solid var(--line); }
+  .mr-week.vid { border-color: color-mix(in srgb, var(--green) 55%, var(--line)); }
   .mr-week.now { border-color: var(--blue); }
   .mr-week.now + .mr-week { border-top-color: var(--line); }
   .mr-wk { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }

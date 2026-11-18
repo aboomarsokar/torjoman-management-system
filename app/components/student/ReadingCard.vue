@@ -107,7 +107,10 @@ const PACE = {
         <p class="rc-scope">
           {{ unitBooks(journey.due) }}
         </p>
-        <ReadingUnitVideos :items="unitVideos(journey.due)" />
+        <ReadingUnitVideos
+          :items="unitVideos(journey.due)"
+          highlight
+        />
         <ol
           class="steps"
           :aria-label="`اجتاز ${journey.passedCount} من ${journey.total} مقرّرات`"

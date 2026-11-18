@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * كشف المواصلات: الشهرُ في الرابط (`?y=&m=`، الافتراضيّ شهرُ اليوم بتوقيت غزة)، والعرضُ بحسب الدور —
- * المشرف الميداني والمختبِر يدخلان رحلاتهما («رحلاتي»)، والمدير الإداري ومشرف المشروع يرون الجميع
+ * المشرف الميداني والمختبِر — **والمديرةُ الإدارية للقسم النسائي منذ 2026-11-18** — يدخلون رحلاتِهم («رحلاتي»)، والمدير الإداري ومشرف المشروع يرون الجميع
  * («كلّ الرحلات»، والمدير الإداري يسدّد ومشرف المشروع يقرأ)، وغيرهم لا شأن لهم بالشاشة. الحكمُ لـRLS؛ هذا طبقةُ تجربة.
  */
 import { TRANSPORT_LOGGER_ROLES } from '~/constants/transport'
@@ -45,7 +45,7 @@ const isLogger = computed(() => (TRANSPORT_LOGGER_ROLES as readonly string[]).in
 const seesAll = computed(() => isAdmin.value || isReadOnly.value)
 const subtitle = computed(() => {
   if (isLogger.value) return 'رحلاتُك في الشهر — أضِفها وعدّلها ما دامت غيرَ مسدَّدة.'
-  if (seesAll.value) return 'رحلاتُ المشرفين الميدانيين والمختبِرين في الشهر.'
+  if (seesAll.value) return 'رحلاتُ المشرفين الميدانيين والمختبِرين والمديرة الإدارية للقسم النسائي في الشهر.'
   return undefined
 })
 </script>
@@ -80,7 +80,7 @@ const subtitle = computed(() => {
     <UiEmptyState
       v-else-if="role"
       icon="i-lucide-lock"
-      title="هذه الشاشة للمشرفين الميدانيين والمختبِرين والإدارة."
+      title="هذه الشاشة للمشرفين الميدانيين والمختبِرين والمديرة الإدارية للقسم النسائي والإدارة."
     />
   </div>
 </template>

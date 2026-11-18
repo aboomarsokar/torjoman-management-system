@@ -122,7 +122,7 @@ const mainNav: Item[] = [
   { key: 'attendance-offline', label: 'الحضور اليوميّ', icon: 'i-lucide-calendar-check', to: '/t', roles: ['teacher'], group: 'quran', isNew: true },
   // بلا المدير الفني (قرار 2026-10-19): المراجعة للمدير الإداري والمديرة الإدارية، ومشرف المشروع اطّلاعاً
   { key: 'incentives', label: 'كشف الحوافز', icon: 'i-lucide-gift', to: '/incentives', roles: [PS, ADMIN, WOMEN, 'teacher'], group: 'sheets' },
-  { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner'], group: 'sheets' },
+  { key: 'transport', label: 'كشف المواصلات', icon: 'i-lucide-bus', to: '/transport', roles: [PS, ADMIN, FIELD, 'examiner', WOMEN], group: 'sheets' },
   // ملازمُ حلقة المعلّم وطلبُها (طلب المستخدم 2026-10-25)
   { key: 'my-booklets', label: 'الملازم', icon: 'i-lucide-book-copy', to: '/my-booklets', roles: ['teacher'], group: 'sheets', isNew: true },
   // بلا المشرف الميدانيّ (قرار 2026-10-21): الإصدارُ للمديرَين وحدهما (alerts_insert)

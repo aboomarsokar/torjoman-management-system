@@ -65,7 +65,7 @@ export function useTransport() {
     return data ?? 0
   }
 
-  /** من يُدخلون رحلات (المشرفون الميدانيون والمختبِرون الفعّالون) مرتّبين بالاسم. */
+  /** من يُدخلون رحلات (المشرفون الميدانيون والمختبِرون والمديرة الإدارية للقسم النسائي، الفعّالون) مرتّبين بالاسم. */
   async function fetchLoggers(): Promise<{ id: string, full_name: string }[]> {
     const { data, error } = await supabase.from('profiles').select('id, full_name')
       .in('role', [...TRANSPORT_LOGGER_ROLES]).eq('status', 'active').order('full_name')

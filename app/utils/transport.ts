@@ -71,6 +71,23 @@ export function groupByEmployee(trips: Trip[], names: Record<string, string>) {
     .sort((a, b) => a.name.localeCompare(b.name, 'ar'))
 }
 
+/** موظفٌ يسجّل رحلات، ورقمُ محفظة جوال باي إن كان له. */
+export interface TransportLogger {
+  id: string
+  full_name: string
+  wallet: string | null
+}
+
+/** رقمُ محفظة جوال باي من حساب الاستلام، أو null إن لم يكن للعامل حسابُ جوال باي. */
+export function jawwalWallet(fin: { account_type: string | null, account_number: string | null } | null): string | null {
+  return fin?.account_type === 'jawwalpay' && fin.account_number ? fin.account_number : null
+}
+
+/** رقمُ المحفظة مقسّماً للقراءة: 0592 242 206. */
+export function formatWallet(n: string): string {
+  return /^\d{10}$/.test(n) ? `${n.slice(0, 4)} ${n.slice(4, 7)} ${n.slice(7)}` : n
+}
+
 /** لفظُ عدد الرحلات بالعربية: مفرد، ومثنّى، وجمع (3–10 «رحلات»، 11 فما فوق «رحلة»). */
 export function tripsCount(n: number): string {
   if (n === 1) return 'رحلة واحدة'

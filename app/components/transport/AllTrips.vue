@@ -6,7 +6,7 @@
  * ومشرف المشروع يقرأ فقط. الحكمُ لـRLS ودالّة `set_transport_paid`؛ هذا طبقةُ تجربة.
  */
 import { periodLabel } from '~/utils/reportWindow'
-import { formatAmount, groupByEmployee, payAllText, sumAmount, tripsCount, unpaid, type Trip } from '~/utils/transport'
+import { formatAmount, groupByEmployee, payAllText, sumAmount, tripsCount, unpaid, type Trip, type TransportLogger } from '~/utils/transport'
 import { transportStats } from '~/utils/pageStats'
 
 const props = defineProps<{ year: number, month: number }>()
@@ -30,7 +30,7 @@ const { data: trips, pending } = useLazyAsyncData<Trip[]>(
   { server: false, default: () => [] }
 )
 
-const { data: loggers } = useLazyAsyncData<{ id: string, full_name: string }[]>(
+const { data: loggers } = useLazyAsyncData<TransportLogger[]>(
   'transport-loggers',
   async () => {
     try {
@@ -44,6 +44,7 @@ const { data: loggers } = useLazyAsyncData<{ id: string, full_name: string }[]>(
 )
 
 const names = computed<Record<string, string>>(() => Object.fromEntries((loggers.value ?? []).map(l => [l.id, l.full_name])))
+const wallets = computed<Record<string, string | null>>(() => Object.fromEntries((loggers.value ?? []).map(l => [l.id, l.wallet])))
 const ALL = 'all'
 const selected = ref<string>(ALL)
 const employeeItems = computed(() => [
@@ -239,6 +240,7 @@ async function refreshTrips() {
         v-for="g in groups"
         :key="g.profileId"
         :name="g.name"
+        :wallet="wallets[g.profileId] ?? null"
         :total="g.total"
         :unpaid-total="g.unpaidTotal"
         :trips="g.trips"

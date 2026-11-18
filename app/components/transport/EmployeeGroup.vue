@@ -1,15 +1,17 @@
 <script setup lang="ts">
 /**
- * مجموعةُ موظفٍ واحد في «كلّ الرحلات»: رأسٌ بالاسم والمجموع وغير المسدَّد، ثم رحلاتُه
+ * مجموعةُ موظفٍ واحد في «كلّ الرحلات»: رأسٌ بالاسم ورقم محفظة جوال باي (لتحويل المبلغ) والمجموع وغير المسدَّد، ثم رحلاتُه
  * (جدولٌ على سطح المكتب وبطاقاتٌ على الجوال). للمدير الإداري (`canPay`) مفتاحُ «مسدَّدة» لكل رحلة؛
  * ولمشرف المشروع شارةٌ نصّيةٌ بلا مفتاح. المفتاحُ يُعطَّل ما دام طلبُه جارياً (`busyIds`)،
  * والتحديثُ المتفائل وإرجاعُه عند الخطأ في المكوّن الأب.
  */
 import { formatDay } from '~/utils/reportWindow'
-import { formatAmount, isolateLtr, type Trip } from '~/utils/transport'
+import { formatAmount, formatWallet, isolateLtr, type Trip } from '~/utils/transport'
 
 const props = defineProps<{
   name: string
+  /** رقمُ محفظة جوال باي، أو null إن لم يسجّل حساباً. */
+  wallet: string | null
   total: number
   unpaidTotal: number
   trips: (Trip & { serial: number })[]
@@ -60,6 +62,7 @@ const columns = [
   { key: 'paid', label: 'مسدَّدة', align: 'end' as const }
 ]
 
+const walletText = computed(() => (props.wallet ? formatWallet(props.wallet) : ''))
 const totalText = computed(() => formatAmount(props.total))
 const unpaidText = computed(() => formatAmount(props.unpaidTotal))
 </script>
@@ -67,9 +70,25 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
 <template>
   <section class="group">
     <header class="ghead">
-      <h3 class="gname">
-        {{ name }}
-      </h3>
+      <div class="gwho">
+        <h3 class="gname">
+          {{ name }}
+        </h3>
+        <span
+          v-if="wallet"
+          class="wallet"
+        ><UIcon
+          name="i-lucide-wallet"
+          aria-hidden="true"
+        /> جوال باي <bdi
+          class="num"
+          dir="ltr"
+        >{{ walletText }}</bdi></span>
+        <span
+          v-else
+          class="wallet none"
+        >لا حسابَ جوال باي</span>
+      </div>
       <p class="gsums">
         <span>المجموع: <bdi
           class="num"
@@ -176,6 +195,10 @@ const unpaidText = computed(() => formatAmount(props.unpaidTotal))
 <style scoped>
 .group { display: flex; flex-direction: column; gap: 10px; }
 .ghead { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; }
+.gwho { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+.wallet { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.wallet bdi { user-select: all; }
+.wallet.none { background: var(--surface-2); color: var(--ink-2); font-weight: 500; }
 .gname { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
 .gsums { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 14.5px; color: var(--ink-2); }
 .gsums .num { color: var(--ink); font-weight: 700; }

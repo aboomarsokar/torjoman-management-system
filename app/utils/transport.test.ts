@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canEditTrip, formatAmount, groupByEmployee, isolateLtr, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, tripsCount, unpaid, validateTrip } from './transport'
+import { canEditTrip, formatAmount, formatWallet, groupByEmployee, isolateLtr, jawwalWallet, monthBounds, normalizeAmount, numberTrips, payAllText, sumAmount, tripsCount, unpaid, validateTrip } from './transport'
 import type { Trip } from './transport'
 
 const trip = (over: Partial<Trip> = {}): Trip => ({
@@ -136,5 +136,18 @@ describe('normalizeAmount والمبلغ بلوحة المفاتيح العرب�
 describe('isolateLtr', () => {
   it('يلفّ النصَّ بعازلَي الاتجاه اللاتينيّ', () => {
     expect(isolateLtr('315 ₪')).toBe('\u2066315 ₪\u2069')
+  })
+})
+
+describe('jawwalWallet / formatWallet', () => {
+  it('يأخذ رقم جوال باي وحده', () => {
+    expect(jawwalWallet({ account_type: 'jawwalpay', account_number: '0592242206' })).toBe('0592242206')
+    expect(jawwalWallet({ account_type: 'palpay', account_number: '0592242206' })).toBeNull()
+    expect(jawwalWallet({ account_type: 'jawwalpay', account_number: null })).toBeNull()
+    expect(jawwalWallet(null)).toBeNull()
+  })
+  it('يقسّم الرقم للقراءة', () => {
+    expect(formatWallet('0592242206')).toBe('0592 242 206')
+    expect(formatWallet('12345')).toBe('12345')
   })
 })

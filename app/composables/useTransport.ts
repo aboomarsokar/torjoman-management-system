@@ -1,6 +1,6 @@
 import type { Database } from '~/types/database.types'
 import { TRANSPORT_LOGGER_ROLES } from '~/constants/transport'
-import { monthBounds, type Trip } from '~/utils/transport'
+import { jawwalWallet, monthBounds, type Trip, type TransportLogger } from '~/utils/transport'
 
 /**
  * الوصولُ إلى رحلات المواصلات (جدول `transport_trips`): جلبُ شهرٍ، وحفظُ رحلةٍ وحذفُها، والتسديد.
@@ -66,11 +66,12 @@ export function useTransport() {
   }
 
   /** من يُدخلون رحلات (المشرفون الميدانيون والمختبِرون والمديرة الإدارية للقسم النسائي، الفعّالون) مرتّبين بالاسم. */
-  async function fetchLoggers(): Promise<{ id: string, full_name: string }[]> {
-    const { data, error } = await supabase.from('profiles').select('id, full_name')
+  /** الموظفون الذين يسجّلون رحلات، مع رقم محفظة جوال باي (يقرؤه المدير الإداري ومشرف المشروع وحدهما — RLS). */
+  async function fetchLoggers(): Promise<TransportLogger[]> {
+    const { data, error } = await supabase.from('profiles').select('id, full_name, fin:profile_financials(account_type, account_number)')
       .in('role', [...TRANSPORT_LOGGER_ROLES]).eq('status', 'active').order('full_name')
     if (error) throw error
-    return data ?? []
+    return (data ?? []).map(p => ({ id: p.id, full_name: p.full_name, wallet: jawwalWallet(p.fin) }))
   }
 
   return { fetchMonth, saveTrip, deleteTrip, setPaid, fetchLoggers }

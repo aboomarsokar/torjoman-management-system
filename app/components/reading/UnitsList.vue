@@ -4,7 +4,7 @@
  * أو استبدالُه، وإضافةُ مقرّرٍ في آخر الخطّة (ReadingAddUnitModal) وكتابٍ جديد (ReadingAddBookModal).
  * شبكةُ بطاقاتٍ بعرض الصفحة بأغلفتها، ومقرّرُ الشهر الجاري مميَّز (2026-11-11).
  */
-import { monthUnit, unitBooks, unitMonthLabel, unitVideos } from '~/utils/reading'
+import { monthUnit, unitBooks, unitMonthLabel, unitScope, unitVideos } from '~/utils/reading'
 import { gazaToday } from '~/utils/reportWindow'
 
 interface Props {
@@ -126,11 +126,20 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
               {{ unitMonthLabel(u.opensOn) }}
             </div>
             <div class="scope">
-              {{ unitBooks(u) }}
+              {{ u.parts.length ? unitBooks(u) : unitScope(u) }}
             </div>
             <ReadingUnitVideos :items="unitVideos(u)" />
             <div
-              v-if="!u.pdfPath"
+              v-if="u.hasTest === false"
+              class="no-test"
+            >
+              <UIcon
+                name="i-lucide-users"
+                class="size-4"
+              /> بلا كتابٍ ولا اختبار
+            </div>
+            <div
+              v-else-if="!u.pdfPath"
               class="missing"
             >
               <UIcon
@@ -141,7 +150,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
           </div>
         </div>
         <div
-          v-if="u.pdfPath || manage"
+          v-if="u.pdfPath || (manage && u.hasTest !== false)"
           class="acts"
         >
           <UButton
@@ -246,6 +255,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
 .month { font-size: 13px; color: var(--ink-3); }
 .scope { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin-top: 4px; }
 .missing { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--err); font-weight: 600; margin-top: 4px; }
+.no-test { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--ink-3); }
 .acts { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
 .add { margin-top: 18px; padding: 16px 18px; background: var(--surface); border: 1px dashed var(--line); border-radius: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .hint { margin: 0; flex: 1 1 320px; font-size: 13px; color: var(--ink-3); }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
+import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, testedUnits, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
 
 const unit = (id: number, parts = [{ book: 'صفقات رابحة', author: null, page_from: 1, page_to: 88 }]): ReadingUnit =>
   ({ id, sort_order: id, title: `المقرّر ${id}`, parts })
@@ -173,5 +173,21 @@ describe('weekHasVideo', () => {
     expect(weekHasVideo([{ kind: 'pages' }, { kind: 'lecture' }])).toBe(true)
     expect(weekHasVideo([{ kind: 'clip' }])).toBe(true)
     expect(weekHasVideo([])).toBe(false)
+  })
+})
+
+describe('المقرّرُ بلا اختبار (لقاءٌ علميّ — 2026-11-18)', () => {
+  it('لا يدخل رحلةَ الطالب ولا عدَّ المقرّرات', () => {
+    const units = [{ id: 1, sort_order: 1, title: 'أ', parts: [] }, { id: 2, sort_order: 2, title: 'ب', parts: [], hasTest: false }] as ReadingUnit[]
+    expect(testedUnits(units).map(u => u.id)).toEqual([1])
+    const j = readingJourney(units, [{ id: 'x', unit_id: 1, started_at: '', deadline_at: '', submitted_at: '2026-11-01', score: 10, total: 10, percent: 100, passed: true }], { retryDays: 7, now: Date.parse('2026-11-18'), enrollmentDate: null })
+    expect(j.due).toBeNull()
+    expect(j.total).toBe(1)
+  })
+  it('اللقاءُ في نطاق المقرّر وليس مرئيّاً', () => {
+    const u = { parts: [], items: [{ week: 1, sort_order: 1, kind: 'meeting', book: null, page_from: null, page_to: null, title: 'لقاء علمي', speaker: null, durationSeconds: null, url: null }] } as Pick<ReadingUnit, 'parts' | 'items'>
+    expect(unitScope(u)).toBe('لقاء علمي')
+    expect(unitVideos(u)).toEqual([])
+    expect(weekHasVideo(u.items!)).toBe(false)
   })
 })

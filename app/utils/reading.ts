@@ -13,11 +13,11 @@ const MS_PER_DAY = 24 * 3600 * 1000
 const DAYS_PER_MONTH = 30.4
 
 export interface ReadingPart { book: string, author: string | null, page_from: number, page_to: number }
-/** بندٌ في خارطة الأسبوع: صفحاتٌ من كتاب، أو محاضرةٌ/مقطعٌ مرئيّ (المدّةُ بالثواني، والرابطُ قد يتأخّر). */
+/** بندٌ في خارطة الأسبوع: صفحاتٌ من كتاب، أو محاضرةٌ/مقطعٌ مرئيّ (المدّةُ بالثواني، والرابطُ قد يتأخّر)، أو لقاءٌ علميّ. */
 export interface ReadingItem {
   week: number
   sort_order: number
-  kind: 'pages' | 'lecture' | 'clip'
+  kind: 'pages' | 'lecture' | 'clip' | 'meeting'
   book: string | null
   page_from: number | null
   page_to: number | null
@@ -39,6 +39,8 @@ export interface ReadingUnit {
   coverPath?: string | null
   opensOn?: string | null
   items?: ReadingItem[]
+  /** للمقرّر اختبار؟ `false` (لقاءٌ علميّ — الشهرُ الثاني عشر) يُعرض في الخطّة ولا يدخل رحلةَ الطالب. */
+  hasTest?: boolean
 }
 export interface ReadingAttempt {
   id: string
@@ -108,13 +110,13 @@ export function unitBooks(unit: Pick<ReadingUnit, 'parts'>): string {
 
 /** مرئيّاتُ المقرّر (محاضراتٌ ومقاطع) بترتيب الخارطة — لبطاقات المقرّر (2026-11-11). */
 export function unitVideos(unit: Pick<ReadingUnit, 'items'>): ReadingItem[] {
-  return (unit.items ?? []).filter(i => i.kind !== 'pages')
+  return (unit.items ?? []).filter(i => i.kind === 'lecture' || i.kind === 'clip')
     .sort((a, b) => a.week - b.week || a.sort_order - b.sort_order)
 }
 
 /** أسبوعٌ فيه محاضرةٌ أو مقطع — يُميَّز في الخارطة كي لا يفوت الطالبَ (طلب المستخدم 2026-11-18). */
 export function weekHasVideo(items: Pick<ReadingItem, 'kind'>[]): boolean {
-  return items.some(i => i.kind !== 'pages')
+  return items.some(i => i.kind === 'lecture' || i.kind === 'clip')
 }
 
 /** عددٌ معدودٌ بالعربية: مفردٌ، ومثنّى، وجمعٌ للثلاثة إلى العشرة، ومفردٌ لما فوقها. */
@@ -133,7 +135,8 @@ export function videosPhrase(items: Pick<ReadingItem, 'kind'>[]): string {
 
 /** نطاقُ المقرّر مختصراً: كتبُه ثم عددُ مرئيّاته — «صفقات رابحة 165–196 + محاضرتان». */
 export function unitScope(unit: Pick<ReadingUnit, 'parts' | 'items'>): string {
-  return [unitBooks(unit), videosPhrase(unitVideos(unit))].filter(Boolean).join(' + ')
+  const meetings = (unit.items ?? []).filter(i => i.kind === 'meeting').map(i => i.title ?? 'لقاء علمي')
+  return [unitBooks(unit), videosPhrase(unitVideos(unit)), ...meetings].filter(Boolean).join(' + ')
 }
 
 /** الأشهرُ الكاملة منذ الالتحاق (صفرٌ قبل شهرٍ أو بلا تاريخ). */
@@ -142,8 +145,11 @@ export function monthsSince(date: string | null, now: number): number {
   return Math.max(0, Math.floor((now - new Date(date).getTime()) / (DAYS_PER_MONTH * MS_PER_DAY)))
 }
 
+/** المقرّراتُ ذواتُ الاختبار — وحدها تدخل رحلةَ الطالب وعدَّ المتأخّر (2026-11-18). */
+export const testedUnits = <T extends Pick<ReadingUnit, 'hasTest'>>(units: T[]): T[] => units.filter(u => u.hasTest !== false)
+
 export function readingJourney(units: ReadingUnit[], attempts: ReadingAttempt[], o: JourneyOptions) {
-  const sorted = [...units].sort((a, b) => a.sort_order - b.sort_order)
+  const sorted = testedUnits(units).sort((a, b) => a.sort_order - b.sort_order)
   const passed = new Set(attempts.filter(a => a.passed).map(a => a.unit_id))
   const due = sorted.find(u => !passed.has(u.id)) ?? null
   const today = gazaToday(new Date(o.now))

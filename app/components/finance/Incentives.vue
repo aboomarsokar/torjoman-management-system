@@ -8,6 +8,7 @@
  */
 import type { Database } from '~/types/database.types'
 import { allocationRows, type AllocationHalaqa } from '~/utils/incentiveAllocation'
+import type { StatementRow } from '~/utils/statementReview'
 
 interface Props {
   /** إخفاء قسم التخصيص وأزراره، وإبقاء الكشوف الواردة فقط. */
@@ -27,7 +28,7 @@ const month = ref(now.getMonth() + 1)
 const year = ref(now.getFullYear())
 
 type AllocRow = { halaqa_id: string, name: string, teacher: string, amount: string }
-type StmtRow = { id: string, halaqa_id: string, halaqa: string, halaqa_name: string, gender: string | null, teacher_name: string | null, received: number, carried: number, spent: number, status: string, returnNote: string | null }
+type StmtRow = StatementRow
 const rows = ref<AllocRow[]>([])
 const statements = ref<StmtRow[]>([])
 const approved = ref(false)
@@ -164,14 +165,13 @@ function onReviewed(id: string) {
   const s = statements.value.find(x => x.id === id)
   if (s) s.status = 'reviewed'
 }
+function onReviewedMany(ids: string[]) {
+  for (const id of ids) onReviewed(id)
+}
 function onReturned(id: string, note: string) {
   const s = statements.value.find(x => x.id === id)
   if (s) Object.assign(s, { status: 'draft', returnNote: note })
 }
-/** المسوّدةُ التي أعادها المراجِع تُميَّز عن مسوّدةٍ لم تُرسل قطّ. */
-const statementBadge = (s: StmtRow) => (s.status === 'draft' && s.returnNote)
-  ? { label: 'أُعيد للمعلّم', color: 'warning' as const }
-  : STATEMENT_STATUS[s.status]
 </script>
 
 <template>
@@ -360,83 +360,13 @@ const statementBadge = (s: StmtRow) => (s.status === 'draft' && s.returnNote)
               @click="reset"
             />
           </div>
-          <div
+          <FinanceStatementsTable
             v-else
-            class="table-wrap stack-wrap"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th class="ta-start">
-                    #
-                  </th><th class="ta-start">
-                    الحلقة
-                  </th><th>المستلَم</th><th>المرحَّل</th><th>المصروف</th><th>المتبقّي</th><th>الحالة</th><th />
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(s, i) in shownStatements"
-                  :key="s.id"
-                >
-                  <td class="ta-start muted stack-hide">
-                    {{ i + 1 }}
-                  </td>
-                  <td class="ta-start strong">
-                    {{ s.halaqa }}
-                  </td>
-                  <td
-                    class="num"
-                    data-label="المستلَم"
-                  >
-                    {{ fmt(s.received) }}
-                  </td>
-                  <td
-                    class="num"
-                    :class="{ out: s.carried > s.received }"
-                    :title="s.carried > s.received ? 'الرصيدُ المرحَّل أكبر من مخصّص شهر — الحلقة لا تصرف ما تستلم' : undefined"
-                    data-label="المرحَّل"
-                  >
-                    {{ s.carried ? fmt(s.carried) : '—' }}
-                  </td>
-                  <td
-                    class="num"
-                    data-label="المصروف"
-                  >
-                    {{ fmt(s.spent) }}
-                  </td>
-                  <td
-                    class="num"
-                    :class="(s.received + s.carried - s.spent) < 0 ? 'out' : ''"
-                    data-label="المتبقّي"
-                  >
-                    {{ fmt(s.received + s.carried - s.spent) }}
-                  </td>
-                  <td data-label="الحالة">
-                    <UBadge
-                      :label="statementBadge(s)?.label"
-                      :color="statementBadge(s)?.color"
-                      variant="soft"
-                      size="sm"
-                      class="stack-keep"
-                    />
-                  </td>
-                  <td>
-                    <UButton
-                      :label="canReview && s.status === 'submitted' ? 'راجع البنود' : 'البنود'"
-                      :color="canReview && s.status === 'submitted' ? 'primary' : 'neutral'"
-                      variant="outline"
-                      size="sm"
-                      icon="i-lucide-list"
-                      class="stack-keep"
-                      :ui="{ base: 'rounded-[9px]' }"
-                      @click="openStatement(s)"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            :rows="shownStatements"
+            :can-review="canReview"
+            @open="openStatement"
+            @reviewed="onReviewedMany"
+          />
         </template>
       </template>
     </ClientOnly>

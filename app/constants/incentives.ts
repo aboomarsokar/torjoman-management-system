@@ -6,3 +6,6 @@ export const STATEMENT_ITEM_CATEGORIES = ['جوائز', 'أنشطة', 'ضياف�
 
 /** أدنى طولٍ للبيان بعد حذف المسافات — «م» وحدها لا توثّق مصروفاً. */
 export const MIN_ITEM_DESCRIPTION_LENGTH = 3
+
+/** مبلغُ حوافز الحلقة الشهريّ الافتراضيّ بالشيكل (طلب المستخدم 2026-11-19): يُملأ لكل حلقةٍ نشطة في شهرٍ لم يُخصَّص بعد. */
+export const DEFAULT_MONTHLY_INCENTIVE = 150

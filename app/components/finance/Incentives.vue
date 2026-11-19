@@ -7,6 +7,7 @@
  * والكشوفُ الواردة تُفلتر بالقسم والبحث (`UiHalaqaFilters` بلا المشرف — 2026-11-09)؛ والتخصيصُ كاملٌ دائماً.
  */
 import type { Database } from '~/types/database.types'
+import { allocationRows, type AllocationHalaqa } from '~/utils/incentiveAllocation'
 
 interface Props {
   /** إخفاء قسم التخصيص وأزراره، وإبقاء الكشوف الواردة فقط. */
@@ -42,7 +43,7 @@ async function load() {
   loading.value = true
   try {
     const [{ data: halqat }, { data: alloc }, { data: stmts }] = await Promise.all([
-      supabase.from('halaqat').select('id, name, teacher:teacher_id(full_name)').order('name').returns<{ id: string, name: string, teacher: { full_name: string } | null }[]>(),
+      supabase.from('halaqat').select('id, name, status, teacher:teacher_id(full_name, status)').order('name').returns<AllocationHalaqa[]>(),
       supabase.from('halaqa_incentives').select('halaqa_id, allocated_amount, approved').eq('incentive_month', month.value).eq('incentive_year', year.value),
       supabase.from('incentive_statements').select('id, halaqa_id, received_amount, carried_amount, status, return_note, items:incentive_statement_items(amount), halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))').eq('statement_month', month.value).eq('statement_year', year.value)
         .returns<{ id: string, halaqa_id: string, received_amount: number, carried_amount: number, status: string, return_note: string | null, items: { amount: number }[], halaqa: { name: string, gender: string | null, teacher: { full_name: string } | null } | null }[]>()
@@ -50,7 +51,7 @@ async function load() {
     const map: Record<string, number> = {}
     for (const a of alloc ?? []) map[a.halaqa_id] = a.allocated_amount
     approved.value = (alloc ?? []).some(a => a.approved)
-    rows.value = (halqat ?? []).map(h => ({ halaqa_id: h.id, name: h.name, teacher: h.teacher?.full_name ?? '—', amount: map[h.id] != null ? String(map[h.id]) : '' }))
+    rows.value = allocationRows(halqat ?? [], map)
     statements.value = (stmts ?? []).map(s => ({
       id: s.id, halaqa_id: s.halaqa_id, halaqa: s.halaqa?.name ?? '—', halaqa_name: s.halaqa?.name ?? '—',
       gender: s.halaqa?.gender ?? null, teacher_name: s.halaqa?.teacher?.full_name ?? null, received: s.received_amount, carried: s.carried_amount,

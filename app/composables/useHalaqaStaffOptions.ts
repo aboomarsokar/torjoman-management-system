@@ -12,7 +12,25 @@ type Gender = Database['public']['Enums']['gender_type']
 export const NO_STAFF = 'none'
 
 export interface StaffRow { id: string, full_name: string, gender: Gender | null }
-export interface HalaqaLoad { id: string, teacher_id: string, status: string }
+export interface HalaqaLoad {
+  id: string
+  teacher_id: string
+  status: string
+  gender?: Gender | null
+  teacher?: { full_name: string } | null
+}
+
+/** وسمُ المعلم المعطَّل في القائمة. */
+export const DISABLED_TEACHER_TAG = ' (معطَّل)'
+
+/**
+ * معلّمُ الحلقة المعدَّلة يبقى في القائمة ولو عُطّل حسابه (فلا يُفرَّغ الحقلُ ويتعذّر الحفظ —
+ * كإيقاف حلقةٍ تركها معلّمها)، موسوماً «معطَّل». القائمةُ نفسها إن كان نشطاً أو لا حلقةَ تُعدَّل.
+ */
+export function withCurrentTeacher(teachers: StaffRow[], halaqa: HalaqaLoad | undefined): StaffRow[] {
+  if (!halaqa?.teacher_id || teachers.some(t => t.id === halaqa.teacher_id)) return teachers
+  return [...teachers, { id: halaqa.teacher_id, full_name: (halaqa.teacher?.full_name ?? '—') + DISABLED_TEACHER_TAG, gender: halaqa.gender ?? null }]
+}
 
 /** الطاقم من جنسٍ بعينه؛ ولا أحد قبل اختيار الجنس. */
 export function staffOfGender<T extends StaffRow>(rows: T[], gender: Gender | ''): T[] {
@@ -70,11 +88,13 @@ export function useHalaqaStaffOptions(
   const { data: supervisors } = useLazyAsyncData('halaqa-supervisor-options', () => fetchStaff('field_supervisor'), opts)
   const { data: examiners } = useLazyAsyncData('halaqa-examiner-options', () => fetchStaff('examiner'), opts)
 
-  const keepId = computed(() => (halqat.value ?? []).find(h => h.id === editingId.value)?.teacher_id ?? null)
+  const editing = computed(() => (halqat.value ?? []).find(h => h.id === editingId.value))
+  const keepId = computed(() => editing.value?.teacher_id ?? null)
+  const teacherList = computed(() => withCurrentTeacher(teachers.value ?? [], editing.value))
   const toItem = (r: StaffRow) => ({ label: r.full_name, value: r.id })
 
   const teacherItems = computed(() =>
-    availableTeachers(teachers.value ?? [], halqat.value ?? [], form.gender, editingId.value, keepId.value).map(toItem))
+    availableTeachers(teacherList.value, halqat.value ?? [], form.gender, editingId.value, keepId.value).map(toItem))
   const supervisorItems = computed(() =>
     [{ label: 'بلا مشرف', value: NO_STAFF }, ...staffOfGender(supervisors.value ?? [], form.gender).map(toItem)])
   const examinerItems = computed(() =>
@@ -82,7 +102,7 @@ export function useHalaqaStaffOptions(
 
   watch(() => form.gender, (g) => {
     Object.assign(form, reconcileStaff(form, g, {
-      teachers: teachers.value ?? [], supervisors: supervisors.value ?? [], examiners: examiners.value ?? []
+      teachers: teacherList.value, supervisors: supervisors.value ?? [], examiners: examiners.value ?? []
     }))
   })
 

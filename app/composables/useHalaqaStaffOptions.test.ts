@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
-  availableTeachers, NO_STAFF, reconcileStaff, staffOfGender, suggestedExaminer, type StaffRow
+  availableTeachers, DISABLED_TEACHER_TAG, NO_STAFF, reconcileStaff, staffOfGender, suggestedExaminer, withCurrentTeacher, type StaffRow
 } from './useHalaqaStaffOptions'
 
 const tM: StaffRow = { id: 'tm', full_name: 'معلم', gender: 'male' }
@@ -58,5 +58,22 @@ describe('reconcileStaff', () => {
   it('القوائم الفارغة (لم تصل بعد) لا تُفرّغ اختياراً قائماً', () => {
     const sel = { teacher_id: 'tm', supervisor_id: 'sm', examiner_id: 'em' }
     expect(reconcileStaff(sel, 'male', { teachers: [], supervisors: [], examiners: [] })).toEqual(sel)
+  })
+})
+
+describe('withCurrentTeacher', () => {
+  const h = { id: 'h1', teacher_id: 'gone', status: 'active', gender: 'male' as const, teacher: { full_name: 'معلم معطّل' } }
+  it('يُبقي معلّمَ الحلقة المعطَّلَ موسوماً', () => {
+    const out = withCurrentTeacher([tM], h)
+    expect(out).toHaveLength(2)
+    expect(out[1]).toEqual({ id: 'gone', full_name: 'معلم معطّل' + DISABLED_TEACHER_TAG, gender: 'male' })
+  })
+  it('لا يكرّر المعلّمَ النشط ولا يضيف شيئاً بلا حلقة', () => {
+    expect(withCurrentTeacher([tM], { ...h, teacher_id: 'tm' })).toEqual([tM])
+    expect(withCurrentTeacher([tM], undefined)).toEqual([tM])
+  })
+  it('يجتاز reconcileStaff فلا يُفرَّغ اختيارُه', () => {
+    const teachers = withCurrentTeacher([tM], h)
+    expect(reconcileStaff({ teacher_id: 'gone', supervisor_id: NO_STAFF, examiner_id: NO_STAFF }, 'male', { teachers, supervisors: [sM], examiners: [eM] }).teacher_id).toBe('gone')
   })
 })

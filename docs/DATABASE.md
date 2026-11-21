@@ -1371,3 +1371,18 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 - `reading_unit_items.kind` += `meeting` (عنوانٌ إلزاميّ بقيد `reading_unit_items_video` كالمرئيّ).
 - البيانات: المقرّرُ الثاني عشر (`opens_on` 2027-09-01، `has_test=false`) وبندُه «لقاء علمي» في الأسبوع الأول.
 
+
+## محطةُ منتصف الشهر: `quran_midmonth` و`quran_mid_records` (2026-11-21)
+
+> الهجرة `20261121113212_quran_midmonth` (طلب المستخدم). **الإدخالُ يُفتح يومَ 15** (`private.report_entry_day(y, m)`: يومُ 15، والخميسُ قبله إن كان جمعة) بدل آخر يوم في `guard_quran_record` — والإرسالُ للاعتماد يبقى `report_opening_day` (آخرُ يوم).
+
+| الجدول | الأعمدة | ملاحظات |
+|---|---|---|
+| `quran_midmonth` | `report_id` PK → `monthly_reports` (cascade)، `halaqa_id`، `mid_year`، `mid_month`، `submitted_at`، `submitted_by` | رأسُ الصورة؛ فريدٌ لكلّ (حلقة، شهر) |
+| `quran_mid_records` | `report_id` → `quran_midmonth` (cascade)، `halaqa_id`، `student_id`، المواضعُ الأربعة، `pages_memorized`، `pages_reviewed` | PK (`report_id`, `student_id`)؛ نسخةٌ من `quran_records` لحظةَ التسليم |
+
+**RLS:** قراءةٌ وحدها بـ`halaqa_id = any ((select public.visible_halaqa_ids())::uuid[])`، ولا منحَ كتابةٍ لـ`authenticated` (الكتابةُ بالدالّة)، و`guard_table_for_impersonation` على الجدولين.
+
+**`public.submit_quran_midmonth(p_report)`** (`security definer`، `assert_session_writable`): معلّمُ الحلقة وحده، والشهرُ مسوّدةٌ جارٍ وقد بلغ يومَ الإدخال؛ يحفظ الرأسَ ويستبدل السجلّات بنسخة `quran_records`، ويُرجع عددَها؛ وأوّلُ تسليمٍ يُشعر المشرفَ الميدانيّ `quran_mid_submitted`.
+
+**`private.quran_mid_reminders()`** (pg_cron `quran-mid-reminders` يومياً 05:00 UTC): يومَ الإدخال يُشعر معلّمَ كلّ حلقةٍ نشطة لم تسلّم `quran_mid_due`، وبعده بيومين يُشعر المديرَ الإداريّ (الكلّ) والفنيَّ (البنين) والمديرةَ (البنات) بعدد غير المسلِّمة `quran_mid_missing` — مرّةً في اليوم. وأُضيفت الأنواعُ الثلاثة إلى `notifications_kind_check` و`private.notify`.

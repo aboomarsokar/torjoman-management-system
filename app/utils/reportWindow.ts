@@ -31,6 +31,19 @@ export function openingDay(year: number, month: number): string {
   return last.toISOString().slice(0, 10)
 }
 
+/** يومُ منتصف الشهر: يُفتح فيه إدخالُ إنجاز الشهر وتسليمُ «رصد المنتصف» (طلب المستخدم 2026-11-21؛ مرآتُه `private.report_entry_day`). */
+export const MID_MONTH_DAY = 15
+
+/** أوّلُ يومٍ يُدخل فيه المعلّمُ إنجازَ الشهر: يومُ 15، والخميسُ قبله إن كان جمعة. */
+export function entryDay(year: number, month: number): string {
+  return schoolDayOnOrBefore(`${year}-${String(month).padStart(2, '0')}-${String(MID_MONTH_DAY).padStart(2, '0')}`)
+}
+
+/** هل بلغ `today` يومَ فتح الإدخال؟ */
+export function isEntryOpen(year: number, month: number, today: string): boolean {
+  return today >= entryDay(year, month)
+}
+
 /** هل بلغ `today` (YYYY-MM-DD) يومَ فتح الإرسال؟ */
 export function isSubmittable(year: number, month: number, today: string): boolean {
   return today >= openingDay(year, month)

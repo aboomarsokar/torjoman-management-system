@@ -25,7 +25,7 @@ const pick = computed<string>({
   set: (v) => { halaqaId.value = v || null }
 })
 const windowText = computed(() =>
-  `الشهر ${String(month.value).padStart(2, '0')} يُرصَد ابتداءً من ${formatDay(openingDay(year.value, month.value))}`)
+  `الشهر ${String(month.value).padStart(2, '0')} يُرصَد ابتداءً من ${formatDay(entryDay(year.value, month.value))} ويُرسَل ${formatDay(openingDay(year.value, month.value))}`)
 </script>
 
 <template>

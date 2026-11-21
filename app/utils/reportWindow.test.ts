@@ -1,6 +1,6 @@
 /** نافذةُ رصد الشهر (قفلُ الإرسال) وتنسيقُ الشهور والأيام بالأرقام، بتاريخ غزة. */
 import { describe, expect, it } from 'vitest'
-import { formatDay, gazaToday, isFriday, isSubmittable, openingDay, periodLabel, schoolDayOnOrBefore, shiftMonth } from './reportWindow'
+import { entryDay, formatDay, gazaToday, isEntryOpen, isFriday, isSubmittable, openingDay, periodLabel, schoolDayOnOrBefore, shiftMonth } from './reportWindow'
 
 describe('الجمعة عطلة', () => {
   it('isFriday', () => {
@@ -67,5 +67,17 @@ describe('gazaToday', () => {
 
   it('بلا وسيط يُرجع تاريخاً بصيغة YYYY-MM-DD', () => {
     expect(gazaToday()).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
+
+describe('entryDay / isEntryOpen', () => {
+  it('يومُ 15، والخميسُ قبله إن كان جمعة', () => {
+    expect(entryDay(2026, 11)).toBe('2026-11-15')
+    expect(entryDay(2027, 1)).toBe('2027-01-14')
+  })
+  it('يُفتح الإدخالُ يومَه وما بعده', () => {
+    expect(isEntryOpen(2026, 11, '2026-11-14')).toBe(false)
+    expect(isEntryOpen(2026, 11, '2026-11-15')).toBe(true)
+    expect(isEntryOpen(2026, 10, '2026-11-01')).toBe(true)
   })
 })

@@ -2306,6 +2306,113 @@ export type Database = {
           },
         ]
       }
+      quran_mid_records: {
+        Row: {
+          from_ayah: number | null
+          from_surah: number | null
+          halaqa_id: string
+          pages_memorized: number
+          pages_reviewed: number | null
+          report_id: string
+          student_id: string
+          to_ayah: number | null
+          to_surah: number | null
+        }
+        Insert: {
+          from_ayah?: number | null
+          from_surah?: number | null
+          halaqa_id: string
+          pages_memorized?: number
+          pages_reviewed?: number | null
+          report_id: string
+          student_id: string
+          to_ayah?: number | null
+          to_surah?: number | null
+        }
+        Update: {
+          from_ayah?: number | null
+          from_surah?: number | null
+          halaqa_id?: string
+          pages_memorized?: number
+          pages_reviewed?: number | null
+          report_id?: string
+          student_id?: string
+          to_ayah?: number | null
+          to_surah?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quran_mid_records_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quran_mid_records_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "quran_midmonth"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "quran_mid_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quran_midmonth: {
+        Row: {
+          halaqa_id: string
+          mid_month: number
+          mid_year: number
+          report_id: string
+          submitted_at: string
+          submitted_by: string | null
+        }
+        Insert: {
+          halaqa_id: string
+          mid_month: number
+          mid_year: number
+          report_id: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Update: {
+          halaqa_id?: string
+          mid_month?: number
+          mid_year?: number
+          report_id?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quran_midmonth_halaqa_id_fkey"
+            columns: ["halaqa_id"]
+            isOneToOne: false
+            referencedRelation: "halaqat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quran_midmonth_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: true
+            referencedRelation: "monthly_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quran_midmonth_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quran_pages: {
         Row: {
           ayah: number
@@ -4015,6 +4122,7 @@ export type Database = {
       }
       start_direct_chat: { Args: { p_other: string }; Returns: string }
       start_reading_test: { Args: never; Returns: Json }
+      submit_quran_midmonth: { Args: { p_report: string }; Returns: number }
       submit_reading_test: {
         Args: { p_answers: Json; p_attempt: string }
         Returns: Json

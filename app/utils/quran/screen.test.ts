@@ -97,10 +97,10 @@ describe('canEditMonth', () => {
   })
   it('سطرُ يوم الفتح للمعلّم', () => {
     // 31-10-2026 سبت؛ و30-04-2027 جمعة فيُفتح الخميسَ قبله
-    expect(teacherOpeningNote(2026, 10, '2026-10-28')).toBe('يُفتح إدخالُ إنجاز الشهر 10 في 31-10-2026.')
-    expect(teacherOpeningNote(2026, 10, '2026-10-31')).toBeNull()
+    expect(teacherOpeningNote(2026, 11, '2026-11-14')).toBe('يُفتح إدخالُ إنجاز الشهر 11 في 15-11-2026.')
+    expect(teacherOpeningNote(2026, 11, '2026-11-15')).toBeNull()
     expect(teacherOpeningNote(2026, 9, '2026-10-28')).toBeNull()
-    expect(teacherOpeningNote(2027, 4, '2027-04-28')).toBe('يُفتح إدخالُ إنجاز الشهر 04 في 29-04-2027.')
+    expect(teacherOpeningNote(2027, 1, '2027-01-10')).toBe('يُفتح إدخالُ إنجاز الشهر 01 في 14-01-2027.')
   })
   it('المعتمِد يكتب ما لم يُعتمد الشهر', () => {
     const base = { readOnly: false, isTeacher: false, canApprove: true }

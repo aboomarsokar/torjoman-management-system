@@ -38,7 +38,10 @@ export const NOTIFICATION_KINDS = [
   'track_requested',
   'track_decided',
   'below_quota',
-  'payout_account_changed'
+  'payout_account_changed',
+  'quran_mid_due',
+  'quran_mid_submitted',
+  'quran_mid_missing'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -71,6 +74,9 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   track_decided: 'i-lucide-signpost',
   below_quota: 'i-lucide-users-round',
   payout_account_changed: 'i-lucide-wallet',
+  quran_mid_due: 'i-lucide-flag-triangle-right',
+  quran_mid_submitted: 'i-lucide-flag',
+  quran_mid_missing: 'i-lucide-flag-off',
   announcement: 'i-lucide-megaphone',
   student_requested: 'i-lucide-user-plus',
   student_request_closed: 'i-lucide-user-check',

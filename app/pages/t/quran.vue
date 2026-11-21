@@ -22,6 +22,12 @@ const {
 } = useOfflineQuran()
 const { state: readiness } = useOfflineReadiness(OFFLINE_QURAN)
 const { isReadOnly } = usePermissions()
+// رصدُ منتصف الشهر (طلب المستخدم 2026-11-21): يظهر في الشهر الجاري ما دام مسوّدة
+const mid = useQuranMidmonth({
+  reportId: computed(() => report.value?.id ?? null), year, month, status,
+  online: computed(() => queue.online.value), pending: computed(() => pendingStudents.value.size)
+})
+const showMid = computed(() => !isReadOnly.value && mid.isCurrentMonth.value && (status.value === null || status.value === 'draft'))
 // `?y=&m=` (إشعارُ الإعادة، «يحتاج متابعتك») يفتح ذلك الشهرَ إن كان على الجهاز
 const route = useRoute()
 onMounted(async () => {
@@ -199,6 +205,14 @@ const noDecision = () => Promise.resolve(false)
         />
         <span>{{ openingNote }}</span>
       </div>
+
+      <QuranMidmonthBar
+        v-if="showMid"
+        :submitted-at="mid.submittedAt.value"
+        :block="mid.block.value"
+        :busy="mid.busy.value"
+        :submit="mid.submit"
+      />
 
       <QuranMonthBar
         :status="status"

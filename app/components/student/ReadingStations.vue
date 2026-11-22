@@ -50,10 +50,7 @@ const { busy, download } = useReadingAdmin()
         /></span>
         <div class="st-body">
           <div class="st-title">
-            {{ s.unit.title }}<span
-              v-if="s.unit.opensOn"
-              class="st-month"
-            > · {{ unitMonthLabel(s.unit.opensOn) }}</span>
+            {{ s.unit.title }}
           </div>
           <div class="st-scope">
             {{ unitScope(s.unit) }}
@@ -131,7 +128,6 @@ ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: col
 .st.due .dot { border-color: var(--blue); box-shadow: 0 0 0 3px var(--ring); }
 .st-body { flex: 1; min-width: 0; }
 .st-title { font-weight: 700; color: var(--ink); font-size: 15px; }
-.st-month { font-weight: 500; color: var(--ink-3); }
 .st-scope { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; margin-top: 2px; }
 .tag { flex: none; display: inline-flex; align-items: center; min-height: 26px; padding: 2px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
 .tag.ok { background: var(--green-soft); color: var(--green-ink); }

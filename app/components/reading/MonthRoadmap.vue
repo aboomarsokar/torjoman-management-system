@@ -5,6 +5,7 @@
  * (`monthUnit`) والأسبوعُ الجاري مميَّز؛ و`browse` يضيف قائمةً لتصفّح خارطة أيّ شهرٍ آخر (للعاملين).
  * وفي العرض الواسع (≥900px) تصير الأسابيعُ أعمدةً متجاورة. وأسبوعُ المحاضرة مميَّزٌ بلونٍ وشارة، وفي الرأس
  * شريطُ «في هذا الشهر محاضرتان» (2026-11-18) كي لا تفوت الطالبَ بين أسابيع القراءة.
+ * والطالبُ يرى خارطةَ **مقرّره المستحقّ** (`unitId` — كلٌّ بإيقاعه، 2026-11-22) لا مقرّرَ شهر المشروع، بتسميةٍ عامة.
  */
 import { formatDuration, monthUnit, roadmapWeeks, unitMonthLabel, unitScope, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingItem } from '~/utils/reading'
 import { gazaToday } from '~/utils/reportWindow'
@@ -12,12 +13,15 @@ import { gazaToday } from '~/utils/reportWindow'
 interface Props {
   /** قائمةُ الأشهر لتصفّح خارطةٍ غير الجارية. */
   browse?: boolean
+  /** مقرّرُ الطالب المستحقّ: تُعرض خارطتُه بدل مقرّر الشهر. */
+  unitId?: number | null
 }
 const props = defineProps<Props>()
 
 const { units } = useReadingUnits()
 const today = gazaToday()
-const current = computed(() => monthUnit(units.value ?? [], today))
+const mine = computed(() => props.unitId ? (units.value ?? []).find(u => u.id === props.unitId) ?? null : null)
+const current = computed(() => mine.value ?? monthUnit(units.value ?? [], today))
 const picked = ref<number | null>(null)
 const unit = computed(() => (units.value ?? []).find(u => u.id === picked.value) ?? current.value)
 const isCurrentMonth = computed(() => !!unit.value && unit.value.id === current.value?.id)
@@ -56,10 +60,10 @@ const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? '
             name="i-lucide-map"
             class="size-5"
           /></span>
-          خارطةُ {{ isCurrentMonth ? 'الشهر' : unitMonthLabel(unit.opensOn) || 'المقرّر' }}
+          خارطةُ {{ mine ? 'مقرّرك' : isCurrentMonth ? 'الشهر' : unitMonthLabel(unit.opensOn) || 'المقرّر' }}
         </h3>
         <p class="mr-sub">
-          <b>{{ unit.title }}</b><template v-if="unit.opensOn">
+          <b>{{ unit.title }}</b><template v-if="unit.opensOn && !mine">
             · {{ unitMonthLabel(unit.opensOn) }}
           </template> · {{ unitScope(unit) }}
         </p>
@@ -71,7 +75,7 @@ const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? '
             name="i-lucide-circle-play"
             class="size-4"
           />
-          في {{ isCurrentMonth ? 'هذا الشهر' : 'هذا المقرّر' }} {{ videos }} — في أسابيعها المميّزة أدناه
+          في {{ isCurrentMonth && !mine ? 'هذا الشهر' : 'هذا المقرّر' }} {{ videos }} — في أسابيعها المميّزة أدناه
         </p>
       </div>
       <UiSelect

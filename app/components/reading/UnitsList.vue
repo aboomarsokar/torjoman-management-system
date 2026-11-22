@@ -115,7 +115,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
             <span
               v-if="u.id === currentId"
               class="now-tag"
-            >مقرّر هذا الشهر</span>
+            >مقرّر الدفعة الأولى هذا الشهر</span>
             <h3 class="title">
               {{ u.title }}
             </h3>
@@ -123,7 +123,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
               v-if="u.opensOn"
               class="month"
             >
-              {{ unitMonthLabel(u.opensOn) }}
+              يُفتح للدفعة الأولى: {{ unitMonthLabel(u.opensOn) }}
             </div>
             <div class="scope">
               {{ u.parts.length ? unitBooks(u) : unitScope(u) }}

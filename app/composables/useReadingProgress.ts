@@ -9,7 +9,7 @@ import type { Database } from '~/types/database.types'
 import { readingProgressRows, type ReadingAttempt } from '~/utils/reading'
 
 type AttemptRow = ReadingAttempt & { student_id: string }
-export type ReadingProgressData = { students: { id: string, full_name: string, enrollment_date: string | null }[], attempts: AttemptRow[] }
+export type ReadingProgressData = { students: { id: string, full_name: string, enrollment_date: string | null, created_at: string }[], attempts: AttemptRow[] }
 
 export const READING_HALAQAT_KEY = 'reading-progress-halaqat'
 export const readingProgressKey = (hid: string | null) => `reading-progress-${hid ?? 'none'}`
@@ -17,7 +17,7 @@ export const readingProgressKey = (hid: string | null) => `reading-progress-${hi
 /** طلابُ الحلقة النشطون ومحاولاتُهم (تناديها الصفحةُ وتجهيزُ نُسخ المعلّم اليوميّ — `useWarmTeacherMirrors`). */
 export async function fetchReadingProgress(supabase: SupabaseClient<Database>, hid: string): Promise<ReadingProgressData> {
   const [students, attempts] = await Promise.all([
-    supabase.from('students').select('id, full_name, enrollment_date').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
+    supabase.from('students').select('id, full_name, enrollment_date, created_at').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
     supabase.from('reading_attempts')
       .select('id, student_id, unit_id, started_at, deadline_at, submitted_at, score, total, percent, passed, student:student_id!inner(halaqa_id)')
       .eq('student.halaqa_id', hid)

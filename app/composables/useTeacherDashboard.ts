@@ -44,7 +44,7 @@ export function useTeacherDashboard() {
    */
   async function loadLastMonth(
     report: DashReport | null,
-    students: { id: string, full_name: string, enrollment_date: string | null, quran_parts: number | null }[],
+    students: { id: string, full_name: string, enrollment_date: string | null, created_at: string, quran_parts: number | null }[],
     current: { halaqaId: string, year: number, month: number, days: string[], absences: { student_id: string, day: string }[] }
   ): Promise<MonthSummary | null> {
     if (!report) return null
@@ -92,7 +92,7 @@ export function useTeacherDashboard() {
     const lowerYear = shiftMonth(year, month, -HISTORY_MONTHS).year
 
     const [students, days, absences, reports, cycles, items, records, results, alerts, alloc, statement, readingUnits, readingPassed, offToday] = await Promise.all([
-      supabase.from('students').select('id, full_name, quran_parts, enrollment_date, halaqa_id').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
+      supabase.from('students').select('id, full_name, quran_parts, enrollment_date, created_at, halaqa_id').eq('halaqa_id', hid).eq('status', 'active').order('full_name'),
       supabase.from('attendance_days').select('day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
       supabase.from('attendance_absences').select('student_id, day').eq('halaqa_id', hid).gte('day', range.from).lte('day', range.to),
       supabase.from('monthly_reports').select('id, report_year, report_month, status, return_note, target_pages_snapshot').eq('halaqa_id', hid)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { behindStudents, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, testedUnits, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
+import { behindStudents, expectedUnits, monthsBetween, readingStart, formatDuration, monthsSince, monthUnit, readingJourney, readingProgressRows, roadmapWeeks, unitBooks, unitMonthLabel, unitOpensOn, unitScope, testedUnits, unitVideos, videosPhrase, weekHasVideo, weekOfMonth, type ReadingAttempt, type ReadingItem, type ReadingUnit } from './reading'
 
 const unit = (id: number, parts = [{ book: 'صفقات رابحة', author: null, page_from: 1, page_to: 88 }]): ReadingUnit =>
   ({ id, sort_order: id, title: `المقرّر ${id}`, parts })
@@ -189,5 +189,34 @@ describe('المقرّرُ بلا اختبار (لقاءٌ علميّ — 2026-1
     expect(unitScope(u)).toBe('لقاء علمي')
     expect(unitVideos(u)).toEqual([])
     expect(weekHasVideo(u.items!)).toBe(false)
+  })
+})
+
+describe('كلٌّ بإيقاعه (2026-11-22)', () => {
+  it('الأشهرُ التقويميّة منذ الالتحاق', () => {
+    expect(monthsBetween('2026-11-05', '2026-11-30')).toBe(0)
+    expect(monthsBetween('2026-11-05', '2026-12-01')).toBe(1)
+    expect(monthsBetween('2026-10-20', '2027-01-03')).toBe(3)
+    expect(monthsBetween(null, '2026-12-01')).toBe(0)
+  })
+  it('ملتحقُ نوفمبر: لا يُقاس في نوفمبر، ومقرّرٌ واحدٌ في ديسمبر ولو فُتح ثلاثة', () => {
+    expect(expectedUnits(2, '2026-11-05', '2026-11-22')).toBe(0)
+    expect(expectedUnits(3, '2026-11-05', '2026-12-10')).toBe(1)
+  })
+  it('لا يتجاوز ما فُتح', () => {
+    expect(expectedUnits(2, '2026-07-01', '2026-11-22')).toBe(2)
+  })
+})
+
+describe('بدايةُ الطالب', () => {
+  it('تاريخُ الالتحاق، وإلا يومُ الإضافة بتوقيت غزة', () => {
+    expect(readingStart({ enrollment_date: '2026-10-01', created_at: '2026-11-05T10:00:00Z' })).toBe('2026-10-01')
+    expect(readingStart({ enrollment_date: null, created_at: '2026-10-31T23:30:00Z' })).toBe('2026-11-01')
+    expect(readingStart({ enrollment_date: null })).toBeNull()
+  })
+  it('المتأخّرون يُقاسون من يوم الإضافة حين يغيب الالتحاق', () => {
+    const now = Date.parse('2026-12-10T09:00:00Z')
+    const students = [{ id: 'n', full_name: 'جديد', enrollment_date: null, created_at: '2026-11-05T08:00:00Z' }]
+    expect(behindStudents(students, new Map(), 3, now)).toEqual([{ id: 'n', name: 'جديد', count: 1 }])
   })
 })

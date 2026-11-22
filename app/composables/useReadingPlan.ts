@@ -6,7 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '~/types/database.types'
 import { isOnlineNow } from '~/utils/reachability'
-import { readingJourney, type ReadingAttempt, type ReadingItem, type ReadingUnit } from '~/utils/reading'
+import { readingJourney, readingStart, type ReadingAttempt, type ReadingItem, type ReadingUnit } from '~/utils/reading'
 
 type ItemRow = { week: number, sort_order: number, kind: string, page_from: number | null, page_to: number | null, title: string | null, speaker: string | null, duration_seconds: number | null, url: string | null, book: { title: string } | null }
 type UnitRow = {
@@ -127,10 +127,17 @@ export function useReadingPlan(source: () => { studentId: string, enrollmentDate
     return data ?? []
   }, { server: false, default: () => [] })
 
+  // بلا تاريخ التحاق: يومُ إضافته إلى المنصة بدايةُ إيقاعه (كلٌّ بإيقاعه — 2026-11-22)
+  const { data: createdAt } = useLazyAsyncData<string | null>(() => `reading-start-${s.value.studentId}`, async () => {
+    if (!s.value.studentId || s.value.enrollmentDate) return null
+    const { data } = await supabase.from('students').select('created_at').eq('id', s.value.studentId).maybeSingle()
+    return data?.created_at ?? null
+  }, { server: false, default: () => null, watch: [() => s.value.enrollmentDate] })
+
   const journey = computed(() => readingJourney(units.value ?? [], attempts.value ?? [], {
     retryDays: settings.value?.reading_retry_days ?? 7,
     now: Date.now(),
-    enrollmentDate: s.value.enrollmentDate
+    enrollmentDate: readingStart({ enrollment_date: s.value.enrollmentDate, created_at: createdAt.value })
   }))
 
   return { units, settings, coverUrls, attempts, journey, refresh }

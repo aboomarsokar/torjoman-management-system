@@ -145,6 +145,29 @@ export function monthsSince(date: string | null, now: number): number {
   return Math.max(0, Math.floor((now - new Date(date).getTime()) / (DAYS_PER_MONTH * MS_PER_DAY)))
 }
 
+/**
+ * الأشهرُ التقويميّة المنقضية منذ شهر الالتحاق (طلب المستخدم 2026-11-22 — كلٌّ بإيقاعه): الملتحقُ في نوفمبر صفرٌ في
+ * نوفمبر وواحدٌ في ديسمبر — فلكلّ مقرّرٍ شهرُه كاملاً. صفرٌ بلا تاريخ أو قبل الالتحاق.
+ */
+export function monthsBetween(enrollment: string | null, today: string): number {
+  if (!enrollment) return 0
+  const n = (d: string) => Number(d.slice(0, 4)) * 12 + Number(d.slice(5, 7))
+  return Math.max(0, n(today) - n(enrollment))
+}
+
+/**
+ * بدايةُ الطالب في البرامج المصاحبة: تاريخُ التحاقه، وإلا يومُ إضافته إلى المنصة (بتوقيت غزة). لا يُكتب في القاعدة لأنّ
+ * تاريخَ الالتحاق يحكم الحضورَ والإنجازَ الشهريّ أيضاً (2026-11-22).
+ */
+export function readingStart(s: { enrollment_date: string | null, created_at?: string | null }): string | null {
+  return s.enrollment_date ?? (s.created_at ? gazaToday(new Date(s.created_at)) : null)
+}
+
+/** المتوقَّعُ اجتيازُه: مقرّرٌ لكلّ شهرٍ منقضٍ منذ الالتحاق، لا يتجاوز ما فُتح من المقرّرات. */
+export function expectedUnits(openedCount: number, enrollment: string | null, today: string): number {
+  return Math.min(openedCount, monthsBetween(enrollment, today))
+}
+
 /** المقرّراتُ ذواتُ الاختبار — وحدها تدخل رحلةَ الطالب وعدَّ المتأخّر (2026-11-18). */
 export const testedUnits = <T extends Pick<ReadingUnit, 'hasTest'>>(units: T[]): T[] => units.filter(u => u.hasTest !== false)
 
@@ -175,10 +198,9 @@ export function readingJourney(units: ReadingUnit[], attempts: ReadingAttempt[],
     : null
   const waiting = retryAtMs !== null && retryAtMs > o.now
 
-  // المتوقّعُ ما فُتح من المقرّرات (مقرّرٌ لكلّ شهر)، والملتحقُ هذا الشهر جديدٌ لا يُقاس؛ وبلا مواعيد (نسخةٌ قديمة) كما كان
-  const months = monthsSince(o.enrollmentDate, o.now)
+  // المتوقّعُ مقرّرٌ لكلّ شهرٍ منقضٍ منذ الالتحاق، لا يتجاوز ما فُتح (كلٌّ بإيقاعه — 2026-11-22)؛ والملتحقُ هذا الشهر جديدٌ لا يُقاس
   const hasSchedule = sorted.length > 0 && sorted.every(u => !!u.opensOn)
-  const expected = months === 0 ? 0 : hasSchedule ? sorted.filter(u => isUnitOpen(u, today)).length : Math.min(sorted.length, months)
+  const expected = expectedUnits(hasSchedule ? sorted.filter(u => isUnitOpen(u, today)).length : sorted.length, o.enrollmentDate, today)
   const pace = expected === 0
     ? null
     : passed.size > expected ? 'ahead' as const : passed.size === expected ? 'onTrack' as const : 'behind' as const
@@ -209,7 +231,7 @@ export type ProgressState = 'done' | 'waiting' | 'ahead' | 'onTrack' | 'behind' 
  * المتأخّرُ أوّلاً ثم بالاسم.
  */
 export function readingProgressRows(
-  students: { id: string, full_name: string, enrollment_date: string | null }[],
+  students: { id: string, full_name: string, enrollment_date: string | null, created_at?: string | null }[],
   attempts: (ReadingAttempt & { student_id: string })[],
   units: ReadingUnit[],
   o: { retryDays: number, now: number }
@@ -223,7 +245,7 @@ export function readingProgressRows(
   const ORDER: Record<ProgressState, number> = { behind: 0, waiting: 1, new: 2, onTrack: 3, ahead: 4, done: 5 }
   return students
     .map((s) => {
-      const j = readingJourney(units, byStudent.get(s.id) ?? [], { retryDays: o.retryDays, now: o.now, enrollmentDate: s.enrollment_date })
+      const j = readingJourney(units, byStudent.get(s.id) ?? [], { retryDays: o.retryDays, now: o.now, enrollmentDate: readingStart(s) })
       const st = j.due ? j.stations.find(x => x.unit.id === j.due!.id) : null
       const state: ProgressState = !j.due ? 'done' : j.retryOn ? 'waiting' : j.pace ?? 'new'
       return {
@@ -240,15 +262,16 @@ export function readingProgressRows(
     .sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.name.localeCompare(b.name, 'ar'))
 }
 
-/** المتأخّرون عن مقرّرهم: اجتازوا أقلَّ من الأشهر منذ التحاقهم (ولم يُتمّوا المقرّرات). */
+/** المتأخّرون عن مقرّرهم: اجتازوا أقلَّ من المتوقَّع (`expectedUnits` — `openedUnits` ما فُتح من المقرّرات ذوات الاختبار). */
 export function behindStudents(
-  students: { id: string, full_name: string, enrollment_date: string | null }[],
+  students: { id: string, full_name: string, enrollment_date: string | null, created_at?: string | null }[],
   passedByStudent: Map<string, number>,
-  totalUnits: number,
+  openedUnits: number,
   now: number
 ) {
+  const today = gazaToday(new Date(now))
   return students
-    .map(s => ({ id: s.id, name: s.full_name, passed: passedByStudent.get(s.id) ?? 0, expected: Math.min(totalUnits, monthsSince(s.enrollment_date, now)) }))
+    .map(s => ({ id: s.id, name: s.full_name, passed: passedByStudent.get(s.id) ?? 0, expected: expectedUnits(openedUnits, readingStart(s), today) }))
     .filter(s => s.passed < s.expected)
     .map(s => ({ id: s.id, name: s.name, count: s.expected - s.passed }))
 }

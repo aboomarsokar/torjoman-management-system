@@ -5,7 +5,7 @@
  * · العاملون: تبويبان (طلب المستخدم 2026-10-22) — «إنجاز الطلاب» لحلقاتهم اطّلاعاً (المشرفُ حلقاتُه، والمعلمُ حلقتُه)،
  *   و«المقرّرات» بكتبها وملفّاتها؛ والتبويبُ في الرابط (`?tab=units`) كي يبقى عند التحديث والرجوع.
  * · المديرُ الإداريّ وحده: ومعها رفعُ الملفّات وإضافةُ المقرّرات والكتب (والفنيُّ يطّلع — قرار 2026-10-22).
- * · خارطةُ الشهر الأسبوعية (2026-11-10): للطالب تحت بطاقته، وللعاملين تبويبٌ أوّل يتصفّحون فيه أيَّ شهر (`?tab=roadmap`).
+ * · خارطةُ الشهر الأسبوعية (2026-11-10): للطالب تحت بطاقته (لمقرّره المستحقّ — 2026-11-22)، وللعاملين تبويبٌ أوّل يتصفّحون فيه أيَّ شهر (`?tab=roadmap`).
  */
 definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'البرامج المصاحبة — ترجمان' })
@@ -15,6 +15,8 @@ const isStudent = computed(() => role.value === 'student')
 // رفعُ الملفّات وإضافةُ المقرّرات للمدير الإداري وحده؛ والفنيُّ يطّلع (قرار 2026-10-22)
 const canManage = computed(() => role.value === 'admin_manager')
 const me = useMyReadingStudent()
+// خارطةُ الطالب لمقرّره المستحقّ لا لمقرّر شهر المشروع (كلٌّ بإيقاعه — 2026-11-22)
+const { journey } = useReadingPlan(() => ({ studentId: me.value?.id ?? '', enrollmentDate: me.value?.enrollment_date ?? null }))
 
 const route = useRoute()
 type Tab = 'progress' | 'roadmap' | 'units'
@@ -48,7 +50,7 @@ const tab = computed<Tab>({
             self
             heading="مقرّرك الحالي"
           />
-          <ReadingMonthRoadmap />
+          <ReadingMonthRoadmap :unit-id="journey.due?.id ?? null" />
           <StudentReadingStations
             :student-id="me.id"
             :enrollment-date="me.enrollment_date"

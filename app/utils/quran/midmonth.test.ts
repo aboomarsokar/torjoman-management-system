@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { midmonthSummary, midSubmitBlock, midThreshold } from './midmonth'
+import { midmonthSummary, midSubmitBlock, midThreshold, studentMidThreshold, testedPartsBefore } from './midmonth'
 
 const ok = { online: true, pending: 0, isCurrentMonth: true, entryOpen: true, status: 'draft', hasReport: true }
 
@@ -53,5 +53,54 @@ describe('midmonthSummary', () => {
   it('الأضعفُ متوسّطاً أوّلاً، وغيرُ المسلِّمة منفصلة', () => {
     expect(out.submitted.map(r => r.id)).toEqual(['h2', 'h1'])
     expect(out.missing.map(h => h.id)).toEqual(['h3'])
+  })
+})
+
+describe('الاختبارُ قبل المنتصف يُسقط التخفيضَ كاملاً (2026-11-22)', () => {
+  it('الحدُّ: 15 − التخفيض، ولا ينزل عن صفر', () => {
+    expect(studentMidThreshold(30, 0)).toBe(15)
+    expect(studentMidThreshold(30, 1)).toBe(5)
+    expect(studentMidThreshold(30, 2)).toBe(0)
+    expect(studentMidThreshold(30, 3)).toBe(0)
+  })
+  it('أكبرُ اختبارٍ في الشهر حتى يوم التسليم وحده', () => {
+    const exams = [
+      { student_id: 'a', exam_date: '2026-11-08', parts: 3 },
+      { student_id: 'a', exam_date: '2026-11-10', parts: 5 },
+      { student_id: 'b', exam_date: '2026-11-20', parts: 3 },
+      { student_id: 'c', exam_date: '2026-10-30', parts: 10 }
+    ]
+    const at = '2026-11-15T08:00:00Z'
+    expect(testedPartsBefore(exams, 'a', at)).toBe(5)
+    expect(testedPartsBefore(exams, 'b', at)).toBe(0)
+    expect(testedPartsBefore(exams, 'c', at)).toBe(0)
+  })
+  it('يصنّف بحدّ كلّ طالب ويسِمُ المختبَر', () => {
+    const out = midmonthSummary({
+      halaqat: [{ id: 'h', name: 'ح', teacher: null }],
+      heads: [{ report_id: 'r', halaqa_id: 'h', submitted_at: '2026-11-15T08:00:00Z' }],
+      records: [
+        { halaqa_id: 'h', student_id: 'x', pages_memorized: 12 },
+        { halaqa_id: 'h', student_id: 'k', pages_memorized: 6 },
+        { halaqa_id: 'h', student_id: 'u', pages_memorized: 3 },
+        { halaqa_id: 'h', student_id: 'b', pages_memorized: 0 }
+      ],
+      students: [
+        { id: 'x', halaqa_id: 'h', full_name: 'أحمد' },
+        { id: 'k', halaqa_id: 'h', full_name: 'خالد' },
+        { id: 'u', halaqa_id: 'h', full_name: 'عمر' },
+        { id: 'b', halaqa_id: 'h', full_name: 'بلال' }
+      ],
+      exams: [
+        { student_id: 'k', exam_date: '2026-11-08', parts: 3 },
+        { student_id: 'u', exam_date: '2026-11-10', parts: 3 },
+        { student_id: 'b', exam_date: '2026-11-05', parts: 5 }
+      ],
+      monthTarget: 30
+    })
+    const r = out.submitted[0]!
+    expect(r.late).toEqual(['أحمد', 'عمر'])
+    expect(r.none).toEqual([])
+    expect(r.tested).toEqual([{ name: 'خالد', parts: 3 }, { name: 'عمر', parts: 3 }, { name: 'بلال', parts: 5 }])
   })
 })

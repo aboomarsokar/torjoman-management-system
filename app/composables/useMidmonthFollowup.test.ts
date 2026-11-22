@@ -12,7 +12,7 @@ function client(tables: Record<string, Result>) {
     from(t: string) {
       asked.push(t)
       const chain: Record<string, unknown> = {}
-      for (const m of ['select', 'eq', 'order', 'not', 'in']) chain[m] = () => chain
+      for (const m of ['select', 'eq', 'order', 'not', 'in', 'gte', 'lt']) chain[m] = () => chain
       chain.maybeSingle = async () => tables[t]
       chain.then = (resolve: (v: Result) => void) => resolve(tables[t]!)
       return chain
@@ -39,7 +39,8 @@ afterEach(() => vi.unstubAllGlobals())
 const base = {
   halaqat: { data: [{ id: 'h1', name: 'أ', gender: 'male', teacher: { full_name: 'م' } }], error: null },
   students: { data: [{ id: 's1', halaqa_id: 'h1', full_name: 'ط' }], error: null },
-  app_settings: { data: { target_memorization_pages: 30 }, error: null }
+  app_settings: { data: { target_memorization_pages: 30 }, error: null },
+  exam_results: { data: [{ student_id: 's1', exam_date: '2026-11-08', item: { cycle: { parts_from: 28, parts_to: 30 } } }], error: null }
 }
 
 describe('useMidmonthFollowup', () => {
@@ -55,6 +56,9 @@ describe('useMidmonthFollowup', () => {
       quran_mid_records: { data: [{ halaqa_id: 'h1', student_id: 's1', pages_memorized: 4 }], error: null }
     })
     expect(out!.monthTarget).toBe(30)
-    expect((out!.submitted as { late: string[] }[])[0]!.late).toEqual(['ط'])
+    // اختُبر 3 أجزاء قبل التسليم: حدُّه 5 — فأربعُ صفحاتٍ متأخّر، وموسومٌ بالاختبار
+    const row = (out!.submitted as { late: string[], tested: unknown[] }[])[0]!
+    expect(row.late).toEqual(['ط'])
+    expect(row.tested).toEqual([{ name: 'ط', parts: 3 }])
   })
 })

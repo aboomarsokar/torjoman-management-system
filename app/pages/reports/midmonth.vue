@@ -36,7 +36,7 @@ const lateCount = computed(() => submitted.value.reduce((t, r) => t + r.late.len
   <div class="mm">
     <UiPageHeader
       title="رصد منتصف الشهر"
-      :subtitle="`ما رصده المعلمون حتى منتصف الشهر — المتأخّرُ من حفظ أقلَّ من نصف هدف الشهر (${threshold} صفحة).`"
+      :subtitle="`ما رصده المعلمون حتى منتصف الشهر — المتأخّرُ من حفظ أقلَّ من نصف هدف الشهر (${threshold} صفحة)، ومن اختُبر قبل التسليم يُطرح من حدّه تخفيضُ الاختبار كاملاً.`"
     />
     <UiEmptyState
       v-if="role && !canView"

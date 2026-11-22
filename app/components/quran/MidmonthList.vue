@@ -1,10 +1,14 @@
 <script setup lang="ts">
 /**
  * قائمةُ الحلقات المسلِّمة لرصد المنتصف (طلب المستخدم 2026-11-21): الأضعفُ متوسّطاً أوّلاً، ولكلّ حلقةٍ تاريخُ التسليم
- * وعددُ الطلاب ومتوسّطُ صفحات الحفظ وشاراتُ المتأخّرين؛ وتنفتح لتُظهر أسماءَهم ومن لم يحفظ ومن لم يُرصد.
+ * وعددُ الطلاب ومتوسّطُ صفحات الحفظ وشاراتُ المتأخّرين؛ وتنفتح لتُظهر أسماءَهم ومن لم يحفظ ومن لم يُرصد،
+ * ومن اختُبر قبل التسليم فخُفّض حدُّه (`tested` — 2026-11-22).
  */
 import type { MidRow } from '~/utils/quran/midmonth'
 import { formatDay } from '~/utils/reportWindow'
+
+/** «3 أجزاء» · «10 أجزاء». */
+const partsCount = (n: number) => `${n} أجزاء`
 
 defineProps<{ rows: MidRow[], threshold: number }>()
 </script>
@@ -54,7 +58,7 @@ defineProps<{ rows: MidRow[], threshold: number }>()
         </summary>
         <div class="ml-body">
           <p v-if="r.late.length">
-            <b>أقلّ من {{ threshold }} صفحة:</b> {{ r.late.join('، ') }}
+            <b>دون حدّه (نصفُ الهدف {{ threshold }} صفحة، أقلّ لمن اختُبر):</b> {{ r.late.join('، ') }}
           </p>
           <p v-if="r.none.length">
             <b>لم يحفظ جديداً:</b> {{ r.none.join('، ') }}
@@ -62,8 +66,11 @@ defineProps<{ rows: MidRow[], threshold: number }>()
           <p v-if="r.unrecorded.length">
             <b>لم يُرصد في المنتصف:</b> {{ r.unrecorded.join('، ') }}
           </p>
+          <p v-if="r.tested.length">
+            <b>اختُبر قبل التسليم فخُفّض حدُّه:</b> {{ r.tested.map(t => `${t.name} (${partsCount(t.parts)})`).join('، ') }}
+          </p>
           <p v-if="!r.late.length && !r.none.length && !r.unrecorded.length">
-            كلُّ الطلاب بلغوا نصفَ هدف الشهر أو تجاوزوه.
+            كلُّ الطلاب بلغوا حدَّهم في المنتصف أو تجاوزوه.
           </p>
         </div>
       </details>

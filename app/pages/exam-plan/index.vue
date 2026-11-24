@@ -269,7 +269,7 @@ const editTitle = computed(() => editing.value
               color="primary"
               size="lg"
               :loading="saving"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             />
           </div>
         </UForm>

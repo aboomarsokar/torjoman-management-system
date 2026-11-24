@@ -277,7 +277,7 @@ const pwOpen = ref(false)
               variant="outline"
               size="lg"
               icon="i-lucide-key-round"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
               @click="pwOpen = true"
             />
             <UButton
@@ -286,7 +286,7 @@ const pwOpen = ref(false)
               color="primary"
               size="lg"
               icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
               @click="openEdit"
             />
           </div>
@@ -648,7 +648,7 @@ const pwOpen = ref(false)
             color="primary"
             icon="i-lucide-check"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>

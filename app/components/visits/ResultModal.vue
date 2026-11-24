@@ -258,7 +258,7 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
             size="lg"
             icon="i-lucide-check-check"
             :loading="busy"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="runRpc('acknowledge_visit', 'سُجّل اطّلاعك على نتيجة الزيارة.')"
           />
           <UButton
@@ -269,7 +269,7 @@ async function runRpc(fn: 'unlock_visit_result' | 'acknowledge_visit', done: str
             icon="i-lucide-lock"
             :loading="saving"
             :disabled="!criteria.length"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>

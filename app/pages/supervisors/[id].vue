@@ -120,7 +120,7 @@ function openResult(v: VisitRow) {
             variant="outline"
             size="lg"
             icon="i-lucide-id-card"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           />
         </div>
 

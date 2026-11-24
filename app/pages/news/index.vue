@@ -169,7 +169,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
           color="primary"
           size="lg"
           icon="i-lucide-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="openCreate"
         />
       </template>
@@ -411,7 +411,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('ar', { day: '
             color="primary"
             icon="i-lucide-check"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>

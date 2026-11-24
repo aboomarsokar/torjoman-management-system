@@ -270,7 +270,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
             size="lg"
             icon="i-lucide-check-check"
             :loading="busy"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="ack"
           />
           <UButton
@@ -281,7 +281,7 @@ const saveAdminNotes = () => run(() => supabase.rpc('set_quality_admin_notes', {
             icon="i-lucide-lock"
             :loading="busy"
             :disabled="!numbers || notOpenYet"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>

@@ -187,7 +187,7 @@ onMounted(load)
             size="lg"
             icon="i-lucide-save"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
           <UButton
@@ -197,7 +197,7 @@ onMounted(load)
             size="lg"
             icon="i-lucide-lock"
             :loading="working"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="approveMonth"
           />
           <UButton

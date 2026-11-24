@@ -126,7 +126,7 @@ async function confirmDelete() {
           color="primary"
           size="lg"
           icon="i-lucide-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="openCreate"
         />
       </template>

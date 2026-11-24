@@ -168,7 +168,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
           color="primary"
           size="lg"
           icon="i-lucide-bell-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="openCreate"
         />
       </template>
@@ -363,7 +363,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
             color="primary"
             icon="i-lucide-bell-plus"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>

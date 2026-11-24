@@ -366,7 +366,7 @@ async function confirmDelete() {
           color="primary"
           size="lg"
           icon="i-lucide-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="openCreate"
         />
       </template>
@@ -631,7 +631,7 @@ async function confirmDelete() {
               variant="outline"
               size="md"
               icon="i-lucide-eye"
-              :ui="{ base: 'rounded-[11px]' }"
+              :ui="{ base: 'rounded-[11px] min-h-11 min-w-11 justify-center' }"
               @click="navigateTo(`/students/${row.id}`)"
             />
             <UButton
@@ -641,7 +641,7 @@ async function confirmDelete() {
               variant="outline"
               size="md"
               icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[11px]' }"
+              :ui="{ base: 'rounded-[11px] min-h-11 min-w-11 justify-center' }"
               @click="openEdit(row)"
             />
             <UButton
@@ -651,7 +651,7 @@ async function confirmDelete() {
               size="md"
               icon="i-lucide-key-round"
               aria-label="إعادة تعيين كلمة المرور"
-              :ui="{ base: 'rounded-[11px]' }"
+              :ui="{ base: 'rounded-[11px] min-h-11 min-w-11 justify-center' }"
               @click="resetTarget = row"
             />
             <UButton
@@ -661,7 +661,7 @@ async function confirmDelete() {
               size="md"
               icon="i-lucide-trash-2"
               aria-label="حذف"
-              :ui="{ base: 'rounded-[11px]' }"
+              :ui="{ base: 'rounded-[11px] min-h-11 min-w-11 justify-center' }"
               @click="deleteTarget = row"
             />
           </div>
@@ -933,7 +933,7 @@ async function confirmDelete() {
               color="primary"
               size="lg"
               :loading="saving"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             />
           </div>
         </UForm>

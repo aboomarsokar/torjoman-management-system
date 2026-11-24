@@ -90,7 +90,7 @@ async function submit() {
             to="/login"
             label="إلى تسجيل الدخول"
             color="primary"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           />
         </div>
 
@@ -132,7 +132,7 @@ async function submit() {
             size="lg"
             block
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           />
         </form>
       </div>

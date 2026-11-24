@@ -240,7 +240,7 @@ async function saveGrade() {
             size="lg"
             icon="i-lucide-check"
             :loading="grading"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="saveGrade"
           />
         </div>

@@ -115,7 +115,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
             color="primary"
             size="lg"
             :loading="uploading"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="fileInput?.click()"
           />
         </template>

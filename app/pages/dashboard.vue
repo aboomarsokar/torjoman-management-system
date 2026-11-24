@@ -299,7 +299,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
                 size="lg"
                 icon="i-lucide-check"
                 :loading="saving === s.key"
-                :ui="{ base: 'rounded-[13px] font-semibold' }"
+                :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
                 @click="saveSetting(s.key, s.unit)"
               />
             </div>

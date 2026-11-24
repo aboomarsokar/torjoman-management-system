@@ -142,7 +142,7 @@ async function submit() {
           block
           :loading="saving"
           :disabled="!profile || !notImpersonating"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
         />
       </form>
 

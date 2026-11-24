@@ -284,7 +284,7 @@ function onReturned(id: string, note: string) {
               size="lg"
               icon="i-lucide-save"
               :loading="saving"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
               @click="save"
             />
             <UButton
@@ -294,7 +294,7 @@ function onReturned(id: string, note: string) {
               size="lg"
               icon="i-lucide-lock"
               :loading="working"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
               @click="approveAlloc"
             />
             <template v-else-if="!isReadOnly">

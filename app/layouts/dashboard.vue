@@ -215,6 +215,8 @@ const newKeys = isNewFor(allItems)
 
 const navTitle = computed(() => {
   if (route.path.startsWith('/profile/') && route.path !== '/profile/me') return 'الملف الشخصي'
+  // صفحةُ الاختبار لا بندَ لها في القائمة (تُفتح من بطاقة البرامج المصاحبة) — كانت تُعنوَن «لوحة التحكم» (2026-11-24)
+  if (route.path === '/reading-test') return 'اختبار البرامج المصاحبة'
   return activeItem.value?.title ?? (activeItem.value ? labelOf(activeItem.value) : 'لوحة التحكم')
 })
 

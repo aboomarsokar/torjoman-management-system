@@ -556,11 +556,13 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 </template>
 
 <style scoped>
+/* تجربةُ التخفيف (طلب المستخدم 2026-11-24): فصلٌ واحد للبطاقة (حدٌّ بلا ظلّ عريض)، فيسري على مكوّنات اللوحة كلِّها عبر المتغيّر */
+.dash { --shadow: 0 1px 2px rgba(11, 44, 66, .04); }
 .welcome { margin-bottom: 28px; }
-.welcome h2 { margin: 0; font-size: 28px; font-weight: 700; color: var(--ink); }
+.welcome h2 { margin: 0; font-size: 28px; font-weight: 600; color: var(--ink); }
 .welcome p { margin: 8px 0 0; font-size: 16px; color: var(--ink-2); font-weight: 300; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .ico { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex: none; }
 .ico-blue { background: var(--blue-soft); color: var(--blue-ink); }
 .ico-green { background: var(--green-soft); color: var(--green-ink); }
@@ -574,7 +576,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 .setting { padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .setting-head { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .setting-text { min-width: 0; }
-.setting-text h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.setting-text h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--ink); }
 .setting-text p { margin: 5px 0 0; font-size: 14px; color: var(--ink-2); font-weight: 300; line-height: 1.6; }
 .cur { font-weight: 600; color: var(--ink); }
 .setting-edit { display: flex; align-items: center; gap: 10px; flex: none; }

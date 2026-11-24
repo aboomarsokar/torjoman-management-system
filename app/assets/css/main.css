@@ -2,7 +2,7 @@
 @import "@nuxt/ui";
 
 /* ============================================================
-   الخط المعتمد — Lama Sans (مع ربط 400→Medium و 700→SemiBold)
+   الخط المعتمد — Lama Sans (400 Regular، و700 يُربط بـ SemiBold)
    ============================================================ */
 @font-face {
   font-family: 'Lama Sans';
@@ -14,9 +14,9 @@
 
 @font-face {
   font-family: 'Lama Sans';
-  src: url('../fonts/LamaSans-Medium.ttf') format('truetype');
+  src: url('../fonts/LamaSans-Regular.ttf') format('truetype');
   font-weight: 400;
-  /* 400 يُربط بـ Medium (البريف §5) */
+  /* 400 بوزنه الحقيقيّ Regular (2026-11-24 — كان يُربط بـ Medium لغياب الملف، فبدت الواجهةُ كلُّها ثقيلة) */
   font-style: normal;
   font-display: swap;
 }

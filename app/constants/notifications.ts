@@ -41,7 +41,8 @@ export const NOTIFICATION_KINDS = [
   'payout_account_changed',
   'quran_mid_due',
   'quran_mid_submitted',
-  'quran_mid_missing'
+  'quran_mid_missing',
+  'booklet_request_reduced'
 ] as const
 
 export type NotificationKind = typeof NOTIFICATION_KINDS[number]
@@ -68,6 +69,7 @@ export const NOTIFICATION_ICONS: Record<NotificationKind, string> = {
   booklet_requested: 'i-lucide-package-plus',
   booklet_ready: 'i-lucide-package-open',
   booklet_request_cancelled: 'i-lucide-package-x',
+  booklet_request_reduced: 'i-lucide-package-minus',
   booklet_stock_low: 'i-lucide-triangle-alert',
   candidate_registered: 'i-lucide-user-search',
   track_requested: 'i-lucide-route',

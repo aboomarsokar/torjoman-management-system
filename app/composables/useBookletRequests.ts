@@ -3,9 +3,12 @@
  * (مشغّلُ `booklet_requested`)، والمديرُ يُغلق الطلبَ بعد التسليم. `halaqaId` يقصر الجلبَ على حلقةٍ (لوحة المعلّم)،
  * وبدونه كلُّ ما تسمح به RLS (المديرُ ومشرفُ المشروع). التحقّقُ نقيٌّ ومختبَر.
  * وبأربع حالات (2026-10-31): المديرُ «يُبلغ بالاستلام» فتُحجز النسخ، والمعلّمُ يعدّل ويلغي ما لم يُسلَّم، والمديرُ يلغي بسبب.
+ * وبسقف الحاجة (2026-11-24): `rooms` حاجةُ الحلقة من كلّ ملزمة (`booklet_rooms`)، فلا يُرسَل ما يتجاوزها — والحارسُ في القاعدة —
+ * والمديرُ يخفّض الطلبَ القائم بسببٍ يصل المعلّم (`reduce_booklet_request`).
  */
 import type { Database } from '~/types/database.types'
 import { BOOKLET_COUNT, MAX_BOOKLET_COPIES, MAX_BOOKLET_NOTE, MAX_CANCEL_REASON } from '~/constants/booklets'
+import { roomError, type BookletRoom } from '~/utils/bookletRequests'
 
 export type BookletRequest = {
   id: string
@@ -18,6 +21,8 @@ export type BookletRequest = {
   requested_by: string
   notified_at: string | null
   cancel_reason: string | null
+  reduced_from: number | null
+  reduce_reason: string | null
   halaqa: { name: string, gender: string | null, teacher: { full_name: string } | null } | null
 }
 
@@ -57,13 +62,29 @@ export function useBookletRequests(halaqaId?: string) {
 
   const { data: requests, pending, refresh } = useLazyAsyncData<BookletRequest[]>(`booklet-requests-${halaqaId ?? 'all'}`, async () => {
     let q = supabase.from('booklet_requests')
-      .select('id, halaqa_id, booklet, copies, note, status, created_at, requested_by, notified_at, cancel_reason, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))')
+      .select('id, halaqa_id, booklet, copies, note, status, created_at, requested_by, notified_at, cancel_reason, reduced_from, reduce_reason, halaqa:halaqa_id(name, gender, teacher:teacher_id(full_name))')
     if (halaqaId) q = q.eq('halaqa_id', halaqaId)
     const { data, error } = await q.order('created_at', { ascending: false })
       .returns<BookletRequest[]>()
     if (error) handle(error)
     return data ?? []
   }, { server: false, default: () => [] })
+
+  const { data: rooms, refresh: refreshRooms } = useLazyAsyncData<BookletRoom[]>(`booklet-rooms-${halaqaId ?? 'all'}`, async () => {
+    const { data, error } = await supabase.rpc('booklet_rooms', halaqaId ? { p_halaqa: halaqaId } : {})
+    if (error) handle(error)
+    return data ?? []
+  }, { server: false, default: () => [] })
+  /** حاجةُ حلقةٍ من ملزمة، أو null إن لم تُجلب. */
+  const roomFor = (halaqa: string, booklet: number | undefined) =>
+    (rooms.value ?? []).find(r => r.halaqa_id === halaqa && r.booklet === booklet) ?? null
+
+  /** يرفض ما يتجاوز حاجةَ الحلقة قبل الإرسال (`own` نسخُ الطلب نفسه حين يُعدَّل). */
+  function overRoom(halaqa: string, d: RequestDraft, own = 0): boolean {
+    const problem = roomError(roomFor(halaqa, d.booklet), Number(d.copies), own)
+    if (problem) toast.add({ title: problem, color: 'warning', icon: 'i-lucide-circle-alert' })
+    return !!problem
+  }
 
   const openCount = computed(() => (requests.value ?? []).filter(r => r.status === 'open').length)
 
@@ -73,7 +94,7 @@ export function useBookletRequests(halaqaId?: string) {
       const { error } = await task()
       if (error) throw error
       toast.add({ title: done, color: 'success', icon: 'i-lucide-circle-check' })
-      await refresh()
+      await Promise.all([refresh(), refreshRooms()])
       return true
     } catch (err) {
       handle(err)
@@ -90,6 +111,7 @@ export function useBookletRequests(halaqaId?: string) {
       toast.add({ title: problem, color: 'warning', icon: 'i-lucide-circle-alert' })
       return false
     }
+    if (overRoom(forHalaqa, d)) return false
     return run(() => supabase.from('booklet_requests').insert({
       halaqa_id: forHalaqa, booklet: d.booklet!, copies: Number(d.copies), note: d.note.trim() || null
     }), 'أُرسل طلبُك إلى المدير الإداري.')
@@ -111,6 +133,10 @@ export function useBookletRequests(halaqaId?: string) {
       toast.add({ title: problem, color: 'warning', icon: 'i-lucide-circle-alert' })
       return false
     }
+    const current = (requests.value ?? []).find(r => r.id === id)
+    // تعديلُ الملاحظة أو التخفيضُ لا يُفحص (يبقى الطلبُ القائمُ كما كان)، والزيادةُ وتغييرُ الملزمة يُفحصان
+    const grows = !current || current.booklet !== d.booklet || Number(d.copies) > current.copies
+    if (current && grows && overRoom(current.halaqa_id, d, current.booklet === d.booklet ? current.copies : 0)) return false
     return run(() => supabase.rpc('update_booklet_request', {
       p_request: id, p_booklet: d.booklet!, p_copies: Number(d.copies), p_note: d.note.trim()
     }), 'عُدِّل الطلبُ وأُشعر المدير الإداري.')
@@ -125,6 +151,16 @@ export function useBookletRequests(halaqaId?: string) {
     return run(() => supabase.rpc('cancel_booklet_request', { p_request: id, p_reason: reason.trim() }), 'أُلغي الطلب.')
   }
 
+  /** المديرُ يخفّض طلباً قائماً إلى عددٍ أقلّ، ويصل المعلّمَ العددان والسبب. */
+  async function reduceRequest(id: string, copies: number, reason: string): Promise<boolean> {
+    if (reason.trim().length > MAX_CANCEL_REASON) {
+      toast.add({ title: `السبب لا يتجاوز ${MAX_CANCEL_REASON} حرف.`, color: 'warning', icon: 'i-lucide-circle-alert' })
+      return false
+    }
+    return run(() => supabase.rpc('reduce_booklet_request', { p_request: id, p_copies: copies, p_reason: reason.trim() }),
+      'خُفّض الطلبُ وأُشعر المعلّم.')
+  }
+
   /**
    * «إبلاغ بالاستلام»: القاعدةُ تفحص المخزون وتحجز النسخ وتُشعر المعلّم (`mark_booklet_request_ready`)، وتُرفض إن لم يكفِ.
    * يُعيد ما بقي متوفّراً للتنبيه بعده (غيرُ المجرودة: `tracked: false`).
@@ -134,7 +170,7 @@ export function useBookletRequests(halaqaId?: string) {
     try {
       const { data, error } = await supabase.rpc('mark_booklet_request_ready', { p_request: id })
       if (error) throw error
-      await refresh()
+      await Promise.all([refresh(), refreshRooms()])
       const result = readyResult(data)
       const msg = readyToast(result)
       toast.add({ ...msg, icon: msg.color === 'success' ? 'i-lucide-circle-check' : 'i-lucide-triangle-alert' })
@@ -147,5 +183,5 @@ export function useBookletRequests(halaqaId?: string) {
     }
   }
 
-  return { requests, pending, busy, openCount, addRequest, updateRequest, cancelRequest, markReady, deliverRequest, refresh }
+  return { requests, rooms, roomFor, pending, busy, openCount, addRequest, updateRequest, cancelRequest, reduceRequest, markReady, deliverRequest, refresh }
 }

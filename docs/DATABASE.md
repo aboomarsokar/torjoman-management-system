@@ -1386,3 +1386,16 @@ news (الأخبار — المدير الإداري ينشرها، عامّة �
 **`public.submit_quran_midmonth(p_report)`** (`security definer`، `assert_session_writable`): معلّمُ الحلقة وحده، والشهرُ مسوّدةٌ جارٍ وقد بلغ يومَ الإدخال؛ يحفظ الرأسَ ويستبدل السجلّات بنسخة `quran_records`، ويُرجع عددَها؛ وأوّلُ تسليمٍ يُشعر المشرفَ الميدانيّ `quran_mid_submitted`.
 
 **`private.quran_mid_reminders()`** (pg_cron `quran-mid-reminders` يومياً 05:00 UTC): يومَ الإدخال يُشعر معلّمَ كلّ حلقةٍ نشطة لم تسلّم `quran_mid_due`، وبعده بيومين يُشعر المديرَ الإداريّ (الكلّ) والفنيَّ (البنين) والمديرةَ (البنات) بعدد غير المسلِّمة `quran_mid_missing` — مرّةً في اليوم. وأُضيفت الأنواعُ الثلاثة إلى `notifications_kind_check` و`private.notify`.
+
+## سقفُ طلبات الملازم بحاجة الحلقة (2026-11-24)
+
+> هجرة `20261124131345_booklet_request_cap`. **`booklet_requests`** + `reduced_from integer` (العددُ الأصليّ قبل أوّل تخفيض، > 0) و`reduce_reason text` (≤ 200). نوعُ إشعارٍ جديد **`booklet_request_reduced`** (في القيد و`private.notify`).
+
+**`private.booklet_room(p_halaqa, p_booklet, p_except)`** ← `(students, received, pending)`: طلابُ الحلقة النشطون، ومجموعُ `booklet_deliveries` لها من الملزمة، ونسخُ طلباتها `open`/`ready` بلا المستثنى. بلا `EXECUTE` لأحد.
+
+**`private.booklet_request_cap()`** — مشغّل `booklet_request_cap` قبل `insert or update of booklet, copies`: للطلب القائم (`open`/`ready`) من غير المدير الإداريّ، ما لم يكن تعديلاً بلا زيادة (الملزمةُ نفسُها والنسخُ ≤ السابق)، يرفض (`22023`) إن زادت النسخُ على `students − received − pending`، برسالةٍ بصيغة الحلقة (`halaqat.gender`). قفلٌ استشاريّ للحلقة والملزمة يمنع طلبين متزامنين من تخطّي الحدّ. الطلباتُ القائمة قبل الهجرة لا يمسّها.
+
+**`public.booklet_rooms(p_halaqa default null)`** ← `(halaqa_id, booklet, students, received, pending, female)`: بحلقةٍ — لمعلّمها والمدير الإداريّ ومشرف المشروع — صفٌّ لكلّ ملزمة (1–15)؛ وبلا حلقةٍ — للمدير ومشرف المشروع وحدهما — أزواجُ (الحلقة، الملزمة) ذاتُ الطلبات القائمة.
+
+**`public.reduce_booklet_request(p_request, p_copies, p_reason)`** (`assert_session_writable`): المديرُ الإداريُّ وحده، والطلبُ قائم وبأكثر من نسخة، إلى عددٍ من 1 إلى أقلَّ من المطلوب (والإسقاطُ الكامل إلغاء)؛ يحفظ `reduced_from` (الأصليّ) و`reduce_reason`، ويُشعر معلّمَ الحلقة `booklet_request_reduced` بالعددين والسبب.
+

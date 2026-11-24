@@ -370,6 +370,8 @@ export type Database = {
           note: string | null
           notified_at: string | null
           notified_by: string | null
+          reduce_reason: string | null
+          reduced_from: number | null
           requested_by: string
           status: string
           updated_at: string | null
@@ -386,6 +388,8 @@ export type Database = {
           note?: string | null
           notified_at?: string | null
           notified_by?: string | null
+          reduce_reason?: string | null
+          reduced_from?: number | null
           requested_by?: string
           status?: string
           updated_at?: string | null
@@ -402,6 +406,8 @@ export type Database = {
           note?: string | null
           notified_at?: string | null
           notified_by?: string | null
+          reduce_reason?: string | null
+          reduced_from?: number | null
           requested_by?: string
           status?: string
           updated_at?: string | null
@@ -3756,6 +3762,17 @@ export type Database = {
         Args: { p_halaqa: string; p_supervisor: string }
         Returns: undefined
       }
+      booklet_rooms: {
+        Args: { p_halaqa?: string }
+        Returns: {
+          booklet: number
+          female: boolean
+          halaqa_id: string
+          pending: number
+          received: number
+          students: number
+        }[]
+      }
       can_approve_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_approve_report_in_halaqa: { Args: { hid: string }; Returns: boolean }
       can_assign_in_halaqa: { Args: { hid: string }; Returns: boolean }
@@ -3977,6 +3994,10 @@ export type Database = {
       quran_page_of: {
         Args: { p_ayah: number; p_surah: number }
         Returns: number
+      }
+      reduce_booklet_request: {
+        Args: { p_copies: number; p_reason?: string; p_request: string }
+        Returns: undefined
       }
       register_candidate: {
         Args: {

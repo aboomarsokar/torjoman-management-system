@@ -20,7 +20,9 @@ const { data: deliveries, pending } = useLazyAsyncData<DeliveryRow[]>(`teacher-h
   return data ?? []
 }, { server: false, default: () => [] })
 
-const { requests, busy, addRequest, updateRequest, cancelRequest } = useBookletRequests(props.halaqaId)
+const { requests, roomFor, busy, addRequest, updateRequest, cancelRequest } = useBookletRequests(props.halaqaId)
+/** حاجةُ الحلقة من ملزمة — تحت حقل النسخ في الطلب والتعديل (2026-11-24). */
+const roomOf = (booklet: number | undefined) => roomFor(props.halaqaId, booklet)
 const requestOpen = ref(false)
 async function sendRequest(d: RequestDraft) {
   if (await addRequest(props.halaqaId, d)) requestOpen.value = false
@@ -115,6 +117,7 @@ const deliveryColumns = [
     <BookletsTeacherRequests
       :rows="requests ?? []"
       :busy="busy"
+      :room-of="roomOf"
       @edit="updateRequest"
       @cancel="cancelRequest"
     />
@@ -122,6 +125,7 @@ const deliveryColumns = [
     <BookletsRequestModal
       v-model:open="requestOpen"
       :busy="busy"
+      :room-of="roomOf"
       @save="sendRequest"
     />
   </div>

@@ -94,7 +94,7 @@ const mineDone = (c: Candidate) => !!props.me && c.evaluations.some(e => e.evalu
 <style scoped>
 .cl { display: flex; flex-direction: column; gap: 8px; }
 .cl-all { padding: 0 14px; }
-.cl-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.cl-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
 .cl-row { display: flex; align-items: center; gap: 12px; padding: 0 14px; border-top: 1px solid var(--line); }
 .cl-row:first-child { border-top: 0; }
 .cl-row.on { background: var(--blue-soft); }

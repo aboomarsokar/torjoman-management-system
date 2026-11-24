@@ -29,7 +29,7 @@ withDefaults(defineProps<{ fields?: number }>(), {
 </template>
 
 <style scoped>
-.slcard { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); }
+.slcard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; box-shadow: var(--shadow); }
 .sltitle { height: 17px; width: 140px; border-radius: 7px; margin-bottom: 18px; }
 .slgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .slfield { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px; }

@@ -387,7 +387,7 @@ function onReturned(id: string, note: string) {
 .sel { width: 130px; }
 .sec-t { margin: 0 0 12px; font-size: 16.5px; font-weight: 700; color: var(--ink); }
 .sec-t.mt { margin-top: 26px; }
-.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
 thead tr, tfoot tr { background: var(--surface-2); }
 th { padding: 12px; font-weight: 600; color: var(--ink-3); font-size: 12.5px; text-align: center; }

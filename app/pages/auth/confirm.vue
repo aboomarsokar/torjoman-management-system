@@ -145,7 +145,7 @@ async function submit() {
 .top { max-width: 440px; margin: 0 auto; padding: 22px 20px; display: flex; align-items: center; justify-content: space-between; }
 .logo { height: 52px; width: auto; filter: var(--logo-filter); }
 .wrap { max-width: 440px; margin: 0 auto; padding: 20px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-lg); padding: 30px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 30px; }
 .card h1 { margin: 0 0 22px; font-size: 23px; font-weight: 700; color: var(--ink); }
 .form { display: flex; flex-direction: column; gap: 16px; }
 .hint { margin: 0; font-size: 14.5px; color: var(--ink-2); }

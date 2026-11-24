@@ -52,7 +52,7 @@ const { targetPerMonth, cycles, examResults, memorizationPages, history, juzDone
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; box-shadow: var(--shadow); }
 .journey { margin-top: 22px; }
 .journey.bare { margin-top: 0; }
 .card h3 { margin: 0 0 18px; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }

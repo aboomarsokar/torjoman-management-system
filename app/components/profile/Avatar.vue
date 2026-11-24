@@ -89,5 +89,5 @@ const monogram = computed(() => props.name.trim().charAt(0) || '؟')
 <style scoped>
 .av-zoom { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
 .av-zoom:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-.av-big { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: 16px; background: var(--surface-2); }
+.av-big { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: 14px; background: var(--surface-2); }
 </style>

@@ -208,7 +208,7 @@ async function submit() {
 
 <style scoped>
 /* بطاقةٌ على مقاس «صورة الهوية» فوقها — والحالةُ في لون الأيقونة */
-.pa { display: flex; align-items: center; gap: 14px 18px; flex-wrap: wrap; padding: 20px 24px; margin-bottom: 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.pa { display: flex; align-items: center; gap: 14px 18px; flex-wrap: wrap; padding: 20px 24px; margin-bottom: 18px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .pa-ico { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); flex: none; }
 .pa.done .pa-ico { background: var(--green-soft); color: var(--green-ink); }
 .pa-body { flex: 1 1 260px; min-width: 0; }

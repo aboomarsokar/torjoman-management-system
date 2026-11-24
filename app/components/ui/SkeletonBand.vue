@@ -35,7 +35,7 @@ withDefaults(defineProps<{ actions?: number }>(), {
 </template>
 
 <style scoped>
-.sband { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.sband { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
 .sband-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .sav { width: 64px; height: 64px; border-radius: 18px; flex: none; }
 .stext { display: flex; flex-direction: column; gap: 10px; min-width: 0; }

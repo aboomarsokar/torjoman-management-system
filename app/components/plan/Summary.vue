@@ -70,7 +70,7 @@ const emit = defineEmits<{ filter: [f: TaskFilter] }>()
 <style scoped>
 .ps {
   display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px;
 }
 .ps-progress { flex: 1 1 320px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .ps-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

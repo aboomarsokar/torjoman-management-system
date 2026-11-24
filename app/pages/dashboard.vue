@@ -556,8 +556,6 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 </template>
 
 <style scoped>
-/* تجربةُ التخفيف (طلب المستخدم 2026-11-24): فصلٌ واحد للبطاقة (حدٌّ بلا ظلّ عريض)، فيسري على مكوّنات اللوحة كلِّها عبر المتغيّر */
-.dash { --shadow: 0 1px 2px rgba(11, 44, 66, .04); }
 .welcome { margin-bottom: 28px; }
 .welcome h2 { margin: 0; font-size: 28px; font-weight: 600; color: var(--ink); }
 .welcome p { margin: 8px 0 0; font-size: 16px; color: var(--ink-2); font-weight: 300; }
@@ -591,7 +589,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 .sec { padding: 20px 22px; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
-.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .row:first-child { border-top: none; }

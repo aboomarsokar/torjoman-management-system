@@ -235,7 +235,7 @@ const LETTERS = ['أ', 'ب', 'ج', 'د']
 .rt { max-width: 760px; margin: 0 auto; }
 .back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); }
 .back:hover { color: var(--ink); }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .intro { padding: 28px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
 .big-ico { width: 60px; height: 60px; border-radius: 18px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
 .pass .big-ico { background: var(--green-soft); color: var(--green-ink); }

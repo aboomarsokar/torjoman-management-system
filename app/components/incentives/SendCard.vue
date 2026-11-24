@@ -50,7 +50,7 @@ function confirmSend() {
 </template>
 
 <style scoped>
-.send { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 18px; padding: 20px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.send { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 18px; padding: 20px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .send-text h3 { margin: 0 0 4px; font-size: 15.5px; font-weight: 600; color: var(--ink); }
 .send-text p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.7; }
 @media (max-width: 620px) {

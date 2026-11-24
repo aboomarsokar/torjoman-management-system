@@ -168,7 +168,7 @@ const weekState = (w: number) => !isCurrentMonth.value ? '' : w === thisWeek ? '
 </template>
 
 <style scoped>
-.mr { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); margin-top: 22px; }
+.mr { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; box-shadow: var(--shadow); margin-top: 22px; }
 .mr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 14px; }
 .mr-id { min-width: 0; flex: 1 1 260px; }
 h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }

@@ -129,7 +129,7 @@ const dateLabel = computed(() => item.value
 .logo { height: 56px; width: auto; filter: var(--logo-filter); }
 .wrap { max-width: 760px; margin: 0 auto; padding: 10px 20px 64px; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-lg); padding: 32px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 32px; }
 .err { text-align: center; color: var(--ink-2); display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 56px 28px; }
 .err h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--ink); }
 .err p { margin: 0; font-size: 15px; line-height: 1.8; font-weight: 300; max-width: 380px; }

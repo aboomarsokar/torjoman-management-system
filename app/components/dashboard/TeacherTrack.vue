@@ -165,7 +165,7 @@ const pupil = computed(() => (props.female ? 'طالبة' : 'طالب'))
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; }
 .tt { display: flex; flex-direction: column; gap: 14px; }
 .tt-head { display: flex; align-items: center; gap: 12px; }
 .tt-ico { width: 42px; height: 42px; border-radius: 12px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }

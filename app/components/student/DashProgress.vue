@@ -80,7 +80,7 @@ const PACE = {
 </template>
 
 <style scoped>
-.hero { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 24px 26px; }
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 24px 26px; }
 .hero-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .eyebrow { font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
 .hero-num { font-size: 52px; font-weight: 800; line-height: 1.05; color: var(--ink); margin-top: 6px; font-variant-numeric: tabular-nums; }

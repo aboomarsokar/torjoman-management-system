@@ -37,7 +37,7 @@ withDefaults(defineProps<{ desc?: boolean, action?: boolean }>(), {
 </template>
 
 <style scoped>
-.srow { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.srow { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .srow-main { flex: 1; min-width: 0; }
 .srow-head { display: flex; align-items: center; gap: 10px; }
 .sbadge { width: 76px; height: 22px; border-radius: 999px; flex: none; }

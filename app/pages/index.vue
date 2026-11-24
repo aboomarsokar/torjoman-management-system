@@ -719,7 +719,7 @@ const btnUi = { base: 'rounded-[14px] font-semibold' }
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 14px;
   padding: 36px 30px;
   box-shadow: var(--shadow);
 }
@@ -788,7 +788,7 @@ const btnUi = { base: 'rounded-[14px] font-semibold' }
 .roles {
   margin-top: 56px;
   padding: 32px;
-  border-radius: 22px;
+  border-radius: 14px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   display: flex;

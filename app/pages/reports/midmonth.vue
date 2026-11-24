@@ -108,11 +108,11 @@ const lateCount = computed(() => submitted.value.reduce((t, r) => t + r.late.len
 .mm { display: flex; flex-direction: column; gap: 16px; }
 .mm-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .mm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
 .stat b { font-size: 22px; color: var(--ink); }
 .stat span { font-size: 13.5px; color: var(--ink-2); }
 .num { font-variant-numeric: tabular-nums; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 8px 20px 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 8px 20px 12px; }
 .sec { margin: 12px 0 6px; font-size: 16px; font-weight: 700; color: var(--ink); }
 .miss { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .miss li { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 12px; background: var(--err-soft); }

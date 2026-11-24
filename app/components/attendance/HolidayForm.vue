@@ -83,7 +83,7 @@ defineExpose({ reset })
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
 .hf { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .pf { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px; }
 .pf.wide { flex: 2 1 280px; }

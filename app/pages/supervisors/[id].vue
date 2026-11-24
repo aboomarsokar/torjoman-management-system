@@ -254,9 +254,9 @@ function openResult(v: VisitRow) {
 
 <style scoped>
 .back { margin-bottom: 14px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 
-.band { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.band { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .av { width: 60px; height: 60px; border-radius: 18px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; flex: none; }
 .band h1 { margin: 0 0 8px; font-size: 23px; font-weight: 700; color: var(--ink); }
@@ -275,7 +275,7 @@ function openResult(v: VisitRow) {
 .sec { padding: 20px 22px; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .sec-head h3 { margin: 0; font-size: 16.5px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
-.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .row-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0; background: none; border: 0; font: inherit; color: inherit; text-align: start; cursor: pointer; min-height: 44px; }
 .row-btn .row-main { flex: 1; }
 .row-btn:hover .row-title { color: var(--blue-ink); }

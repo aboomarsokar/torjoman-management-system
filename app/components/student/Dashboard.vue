@@ -249,7 +249,7 @@ const pace = computed(() => {
 
 /* الأرقام */
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .t-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .t-ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .t-ico.green { background: var(--green-soft); color: var(--green-ink); }
@@ -270,7 +270,7 @@ const pace = computed(() => {
 .meter span { display: block; height: 100%; border-radius: 999px; background: var(--green); transition: width .4s ease; }
 
 /* حلقتي */
-.halaqa { display: flex; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 18px; padding: 6px; }
+.halaqa { display: flex; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 6px; }
 .hq-item { flex: 1 1 160px; display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; }
 .hq-lbl { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
 .hq-val { font-size: 15.5px; font-weight: 700; color: var(--ink); text-align: start; }

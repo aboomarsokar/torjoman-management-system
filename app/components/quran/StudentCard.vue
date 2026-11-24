@@ -129,7 +129,7 @@ const button = computed(() => props.action ? ACTIONS[props.action] : null)
 .sc { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; }
 .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .name { margin: 0; font-size: 16.5px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
-.seq { min-width: 26px; height: 26px; padding: 0 6px; flex: none; border-radius: 999px; background: var(--navy); color: var(--on-primary); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.seq { min-width: 26px; height: 26px; padding: 0 6px; flex: none; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .progress { font-size: 13.5px; color: var(--ink-2); }
 .progress.khatm { color: var(--green-ink); font-weight: 600; }
 .range { font-size: 13.5px; color: var(--ink-3); }

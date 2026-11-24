@@ -129,7 +129,7 @@ const deliveryColumns = [
 
 <style scoped>
 .th { display: flex; flex-direction: column; gap: 14px; }
-.th-sum { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 16px 20px; border-radius: 18px; background: var(--surface); }
+.th-sum { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 16px 20px; border-radius: 14px; background: var(--surface); }
 .th-figs { display: flex; gap: 28px; }
 .fig { display: flex; align-items: baseline; gap: 8px; }
 .fig b { font-size: 26px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }

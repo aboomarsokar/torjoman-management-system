@@ -205,7 +205,7 @@ const passedCount = computed(() => history.value.filter(h => h.passed === true).
 .rd-score { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd-score b { font-size: 16px; color: var(--ink); }
 
-.rd-detail { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--surface-2); }
+.rd-detail { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface-2); }
 .rd-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .rd-detail-head h4 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }
 .rd-detail-head p { margin: 3px 0 0; font-size: 13px; color: var(--ink-2); }

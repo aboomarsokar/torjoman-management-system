@@ -413,7 +413,7 @@ const { open, detail, detailLoading, toggleDay, excused, unexcused, present } = 
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .rf { padding: 20px 22px; margin-bottom: 18px; }
 .rf-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .rf-head > .rf-hf { flex-basis: 100%; }
@@ -443,7 +443,7 @@ const { open, detail, detailLoading, toggleDay, excused, unexcused, present } = 
 .rf-sumrow:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .rf-sumrow .rf-who { flex: 1; }
 /* الرقمُ المتسلسل كبطاقات العاملين والطلاب (2026-10-22) */
-.rf-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--navy); color: #fff; font-size: 13.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.rf-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .rf-count { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; white-space: nowrap; }
 .rf-count-n { font-size: 14px; color: var(--ink-2); }
 .rf-count-n b { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }

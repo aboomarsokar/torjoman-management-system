@@ -447,7 +447,7 @@ async function doExport() {
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .filters { display: flex; gap: 10px; flex-wrap: wrap; }
 .bar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
 thead tr, tfoot tr { background: var(--surface-2); }
 th { padding: 12px 12px; font-weight: 600; color: var(--ink-3); font-size: 12.5px; white-space: nowrap; text-align: center; }

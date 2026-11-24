@@ -51,7 +51,7 @@ withDefaults(defineProps<{
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 15px; }
 @media (max-width: 640px) { .table-wrap table { min-width: 640px; } }

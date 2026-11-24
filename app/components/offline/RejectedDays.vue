@@ -52,7 +52,7 @@ const emit = defineEmits<{ retry: [key: string], discard: [key: string] }>()
 </template>
 
 <style scoped>
-.rej { padding: 16px 18px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--err) 35%, var(--line)); background: var(--surface); }
+.rej { padding: 16px 18px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--err) 35%, var(--line)); background: var(--surface); }
 .rej h2 { margin: 0 0 8px; font-size: 15.5px; font-weight: 700; color: var(--err); }
 .rej ul { list-style: none; margin: 0; padding: 0; }
 .rej li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; }

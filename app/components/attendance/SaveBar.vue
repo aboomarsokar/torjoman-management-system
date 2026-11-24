@@ -36,7 +36,7 @@ const emit = defineEmits<{ save: [] }>()
 </template>
 
 <style scoped>
-.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; padding: 12px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
+.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; padding: 12px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
 .save-note { font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .save-note.warn { color: var(--err); }
 @media (max-width: 520px) {

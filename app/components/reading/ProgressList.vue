@@ -166,7 +166,7 @@ const passedPct = (passed: number, total: number) => total ? Math.round(passed /
 </template>
 
 <style scoped>
-.pl { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 20px 24px 8px; margin-bottom: 18px; }
+.pl { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 24px 8px; margin-bottom: 18px; }
 .pl-head { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 14px; }
 .pl-pick { width: 280px; max-width: 100%; }
 .none { margin: 0 0 14px; color: var(--ink-3); font-size: 14px; }

@@ -258,7 +258,7 @@ const ARROW = { up: 'i-lucide-trending-up', down: 'i-lucide-trending-down', flat
 .picker { display: flex; gap: 10px; margin-bottom: 16px; }
 .sel { width: 140px; }
 .cards { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 18px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 22px; }
 .hero { background: var(--navy); border-color: var(--navy); }
 .hero .c-lbl, .hero .c-val { color: #fff; }
 .c-lbl { font-size: 13.5px; color: var(--ink-3); }

@@ -970,7 +970,7 @@ async function confirmDelete() {
   .students :deep(.table-wrap) { display: none; }
   .scards { display: grid; gap: 12px; }
 }
-.scard { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
+.scard { background: var(--surface); border-radius: 14px; padding: 14px 16px; }
 .scard-head { display: flex; align-items: center; gap: 12px; color: inherit; }
 .scard-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .scard .u-sub { display: block; } /* الهوية تظهر في البطاقة (يُخفيها الجدول تحت 640) */

@@ -212,7 +212,7 @@ const PACE = {
 </template>
 
 <style scoped>
-.rc { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; }
+.rc { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 22px; }
 .rc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .rc-ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
 h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink); }

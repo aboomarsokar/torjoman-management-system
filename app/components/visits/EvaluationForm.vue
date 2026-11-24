@@ -113,7 +113,7 @@ function bump(key: string, by: number) {
 
 <style scoped>
 .ef { display: flex; flex-direction: column; gap: 12px; }
-.ef-crit { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface); }
+.ef-crit { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
 .ef-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
 .ef-num { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; border: 1.5px solid var(--navy); color: var(--navy); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ef-title { flex: 1; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }

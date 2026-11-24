@@ -99,7 +99,7 @@ const kind = (i: LibraryItem) => libraryExt(i.file_name) ?? 'pdf'
 .ld-group h2 { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
 .ld-group h2 span { font-size: 12.5px; font-weight: 600; color: var(--ink-3); background: var(--surface-2); border-radius: 999px; padding: 0 9px; font-variant-numeric: tabular-nums; }
 .ld-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.ld-group li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); flex-wrap: wrap; }
+.ld-group li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-sm); flex-wrap: wrap; }
 .ld-ico { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--blue-ink); flex: none; }
 .ld-body { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ld-body b { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }

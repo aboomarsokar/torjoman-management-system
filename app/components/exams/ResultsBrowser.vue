@@ -357,8 +357,8 @@ const fmtDate = (iso: string) => iso.split('-').reverse().join('-')
 <style scoped>
 .sec-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 14px; display: flex; align-items: center; gap: 9px; }
 /* شارةُ العدد الكحليّة نفسُها في اللوحات وصفحة المشرف (2026-10-22) */
-.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.res-filters { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.res-filters { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 /* مثلُ فلترَي «اختبارات الطلاب» (الحلقة والشهر — طلب المستخدم 2026-10-22) */
 .rf { width: 280px; max-width: 100%; }
 .res-filters :deep(.rf-label) { font-size: 14px; font-weight: 600; color: var(--ink-2); }

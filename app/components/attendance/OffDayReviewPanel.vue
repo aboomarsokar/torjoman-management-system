@@ -148,7 +148,7 @@ function confirmReject() {
 </template>
 
 <style scoped>
-.orp { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; margin-bottom: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
+.orp { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; margin-bottom: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
 .orp.pending { background: var(--chip-warn-bg); color: var(--chip-warn-ink); border-color: color-mix(in srgb, var(--chip-warn-ink) 30%, transparent); }
 .orp.rejected { background: var(--err-soft); color: var(--err); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
 .orp-head { display: flex; align-items: center; gap: 12px; }

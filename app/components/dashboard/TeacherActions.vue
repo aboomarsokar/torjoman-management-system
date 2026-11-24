@@ -105,7 +105,7 @@ watch(() => open.value.some(a => a.tone === 'urgent'), (urgent) => {
 </template>
 
 <style scoped>
-.acts { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 14px 18px; }
+.acts { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 18px; }
 h2 { margin: 0; }
 .bar { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0; border: none; background: none; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); text-align: start; cursor: pointer; }
 .bar:disabled { cursor: default; }
@@ -117,7 +117,7 @@ h2 { margin: 0; }
 .count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
 .clear { margin: 10px 0 0; display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--green-ink); }
 ul { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.act { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: inherit; text-decoration: none; }
+.act { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); color: inherit; text-decoration: none; }
 .act.urgent { background: var(--err-soft); border-color: color-mix(in oklab, var(--err) 30%, transparent); }
 .act.done { background: transparent; }
 .act.needs-net { opacity: .5; }

@@ -210,7 +210,7 @@ const day = (iso: string) => iso.split('-').reverse().join('-')
 <style scoped>
 .es { display: flex; flex-direction: column; gap: 16px; }
 .es :deep(.head) { margin-bottom: 0; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .pick { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 14px 18px; }
 .pick-label { font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .pick-sel { width: 280px; max-width: 100%; }

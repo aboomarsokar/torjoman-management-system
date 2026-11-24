@@ -68,7 +68,7 @@ const subParts = computed(() => (props.sub ?? '').split(/(\d+(?:[.,]\d+)?٪?%?)/
 </template>
 
 <style scoped>
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 15px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 15px; }
 .stat.stacked { flex-direction: column; align-items: flex-start; gap: 0; padding: 24px; }
 .ico { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex: none; }
 .stat.stacked .ico { margin-bottom: 18px; }

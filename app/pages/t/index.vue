@@ -278,7 +278,7 @@ const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود
   .att-grid { display: grid; grid-template-columns: minmax(340px, 400px) minmax(0, 1fr); align-items: start; }
   .att-grid > .main { position: sticky; top: 16px; }
 }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px; }
 .main { display: flex; flex-direction: column; gap: 18px; }
 .day-label small { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
 .day { display: flex; flex-direction: column; gap: 10px; }
@@ -290,7 +290,7 @@ const onWithdraw = () => runOff(withdrawOff, 'سُحب البلاغ، ويعود
 .day-state { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 14px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); font-size: 14.5px; font-weight: 600; line-height: 1.6; }
 .day-state.on { background: var(--green-soft); color: var(--green-ink); }
 .day-state.queued { background: var(--blue-soft); color: var(--blue-ink); }
-.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
+.save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
 .save-note { font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .save-note.warn { color: var(--err); }
 .save-acts { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }

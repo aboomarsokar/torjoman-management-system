@@ -268,7 +268,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
 
 /* المحدِّدات: الحلقةُ سطرٌ، والشهرُ والسنةُ معاً — على الجوال نصفان بدل سطرين كاملين */
 .pick-fields { display: grid; grid-template-columns: minmax(0, 1fr) 140px 140px; gap: 14px; align-items: end; }
@@ -277,7 +277,7 @@ const fmt = (n: number) => n.toLocaleString('ar')
 .halqa-auto { display: flex; align-items: center; gap: 9px; height: 48px; padding: 0 16px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); font-size: 15.5px; font-weight: 600; color: var(--ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* الملخّص: لوحٌ واحد بثلاثة أقسامٍ يفصلها خطّ */
-.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
 .sm-seg { padding: 16px 20px; display: flex; flex-direction: column-reverse; gap: 6px; }
 .sm-seg + .sm-seg { border-inline-start: 1px solid var(--line); }
 .sm-seg dt { font-size: 13px; color: var(--ink-3); }

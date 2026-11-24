@@ -2,12 +2,13 @@
 /**
  * أزرارُ طلب الملازم عند المدير الإداريّ (طلب المستخدم 2026-10-31): محادثةُ المعلّم، و«إبلاغ بالاستلام» للجديد،
  * و«تسليم» و«إلغاء» لما لم يُسلَّم. `block` لبطاقة الجوال، وفي الجدول الضيّق أيقوناتٌ بتلميح.
+ * و«تخفيض» لما يتجاوز حاجةَ الحلقة (`over` — 2026-11-24).
  */
 import type { BookletRequest } from '~/composables/useBookletRequests'
 import { isPendingRequest } from '~/utils/bookletRequests'
 
-const props = defineProps<{ row: BookletRequest, busy: boolean, block?: boolean }>()
-const emit = defineEmits<{ chat: [], ready: [], deliver: [], cancel: [] }>()
+const props = defineProps<{ row: BookletRequest, busy: boolean, block?: boolean, over?: boolean }>()
+const emit = defineEmits<{ chat: [], ready: [], deliver: [], cancel: [], reduce: [] }>()
 
 const pending = computed(() => isPendingRequest(props.row.status))
 const ui = computed(() => ({ base: props.block ? 'rounded-[12px] min-h-11 font-semibold' : 'rounded-[11px] min-h-10 px-3 font-semibold' }))
@@ -57,6 +58,19 @@ const ui = computed(() => ({ base: props.block ? 'rounded-[12px] min-h-11 font-s
       @click="emit('deliver')"
     >
       <span class="ra-lbl">تسليم</span>
+    </UButton>
+    <UButton
+      v-if="pending && over && row.copies > 1"
+      icon="i-lucide-arrow-down-wide-narrow"
+      color="warning"
+      variant="soft"
+      :block="block"
+      aria-label="تخفيض الطلب"
+      title="تخفيض الطلب"
+      :ui="ui"
+      @click="emit('reduce')"
+    >
+      <span class="ra-lbl">تخفيض</span>
     </UButton>
     <UTooltip
       v-if="pending"

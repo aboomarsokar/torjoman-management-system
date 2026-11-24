@@ -60,3 +60,54 @@ export function requestStockText(s: RequestStock, copies: number): string | null
   if (s.kind === 'low') return `يكفي، ويبقى بعده ${s.available - copies} — عند حدّ التنبيه`
   return null
 }
+
+/**
+ * حاجةُ الحلقة من ملزمة (طلب المستخدم 2026-11-24 — `booklet_rooms`): طلابُها النشطون، وما استلمته منها،
+ * ونسخُ طلباتها القائمة. لا يطلب المعلّمُ ما يجعل المستلَمَ والقائمَ أكثرَ من الطلاب (الحارسُ في القاعدة).
+ */
+export interface BookletRoom { halaqa_id: string, booklet: number, students: number, received: number, pending: number, female: boolean }
+
+/** المتاحُ لطلب: الطلاب − المستلَم − القائمُ لغيره (`own` نسخُ الطلب نفسه حين يُعدَّل وهو قائم). */
+export const roomLeft = (r: BookletRoom, own = 0) => r.students - r.received - (r.pending - own)
+
+/** سطرُ الحاجة تحت حقل النسخ عند المعلّم. */
+export function roomLine(r: BookletRoom, own = 0): string {
+  const others = r.pending - own
+  return `${r.female ? 'طالباتُكِ' : 'طلابُك'} ${r.students} · استلمت الحلقة ${r.received}`
+    + (others > 0 ? ` · طلباتٌ قائمة ${others}` : '') + ` — المتاح ${Math.max(roomLeft(r, own), 0)}`
+}
+
+/** خطأُ تجاوز الحاجة بالعربية، أو null. */
+export function roomError(r: BookletRoom | null | undefined, copies: number, own = 0): string | null {
+  if (!r) return null
+  const left = roomLeft(r, own)
+  if (copies <= left) return null
+  if (left <= 0) {
+    return `لا تحتاج ${r.female ? 'حلقتُكِ' : 'حلقتُك'} نسخاً إضافية من هذه الملزمة. للحالات الخاصة ${r.female ? 'تواصلي' : 'تواصل'} مع المدير الإداري.`
+  }
+  return `عددُ النسخ أكبر من حاجة الحلقة — المتاحُ ${left} نسخة.`
+}
+
+/** تنبيهُ المدير لطلبٍ قائم يزيد فيه المستلَمُ والقائمُ على عدد الطلاب، أو null. */
+export function overNeedText(r: BookletRoom | null | undefined): string | null {
+  if (!r || r.received + r.pending <= r.students) return null
+  return `يتجاوز الحاجة: ${r.female ? 'الطالبات' : 'الطلاب'} ${r.students} · استُلم ${r.received} · مطلوبٌ قائم ${r.pending}`
+}
+
+/** حاجةُ حلقة الطلب وملزمته من قائمة الحاجات، أو null. */
+export function roomOfRequest(rooms: BookletRoom[], r: { halaqa_id: string, booklet: number } | null): BookletRoom | null {
+  return r ? rooms.find(x => x.halaqa_id === r.halaqa_id && x.booklet === r.booklet) ?? null : null
+}
+
+/** «يتجاوز الحاجة» لكلّ طلبٍ قائم في حلقةٍ وملزمةٍ زاد فيهما المستلَمُ والقائمُ على الطلاب. */
+export function overNeedNotes(rows: (RequestLike & { halaqa_id: string })[], rooms: BookletRoom[]): Map<string, string> {
+  const notes = new Map<string, string>()
+  for (const r of rows) {
+    const text = isPendingRequest(r.status) ? overNeedText(roomOfRequest(rooms, r)) : null
+    if (text) notes.set(r.id, text)
+  }
+  return notes
+}
+
+/** أقصى ما يُبقى عليه طلبٌ قائم ليوافق الحاجة (0: الأنسبُ إلغاؤه). */
+export const fitCopies = (r: BookletRoom, own: number) => Math.max(0, roomLeft(r, own))

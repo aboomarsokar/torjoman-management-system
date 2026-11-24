@@ -2,11 +2,14 @@
 /**
  * «اطلب ملازم» (المعلّم — طلب المستخدم 2026-10-25): الملزمةُ وعددُ النسخ وملاحظةٌ اختياريّة، والحلقةُ حلقتُه.
  * يُشعَر المديرُ الإداريّ بالطلب، والتحقّقُ في `useBookletRequests`. ومع `initial` يصير تعديلاً لطلبٍ لم يُسلَّم (2026-10-31).
+ * وتحت النسخ حاجةُ الحلقة من الملزمة المختارة (`roomOf` — 2026-11-24)، ويُعطَّل الإرسالُ إن تجاوزها؛ وتعديلُ الملاحظة
+ * أو التخفيضُ في طلبٍ قائم لا يُعطَّل (يبقى كما كان).
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { RequestDraft } from '~/composables/useBookletRequests'
+import { roomError, roomLine, type BookletRoom } from '~/utils/bookletRequests'
 
-const props = defineProps<{ busy: boolean, initial?: RequestDraft | null }>()
+const props = defineProps<{ busy: boolean, initial?: RequestDraft | null, roomOf?: (booklet: number | undefined) => BookletRoom | null }>()
 const emit = defineEmits<{ save: [draft: RequestDraft] }>()
 const open = defineModel<boolean>('open', { required: true })
 
@@ -16,6 +19,11 @@ watch(open, (o) => {
   if (o) Object.assign(form, props.initial ? { ...props.initial } : blank())
 })
 const editing = computed(() => !!props.initial)
+/** نسخُ الطلب نفسه إن بقيت ملزمتُه: محسوبةٌ في القائم فلا تُحسب مرّتين. */
+const own = computed(() => props.initial && props.initial.booklet === form.booklet ? Number(props.initial.copies) : 0)
+const room = computed(() => props.roomOf?.(form.booklet) ?? null)
+const grows = computed(() => !props.initial || props.initial.booklet !== form.booklet || Number(form.copies) > Number(props.initial.copies))
+const overError = computed(() => (grows.value && form.copies ? roomError(room.value, Number(form.copies), own.value) : null))
 const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b.label}`, value: b.no }))
 </script>
 
@@ -47,6 +55,19 @@ const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b
             class="w-full"
             :ui="{ base: 'rounded-[12px] min-h-12' }"
           />
+          <p
+            v-if="room"
+            class="room"
+          >
+            {{ roomLine(room, own) }}
+          </p>
+          <p
+            v-if="overError"
+            class="room room-bad"
+            role="alert"
+          >
+            {{ overError }}
+          </p>
         </UFormField>
         <UFormField label="ملاحظة (اختياريّة)">
           <UTextarea
@@ -73,6 +94,7 @@ const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b
           :icon="editing ? 'i-lucide-check' : 'i-lucide-send'"
           color="primary"
           :loading="busy"
+          :disabled="!!overError"
           :ui="{ base: 'rounded-[12px] min-h-11 font-semibold' }"
           @click="emit('save', { ...form })"
         />
@@ -83,4 +105,6 @@ const bookletItems = BOOKLETS.map(b => ({ label: `الملزمة ${b.no} — ${b
 
 <style scoped>
 .rf { display: flex; flex-direction: column; gap: 14px; }
+.room { margin: 6px 2px 0; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.room-bad { color: var(--err); font-weight: 600; }
 </style>

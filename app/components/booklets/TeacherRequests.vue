@@ -2,16 +2,21 @@
 /**
  * «طلباتي» في صفحة الملازم عند المعلّم (طلب المستخدم 2026-10-25)، بأربع حالات (2026-10-31): بانتظار التجهيز ·
  * جاهزةٌ للاستلام (أبلغه المدير) · تمّ التسليم · ملغى بسببه. ويعدّل طلبَه ويلغيه ما لم يُسلَّم.
+ * وما خفّضه المديرُ يظهر تحت الملزمة بالعدد الأصليّ وسببه (2026-11-24).
  */
 import { BOOKLETS } from '~/constants/booklets'
 import { requestError, type BookletRequest, type RequestDraft } from '~/composables/useBookletRequests'
 import { deliveryDate } from '~/utils/booklets'
-import { isPendingRequest, statusMeta, TEACHER_STATUS, type RequestStatus } from '~/utils/bookletRequests'
+import { isPendingRequest, statusMeta, TEACHER_STATUS, type BookletRoom, type RequestStatus } from '~/utils/bookletRequests'
 
-defineProps<{ rows: BookletRequest[], busy: boolean }>()
+defineProps<{ rows: BookletRequest[], busy: boolean, roomOf?: (booklet: number | undefined) => BookletRoom | null }>()
 const emit = defineEmits<{ edit: [id: string, draft: RequestDraft], cancel: [id: string, reason: string] }>()
 
 const label = (n: number) => BOOKLETS.find(b => b.no === n)?.label ?? `الملزمة ${n}`
+/** «خفّضه المدير من 13» مع سببه إن وُجد. */
+const reducedText = (r: BookletRequest) => r.reduced_from
+  ? `خفّضه المدير الإداري من ${r.reduced_from}${r.reduce_reason ? ` — ${r.reduce_reason}` : ''}`
+  : null
 const stateLabel = (s: string) => TEACHER_STATUS[s as RequestStatus] ?? TEACHER_STATUS.open
 
 const editing = ref<BookletRequest | null>(null)
@@ -70,6 +75,10 @@ const columns = [
           v-if="row.status === 'cancelled' && row.cancel_reason"
           class="why"
         >السبب: {{ row.cancel_reason }}</span>
+        <span
+          v-if="reducedText(row)"
+          class="why"
+        >{{ reducedText(row) }}</span>
       </div>
     </template>
     <template #copies="{ row }">
@@ -115,7 +124,7 @@ const columns = [
       <UiCardRow
         :title="label(row.booklet)"
         :subtitle="deliveryDate(row.created_at)"
-        :fields="[{ label: 'النسخ', value: String(row.copies) }, ...(row.cancel_reason ? [{ label: 'سبب الإلغاء', value: row.cancel_reason }] : [])]"
+        :fields="[{ label: 'النسخ', value: String(row.copies) }, ...(row.cancel_reason ? [{ label: 'سبب الإلغاء', value: row.cancel_reason }] : []), ...(reducedText(row) ? [{ label: 'التخفيض', value: reducedText(row)! }] : [])]"
         :class="row.status === 'ready' ? 'is-ready' : undefined"
       >
         <template #lead>
@@ -161,6 +170,7 @@ const columns = [
     :open="!!editing"
     :initial="editDraft"
     :busy="busy"
+    :room-of="roomOf"
     @update:open="(v: boolean) => { if (!v) editing = null }"
     @save="saveEdit"
   />

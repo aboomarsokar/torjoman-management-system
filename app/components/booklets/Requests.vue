@@ -5,19 +5,21 @@
  * «تمّ التسليم»، أو «ملغى» بسببٍ يصل المعلّم. تحت كلّ طلبٍ قائمٍ حالُ مخزونه (لا يكفي / عند الحدّ / غيرُ مجرودة).
  * تبويبان: بانتظار التسليم · ملغاة — والمسلَّمُ في «السجلّ» بملاحظة «بطلب المعلّم» (طلب المستخدم 2026-10-31). مشرفُ المشروع يقرأ.
  * وبحثٌ باسم المعلّم أو الحلقة يسري على التبويبين وعدّاديهما (طلب المستخدم 2026-11-01).
+ * وما يتجاوز حاجةَ الحلقة (المستلَم والقائم أكثرُ من طلابها) يُوسَم ويُخفَّض بسببٍ يصل المعلّم (2026-11-24).
  */
 import { BOOKLETS } from '~/constants/booklets'
 import type { BookletRequest } from '~/composables/useBookletRequests'
 import type { StockRow } from '~/utils/bookletStock'
 import { deliveryDate } from '~/utils/booklets'
-import { isPendingRequest, requestStock, requestStockText, statusMeta } from '~/utils/bookletRequests'
+import { isPendingRequest, overNeedNotes, requestStock, requestStockText, roomOfRequest, statusMeta, type BookletRoom } from '~/utils/bookletRequests'
 import { matchesSearch } from '~/utils/search'
 
-const props = defineProps<{ rows: BookletRequest[], stock: StockRow[], canClose: boolean, busy: boolean }>()
+const props = defineProps<{ rows: BookletRequest[], stock: StockRow[], rooms: BookletRoom[], canClose: boolean, busy: boolean }>()
 const emit = defineEmits<{
   deliver: [id: string, deliveredOn: string]
   ready: [id: string]
   cancel: [id: string, reason: string]
+  reduce: [id: string, copies: number, reason: string]
   chat: [row: BookletRequest]
 }>()
 
@@ -51,6 +53,13 @@ const stockNotes = computed(() => new Map(oldestFirst.value.filter(r => isPendin
   const s = requestStock(r, props.stock, props.rows)
   return [r.id, { text: requestStockText(s, r.copies), tone: s.kind === 'short' ? 'bad' : 'warn' }]
 })))
+
+const overNotes = computed(() => overNeedNotes(props.rows, props.rooms))
+const toReduce = ref<BookletRequest | null>(null)
+function confirmReduce(copies: number, reason: string) {
+  if (toReduce.value) emit('reduce', toReduce.value.id, copies, reason)
+  toReduce.value = null
+}
 
 const toDeliver = ref<BookletRequest | null>(null)
 const toCancel = ref<BookletRequest | null>(null)
@@ -145,6 +154,10 @@ const columns = [
           :class="['stock', stockNotes.get(row.id)?.tone]"
         >{{ stockNotes.get(row.id)?.text }}</span>
         <span
+          v-if="overNotes.get(row.id)"
+          class="stock bad"
+        >{{ overNotes.get(row.id) }}</span>
+        <span
           v-if="row.status === 'cancelled' && row.cancel_reason"
           class="note"
         >السبب: {{ row.cancel_reason }}</span>
@@ -175,10 +188,12 @@ const columns = [
         v-if="canClose"
         :row="row"
         :busy="busy"
+        :over="overNotes.has(row.id)"
         @chat="emit('chat', row)"
         @ready="emit('ready', row.id)"
         @deliver="toDeliver = row"
         @cancel="toCancel = row"
+        @reduce="toReduce = row"
       />
     </template>
     <template #card="{ row, index }">
@@ -189,6 +204,7 @@ const columns = [
           { label: 'الطلب', value: summary(row) },
           ...(row.note ? [{ label: 'ملاحظة', value: row.note }] : []),
           ...(stockNotes.get(row.id)?.text ? [{ label: 'المخزون', value: stockNotes.get(row.id)!.text! }] : []),
+          ...(overNotes.get(row.id) ? [{ label: 'الحاجة', value: overNotes.get(row.id)! }] : []),
           ...(row.cancel_reason ? [{ label: 'سبب الإلغاء', value: row.cancel_reason }] : []),
           { label: 'التاريخ', value: deliveryDate(row.created_at) }
         ]"
@@ -211,11 +227,13 @@ const columns = [
           <BookletsRequestActions
             :row="row"
             :busy="busy"
+            :over="overNotes.has(row.id)"
             block
             @chat="emit('chat', row)"
             @ready="emit('ready', row.id)"
             @deliver="toDeliver = row"
             @cancel="toCancel = row"
+            @reduce="toReduce = row"
           />
         </template>
       </UiCardRow>
@@ -230,6 +248,15 @@ const columns = [
     :busy="busy"
     @update:open="(v: boolean) => { if (!v) toDeliver = null }"
     @confirm="confirmDeliver"
+  />
+  <BookletsReduceModal
+    :open="!!toReduce"
+    :summary="`${toReduce?.halaqa?.teacher?.full_name ?? ''} — ${summary(toReduce)}`"
+    :copies="toReduce?.copies ?? 2"
+    :room="roomOfRequest(rooms, toReduce)"
+    :busy="busy"
+    @update:open="(v: boolean) => { if (!v) toReduce = null }"
+    @confirm="confirmReduce"
   />
   <BookletsCancelModal
     :open="!!toCancel"

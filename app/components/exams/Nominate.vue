@@ -215,7 +215,7 @@ function askWithdraw(r: NomineeRow) {
             >
               <UButton
                 v-if="selectable(row)"
-                :label="checked[row.id] ? 'محدَّدٌ للترشيح' : 'رشّحه'"
+                :label="checked[row.id] ? 'محدَّدٌ للترشيح' : 'ترشيح'"
                 :color="checked[row.id] ? 'primary' : 'neutral'"
                 :variant="checked[row.id] ? 'solid' : 'outline'"
                 :icon="checked[row.id] ? 'i-lucide-check' : 'i-lucide-plus'"

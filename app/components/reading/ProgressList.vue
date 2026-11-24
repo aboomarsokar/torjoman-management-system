@@ -166,7 +166,7 @@ const passedPct = (passed: number, total: number) => total ? Math.round(passed /
 </template>
 
 <style scoped>
-.pl { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 20px 24px 8px; margin-bottom: 18px; }
+.pl { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 24px 8px; margin-bottom: 18px; }
 .pl-head { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 14px; }
 .pl-pick { width: 280px; max-width: 100%; }
 .none { margin: 0 0 14px; color: var(--ink-3); font-size: 14px; }
@@ -178,7 +178,7 @@ const passedPct = (passed: number, total: number) => total ? Math.round(passed /
 .tr { display: grid; grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 1fr) minmax(170px, 1.1fr) 100px 140px; align-items: center; gap: 16px; padding: 12px 10px; border-top: 1px solid var(--line); }
 .tr:not(.th):hover { background: var(--surface-2); }
 .th { border-top: none; padding-block: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
-.name { font-weight: 600; color: var(--ink); font-size: 15px; text-decoration: none; }
+.name { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--ink); font-size: 15px; text-decoration: none; }
 .name:hover { color: var(--blue-ink); text-decoration: underline; text-underline-offset: 3px; }
 .name:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
 .c-unit { font-size: 14px; color: var(--ink-2); display: flex; flex-direction: column; }

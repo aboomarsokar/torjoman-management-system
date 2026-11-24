@@ -78,7 +78,7 @@ const conditions = [
 .ji-vision { margin: 0; padding: 22px 24px; border-radius: 20px; background: var(--navy); color: var(--on-primary); display: flex; flex-direction: column; gap: 6px; }
 .ji-vision figcaption { font-size: 13px; font-weight: 600; opacity: .8; }
 .ji-vision blockquote { margin: 0; font-size: clamp(18px, 2.6vw, 22px); font-weight: 600; line-height: 1.9; text-wrap: balance; }
-.ji-welcome { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
+.ji-welcome { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
 .ji-welcome h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--ink); }
 .ji-welcome p { margin: 0; color: var(--ink-2); line-height: 1.9; }
 .ji-points { margin: 0; display: flex; flex-direction: column; }
@@ -86,7 +86,7 @@ const conditions = [
 .ji-points div:first-child { border-top: 0; }
 .ji-points dt { font-weight: 600; color: var(--blue-ink); }
 .ji-points dd { margin: 0; color: var(--ink); line-height: 1.8; }
-.ji-cond { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.ji-cond { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
 .ji-cond summary {
   list-style: none; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 20px; cursor: pointer;
   font-weight: 700; font-size: 16px; color: var(--ink);

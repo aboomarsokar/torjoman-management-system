@@ -199,7 +199,7 @@ const otherReporter = (i: OffDayQueueItem) => (i.reporterName && i.reporterName 
 </template>
 
 <style scoped>
-.odq { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 18px; }
+.odq { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 22px; margin-bottom: 18px; }
 .odq-head { margin-bottom: 8px; }
 .odq-head h3 { margin: 0; display: flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 700; color: var(--ink); }
 .odq-count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--chip-warn-bg); color: var(--chip-warn-ink); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }

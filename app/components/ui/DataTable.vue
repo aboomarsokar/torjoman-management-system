@@ -101,7 +101,7 @@ function onRowKey(row: T, e: KeyboardEvent) {
 
 <style scoped>
 .dt { container: dt / inline-size; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 15px; }
 /* على الجوال بلا بطاقات: لا تضغط الأعمدة، اسمح بالتمرير الأفقي */

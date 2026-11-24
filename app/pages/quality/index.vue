@@ -256,7 +256,7 @@ async function onChanged() {
 <style scoped>
 .quality { display: flex; flex-direction: column; gap: 16px; }
 .quality :deep(.head) { margin-bottom: 0; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .month { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
 .month-label { flex: none; font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .list { list-style: none; margin: 0; padding: 6px 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow); }
@@ -265,7 +265,7 @@ async function onChanged() {
 .row:hover { background: var(--surface-2); }
 .row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.row-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--navy); color: var(--on-primary); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.row-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 /* صفُّ أدواتٍ واحد بارتفاع 48px: البحثُ يتمدّد والقوائمُ بعرضٍ ثابت */
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
 .tools-search { flex: 1 1 300px; min-inline-size: 0; }
@@ -282,6 +282,10 @@ async function onChanged() {
 .row-go { color: var(--ink-3); }
 @media (max-width: 560px) {
   .month { flex-direction: column; align-items: stretch; gap: 8px; }
-  .row { flex-wrap: wrap; }
+  /* الاسمُ سطرٌ كامل بجانب الرقم، والعلامةُ والحالةُ والسهمُ تحته — كان العمودُ يضيق حتى كلمةٍ في السطر (2026-11-24) */
+  .row { flex-wrap: wrap; row-gap: 8px; }
+  .row-main { flex: 1 1 calc(100% - 44px); }
+  .row-score { margin-inline-start: 40px; }
+  .row-go { margin-inline-start: auto; }
 }
 </style>

@@ -182,7 +182,7 @@ const date = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse(
 
 <style scoped>
 .tk { display: flex; flex-direction: column; gap: 16px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 8px 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 8px 20px; }
 .tk-sum { margin: 12px 0 4px; font-size: 14.5px; color: var(--ink-2); }
 .tk-list { list-style: none; margin: 0; padding: 0; }
 .tk-list li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid var(--line); }

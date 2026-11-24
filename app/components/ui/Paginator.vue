@@ -63,7 +63,7 @@ const pages = computed(() => {
     <div class="pg-btns">
       <button
         v-if="edges"
-        class="pg-b"
+        class="pg-b pg-edge"
         :disabled="page <= 1"
         aria-label="الصفحة الأولى"
         title="الصفحة الأولى"
@@ -129,7 +129,7 @@ const pages = computed(() => {
       </button>
       <button
         v-if="edges"
-        class="pg-b"
+        class="pg-b pg-edge"
         :disabled="page >= pageCount"
         aria-label="الصفحة الأخيرة"
         title="الصفحة الأخيرة"
@@ -148,7 +148,7 @@ const pages = computed(() => {
 .pg { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
 .pg-info { font-size: 13.5px; color: var(--ink-3); }
 .pg-btns { display: flex; align-items: center; gap: 6px; }
-.pg-b { min-width: 36px; height: 36px; padding: 0 9px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; }
+.pg-b { min-width: 44px; height: 44px; padding: 0 9px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; }
 .pg-b:hover:not(:disabled) { border-color: var(--blue); color: var(--ink); }
 .pg-b.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 .pg-b:disabled { opacity: .4; cursor: not-allowed; }
@@ -168,7 +168,10 @@ const pages = computed(() => {
 .refined .pg-b:disabled { opacity: .35; }
 .refined .pg-dots { min-width: 14px; text-align: center; }
 @media (max-width: 480px) {
-  .refined .pg-btns { gap: 5px; }
-  .refined .pg-b { width: 36px; min-width: 36px; height: 36px; border-radius: 10px; }
+  .refined .pg-btns { gap: 4px; flex-wrap: wrap; justify-content: center; }
+  /* «الأولى/الأخيرة» يُغنيهما رقمُ أوّل صفحةٍ وآخرِها — فيبقى الصفُّ واحداً بأزرار 44px */
+  .refined .pg-edge { display: none; }
+  /* اللمسُ ≥ 44px على الجوال (قاعدة المشروع — فحص 2026-11-24) */
+  .refined .pg-b { width: 44px; min-width: 44px; height: 44px; border-radius: 11px; }
 }
 </style>

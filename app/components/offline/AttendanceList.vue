@@ -44,7 +44,7 @@ const absent = computed(() => props.summary.excused + props.summary.unexcused)
 </template>
 
 <style scoped>
-.al { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+.al { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
 .al-sum { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; padding: 12px 18px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .al-sum b { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .al-sum .p b { color: var(--green-ink); }

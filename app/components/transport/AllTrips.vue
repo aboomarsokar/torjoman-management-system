@@ -265,7 +265,7 @@ async function refreshTrips() {
 
 <style scoped>
 .all { display: flex; flex-direction: column; gap: 20px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .top { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; }
 .controls { display: flex; align-items: flex-end; gap: 12px 16px; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 8px; width: min(100%, 300px); }

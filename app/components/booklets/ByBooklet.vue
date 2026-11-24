@@ -26,7 +26,7 @@ defineProps<{ rows: BookletTotal[] }>()
 
 <style scoped>
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
 .tile.none { box-shadow: none; background: var(--surface-2); }
 .no { font-size: 12px; color: var(--ink-3); }
 .label { font-weight: 600; color: var(--ink); font-size: 15px; }

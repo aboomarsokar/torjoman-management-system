@@ -106,7 +106,7 @@ async function onInstall() {
   padding: 18px 18px 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 14px;
   box-shadow: var(--shadow-lg);
 }
 .pwa-close {

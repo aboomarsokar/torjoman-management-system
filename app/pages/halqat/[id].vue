@@ -399,9 +399,9 @@ const today = gazaToday()
 <style scoped>
 .back { margin-bottom: 14px; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 
-.band { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.band { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .hicon { width: 60px; height: 60px; border-radius: 18px; background: var(--blue-soft); color: var(--blue-ink); display: flex; align-items: center; justify-content: center; flex: none; }
 .band h1 { margin: 0; font-size: 24px; font-weight: 700; color: var(--ink); }

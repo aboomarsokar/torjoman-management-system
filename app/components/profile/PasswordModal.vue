@@ -95,7 +95,7 @@ async function changePassword() {
           color="primary"
           icon="i-lucide-check"
           :loading="saving"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="changePassword"
         />
       </div>

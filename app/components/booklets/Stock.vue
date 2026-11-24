@@ -120,7 +120,7 @@ const when = (day: string) => day.split('-').reverse().map(Number).join('/')
 .st { display: flex; flex-direction: column; gap: 16px; }
 .st-hint { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.8; }
 .st-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.st-grid li { padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.st-grid li { padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .st-grid li.lv-low { border-color: color-mix(in srgb, var(--ui-warning) 45%, var(--line)); }
 .st-grid li.lv-out { border-color: color-mix(in srgb, var(--ui-error) 45%, var(--line)); }
 .st-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -132,7 +132,7 @@ const when = (day: string) => day.split('-').reverse().map(Number).join('/')
 .st-qty .u { font-size: 13px; color: var(--ink-3); }
 .st-alert { margin: 0; font-size: 12px; color: var(--ink-3); }
 .st-acts { display: flex; gap: 8px; margin-top: 4px; }
-.st-log { padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.st-log { padding: 16px 18px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .st-log h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; color: var(--ink); }
 .st-empty { margin: 0; color: var(--ink-3); }
 .st-log ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

@@ -41,7 +41,7 @@ const emit = defineEmits<{ 'update:open': [boolean], 'confirm': [] }>()
           size="lg"
           :icon="confirmIcon"
           :loading="loading"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="emit('confirm')"
         />
       </div>

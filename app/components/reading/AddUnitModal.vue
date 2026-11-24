@@ -122,7 +122,7 @@ async function save() {
           color="primary"
           :loading="busy"
           class="min-h-11"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="save"
         />
       </div>

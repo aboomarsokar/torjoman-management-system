@@ -106,29 +106,23 @@ const head = (it: SplitItem) => it.avg ? show(it.total, it.suffix) : String(sum(
 .gs { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
 /* أربعُ بطاقات: صفٌّ واحدٌ على العريض، واثنتان في الصفّ على المتوسّط — لا ثلاثٌ ورابعةٌ وحيدةٌ تحتها */
 .gs.n-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* وخمسٌ (لوحةُ الإدارة): صفٌّ واحد على العريض لا أربعٌ وخامسةٌ وحيدة (2026-11-24) */
+.gs.n-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1180px) {
   .gs.n-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gs.n-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* بطاقتان في السطر على الجوال (كبطاقات الأرقام الأخرى) */
-@media (max-width: 620px) {
-  .gs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .gs-card { padding: 12px; gap: 10px; }
-  .gs-ico { width: 30px; height: 30px; border-radius: 9px; }
-  .gs-label { font-size: 13px; }
-  .gs-total { min-width: 26px; height: 24px; font-size: 12.5px; padding: 0 8px; }
-  .gs-side b { font-size: 21px; }
-  .gs-side + .gs-side { padding-inline-start: 10px; }
-}
-.gs-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.gs-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
 .gs-head { display: flex; align-items: center; gap: 10px; }
 .gs-ico { width: 36px; height: 36px; flex: none; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); }
-.gs-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; color: var(--ink); }
-.gs-total { min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.gs-label { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 500; color: var(--ink); }
+.gs-total { flex: none; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 
 .gs-split { display: grid; grid-template-columns: 1fr 1fr; }
 .gs-side { display: flex; flex-direction: column; gap: 2px; padding-inline: 4px; }
 .gs-side + .gs-side { border-inline-start: 1px solid var(--line); padding-inline-start: 14px; }
-.gs-side b { font-size: 26px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gs-side b { font-size: 26px; line-height: 1.1; font-weight: 600; font-variant-numeric: tabular-nums; }
 .gs-side span { font-size: 12.5px; color: var(--ink-2); }
 .gs-side.m b { color: var(--navy); }
 .gs-side.f b { color: var(--green-ink); }
@@ -138,4 +132,15 @@ const head = (it: SplitItem) => it.avg ? show(it.total, it.suffix) : String(sum(
 .gs-bar i.m { background: var(--navy); }
 .gs-bar i.f { background: var(--green); }
 .gs-bar.empty i { width: 100%; background: var(--surface-2); }
+/* قواعدُ الجوال آخرَ الملف كي تغلب القواعدَ الأساسية (كانت قبلها فلا تسري — فحص 2026-11-24) */
+@media (max-width: 620px) {
+  .gs, .gs.n-4, .gs.n-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .gs-card { padding: 12px; gap: 10px; }
+  /* عمودان ضيّقان: الأيقونةُ تُخلي مكانها للتسمية فلا تركب الكلمةُ الطويلة («والمعلّمات») على الرقم (فحص 2026-11-24) */
+  .gs-ico { display: none; }
+  .gs-label { font-size: 13px; }
+  .gs-total { min-width: 26px; height: 24px; font-size: 12.5px; padding: 0 8px; }
+  .gs-side b { font-size: 21px; }
+  .gs-side + .gs-side { padding-inline-start: 10px; }
+}
 </style>

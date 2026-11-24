@@ -182,7 +182,7 @@ const pct = computed(() => Math.min(100, Math.round((j.value.parts / 30) * 100))
 .range { font-weight: 600; color: var(--ink); white-space: nowrap; }
 .stage { font-size: 13px; color: var(--ink-3); }
 .status { margin-inline-start: auto; }
-.tag { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+.tag { display: inline-flex; align-items: center; flex: none; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .tag-ok { background: var(--green-soft); color: var(--green-ink); }
 .tag-fail { background: var(--err-soft); color: var(--err); }
 .tag-next { background: var(--blue-soft); color: var(--blue-ink); }

@@ -188,7 +188,7 @@ const menu = computed<DropdownMenuItem[]>(() => [
 </template>
 
 <style scoped>
-.gc { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; min-width: 0; }
+.gc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-width: 0; }
 .gc-h { display: flex; align-items: center; gap: 4px; background: var(--band); color: var(--band-ink); padding-inline-end: 6px; }
 .gc-toggle {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 14px 16px;

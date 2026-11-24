@@ -133,7 +133,7 @@ const commitColor = (c: number | null) => c == null ? 'neutral' : c >= 85 ? 'suc
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 .scard { padding: 18px 20px; display: block; transition: border-color .15s, transform .1s; }
 .scard:hover { border-color: var(--blue); transform: translateY(-2px); }

@@ -172,7 +172,7 @@ const audience = computed(() => form.mode === 'group'
 
 <style scoped>
 .cf {
-  display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; border-radius: 16px;
+  display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; border-radius: 14px;
   background: var(--surface); box-shadow: var(--shadow); container: cf / inline-size;
 }
 .cf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }

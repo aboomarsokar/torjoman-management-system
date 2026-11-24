@@ -219,7 +219,7 @@ async function confirmDelete() {
 <style scoped>
 .sch { display: flex; flex-direction: column; gap: 16px; }
 .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.list li { padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.list li { padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .list li.off { opacity: .7; }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .top b { color: var(--ink); font-size: 16px; font-weight: 600; }

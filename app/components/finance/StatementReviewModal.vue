@@ -185,7 +185,7 @@ async function markReviewed() {
           icon="i-lucide-undo-2"
           :loading="returnSaving"
           :disabled="loading"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="returning ? sendBack() : (returning = true)"
         />
         <UButton
@@ -196,7 +196,7 @@ async function markReviewed() {
           icon="i-lucide-check"
           :loading="marking"
           :disabled="loading"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="markReviewed"
         />
       </div>

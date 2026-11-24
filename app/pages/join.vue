@@ -73,7 +73,7 @@ const tabs: SegmentTab<View>[] = [
 .wrap { max-width: 760px; margin: 0 auto; padding: 6px 20px 64px; display: flex; flex-direction: column; gap: 14px; }
 h1 { margin: 0; font-size: clamp(24px, 4vw, 32px); font-weight: 700; color: var(--ink); text-wrap: balance; }
 .lead { margin: 0 0 6px; font-size: 16px; line-height: 1.9; color: var(--ink-2); max-width: 62ch; }
-.card { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-lg); padding: 24px; display: flex; flex-direction: column; gap: 4px; }
+.card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 24px; display: flex; flex-direction: column; gap: 4px; }
 .tabs { width: 100%; }
 @media (max-width: 560px) {
   .card { padding: 18px 16px; }

@@ -299,7 +299,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
                 size="lg"
                 icon="i-lucide-check"
                 :loading="saving === s.key"
-                :ui="{ base: 'rounded-[13px] font-semibold' }"
+                :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
                 @click="saveSetting(s.key, s.unit)"
               />
             </div>
@@ -557,10 +557,10 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 
 <style scoped>
 .welcome { margin-bottom: 28px; }
-.welcome h2 { margin: 0; font-size: 28px; font-weight: 700; color: var(--ink); }
+.welcome h2 { margin: 0; font-size: 28px; font-weight: 600; color: var(--ink); }
 .welcome p { margin: 8px 0 0; font-size: 16px; color: var(--ink-2); font-weight: 300; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .ico { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex: none; }
 .ico-blue { background: var(--blue-soft); color: var(--blue-ink); }
 .ico-green { background: var(--green-soft); color: var(--green-ink); }
@@ -574,7 +574,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 .setting { padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .setting-head { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .setting-text { min-width: 0; }
-.setting-text h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.setting-text h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--ink); }
 .setting-text p { margin: 5px 0 0; font-size: 14px; color: var(--ink-2); font-weight: 300; line-height: 1.6; }
 .cur { font-weight: 600; color: var(--ink); }
 .setting-edit { display: flex; align-items: center; gap: 10px; flex: none; }
@@ -589,7 +589,7 @@ const cachedRole = import.meta.client ? readCache<{ role?: string }>(PROFILE_CAC
 .sec { padding: 20px 22px; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .sec-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
-.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .row:first-child { border-top: none; }

@@ -26,7 +26,7 @@ defineProps<{
 </template>
 
 <style scoped>
-.hb { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
+.hb { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
 .hb-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .hb-text b { font-size: 15.5px; font-weight: 700; color: var(--ink); line-height: 1.6; }
 .hb-text span { font-size: 13.5px; color: var(--ink-3); }

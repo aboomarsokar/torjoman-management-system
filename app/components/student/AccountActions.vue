@@ -129,7 +129,7 @@ async function toggleLogin() {
 </template>
 
 <style scoped>
-.acct { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 20px; margin-bottom: 22px; }
+.acct { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 14px 20px; margin-bottom: 22px; }
 .acct-info { display: flex; align-items: center; gap: 10px; color: var(--ink-2); }
 .acct-title { font-weight: 600; color: var(--ink); }
 .acct-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

@@ -65,7 +65,7 @@ defineProps<{
 
 <style scoped>
 /* بلا حدود (طلب المستخدم): بطاقةٌ بيضاء على خلفية الصفحة، والفصل بالمسافة بين البطاقات */
-.crow { background: var(--surface); border-radius: 16px; padding: 14px 16px; }
+.crow { background: var(--surface); border-radius: 14px; padding: 14px 16px; }
 .crow-head { display: flex; align-items: center; gap: 12px; color: inherit; }
 .crow-lead { flex: none; display: flex; }
 .crow-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }

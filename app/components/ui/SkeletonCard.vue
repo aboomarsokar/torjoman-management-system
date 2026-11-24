@@ -55,7 +55,7 @@ withDefaults(defineProps<{ lines?: number, icon?: boolean, image?: boolean }>(),
 </template>
 
 <style scoped>
-.scard { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px; box-shadow: var(--shadow); }
+.scard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; box-shadow: var(--shadow); }
 .scard.no-pad { padding: 0; overflow: hidden; }
 .simage { width: 100%; height: 150px; border-radius: 0; }
 .sbody { padding: 18px 20px; }

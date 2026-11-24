@@ -233,7 +233,7 @@ function onKey(e: KeyboardEvent) {
 .th-empty { margin: auto; color: var(--ink-3); font-size: 14px; }
 .th-day { display: flex; justify-content: center; margin: 8px 0; }
 .th-day span { font-size: 12px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); padding: 2px 12px; border-radius: 999px; }
-.th-msg { align-self: flex-start; max-width: min(78%, 560px); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; border-start-start-radius: 4px; padding: 8px 12px 6px; }
+.th-msg { align-self: flex-start; max-width: min(78%, 560px); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; border-start-start-radius: 4px; padding: 8px 12px 6px; }
 .th-msg.mine { align-self: flex-end; background: var(--blue-soft); border-color: transparent; border-start-start-radius: 16px; border-start-end-radius: 4px; }
 .th-from { display: block; font-size: 12px; color: var(--blue-ink); font-weight: 600; margin-bottom: 2px; }
 .th-msg p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; color: var(--ink); font-size: 15px; }

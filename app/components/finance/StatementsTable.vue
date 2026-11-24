@@ -192,7 +192,7 @@ async function confirmReview() {
 <style scoped>
 .bulk { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; }
 .pick { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
-.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
 thead tr { background: var(--surface-2); }
 th { padding: 12px; font-weight: 600; color: var(--ink-3); font-size: 12.5px; text-align: center; }

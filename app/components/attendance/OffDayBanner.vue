@@ -88,7 +88,7 @@ const icon = computed(() => props.off.queued
 </template>
 
 <style scoped>
-.ob { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
+.ob { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
 .ob.queued { background: var(--blue-soft); color: var(--blue-ink); border-color: color-mix(in srgb, var(--blue) 35%, transparent); }
 .ob.pending { background: var(--chip-warn-bg); color: var(--chip-warn-ink); border-color: color-mix(in srgb, var(--chip-warn-ink) 30%, transparent); }
 .ob.rejected { background: var(--err-soft); color: var(--err); border-color: color-mix(in srgb, var(--err) 35%, transparent); }

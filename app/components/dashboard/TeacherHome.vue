@@ -185,7 +185,7 @@ const attentionOpen = ref(false)
 /* يملأ عرضَ المحتوى كسائر الصفحات (لقطة المستخدم 2026-10-27: كانت عموداً ضيّقاً إلى اليمين على الشاشة الكبيرة) */
 .th { display: flex; flex-direction: column; gap: 16px; }
 .pair { display: flex; flex-direction: column; gap: 16px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; }
 .placeholder { font-size: 15px; color: var(--ink-2); }
 .head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .h-ico { width: 48px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
@@ -196,7 +196,7 @@ const attentionOpen = ref(false)
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 
 .quick { display: flex; flex-direction: column; gap: 10px; }
-.q { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 18px; border-radius: 16px; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--blue) 35%, var(--line)); box-shadow: var(--shadow); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
+.q { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 18px; border-radius: 14px; background: var(--surface); border: 1.5px solid color-mix(in srgb, var(--blue) 35%, var(--line)); box-shadow: var(--shadow); color: var(--ink); font-size: 16.5px; font-weight: 700; text-decoration: none; transition: background-color .15s, transform .12s; }
 .q:hover { background: var(--blue-soft); }
 .q-label { flex: 1; }
 .q-chev { color: var(--ink-3); }

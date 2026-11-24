@@ -57,7 +57,7 @@ const dirty = computed(() => DEPT_REPORT_FIELDS.some(f => form[f.key].trim() !==
 </template>
 
 <style scoped>
-.rp { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.rp { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
 .rp h2 { margin: 0; font-size: 17px; font-weight: 600; color: var(--ink); }
 .rp-sub { margin: -6px 0 0; font-size: 13px; color: var(--ink-3); }
 .rp-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }

@@ -76,7 +76,7 @@ watch(ready, (r) => {
   padding: 14px 16px 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: var(--shadow-lg);
 }
 .upd-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }

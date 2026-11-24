@@ -116,7 +116,7 @@ const { busy, download } = useReadingAdmin()
 </template>
 
 <style scoped>
-.rs { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); margin-top: 22px; }
+.rs { container-type: inline-size; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; box-shadow: var(--shadow); margin-top: 22px; }
 h3 { margin: 0 0 14px; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 10px; }
 .ico { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
 .none { margin: 0; font-size: 14px; color: var(--ink-3); }

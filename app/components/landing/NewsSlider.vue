@@ -166,7 +166,7 @@ onBeforeUnmount(() => observer?.disconnect())
   scroll-snap-align: start;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: all 0.2s;

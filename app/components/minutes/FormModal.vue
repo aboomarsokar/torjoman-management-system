@@ -211,7 +211,7 @@ function submit(status: MinuteStatus) {
             icon="i-lucide-check-check"
             :loading="saving === 'final'"
             :disabled="busy && saving !== 'final'"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="submit('final')"
           />
         </div>

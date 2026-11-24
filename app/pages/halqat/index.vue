@@ -692,7 +692,7 @@ async function confirmDelete() {
               color="primary"
               size="lg"
               :loading="saving"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             />
           </div>
         </UForm>
@@ -760,7 +760,7 @@ async function confirmDelete() {
   .filter-sel, .teacher-sel { flex: 1 1 140px; width: auto; min-width: 0; }
   .create { width: 100%; justify-content: center; min-height: 48px; }
 }
-.hcard { background: var(--surface); border-radius: 16px; padding: 16px; }
+.hcard { background: var(--surface); border-radius: 14px; padding: 16px; }
 .hcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 .hcard-actions { display: flex; gap: 8px; margin-top: 16px; }
 .hcard-actions > :first-child { flex: 1; justify-content: center; }

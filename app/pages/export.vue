@@ -102,14 +102,14 @@ const ITEMS: Item[] = [
 
 <style scoped>
 .ex { display: flex; flex-direction: column; gap: 16px; }
-.ex-all { display: flex; align-items: center; gap: 16px 20px; flex-wrap: wrap; padding: 18px 20px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.ex-all { display: flex; align-items: center; gap: 16px 20px; flex-wrap: wrap; padding: 18px 20px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .ex-all-text { flex: 1 1 280px; min-width: 0; }
 .ex-all-text h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; color: var(--navy); }
 .ex-all-text p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.7; }
 .ex-month { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 14px; flex-wrap: wrap; }
 @media (max-width: 640px) { .ex-month { width: 100%; } .ex-month > :last-child { flex: 1; } }
 .ex-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-.ex-grid li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.ex-grid li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .ex-ic { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue-ink); }
 .ex-text { flex: 1; min-width: 0; }
 .ex-text h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }

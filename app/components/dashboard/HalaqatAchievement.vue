@@ -151,7 +151,7 @@ const toneOf = (p: number | null) => p === null ? 'neutral' : p < ACHIEVEMENT_LO
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .ha { padding: 20px 22px; margin-bottom: 18px; }
 .ha-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .ha-head h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }

@@ -196,7 +196,7 @@ async function confirmDelete() {
           icon="i-lucide-plus"
           :disabled="!online"
           :title="online ? undefined : 'يحتاج اتصالاً'"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="openSchedule(null)"
         />
       </template>

@@ -118,7 +118,7 @@ function toggle(state: State) {
 .hl-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .hl-stat {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 76px; padding: 12px 16px;
-  border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
+  border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
   cursor: pointer; text-align: start; font: inherit; transition: border-color .15s, background-color .15s;
 }
 .hl-stat:hover { border-color: var(--blue); }
@@ -143,7 +143,7 @@ function toggle(state: State) {
 .hl-row:hover { background: var(--surface-2); }
 .hl-row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .hl-name { flex: 1; font-size: 15.5px; font-weight: 600; }
-.hl-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--navy); color: #fff; font-size: 13.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.hl-seq { min-width: 28px; height: 28px; padding: 0 7px; flex: none; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
 .hl-go { color: var(--ink-3); }
 .hl-empty { margin: 0; padding: 22px; text-align: center; font-size: 14px; color: var(--ink-3); background: var(--surface); border: 1px dashed var(--line-2); border-radius: var(--r-card); }
 

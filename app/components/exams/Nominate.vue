@@ -215,7 +215,7 @@ function askWithdraw(r: NomineeRow) {
             >
               <UButton
                 v-if="selectable(row)"
-                :label="checked[row.id] ? 'محدَّدٌ للترشيح' : 'رشّحه'"
+                :label="checked[row.id] ? 'محدَّدٌ للترشيح' : 'ترشيح'"
                 :color="checked[row.id] ? 'primary' : 'neutral'"
                 :variant="checked[row.id] ? 'solid' : 'outline'"
                 :icon="checked[row.id] ? 'i-lucide-check' : 'i-lucide-plus'"
@@ -271,7 +271,7 @@ function askWithdraw(r: NomineeRow) {
 .hint { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--chip-warn-ink); margin-top: 2px; }
 .status { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: var(--surface-3); color: var(--ink-3); white-space: nowrap; }
-.send-bar { position: sticky; bottom: 12px; z-index: 5; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); font-weight: 600; color: var(--ink-2); }
+.send-bar { position: sticky; bottom: 12px; z-index: 5; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); font-weight: 600; color: var(--ink-2); }
 .send-bar strong { color: var(--ink); }
 .send-bar :deep(button) { min-height: 48px; }
 .float-enter-active, .float-leave-active { transition: opacity .18s ease, transform .18s ease; }

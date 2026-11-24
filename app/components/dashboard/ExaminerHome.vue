@@ -119,7 +119,7 @@ const stats = computed<StatItem[]>(() => {
 
 <style scoped>
 .xh { display: flex; flex-direction: column; gap: 18px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 20px 22px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 20px 22px; }
 .head { display: flex; align-items: center; gap: 14px; }
 .h-ico { width: 48px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--blue-soft); color: var(--blue-ink); }
 .h-info { min-width: 0; }
@@ -127,7 +127,7 @@ const stats = computed<StatItem[]>(() => {
 .h-info p { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .sec h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 9px; }
-.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .rows { list-style: none; margin: 0; padding: 0; }
 .rows li + li { border-top: 1px solid var(--line); }
 .row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 4px; color: inherit; text-decoration: none; border-radius: 12px; }
@@ -141,6 +141,9 @@ const stats = computed<StatItem[]>(() => {
 .row-go { color: var(--ink-3); }
 @media (max-width: 560px) {
   .card { padding: 16px; }
-  .row { flex-wrap: wrap; }
+  /* الحلقةُ ومعلّمُها سطرٌ كامل، والحالةُ والعدُّ والسهمُ تحتها — كان العمودُ يضيق حتى كلمةٍ في السطر (2026-11-24) */
+  .row { flex-wrap: wrap; row-gap: 6px; }
+  .row-main { flex: 1 1 100%; }
+  .row-go { margin-inline-start: auto; }
 }
 </style>

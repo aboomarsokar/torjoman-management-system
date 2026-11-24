@@ -133,7 +133,7 @@ watch([activeId, loaded], ([id, ok]) => {
    وحشوةُ المحتوى أعلى وأسفل (`--content-pad`، والأسفلُ يزيد 60px) */
 .chat { --chat-top: 76px; display: flex; flex-direction: column; gap: 16px;
   height: calc(100dvh - var(--chat-top) - 2 * var(--content-pad, 24px) - 60px); min-height: 360px; }
-.chat-box { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px 1fr; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow); }
+.chat-box { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px 1fr; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; box-shadow: var(--shadow); }
 .chat-side { border-inline-end: 1px solid var(--line); overflow-y: auto; min-height: 0; }
 .chat-main { min-height: 0; display: flex; flex-direction: column; }
 .chat-main > :deep(.empty), .chat-main > :deep(section:not(.th)) { margin: auto; }

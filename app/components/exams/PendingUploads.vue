@@ -43,7 +43,7 @@ defineProps<{
 </template>
 
 <style scoped>
-.pend { padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); }
+.pend { padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
 .pend h2 { margin: 0 0 8px; font-size: 15.5px; font-weight: 700; color: var(--chip-warn-ink); }
 .pend ul { list-style: none; margin: 0; padding: 0; }
 .pend li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 44px; padding: 10px 0; }

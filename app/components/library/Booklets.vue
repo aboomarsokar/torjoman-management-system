@@ -104,7 +104,7 @@ function onPicked(e: Event) {
 
 <style scoped>
 .lb { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px; }
-.lb-card { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.lb-card { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .lb-card.empty { background: var(--surface-2); box-shadow: none; }
 .lb-card small { color: var(--ink-3); font-size: 12.5px; }
 .lb-card h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); }

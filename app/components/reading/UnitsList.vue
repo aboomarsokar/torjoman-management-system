@@ -244,7 +244,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
 .ul { container-type: inline-size; }
 .none { margin: 16px 0 0; color: var(--ink-3); }
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; }
-.card { display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+.card { display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
 .card.now { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue), var(--shadow); }
 .top { display: flex; gap: 14px; align-items: flex-start; flex: 1; }
 .thumb { flex: none; width: 64px; height: 86px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
@@ -257,7 +257,7 @@ const nextOrder = computed(() => Math.max(0, ...(units.value ?? []).map(u => u.s
 .missing { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--err); font-weight: 600; margin-top: 4px; }
 .no-test { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--ink-3); }
 .acts { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
-.add { margin-top: 18px; padding: 16px 18px; background: var(--surface); border: 1px dashed var(--line); border-radius: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.add { margin-top: 18px; padding: 16px 18px; background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .hint { margin: 0; flex: 1 1 320px; font-size: 13px; color: var(--ink-3); }
 @container (max-width: 520px) {
   .acts > * { flex: 1 1 0; }

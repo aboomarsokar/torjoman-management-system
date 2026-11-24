@@ -85,7 +85,7 @@ export function dueCycle(
 
 /** تنبيهٌ إن لم يبلغ موضعُ الطالب المعتمد (عددُ أجزائه) حدودَ الدورة؛ وإلا null. */
 export function reachedHint(c: ExamCycle, juzReached: number): string | null {
-  return juzReached < partsAfterPass(c) ? 'لم يبلغ موضعُه المعتمد حدودَ هذه الدورة بعد' : null
+  return juzReached < partsAfterPass(c) ? 'لم يبلغ الموضعُ المعتمد حدودَ هذه الدورة بعد' : null
 }
 
 /**

@@ -88,7 +88,7 @@ const subtitle = computed(() => {
 <style scoped>
 .transport { display: flex; flex-direction: column; gap: 16px; }
 .transport :deep(.head) { margin-bottom: 0; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 .month { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; }
 .month-label { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 </style>

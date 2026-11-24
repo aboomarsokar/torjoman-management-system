@@ -277,7 +277,7 @@ const pwOpen = ref(false)
               variant="outline"
               size="lg"
               icon="i-lucide-key-round"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
               @click="pwOpen = true"
             />
             <UButton
@@ -286,7 +286,7 @@ const pwOpen = ref(false)
               color="primary"
               size="lg"
               icon="i-lucide-pencil"
-              :ui="{ base: 'rounded-[13px] font-semibold' }"
+              :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
               @click="openEdit"
             />
           </div>
@@ -648,7 +648,7 @@ const pwOpen = ref(false)
             color="primary"
             icon="i-lucide-check"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>
@@ -658,9 +658,9 @@ const pwOpen = ref(false)
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 
-.band { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.band { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
 .band-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .band-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .av { width: 64px; height: 64px; border-radius: 18px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex: none; overflow: hidden; }
@@ -670,7 +670,7 @@ const pwOpen = ref(false)
 .band-sub span { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-2); }
 
 .scope { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
-.scope-card { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px 18px; }
+.scope-card { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 18px; }
 .scope-val { font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1; }
 .scope-lbl { font-size: 13px; color: var(--ink-3); margin-top: 7px; }
 

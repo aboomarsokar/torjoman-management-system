@@ -142,7 +142,7 @@ async function submit() {
           block
           :loading="saving"
           :disabled="!profile || !notImpersonating"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
         />
       </form>
 
@@ -163,7 +163,7 @@ async function submit() {
 
 <style scoped>
 .cp { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 16px; background: var(--bg); color: var(--ink); }
-.card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-lg); padding: 32px 28px; }
+.card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 32px 28px; }
 .mark { height: 60px; width: auto; margin: 0 auto 14px; display: block; filter: var(--logo-filter); }
 h1 { margin: 0; text-align: center; font-size: 26px; font-weight: 700; color: var(--ink); }
 .lead { margin: 12px 0 24px; text-align: center; font-size: 15px; line-height: 1.8; color: var(--ink-2); }

@@ -104,7 +104,7 @@ describe('dueCycle', () => {
 
 describe('reachedHint', () => {
   it('لم يبلغ حدودَ الدورة', () => {
-    expect(reachedHint(c(1), 2)).toBe('لم يبلغ موضعُه المعتمد حدودَ هذه الدورة بعد')
+    expect(reachedHint(c(1), 2)).toBe('لم يبلغ الموضعُ المعتمد حدودَ هذه الدورة بعد')
     expect(reachedHint(c(5), 9)).not.toBeNull()
   })
   it('بلغها أو جاوزها ← null', () => {

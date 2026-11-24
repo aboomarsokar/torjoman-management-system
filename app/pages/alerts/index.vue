@@ -168,7 +168,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
           color="primary"
           size="lg"
           icon="i-lucide-bell-plus"
-          :ui="{ base: 'rounded-[13px] font-semibold' }"
+          :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
           @click="openCreate"
         />
       </template>
@@ -363,7 +363,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
             color="primary"
             icon="i-lucide-bell-plus"
             :loading="saving"
-            :ui="{ base: 'rounded-[13px] font-semibold' }"
+            :ui="{ base: 'rounded-[13px] font-semibold min-h-11' }"
             @click="save"
           />
         </div>
@@ -373,7 +373,7 @@ const newCount = computed(() => (alerts.value ?? []).filter(a => a.status === 'n
 </template>
 
 <style scoped>
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
 
 .hint { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 16px; margin-bottom: 16px; }
 .hint strong { color: var(--ink); }

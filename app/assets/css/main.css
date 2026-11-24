@@ -2,7 +2,7 @@
 @import "@nuxt/ui";
 
 /* ============================================================
-   الخط المعتمد — Lama Sans (مع ربط 400→Medium و 700→SemiBold)
+   الخط المعتمد — Lama Sans (400 Regular، و700 يُربط بـ SemiBold)
    ============================================================ */
 @font-face {
   font-family: 'Lama Sans';
@@ -14,9 +14,9 @@
 
 @font-face {
   font-family: 'Lama Sans';
-  src: url('../fonts/LamaSans-Medium.ttf') format('truetype');
+  src: url('../fonts/LamaSans-Regular.ttf') format('truetype');
   font-weight: 400;
-  /* 400 يُربط بـ Medium (البريف §5) */
+  /* 400 بوزنه الحقيقيّ Regular (2026-11-24 — كان يُربط بـ Medium لغياب الملف، فبدت الواجهةُ كلُّها ثقيلة) */
   font-style: normal;
   font-display: swap;
 }
@@ -154,7 +154,8 @@
   --surface-3: #E9F0F6;
   --ink: #0B2C42;
   --ink-2: #42607A;
-  --ink-3: #859AAC;
+  /* النصُّ الثانويّ: كان #859AAC (2.9:1) — صار ≥ 4.5:1 على البطاقة والخلفية (فحص 2026-11-24) */
+  --ink-3: #5A7084;
   --line: #E2EAF1;
   --line-2: #CFDBE6;
   /* نصوصُ مكوّنات Nuxt UI بألوان الهوية: كان تلميحُ الحقول (placeholder) وأيقونتُها رماديّاً عامّاً باهتاً
@@ -180,7 +181,7 @@
   --blue-ink: #2E70AE;
   --blue-soft: #E8F1FA;
   --green: #54BF99;
-  --green-ink: #1F9D70;
+  --green-ink: #137A55;
   --green-soft: #E4F6EF;
   /* زرُّ «حاضر» الممتلئ في الحضور (2026-10-28): أخضرُ أغمق كي يُقرأ النصُّ الأبيض عليه (≈ 4.6:1) */
   --present-bg: #17845E;
@@ -188,7 +189,7 @@
   /* وزرُّ «غائب» الممتلئ (طلب المستخدم 2026-10-28: الخلفيةُ كلُّها بلون الحدود) — أحمرُ أغمق ليُقرأ الأبيضُ عليه */
   --absent-bg: #B9473B;
   --absent-ink: #FFFFFF;
-  --err: #D26458;
+  --err: #AE4337;
   --err-soft: #FBEAE7;
 
   /* الأساسي (الأزرار) ونصّه */
@@ -219,18 +220,19 @@
   --ring: rgba(76, 139, 201, .30);
 
   /* الظل */
-  --shadow: 0 1px 2px rgba(11, 44, 66, .05), 0 10px 26px rgba(11, 44, 66, .06);
+  /* فصلٌ واحد للبطاقة: حدٌّ وظلٌّ خفيفٌ جدّاً (تخفيفُ الشكل — 2026-11-24؛ كان ظلّاً عريضاً فوق الحدّ) */
+  --shadow: 0 1px 2px rgba(11, 44, 66, .04);
   --shadow-lg: 0 18px 48px rgba(11, 44, 66, .13);
 
   /* الاستدارة (صغير 9 · حقول/أزرار 13 · بطاقات 18 · دائري) */
   --r-sm: 9px;
   --r-control: 13px;
-  --r-card: 18px;
+  --r-card: 14px;
   --r-pill: 999px;
 
   /* شارات الحالة (خلفية/نص) */
   --chip-active-bg: #E4F6EF;
-  --chip-active-ink: #1F9D70;
+  --chip-active-ink: #137A55;
   /* نشط/نجاح */
   --chip-warn-bg: #FAEBCB;
   --chip-warn-ink: #8A6A1A;
@@ -239,10 +241,10 @@
   --chip-info-ink: #2E70AE;
   /* متخرّج/معلومة */
   --chip-muted-bg: #E9F0F6;
-  --chip-muted-ink: #859AAC;
+  --chip-muted-ink: #5A7084;
   /* منتقل/محايد */
   --chip-late-bg: #FBEAE7;
-  --chip-late-ink: #D26458;
+  --chip-late-ink: #AE4337;
   /* متأخرة/خطأ */
 
   /* شريط النيابة: أصفر للقراءة، أحمر لوضع التعديل */
@@ -275,7 +277,7 @@
   --surface-3: #0E3852;
   --ink: #E9F1F7;
   --ink-2: #A7C0D2;
-  --ink-3: #6B8699;
+  --ink-3: #8AA3B6;
   --line: #163E59;
   --line-2: #214F70;
   --ui-text-dimmed: color-mix(in oklab, var(--ink-2) 55%, var(--ink-3));
@@ -316,7 +318,7 @@
 
   --ring: rgba(107, 166, 221, .38);
 
-  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px rgba(0, 0, 0, .35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .25);
   --shadow-lg: 0 20px 54px rgba(0, 0, 0, .5);
 
   /* شارات الحالة (ليلي) */

@@ -282,6 +282,10 @@ async function onChanged() {
 .row-go { color: var(--ink-3); }
 @media (max-width: 560px) {
   .month { flex-direction: column; align-items: stretch; gap: 8px; }
-  .row { flex-wrap: wrap; }
+  /* الاسمُ سطرٌ كامل بجانب الرقم، والعلامةُ والحالةُ والسهمُ تحته — كان العمودُ يضيق حتى كلمةٍ في السطر (2026-11-24) */
+  .row { flex-wrap: wrap; row-gap: 8px; }
+  .row-main { flex: 1 1 calc(100% - 44px); }
+  .row-score { margin-inline-start: 40px; }
+  .row-go { margin-inline-start: auto; }
 }
 </style>

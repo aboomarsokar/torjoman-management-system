@@ -163,7 +163,8 @@ const phoneOf = (s: { guardian_phone: string | null, phone: string | null }) => 
 /* كصورة الطالب في `/students`: الحرفُ الأوّل على أخضر الهوية */
 .av { width: 42px; height: 42px; flex: none; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--green-ink); color: var(--on-primary); font-size: 16px; font-weight: 700; }
 .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.txt b { font-size: 15.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* الاسمُ كاملاً على سطرين إن لزم — لا يُقصّ بـ«…» (2026-11-24) */
+.txt b { font-size: 15.5px; font-weight: 600; color: var(--ink); line-height: 1.45; overflow-wrap: anywhere; }
 .txt small { font-size: 13px; color: var(--ink-3); }
 .badge { flex: none; }
 .call { flex: none; }

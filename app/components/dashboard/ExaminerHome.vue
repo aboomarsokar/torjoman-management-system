@@ -141,6 +141,9 @@ const stats = computed<StatItem[]>(() => {
 .row-go { color: var(--ink-3); }
 @media (max-width: 560px) {
   .card { padding: 16px; }
-  .row { flex-wrap: wrap; }
+  /* الحلقةُ ومعلّمُها سطرٌ كامل، والحالةُ والعدُّ والسهمُ تحتها — كان العمودُ يضيق حتى كلمةٍ في السطر (2026-11-24) */
+  .row { flex-wrap: wrap; row-gap: 6px; }
+  .row-main { flex: 1 1 100%; }
+  .row-go { margin-inline-start: auto; }
 }
 </style>

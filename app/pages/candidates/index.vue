@@ -49,6 +49,19 @@ watch(filter, () => (selected.value = []))
 const detail = reactive({ open: false, id: '' })
 const current = computed(() => candidates.value.find(c => c.id === detail.id) ?? null)
 const openDetail = (c: Candidate) => Object.assign(detail, { open: true, id: c.id })
+/** ما يُفتح من لوحة المرشّح يُفتح بعد إغلاقها فلا تتراكب النافذتان — كانت نافذةُ النتيجة تظهر تحتها باهتةً (2026-11-28). */
+let afterDetail: (() => void) | null = null
+function fromDetail(run: (c: Candidate) => void) {
+  const c = current.value
+  if (!c) return
+  afterDetail = () => run(c)
+  detail.open = false
+}
+function onDetailClosed() {
+  const run = afterDetail
+  afterDetail = null
+  run?.()
+}
 
 const scheduleOpen = ref(false)
 const scheduleFor = ref<Candidate[]>([])
@@ -216,9 +229,10 @@ async function hire() {
       :can-manage="canManage"
       :is-admin="isAdmin"
       :busy="busy"
-      @schedule="current && openSchedule([current])"
-      @sms="current && (smsFor = [current])"
-      @result-sms="current && resultSms?.open([current])"
+      @schedule="fromDetail(c => openSchedule([c]))"
+      @sms="fromDetail(c => (smsFor = [c]))"
+      @result-sms="fromDetail(c => resultSms?.open([c]))"
+      @closed="onDetailClosed"
       @evaluate="evalOpen = true"
       @decide="(s: CandidateStatus, n: string) => current && api.decide(current.id, s, n)"
       @hire="hire"

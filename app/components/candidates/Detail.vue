@@ -17,7 +17,7 @@ interface Props {
   busy: boolean
 }
 const props = defineProps<Props>()
-const emit = defineEmits<{ evaluate: [], schedule: [], sms: [], resultSms: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [] }>()
+const emit = defineEmits<{ evaluate: [], schedule: [], sms: [], resultSms: [], decide: [status: CandidateStatus, note: string], hire: [], remove: [], closed: [] }>()
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
@@ -61,6 +61,7 @@ async function copyInvite() {
     side="left"
     :title="candidate?.full_name ?? ''"
     :ui="{ content: 'max-w-xl' }"
+    @after:leave="emit('closed')"
   >
     <template #body>
       <div
